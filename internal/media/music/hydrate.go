@@ -533,7 +533,7 @@ func (s *Service) hydrationParams(
 	for _, t := range d.Tracks {
 		p.Tracks = append(p.Tracks, db.TrackSeed{
 			MBID: t.MBID, ReleaseTrackMBID: t.ReleaseTrackMBID,
-			Title: t.Title, Disc: t.Disc, Position: t.Position,
+			Title: t.Title, Aliases: t.Aliases, Disc: t.Disc, Position: t.Position,
 			Duration: t.Duration, Bonus: t.Bonus,
 			Artists:      personSeeds(t.Artists),
 			ArtistCredit: t.ArtistCredit,

@@ -15,6 +15,9 @@ var _ = Describe("music names", Label("unit", "library"), func() {
 
 	It("reads a sort name forwards", func() {
 		Expect(ArtistNames(hoshino)).To(Equal([]string{"星野源", "Gen Hoshino"}))
+		Expect(ArtistNames(&ent.Artist{
+			Name: "Ado", SortName: "Ado", Aliases: []string{"アド"},
+		})).To(Equal([]string{"Ado", "アド"}))
 		Expect(ArtistNames(ic3peak)).To(Equal([]string{"IC3PEAK"}))
 		Expect(
 			ArtistNames(
@@ -56,6 +59,30 @@ var _ = Describe("music names", Label("unit", "library"), func() {
 			To(BeTrue())
 		Expect(ReleaseNamedByArtist("Gen Hoshi - Discography [FLAC]", hoshino)).
 			To(BeFalse())
+	})
+
+	It("matches a file to a track by the title another release gives it", func() {
+		tracks := []*ent.Track{
+			{
+				ID:       1,
+				Disc:     1,
+				Position: 1,
+				Title:    "Считалочка",
+				Aliases:  []string{"Sčitaločka"},
+			},
+			{
+				ID:       2,
+				Disc:     1,
+				Position: 2,
+				Title:    "Привет",
+				Aliases:  []string{"Privet"},
+			},
+		}
+		Expect(matchTitle(tracks, 1, "Privet")).To(Equal(tracks[1]))
+		Expect(matchTitle(tracks, 1, "Scitalocka")).To(Equal(tracks[0]))
+		Expect(matchTitle(tracks, 1, "Poka")).To(BeNil())
+		Expect(TrackTitleAgrees(tracks[1], "Privet")).To(BeTrue())
+		Expect(TrackTitleAgrees(tracks[1], "Sčitaločka")).To(BeFalse())
 	})
 
 	It("matches a pack folder and a feed title by an alias", func() {

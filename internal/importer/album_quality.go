@@ -60,7 +60,7 @@ func albumHoldReasons(plan []albumFile, alb *ent.Album) []schema.HoldReason {
 	var out []schema.HoldReason
 	for _, f := range plan {
 		if f.info.Album == "" ||
-			library.TitleNamesSameWork(f.info.Album, alb.Title) {
+			library.AlbumTitleNamed(f.info.Album, alb) {
 			continue
 		}
 		out = append(out, schema.HoldReason{
@@ -101,7 +101,7 @@ func trackHoldReasons(plan []albumFile, everyFile bool) []schema.HoldReason {
 			continue
 		}
 		compared++
-		if library.TitlePrefixMatches(f.tr.Title, f.info.Title) {
+		if library.TrackTitleAgrees(f.tr, f.info.Title) {
 			agree++
 			continue
 		}

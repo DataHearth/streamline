@@ -26,6 +26,10 @@ func (Track) Fields() []ent.Field {
 		field.String("mbid").Optional(),
 		field.String("release_track_mbid").Optional(),
 		field.String("title").NotEmpty(),
+		// aliases are the titles the same recording carries on the release
+		// group's other-script releases (a pseudo-release's transliterated
+		// track list): files of a romanized release are matched by them.
+		field.JSON("aliases", []string{}).Optional(),
 		field.Uint8("disc").Default(1),
 		field.Uint16("position"),
 		field.Uint32("duration").Optional().Default(0),

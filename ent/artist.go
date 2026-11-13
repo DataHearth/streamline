@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -27,6 +28,8 @@ type Artist struct {
 	Name string `json:"name,omitempty"`
 	// SortName holds the value of the "sort_name" field.
 	SortName string `json:"sort_name,omitempty"`
+	// Aliases holds the value of the "aliases" field.
+	Aliases []string `json:"aliases,omitempty"`
 	// Overview holds the value of the "overview" field.
 	Overview string `json:"overview,omitempty"`
 	// OverviewSource holds the value of the "overview_source" field.
@@ -141,6 +144,8 @@ func (*Artist) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case artist.FieldAliases:
+			values[i] = new([]byte)
 		case artist.FieldID, artist.FieldSince, artist.FieldDeezerID:
 			values[i] = new(sql.NullInt64)
 		case artist.FieldMbid, artist.FieldName, artist.FieldSortName, artist.FieldOverview, artist.FieldOverviewSource, artist.FieldOverviewFr, artist.FieldOverviewSourceFr, artist.FieldMonitor, artist.FieldType, artist.FieldOrigin, artist.FieldGenre, artist.FieldWikidataID, artist.FieldQualityProfile, artist.FieldArtSidecarHash:
@@ -197,6 +202,14 @@ func (_m *Artist) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field sort_name", values[i])
 			} else if value.Valid {
 				_m.SortName = value.String
+			}
+		case artist.FieldAliases:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field aliases", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Aliases); err != nil {
+					return fmt.Errorf("unmarshal field aliases: %w", err)
+				}
 			}
 		case artist.FieldOverview:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -370,6 +383,9 @@ func (_m *Artist) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("sort_name=")
 	builder.WriteString(_m.SortName)
+	builder.WriteString(", ")
+	builder.WriteString("aliases=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Aliases))
 	builder.WriteString(", ")
 	builder.WriteString("overview=")
 	builder.WriteString(_m.Overview)

@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/bookmark"
@@ -92,6 +93,24 @@ func (_u *TrackUpdate) SetNillableTitle(v *string) *TrackUpdate {
 	if v != nil {
 		_u.SetTitle(*v)
 	}
+	return _u
+}
+
+// SetAliases sets the "aliases" field.
+func (_u *TrackUpdate) SetAliases(v []string) *TrackUpdate {
+	_u.mutation.SetAliases(v)
+	return _u
+}
+
+// AppendAliases appends value to the "aliases" field.
+func (_u *TrackUpdate) AppendAliases(v []string) *TrackUpdate {
+	_u.mutation.AppendAliases(v)
+	return _u
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (_u *TrackUpdate) ClearAliases() *TrackUpdate {
+	_u.mutation.ClearAliases()
 	return _u
 }
 
@@ -497,6 +516,17 @@ func (_u *TrackUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(track.FieldTitle, field.TypeString, value)
 	}
+	if value, ok := _u.mutation.Aliases(); ok {
+		_spec.SetField(track.FieldAliases, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedAliases(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, track.FieldAliases, value)
+		})
+	}
+	if _u.mutation.AliasesCleared() {
+		_spec.ClearField(track.FieldAliases, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.Disc(); ok {
 		_spec.SetField(track.FieldDisc, field.TypeUint8, value)
 	}
@@ -866,6 +896,24 @@ func (_u *TrackUpdateOne) SetNillableTitle(v *string) *TrackUpdateOne {
 	if v != nil {
 		_u.SetTitle(*v)
 	}
+	return _u
+}
+
+// SetAliases sets the "aliases" field.
+func (_u *TrackUpdateOne) SetAliases(v []string) *TrackUpdateOne {
+	_u.mutation.SetAliases(v)
+	return _u
+}
+
+// AppendAliases appends value to the "aliases" field.
+func (_u *TrackUpdateOne) AppendAliases(v []string) *TrackUpdateOne {
+	_u.mutation.AppendAliases(v)
+	return _u
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (_u *TrackUpdateOne) ClearAliases() *TrackUpdateOne {
+	_u.mutation.ClearAliases()
 	return _u
 }
 
@@ -1300,6 +1348,17 @@ func (_u *TrackUpdateOne) sqlSave(ctx context.Context) (_node *Track, err error)
 	}
 	if value, ok := _u.mutation.Title(); ok {
 		_spec.SetField(track.FieldTitle, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Aliases(); ok {
+		_spec.SetField(track.FieldAliases, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedAliases(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, track.FieldAliases, value)
+		})
+	}
+	if _u.mutation.AliasesCleared() {
+		_spec.ClearField(track.FieldAliases, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Disc(); ok {
 		_spec.SetField(track.FieldDisc, field.TypeUint8, value)

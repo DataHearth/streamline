@@ -88,6 +88,12 @@ func (_c *TrackCreate) SetTitle(v string) *TrackCreate {
 	return _c
 }
 
+// SetAliases sets the "aliases" field.
+func (_c *TrackCreate) SetAliases(v []string) *TrackCreate {
+	_c.mutation.SetAliases(v)
+	return _c
+}
+
 // SetDisc sets the "disc" field.
 func (_c *TrackCreate) SetDisc(v uint8) *TrackCreate {
 	_c.mutation.SetDisc(v)
@@ -384,6 +390,10 @@ func (_c *TrackCreate) createSpec() (*Track, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(track.FieldTitle, field.TypeString, value)
 		_node.Title = value
+	}
+	if value, ok := _c.mutation.Aliases(); ok {
+		_spec.SetField(track.FieldAliases, field.TypeJSON, value)
+		_node.Aliases = value
 	}
 	if value, ok := _c.mutation.Disc(); ok {
 		_spec.SetField(track.FieldDisc, field.TypeUint8, value)

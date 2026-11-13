@@ -184,9 +184,12 @@ type TVProvider interface {
 
 // ArtistResult is a single MusicBrainz artist search hit.
 type ArtistResult struct {
-	MBID           string
-	Name           string
-	SortName       string
+	MBID     string
+	Name     string
+	SortName string
+	// Aliases are the artist's other names, search hints left out. Only a
+	// lookup by id carries them.
+	Aliases        []string
 	Disambiguation string
 	Score          uint8
 	// Type is "group" or "person"; empty for a character, an "other" and a
@@ -270,6 +273,9 @@ type TrackInfo struct {
 	// Bonus is set only when MusicBrainz says so: a medium titled "bonus" or a
 	// track titled "(bonus track)".
 	Bonus bool
+	// Aliases are the titles the recording carries on the group's releases
+	// in another script.
+	Aliases []string
 }
 
 // CreditInfo is one credit of an album or a track.

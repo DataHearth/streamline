@@ -24,6 +24,10 @@ func (Artist) Fields() []ent.Field {
 		field.String("mbid").NotEmpty().Unique(),
 		field.String("name").NotEmpty(),
 		field.String("sort_name").Optional(),
+		// aliases are the artist's other names on MusicBrainz, search hints
+		// left out: 星野源 is also "Gen Hoshino". Release names are compared
+		// with them. Written on add and on every refresh.
+		field.JSON("aliases", []string{}).Optional(),
 		// overview and overview_source are the English Wikipedia extract and
 		// its page; the _fr pair is the French one. A locale with no article
 		// stays empty and the API falls back to English.

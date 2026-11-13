@@ -477,6 +477,15 @@ var _ = Describe("albumHoldReasons", Label("unit", "importer"), func() {
 			}))
 		},
 	)
+
+	It("lets through files tagged with one of the album's other titles", func() {
+		episode := &ent.Album{Title: "エピソード", Aliases: []string{"Episode"}}
+		Expect(albumHoldReasons(
+			[]albumFile{file("Episode"), file("エピソード")}, episode,
+		)).To(BeEmpty())
+		Expect(albumHoldReasons([]albumFile{file("Stranger")}, episode)).
+			To(HaveLen(1))
+	})
 })
 
 var _ = Describe("trackHoldReasons", Label("unit", "importer"), func() {

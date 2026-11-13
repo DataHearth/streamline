@@ -3898,6 +3898,8 @@ type ArtistMutation struct {
 	mbid                    *string
 	name                    *string
 	sort_name               *string
+	aliases                 *[]string
+	appendaliases           []string
 	overview                *string
 	overview_source         *string
 	overview_fr             *string
@@ -4234,6 +4236,71 @@ func (m *ArtistMutation) SortNameCleared() bool {
 func (m *ArtistMutation) ResetSortName() {
 	m.sort_name = nil
 	delete(m.clearedFields, artist.FieldSortName)
+}
+
+// SetAliases sets the "aliases" field.
+func (m *ArtistMutation) SetAliases(s []string) {
+	m.aliases = &s
+	m.appendaliases = nil
+}
+
+// Aliases returns the value of the "aliases" field in the mutation.
+func (m *ArtistMutation) Aliases() (r []string, exists bool) {
+	v := m.aliases
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAliases returns the old "aliases" field's value of the Artist entity.
+// If the Artist object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ArtistMutation) OldAliases(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAliases is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAliases requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAliases: %w", err)
+	}
+	return oldValue.Aliases, nil
+}
+
+// AppendAliases adds s to the "aliases" field.
+func (m *ArtistMutation) AppendAliases(s []string) {
+	m.appendaliases = append(m.appendaliases, s...)
+}
+
+// AppendedAliases returns the list of values that were appended to the "aliases" field in this mutation.
+func (m *ArtistMutation) AppendedAliases() ([]string, bool) {
+	if len(m.appendaliases) == 0 {
+		return nil, false
+	}
+	return m.appendaliases, true
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (m *ArtistMutation) ClearAliases() {
+	m.aliases = nil
+	m.appendaliases = nil
+	m.clearedFields[artist.FieldAliases] = struct{}{}
+}
+
+// AliasesCleared returns if the "aliases" field was cleared in this mutation.
+func (m *ArtistMutation) AliasesCleared() bool {
+	_, ok := m.clearedFields[artist.FieldAliases]
+	return ok
+}
+
+// ResetAliases resets all changes to the "aliases" field.
+func (m *ArtistMutation) ResetAliases() {
+	m.aliases = nil
+	m.appendaliases = nil
+	delete(m.clearedFields, artist.FieldAliases)
 }
 
 // SetOverview sets the "overview" field.
@@ -5358,7 +5425,7 @@ func (m *ArtistMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ArtistMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.create_time != nil {
 		fields = append(fields, artist.FieldCreateTime)
 	}
@@ -5373,6 +5440,9 @@ func (m *ArtistMutation) Fields() []string {
 	}
 	if m.sort_name != nil {
 		fields = append(fields, artist.FieldSortName)
+	}
+	if m.aliases != nil {
+		fields = append(fields, artist.FieldAliases)
 	}
 	if m.overview != nil {
 		fields = append(fields, artist.FieldOverview)
@@ -5437,6 +5507,8 @@ func (m *ArtistMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case artist.FieldSortName:
 		return m.SortName()
+	case artist.FieldAliases:
+		return m.Aliases()
 	case artist.FieldOverview:
 		return m.Overview()
 	case artist.FieldOverviewSource:
@@ -5486,6 +5558,8 @@ func (m *ArtistMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldName(ctx)
 	case artist.FieldSortName:
 		return m.OldSortName(ctx)
+	case artist.FieldAliases:
+		return m.OldAliases(ctx)
 	case artist.FieldOverview:
 		return m.OldOverview(ctx)
 	case artist.FieldOverviewSource:
@@ -5559,6 +5633,13 @@ func (m *ArtistMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSortName(v)
+		return nil
+	case artist.FieldAliases:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAliases(v)
 		return nil
 	case artist.FieldOverview:
 		v, ok := value.(string)
@@ -5725,6 +5806,9 @@ func (m *ArtistMutation) ClearedFields() []string {
 	if m.FieldCleared(artist.FieldSortName) {
 		fields = append(fields, artist.FieldSortName)
 	}
+	if m.FieldCleared(artist.FieldAliases) {
+		fields = append(fields, artist.FieldAliases)
+	}
 	if m.FieldCleared(artist.FieldOverview) {
 		fields = append(fields, artist.FieldOverview)
 	}
@@ -5783,6 +5867,9 @@ func (m *ArtistMutation) ClearField(name string) error {
 	switch name {
 	case artist.FieldSortName:
 		m.ClearSortName()
+		return nil
+	case artist.FieldAliases:
+		m.ClearAliases()
 		return nil
 	case artist.FieldOverview:
 		m.ClearOverview()
@@ -5848,6 +5935,9 @@ func (m *ArtistMutation) ResetField(name string) error {
 		return nil
 	case artist.FieldSortName:
 		m.ResetSortName()
+		return nil
+	case artist.FieldAliases:
+		m.ResetAliases()
 		return nil
 	case artist.FieldOverview:
 		m.ResetOverview()
@@ -52048,6 +52138,8 @@ type TrackMutation struct {
 	mbid                    *string
 	release_track_mbid      *string
 	title                   *string
+	aliases                 *[]string
+	appendaliases           []string
 	disc                    *uint8
 	adddisc                 *int8
 	position                *uint16
@@ -52388,6 +52480,71 @@ func (m *TrackMutation) OldTitle(ctx context.Context) (v string, err error) {
 // ResetTitle resets all changes to the "title" field.
 func (m *TrackMutation) ResetTitle() {
 	m.title = nil
+}
+
+// SetAliases sets the "aliases" field.
+func (m *TrackMutation) SetAliases(s []string) {
+	m.aliases = &s
+	m.appendaliases = nil
+}
+
+// Aliases returns the value of the "aliases" field in the mutation.
+func (m *TrackMutation) Aliases() (r []string, exists bool) {
+	v := m.aliases
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAliases returns the old "aliases" field's value of the Track entity.
+// If the Track object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TrackMutation) OldAliases(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAliases is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAliases requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAliases: %w", err)
+	}
+	return oldValue.Aliases, nil
+}
+
+// AppendAliases adds s to the "aliases" field.
+func (m *TrackMutation) AppendAliases(s []string) {
+	m.appendaliases = append(m.appendaliases, s...)
+}
+
+// AppendedAliases returns the list of values that were appended to the "aliases" field in this mutation.
+func (m *TrackMutation) AppendedAliases() ([]string, bool) {
+	if len(m.appendaliases) == 0 {
+		return nil, false
+	}
+	return m.appendaliases, true
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (m *TrackMutation) ClearAliases() {
+	m.aliases = nil
+	m.appendaliases = nil
+	m.clearedFields[track.FieldAliases] = struct{}{}
+}
+
+// AliasesCleared returns if the "aliases" field was cleared in this mutation.
+func (m *TrackMutation) AliasesCleared() bool {
+	_, ok := m.clearedFields[track.FieldAliases]
+	return ok
+}
+
+// ResetAliases resets all changes to the "aliases" field.
+func (m *TrackMutation) ResetAliases() {
+	m.aliases = nil
+	m.appendaliases = nil
+	delete(m.clearedFields, track.FieldAliases)
 }
 
 // SetDisc sets the "disc" field.
@@ -53049,7 +53206,7 @@ func (m *TrackMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TrackMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.create_time != nil {
 		fields = append(fields, track.FieldCreateTime)
 	}
@@ -53064,6 +53221,9 @@ func (m *TrackMutation) Fields() []string {
 	}
 	if m.title != nil {
 		fields = append(fields, track.FieldTitle)
+	}
+	if m.aliases != nil {
+		fields = append(fields, track.FieldAliases)
 	}
 	if m.disc != nil {
 		fields = append(fields, track.FieldDisc)
@@ -53101,6 +53261,8 @@ func (m *TrackMutation) Field(name string) (ent.Value, bool) {
 		return m.ReleaseTrackMbid()
 	case track.FieldTitle:
 		return m.Title()
+	case track.FieldAliases:
+		return m.Aliases()
 	case track.FieldDisc:
 		return m.Disc()
 	case track.FieldPosition:
@@ -53132,6 +53294,8 @@ func (m *TrackMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldReleaseTrackMbid(ctx)
 	case track.FieldTitle:
 		return m.OldTitle(ctx)
+	case track.FieldAliases:
+		return m.OldAliases(ctx)
 	case track.FieldDisc:
 		return m.OldDisc(ctx)
 	case track.FieldPosition:
@@ -53187,6 +53351,13 @@ func (m *TrackMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetTitle(v)
+		return nil
+	case track.FieldAliases:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAliases(v)
 		return nil
 	case track.FieldDisc:
 		v, ok := value.(uint8)
@@ -53305,6 +53476,9 @@ func (m *TrackMutation) ClearedFields() []string {
 	if m.FieldCleared(track.FieldReleaseTrackMbid) {
 		fields = append(fields, track.FieldReleaseTrackMbid)
 	}
+	if m.FieldCleared(track.FieldAliases) {
+		fields = append(fields, track.FieldAliases)
+	}
 	if m.FieldCleared(track.FieldDuration) {
 		fields = append(fields, track.FieldDuration)
 	}
@@ -53333,6 +53507,9 @@ func (m *TrackMutation) ClearField(name string) error {
 		return nil
 	case track.FieldReleaseTrackMbid:
 		m.ClearReleaseTrackMbid()
+		return nil
+	case track.FieldAliases:
+		m.ClearAliases()
 		return nil
 	case track.FieldDuration:
 		m.ClearDuration()
@@ -53365,6 +53542,9 @@ func (m *TrackMutation) ResetField(name string) error {
 		return nil
 	case track.FieldTitle:
 		m.ResetTitle()
+		return nil
+	case track.FieldAliases:
+		m.ResetAliases()
 		return nil
 	case track.FieldDisc:
 		m.ResetDisc()

@@ -24,6 +24,8 @@ const (
 	FieldReleaseTrackMbid = "release_track_mbid"
 	// FieldTitle holds the string denoting the title field in the database.
 	FieldTitle = "title"
+	// FieldAliases holds the string denoting the aliases field in the database.
+	FieldAliases = "aliases"
 	// FieldDisc holds the string denoting the disc field in the database.
 	FieldDisc = "disc"
 	// FieldPosition holds the string denoting the position field in the database.
@@ -102,6 +104,7 @@ var Columns = []string{
 	FieldMbid,
 	FieldReleaseTrackMbid,
 	FieldTitle,
+	FieldAliases,
 	FieldDisc,
 	FieldPosition,
 	FieldDuration,

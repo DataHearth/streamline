@@ -1044,15 +1044,15 @@ func init() {
 	// track.TitleValidator is a validator for the "title" field. It is called by the builders before save.
 	track.TitleValidator = trackDescTitle.Validators[0].(func(string) error)
 	// trackDescDisc is the schema descriptor for disc field.
-	trackDescDisc := trackFields[3].Descriptor()
+	trackDescDisc := trackFields[4].Descriptor()
 	// track.DefaultDisc holds the default value on creation for the disc field.
 	track.DefaultDisc = trackDescDisc.Default.(uint8)
 	// trackDescDuration is the schema descriptor for duration field.
-	trackDescDuration := trackFields[5].Descriptor()
+	trackDescDuration := trackFields[6].Descriptor()
 	// track.DefaultDuration holds the default value on creation for the duration field.
 	track.DefaultDuration = trackDescDuration.Default.(uint32)
 	// trackDescBonus is the schema descriptor for bonus field.
-	trackDescBonus := trackFields[6].Descriptor()
+	trackDescBonus := trackFields[7].Descriptor()
 	// track.DefaultBonus holds the default value on creation for the bonus field.
 	track.DefaultBonus = trackDescBonus.Default.(bool)
 	transcodejobMixin := schema.TranscodeJob{}.Mixin()

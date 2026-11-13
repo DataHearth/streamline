@@ -25,6 +25,8 @@ const (
 	FieldName = "name"
 	// FieldSortName holds the string denoting the sort_name field in the database.
 	FieldSortName = "sort_name"
+	// FieldAliases holds the string denoting the aliases field in the database.
+	FieldAliases = "aliases"
 	// FieldOverview holds the string denoting the overview field in the database.
 	FieldOverview = "overview"
 	// FieldOverviewSource holds the string denoting the overview_source field in the database.
@@ -119,6 +121,7 @@ var Columns = []string{
 	FieldMbid,
 	FieldName,
 	FieldSortName,
+	FieldAliases,
 	FieldOverview,
 	FieldOverviewSource,
 	FieldOverviewFr,

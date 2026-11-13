@@ -301,6 +301,8 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			"begin-area":{"name":"Aberdeen"},"area":{"name":"United States"},
 			"life-span":{"begin":"1987-01-01"},
 			"genres":[{"name":"grunge","count":3},{"name":"rock","count":9}],
+			"aliases":[{"name":"Nirvāna","type":"Artist name"},{"name":"Nirvanna","type":"Search hint"},
+				{"name":"nirvana","type":"Artist name"},{"name":"Kurt's Band","type":"Legal name"}],
 			"relations":[
 				{"type":"member of band","direction":"backward","begin":"1987","end":"1994","ended":true,"attributes":["original","guitar","lead vocals"],"artist":{"id":"m-kurt","name":"Kurt Cobain"}},
 				{"type":"member of band","direction":"backward","begin":"1990","ended":false,"attributes":["additional","drums"],"artist":{"id":"m-dave","name":"Dave Grohl"}},
@@ -332,7 +334,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				)
 				a, err := mb.GetArtist(ctx, "mbid-1")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(gotInc).To(Equal("genres+artist-rels+url-rels"))
+				Expect(gotInc).To(Equal("genres+artist-rels+url-rels+aliases"))
 				Expect(a.ReleaseGroups).To(HaveLen(1))
 				Expect(a.ReleaseGroups[0].Type).To(Equal(AlbumTypeAlbum))
 				Expect(a.ReleaseGroups[0].ReleaseDate.Year()).To(Equal(1991))
@@ -346,6 +348,7 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				Expect(a.Genres).To(Equal([]string{"Rock", "Grunge"}))
 				Expect(a.DeezerID).To(Equal(uint32(415)))
 				Expect(a.WikidataID).To(Equal("Q11649"))
+				Expect(a.Aliases).To(Equal([]string{"Nirvāna", "Kurt's Band"}))
 			},
 		)
 
@@ -565,6 +568,40 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			)
 			return &incs
 		}
+
+		It("reads a track's other titles off a pseudo-release", func() {
+			track := func(title string) string {
+				return `{"id":"rel","media":[{"position":1,"format":"CD","tracks":[
+					{"id":"t-1","position":1,"title":"` + title + `","recording":{"id":"rec-1"}}]}]}`
+			}
+			var alias []string
+			mb.client.Transport = mbRoundTripper(
+				func(r *http.Request) (*http.Response, error) {
+					switch r.URL.Path {
+					case "/ws/2/release-group/rg-1":
+						return jsonResponse(
+							200,
+							`{"id":"rg-1","title":"Сказка","releases":[
+							{"id":"rel-1","title":"Сказка","status":"Official","date":"2018","text-representation":{"script":"Cyrl"},"media":[{"format":"CD","track-count":1}]},
+							{"id":"rel-9","title":"Skazka","status":"Pseudo-Release","text-representation":{"script":"Latn"},"media":[{"format":"CD","track-count":1}]}]}`,
+						), nil
+					case "/ws/2/release/rel-1":
+						return jsonResponse(200, track("Привет")), nil
+					case "/ws/2/release/rel-9":
+						alias = append(alias, r.URL.Query().Get("inc"))
+						return jsonResponse(200, track("Privet")), nil
+					}
+					return jsonResponse(404, `{}`), nil
+				},
+			)
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(alias).To(Equal([]string{"recordings"}))
+			Expect(rg.ReleaseMBID).To(Equal("rel-1"))
+			Expect(rg.Tracks).To(HaveLen(1))
+			Expect(rg.Tracks[0].Title).To(Equal("Привет"))
+			Expect(rg.Tracks[0].Aliases).To(Equal([]string{"Privet"}))
+		})
 
 		It("lists the editions oldest first, leaving out what has no audio", func() {
 			mb.client.Transport = mbRoundTripper(

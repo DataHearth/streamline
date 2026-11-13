@@ -79,6 +79,12 @@ func (_c *ArtistCreate) SetNillableSortName(v *string) *ArtistCreate {
 	return _c
 }
 
+// SetAliases sets the "aliases" field.
+func (_c *ArtistCreate) SetAliases(v []string) *ArtistCreate {
+	_c.mutation.SetAliases(v)
+	return _c
+}
+
 // SetOverview sets the "overview" field.
 func (_c *ArtistCreate) SetOverview(v string) *ArtistCreate {
 	_c.mutation.SetOverview(v)
@@ -522,6 +528,10 @@ func (_c *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.SortName(); ok {
 		_spec.SetField(artist.FieldSortName, field.TypeString, value)
 		_node.SortName = value
+	}
+	if value, ok := _c.mutation.Aliases(); ok {
+		_spec.SetField(artist.FieldAliases, field.TypeJSON, value)
+		_node.Aliases = value
 	}
 	if value, ok := _c.mutation.Overview(); ok {
 		_spec.SetField(artist.FieldOverview, field.TypeString, value)

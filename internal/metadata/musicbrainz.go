@@ -234,6 +234,34 @@ type mbArtist struct {
 	Tags           []mbTag  `json:"tags"`
 	Genres         []mbTag  `json:"genres"`
 	Relations      []mbRel  `json:"relations"`
+	Aliases        []struct {
+		Name string `json:"name"`
+		Type string `json:"type"`
+	} `json:"aliases"`
+}
+
+// aliases leaves out search hints, which are misspellings filed to help
+// MusicBrainz's own search. A legal name stays: it is where a performer's
+// romanized name is often filed ("Gen Hoshino" for 星野源).
+func (a mbArtist) aliases() []string {
+	out := []string{}
+	for _, al := range a.Aliases {
+		out = appendAlias(out, a.Name, al.Name, al.Type == "Search hint")
+	}
+	return out
+}
+
+// appendAlias adds name to out unless skip, or it is empty, primary itself or
+// already listed, case aside.
+func appendAlias(out []string, primary, name string, skip bool) []string {
+	name = strings.TrimSpace(name)
+	if skip || name == "" || strings.EqualFold(name, primary) ||
+		slices.ContainsFunc(out, func(o string) bool {
+			return strings.EqualFold(o, name)
+		}) {
+		return out
+	}
+	return append(out, name)
 }
 
 type lifeSpan struct {
@@ -535,7 +563,7 @@ func (m *MusicBrainz) GetArtist(
 	if err := m.get(
 		ctx,
 		"/artist/"+url.PathEscape(mbid),
-		url.Values{"inc": {"genres+artist-rels+url-rels"}},
+		url.Values{"inc": {"genres+artist-rels+url-rels+aliases"}},
 		&artist,
 	); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
@@ -544,6 +572,7 @@ func (m *MusicBrainz) GetArtist(
 		ArtistResult: artist.toResult(),
 		Origin:       joinAreas(artist.BeginArea, artist.Area),
 	}
+	details.Aliases = artist.aliases()
 	if g := topGenres(artist.Genres); len(g) > 0 {
 		details.Genres = g
 	}
@@ -742,13 +771,16 @@ func readURLRel(rel mbRel, d *ArtistDetails) {
 }
 
 type mbRelease struct {
-	ID        string          `json:"id"`
-	Title     string          `json:"title"`
-	Disambig  string          `json:"disambiguation"`
-	Status    string          `json:"status"`
-	Date      string          `json:"date"`
-	Barcode   string          `json:"barcode"`
-	Country   string          `json:"country"`
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Disambig string `json:"disambiguation"`
+	Status   string `json:"status"`
+	Date     string `json:"date"`
+	Barcode  string `json:"barcode"`
+	Country  string `json:"country"`
+	Text     struct {
+		Script string `json:"script"`
+	} `json:"text-representation"`
 	LabelInfo []mbLabelInfo   `json:"label-info"`
 	Media     []mbMedium      `json:"media"`
 	Relations []mbRel         `json:"relations"`
@@ -880,23 +912,73 @@ type mbReleaseGroupDetail struct {
 // MusicBrainz files a transliteration.
 func (rg mbReleaseGroupDetail) aliases() []string {
 	out := []string{}
-	add := func(name string) {
-		name = strings.TrimSpace(name)
-		if name == "" || strings.EqualFold(name, rg.Title) ||
-			slices.ContainsFunc(out, func(o string) bool {
-				return strings.EqualFold(o, name)
-			}) {
-			return
-		}
-		out = append(out, name)
-	}
 	for _, a := range rg.Aliases {
-		add(a.Name)
+		out = appendAlias(out, rg.Title, a.Name, false)
 	}
 	for _, r := range rg.Releases {
-		add(r.Title)
+		out = appendAlias(out, rg.Title, r.Title, false)
 	}
 	return out
+}
+
+// maxAliasReleases caps the extra release calls one album's track aliases
+// may cost.
+const maxAliasReleases = 2
+
+// fillTrackAliases gives each track the titles its recording carries on the
+// group's releases in another script: a pseudo-release is the same track
+// list transliterated or translated, recording for recording. One light call
+// per such release, none for a group that has only one script. A release
+// that cannot be read is skipped; a rate limit is the caller's to wait out.
+func (m *MusicBrainz) fillTrackAliases(
+	ctx context.Context,
+	details *ReleaseGroupDetails,
+	releases []mbRelease,
+) error {
+	var script string
+	for _, r := range releases {
+		if r.ID == details.ReleaseMBID {
+			script = r.Text.Script
+		}
+	}
+	var seen []string
+	titles := map[string][]string{}
+	for _, r := range releases {
+		other := r.Status == "Pseudo-Release" ||
+			(r.Text.Script != "" && script != "" && r.Text.Script != script)
+		key := r.Text.Script + "\x00" + r.Title
+		if r.ID == details.ReleaseMBID || !other || slices.Contains(seen, key) {
+			continue
+		}
+		if len(seen) == maxAliasReleases {
+			break
+		}
+		seen = append(seen, key)
+		var rel mbRelease
+		err := m.getMax(ctx, "/release/"+url.PathEscape(r.ID),
+			url.Values{"inc": {"recordings"}}, maxMusicReleaseResponse, &rel)
+		switch {
+		case errors.Is(err, ErrRateLimited) || ctx.Err() != nil:
+			return err
+		case err != nil:
+			slog.WarnContext(ctx, "musicbrainz track aliases: release skipped",
+				"musicbrainz.release", r.ID, "error", err)
+			continue
+		}
+		for _, md := range rel.Media {
+			for _, t := range md.Tracks {
+				titles[t.Recording.ID] = append(titles[t.Recording.ID], t.Title)
+			}
+		}
+	}
+	for i, t := range details.Tracks {
+		aliases := []string{}
+		for _, title := range titles[t.MBID] {
+			aliases = appendAlias(aliases, t.Title, title, false)
+		}
+		details.Tracks[i].Aliases = aliases
+	}
+	return nil
 }
 
 func (m *MusicBrainz) fetchReleaseGroup(
@@ -1053,6 +1135,9 @@ func (m *MusicBrainz) GetReleaseGroupEdition(
 	details.Media = mapMedia(formats)
 	details.CreditsComplete = complete
 	fillRelease(details, rel, complete)
+	if err := m.fillTrackAliases(ctx, details, rg.Releases); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
 	return details, nil
 }
 

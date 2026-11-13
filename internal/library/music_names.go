@@ -8,9 +8,9 @@ import (
 )
 
 // ArtistNames is every name a release may credit the artist under: its name,
-// then its MusicBrainz sort name read forwards. A sort name is written in
-// Latin script whatever the name's own, so 星野源's "Hoshino, Gen" is the
-// "Gen Hoshino" a release outside Japan carries.
+// its MusicBrainz sort name read forwards, then its aliases. A sort name is
+// written in Latin script whatever the name's own, so 星野源's "Hoshino, Gen"
+// is the "Gen Hoshino" a release outside Japan carries.
 func ArtistNames(a *ent.Artist) []string {
 	names := []string{a.Name}
 	sort := a.SortName
@@ -20,10 +20,32 @@ func ArtistNames(a *ent.Artist) []string {
 		!strings.Contains(first, ",") {
 		sort = first + " " + last
 	}
-	if sort != "" && !slices.Contains(names, sort) {
-		names = append(names, sort)
+	for _, n := range append([]string{sort}, a.Aliases...) {
+		if n != "" && !slices.Contains(names, n) {
+			names = append(names, n)
+		}
 	}
 	return names
+}
+
+// TrackTitles is every title a file of the track may state: its own, then
+// the ones its recording carries on the album's other-script releases.
+func TrackTitles(t *ent.Track) []string {
+	return append([]string{t.Title}, t.Aliases...)
+}
+
+// trackTitleIs is TitleMatchesStrict against any of the track's titles.
+func trackTitleIs(t *ent.Track, title string) bool {
+	return slices.ContainsFunc(TrackTitles(t), func(own string) bool {
+		return TitleMatchesStrict(own, title)
+	})
+}
+
+// TrackTitleAgrees is TitlePrefixMatches against any of the track's titles.
+func TrackTitleAgrees(t *ent.Track, title string) bool {
+	return slices.ContainsFunc(TrackTitles(t), func(own string) bool {
+		return TitlePrefixMatches(own, title)
+	})
 }
 
 // AlbumTitles is every title a release of the album may carry: its own, then

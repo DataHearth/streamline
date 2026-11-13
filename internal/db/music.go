@@ -46,6 +46,7 @@ type TrackSeed struct {
 	MBID             string
 	ReleaseTrackMBID string
 	Title            string
+	Aliases          []string
 	Disc             uint8
 	Position         uint16
 	Duration         uint32
@@ -96,6 +97,7 @@ type CreateArtistParams struct {
 	MBID           string
 	Name           string
 	SortName       string
+	Aliases        []string
 	Monitor        artist.Monitor
 	Type           string
 	Origin         string
@@ -114,6 +116,7 @@ type CreateArtistParams struct {
 type RefreshArtistParams struct {
 	Name        string
 	SortName    string
+	Aliases     []string
 	Type        string
 	Origin      string
 	Since       uint16
@@ -312,6 +315,7 @@ func (db *DB) CreateArtist(
 		SetMbid(p.MBID).
 		SetName(p.Name).
 		SetSortName(p.SortName).
+		SetAliases(append([]string{}, p.Aliases...)).
 		SetOrigin(p.Origin).
 		SetSince(p.Since).
 		SetGenre(p.Genre).
@@ -975,6 +979,7 @@ func (db *DB) RefreshArtist(
 	u := c.Artist.UpdateOneID(id).
 		SetName(p.Name).
 		SetSortName(p.SortName).
+		SetAliases(append([]string{}, p.Aliases...)).
 		SetOrigin(p.Origin).
 		SetSince(p.Since).
 		SetGenre(p.Genre).
@@ -1412,6 +1417,7 @@ func (db *DB) SetAlbumHydration(
 				SetMbid(t.MBID).
 				SetReleaseTrackMbid(t.ReleaseTrackMBID).
 				SetTitle(t.Title).
+				SetAliases(append([]string{}, t.Aliases...)).
 				SetDisc(t.Disc).
 				SetPosition(t.Position).
 				SetDuration(t.Duration).
@@ -1426,6 +1432,7 @@ func (db *DB) SetAlbumHydration(
 				SetMbid(t.MBID).
 				SetReleaseTrackMbid(t.ReleaseTrackMBID).
 				SetTitle(t.Title).
+				SetAliases(append([]string{}, t.Aliases...)).
 				SetDisc(t.Disc).
 				SetPosition(t.Position).
 				SetDuration(t.Duration).

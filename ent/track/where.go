@@ -400,6 +400,16 @@ func TitleContainsFold(v string) predicate.Track {
 	return predicate.Track(sql.FieldContainsFold(FieldTitle, v))
 }
 
+// AliasesIsNil applies the IsNil predicate on the "aliases" field.
+func AliasesIsNil() predicate.Track {
+	return predicate.Track(sql.FieldIsNull(FieldAliases))
+}
+
+// AliasesNotNil applies the NotNil predicate on the "aliases" field.
+func AliasesNotNil() predicate.Track {
+	return predicate.Track(sql.FieldNotNull(FieldAliases))
+}
+
 // DiscEQ applies the EQ predicate on the "disc" field.
 func DiscEQ(v uint8) predicate.Track {
 	return predicate.Track(sql.FieldEQ(FieldDisc, v))

@@ -126,6 +126,7 @@ var (
 		{Name: "mbid", Type: field.TypeString, Unique: true},
 		{Name: "name", Type: field.TypeString},
 		{Name: "sort_name", Type: field.TypeString, Nullable: true},
+		{Name: "aliases", Type: field.TypeJSON, Nullable: true},
 		{Name: "overview", Type: field.TypeString, Nullable: true},
 		{Name: "overview_source", Type: field.TypeString, Nullable: true},
 		{Name: "overview_fr", Type: field.TypeString, Nullable: true},
@@ -1893,6 +1894,7 @@ var (
 		{Name: "mbid", Type: field.TypeString, Nullable: true},
 		{Name: "release_track_mbid", Type: field.TypeString, Nullable: true},
 		{Name: "title", Type: field.TypeString},
+		{Name: "aliases", Type: field.TypeJSON, Nullable: true},
 		{Name: "disc", Type: field.TypeUint8, Default: 1},
 		{Name: "position", Type: field.TypeUint16},
 		{Name: "duration", Type: field.TypeUint32, Nullable: true, Default: 0},
@@ -1909,7 +1911,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "tracks_albums_tracks",
-				Columns:    []*schema.Column{TracksColumns[12]},
+				Columns:    []*schema.Column{TracksColumns[13]},
 				RefColumns: []*schema.Column{AlbumsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1918,7 +1920,7 @@ var (
 			{
 				Name:    "track_album_tracks",
 				Unique:  false,
-				Columns: []*schema.Column{TracksColumns[12]},
+				Columns: []*schema.Column{TracksColumns[13]},
 			},
 		},
 	}

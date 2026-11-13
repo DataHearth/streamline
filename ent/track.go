@@ -29,6 +29,8 @@ type Track struct {
 	ReleaseTrackMbid string `json:"release_track_mbid,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
+	// Aliases holds the value of the "aliases" field.
+	Aliases []string `json:"aliases,omitempty"`
 	// Disc holds the value of the "disc" field.
 	Disc uint8 `json:"disc,omitempty"`
 	// Position holds the value of the "position" field.
@@ -128,7 +130,7 @@ func (*Track) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case track.FieldTagOverrides:
+		case track.FieldAliases, track.FieldTagOverrides:
 			values[i] = new([]byte)
 		case track.FieldBonus:
 			values[i] = new(sql.NullBool)
@@ -190,6 +192,14 @@ func (_m *Track) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field title", values[i])
 			} else if value.Valid {
 				_m.Title = value.String
+			}
+		case track.FieldAliases:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field aliases", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Aliases); err != nil {
+					return fmt.Errorf("unmarshal field aliases: %w", err)
+				}
 			}
 		case track.FieldDisc:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -316,6 +326,9 @@ func (_m *Track) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)
+	builder.WriteString(", ")
+	builder.WriteString("aliases=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Aliases))
 	builder.WriteString(", ")
 	builder.WriteString("disc=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Disc))

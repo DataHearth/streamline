@@ -347,6 +347,7 @@ func (s *Service) Add(ctx context.Context, p AddParams) (*ent.Artist, error) {
 		MBID:           details.MBID,
 		Name:           details.Name,
 		SortName:       details.SortName,
+		Aliases:        details.Aliases,
 		Monitor:        policy,
 		Type:           details.Type,
 		Origin:         details.Origin,
@@ -633,6 +634,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 	created, removed, err := s.db.RefreshArtist(ctx, id, db.RefreshArtistParams{
 		Name:        details.Name,
 		SortName:    details.SortName,
+		Aliases:     details.Aliases,
 		Type:        details.Type,
 		Origin:      details.Origin,
 		Since:       details.Since,

@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/artist"
@@ -85,6 +86,24 @@ func (_u *ArtistUpdate) SetNillableSortName(v *string) *ArtistUpdate {
 // ClearSortName clears the value of the "sort_name" field.
 func (_u *ArtistUpdate) ClearSortName() *ArtistUpdate {
 	_u.mutation.ClearSortName()
+	return _u
+}
+
+// SetAliases sets the "aliases" field.
+func (_u *ArtistUpdate) SetAliases(v []string) *ArtistUpdate {
+	_u.mutation.SetAliases(v)
+	return _u
+}
+
+// AppendAliases appends value to the "aliases" field.
+func (_u *ArtistUpdate) AppendAliases(v []string) *ArtistUpdate {
+	_u.mutation.AppendAliases(v)
+	return _u
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (_u *ArtistUpdate) ClearAliases() *ArtistUpdate {
+	_u.mutation.ClearAliases()
 	return _u
 }
 
@@ -711,6 +730,17 @@ func (_u *ArtistUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.SortNameCleared() {
 		_spec.ClearField(artist.FieldSortName, field.TypeString)
 	}
+	if value, ok := _u.mutation.Aliases(); ok {
+		_spec.SetField(artist.FieldAliases, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedAliases(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, artist.FieldAliases, value)
+		})
+	}
+	if _u.mutation.AliasesCleared() {
+		_spec.ClearField(artist.FieldAliases, field.TypeJSON)
+	}
 	if value, ok := _u.mutation.Overview(); ok {
 		_spec.SetField(artist.FieldOverview, field.TypeString, value)
 	}
@@ -1147,6 +1177,24 @@ func (_u *ArtistUpdateOne) SetNillableSortName(v *string) *ArtistUpdateOne {
 // ClearSortName clears the value of the "sort_name" field.
 func (_u *ArtistUpdateOne) ClearSortName() *ArtistUpdateOne {
 	_u.mutation.ClearSortName()
+	return _u
+}
+
+// SetAliases sets the "aliases" field.
+func (_u *ArtistUpdateOne) SetAliases(v []string) *ArtistUpdateOne {
+	_u.mutation.SetAliases(v)
+	return _u
+}
+
+// AppendAliases appends value to the "aliases" field.
+func (_u *ArtistUpdateOne) AppendAliases(v []string) *ArtistUpdateOne {
+	_u.mutation.AppendAliases(v)
+	return _u
+}
+
+// ClearAliases clears the value of the "aliases" field.
+func (_u *ArtistUpdateOne) ClearAliases() *ArtistUpdateOne {
+	_u.mutation.ClearAliases()
 	return _u
 }
 
@@ -1802,6 +1850,17 @@ func (_u *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err erro
 	}
 	if _u.mutation.SortNameCleared() {
 		_spec.ClearField(artist.FieldSortName, field.TypeString)
+	}
+	if value, ok := _u.mutation.Aliases(); ok {
+		_spec.SetField(artist.FieldAliases, field.TypeJSON, value)
+	}
+	if value, ok := _u.mutation.AppendedAliases(); ok {
+		_spec.AddModifier(func(u *sql.UpdateBuilder) {
+			sqljson.Append(u, artist.FieldAliases, value)
+		})
+	}
+	if _u.mutation.AliasesCleared() {
+		_spec.ClearField(artist.FieldAliases, field.TypeJSON)
 	}
 	if value, ok := _u.mutation.Overview(); ok {
 		_spec.SetField(artist.FieldOverview, field.TypeString, value)

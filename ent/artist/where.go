@@ -430,6 +430,16 @@ func SortNameContainsFold(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldContainsFold(FieldSortName, v))
 }
 
+// AliasesIsNil applies the IsNil predicate on the "aliases" field.
+func AliasesIsNil() predicate.Artist {
+	return predicate.Artist(sql.FieldIsNull(FieldAliases))
+}
+
+// AliasesNotNil applies the NotNil predicate on the "aliases" field.
+func AliasesNotNil() predicate.Artist {
+	return predicate.Artist(sql.FieldNotNull(FieldAliases))
+}
+
 // OverviewEQ applies the EQ predicate on the "overview" field.
 func OverviewEQ(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldEQ(FieldOverview, v))

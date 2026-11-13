@@ -90,7 +90,7 @@ func MatchTrack(tracks []*ent.Track, info audiotags.Info) *ent.Track {
 	}
 	if i := slices.IndexFunc(tracks, func(t *ent.Track) bool {
 		return strings.EqualFold(strings.TrimSpace(t.Title), title) ||
-			TitleMatchesStrict(t.Title, title)
+			trackTitleIs(t, title)
 	}); i >= 0 {
 		return tracks[i]
 	}
@@ -140,7 +140,7 @@ func NewTrackMatcher(tracks []*ent.Track, infos []audiotags.Info) TrackMatcher {
 			continue
 		}
 		switch {
-		case TitlePrefixMatches(t.Title, info.Title):
+		case TrackTitleAgrees(t, info.Title):
 			agree++
 		case matchTitle(tracks, info.Disc, info.Title) != nil:
 			elsewhere++
@@ -178,7 +178,7 @@ func (m TrackMatcher) Match(info audiotags.Info) *ent.Track {
 // offered to someone choosing a held file's track.
 func (m TrackMatcher) Suggest(info audiotags.Info) *ent.Track {
 	t := m.Match(info)
-	if t != nil && TitlePrefixMatches(t.Title, info.Title) {
+	if t != nil && TrackTitleAgrees(t, info.Title) {
 		return t
 	}
 	if named := matchTitle(m.tracks, info.Disc, info.Title); named != nil {
@@ -205,7 +205,7 @@ func matchTitle(tracks []*ent.Track, disc uint8, title string) *ent.Track {
 	}
 	var found *ent.Track
 	for _, t := range tracks {
-		if !TitleMatchesStrict(t.Title, title) {
+		if !trackTitleIs(t, title) {
 			continue
 		}
 		if t.Disc == disc {
@@ -311,7 +311,7 @@ func MatchTrackByName(tracks []*ent.Track, p string) *ent.Track {
 		return t
 	}
 	if i := slices.IndexFunc(tracks, func(t *ent.Track) bool {
-		return TitleMatchesStrict(t.Title, title)
+		return trackTitleIs(t, title)
 	}); i >= 0 {
 		return tracks[i]
 	}
