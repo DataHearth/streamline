@@ -430,14 +430,18 @@ func (c *Cardigann) TestConnection(ctx context.Context) error {
 }
 
 // cardigannError files an engine failure under the sentinel the handlers and
-// metrics read; a transport failure has none of the engine's own.
+// metrics read; a transport failure has none of the engine's own. What it
+// returns is logged, recorded on spans, stored as a session's LastError and
+// answered by the API, so no branch may pass a request URL through: a
+// cancelled or timed-out request is a *url.Error quoting it, query and all.
 func cardigannError(err error) error {
 	switch {
 	case err == nil:
 		return nil
 	case errors.Is(err, context.Canceled),
-		errors.Is(err, context.DeadlineExceeded),
-		errors.Is(err, ErrLoginFailed),
+		errors.Is(err, context.DeadlineExceeded):
+		return otelx.RedactTransportError(err)
+	case errors.Is(err, ErrLoginFailed),
 		errors.Is(err, ErrCaptchaRequired),
 		errors.Is(err, ErrLoginBackoff):
 		return err

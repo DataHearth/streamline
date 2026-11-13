@@ -584,7 +584,17 @@ request stops at a `magnet:` hop, which a transport cannot take; `Fetch` hands i
   different address, still fails there. The audit log redacts `.cardigann.proxy`.
 - Errors: `indexer.ErrChallenge` (outcome `challenge`), echoed in connection tests — the
   engine's messages carry no tracker URL, and a transport error reaching the solver is
-  redacted.
+  redacted. The solver's own `message` is foreign text about a request it was handed
+  whole, so `scrubSolverMessage` cuts every URL in it down to scheme, host and path and
+  removes the request's query and form values (4 characters and up) and the proxy's
+  credentials wherever else they stand. A value the solver quotes in an encoding other than
+  plain, query- or path-escaped, outside a URL, is not recognised.
+- **A request URL is a secret** (a `get` login's credentials, a passkey download link, an
+  API-key search all sit in the query) and net/http quotes it whole in every transport
+  error, a timeout or cancellation included. `Engine.send` passes each through
+  `otelx.RedactTransportError` (scheme, host and path kept, `errors.Is` intact), and
+  `indexer.cardigannError` does so again on its context branch, since what it returns is
+  logged, recorded on spans, stored as `IndexerSession.last_error` and answered by the API.
 
 ## Secrets
 
