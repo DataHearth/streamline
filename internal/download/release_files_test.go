@@ -2,6 +2,7 @@ package download
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -65,8 +66,47 @@ var _ = Describe("ReleaseFiles", Label("unit", "downloads"), func() {
 		}))
 	})
 
-	It("has no file list for a magnet", func() {
+	It("has no file list for a magnet its client cannot probe", func() {
 		_, err := mgr.ReleaseFiles(ctx, indexer.SearchResult{
+			Download: "magnet:?xt=urn:btih:abc",
+		})
+		Expect(err).To(MatchError(ErrFileListUnavailable))
+	})
+
+	It("lists a magnet's files through a client that can probe it", func() {
+		configtest.Setup(map[string]any{
+			"download_clients": []map[string]any{{
+				"name": "embedded", "client_type": "builtin",
+				"download_dir": "/downloads", "enabled": true,
+			}},
+		})
+		prober := &fakeProbeClient{metainfo: buildTorrentBytes(metainfo.Info{
+			Name: "Avatar - Feathers & Flesh",
+			Files: []metainfo.FileInfo{
+				{Path: []string{"01 - Regret.flac"}, Length: 30},
+			},
+		})}
+		probing := New(dbmocks.NewMockStore(GinkgoT()), prober)
+
+		files, err := probing.ReleaseFiles(ctx, indexer.SearchResult{
+			Download: "magnet:?xt=urn:btih:abc",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(prober.magnet).To(Equal("magnet:?xt=urn:btih:abc"))
+		Expect(files).To(Equal([]ReleaseFile{{Path: "01 - Regret.flac", Size: 30}}))
+	})
+
+	It("has no file list for a magnet no peer answered for", func() {
+		configtest.Setup(map[string]any{
+			"download_clients": []map[string]any{{
+				"name": "embedded", "client_type": "builtin",
+				"download_dir": "/downloads", "enabled": true,
+			}},
+		})
+		silent := New(dbmocks.NewMockStore(GinkgoT()), &fakeProbeClient{
+			err: fmt.Errorf("%w: no peer", ErrFileListUnavailable),
+		})
+		_, err := silent.ReleaseFiles(ctx, indexer.SearchResult{
 			Download: "magnet:?xt=urn:btih:abc",
 		})
 		Expect(err).To(MatchError(ErrFileListUnavailable))
@@ -86,3 +126,18 @@ var _ = Describe("ReleaseFiles", Label("unit", "downloads"), func() {
 		Expect(err).To(HaveOccurred())
 	})
 })
+
+// fakeProbeClient is a client that fetches a magnet's metainfo for a preview.
+type fakeProbeClient struct {
+	fakeSelectiveClient
+	magnet   string
+	metainfo []byte
+	err      error
+}
+
+func (f *fakeProbeClient) ProbeMagnet(
+	_ context.Context, magnet string,
+) ([]byte, error) {
+	f.magnet = magnet
+	return f.metainfo, f.err
+}

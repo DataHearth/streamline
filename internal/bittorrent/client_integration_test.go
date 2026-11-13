@@ -963,6 +963,57 @@ var _ = Describe(
 			Expect(spec.InfoBytes).To(Equal(info))
 		})
 
+		It("probes a magnet it already holds from the torrent itself", func() {
+			ctx := context.Background()
+			dlDir := filepath.Join(GinkgoT().TempDir(), "dl")
+			Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+			entClient := dbtest.SetupTestDB(ctx)
+			DeferCleanup(entClient.Close)
+			engine, _ := newEngine(ctx, dlDir, db.New(entClient))
+
+			info, infoHash := packInfo(100)
+			magnet := "magnet:?xt=urn:btih:" + infoHash.HexString()
+			_, err := engine.AddTorrent(ctx, download.TorrentSource{Magnet: magnet})
+			Expect(err).NotTo(HaveOccurred())
+			t, ok := engine.client.Torrent(infoHash)
+			Expect(ok).To(BeTrue())
+			Expect(t.SetInfoBytes(info)).To(Succeed())
+
+			raw, err := engine.ProbeMagnet(ctx, magnet)
+			Expect(err).NotTo(HaveOccurred())
+			spec, _, _, err := specFromSource(download.TorrentSource{Bytes: raw})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(spec.InfoBytes).To(Equal(info))
+		})
+
+		It(
+			"gives up on a magnet no peer answers for and leaves nothing behind",
+			func() {
+				ctx := context.Background()
+				dlDir := filepath.Join(GinkgoT().TempDir(), "dl")
+				Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+				entClient := dbtest.SetupTestDB(ctx)
+				DeferCleanup(entClient.Close)
+				engine, _ := newEngine(ctx, dlDir, db.New(entClient))
+
+				_, infoHash := packInfo(100)
+				short, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+				defer cancel()
+				_, err := engine.ProbeMagnet(
+					short, "magnet:?xt=urn:btih:"+infoHash.HexString(),
+				)
+				Expect(err).To(MatchError(download.ErrFileListUnavailable))
+
+				_, held := engine.client.Torrent(infoHash)
+				Expect(held).To(BeFalse())
+				left, err := filepath.Glob(
+					filepath.Join(sessionDir(dlDir), "probe-*"),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(left).To(BeEmpty())
+			},
+		)
+
 		It("drops a second magnet sharing a held name and reports why", func() {
 			ctx := context.Background()
 			dlDir := filepath.Join(GinkgoT().TempDir(), "dl")

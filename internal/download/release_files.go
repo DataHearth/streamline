@@ -7,16 +7,48 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/otelx"
 )
 
-// ErrFileListUnavailable is returned by ReleaseFiles for a magnet: its file
-// list lives in the metainfo only peers can hand over, and nothing is added
-// to a client to ask them.
+// ErrFileListUnavailable is returned by ReleaseFiles for a magnet whose file
+// list could not be had: it lives in the metainfo only peers can hand over,
+// and the download client either cannot ask them without adding the torrent
+// or got no answer.
 var ErrFileListUnavailable = errors.New(
 	"a magnet link carries no file list until a client fetches it from peers",
 )
+
+// magnetProber is a client that can fetch a magnet's metainfo from its swarm
+// for a person's preview, at a cost a grab should not pay: the builtin
+// engine starts a client of its own for it.
+type magnetProber interface {
+	ProbeMagnet(ctx context.Context, magnet string) ([]byte, error)
+}
+
+// magnetMetainfo asks the download client a grab would use for the magnet's
+// metainfo, without adding the torrent to it.
+func (d *download) magnetMetainfo(
+	ctx context.Context,
+	magnet string,
+) ([]byte, error) {
+	dc, ok := config.PickDownloadClient()
+	if !ok {
+		return nil, ErrFileListUnavailable
+	}
+	client, err := d.buildClient(dc)
+	if err != nil {
+		return nil, err
+	}
+	switch c := client.(type) {
+	case MagnetMetadataFetcher:
+		return c.FetchMagnetMetadata(ctx, magnet)
+	case magnetProber:
+		return c.ProbeMagnet(ctx, magnet)
+	}
+	return nil, ErrFileListUnavailable
+}
 
 // ReleaseFile is one file of a release's torrent, as its metainfo lists it.
 type ReleaseFile struct {
@@ -47,7 +79,9 @@ func (d *download) ReleaseFiles(
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	if src.Magnet != "" {
-		return nil, otelx.RecordSpanError(span, ErrFileListUnavailable)
+		if src.Bytes, err = d.magnetMetainfo(ctx, src.Magnet); err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
 	}
 	files, err := decodeTorrentFiles(src.Bytes)
 	if err != nil {

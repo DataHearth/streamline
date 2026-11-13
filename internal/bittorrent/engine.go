@@ -5,7 +5,6 @@
 package bittorrent
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"errors"
@@ -105,6 +104,11 @@ type Engine struct {
 	// listener nor change the port it announces.
 	listener   *rebindableListener
 	packetConn *rebindablePacketConn
+	// entry and bindIP are what the client was built from; a magnet probe
+	// builds its own client from the same two. probing lets one run at a time.
+	entry   config.DownloadClientEntry
+	bindIP  net.IP
+	probing sync.Mutex
 
 	mu     sync.Mutex
 	state  map[string]*torrentState
@@ -149,47 +153,15 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	}
 	st, paths := newContentStorage(entry.DownloadDir, pc)
 
-	packetConn, listener, err := newPeerSockets(ctx, bindIP, entry.ListenPort)
+	peers, err := newPeerClient(ctx, entry, bindIP, st, entry.ListenPort)
 	if err != nil {
 		closeAndWarn(ctx, "torrent storage", st)
 		return nil, err
 	}
-
-	cc := newClientConfig(entry, bindIP, st, packetConn)
-
-	client, err := antorrent.NewClient(cc)
-	if err != nil {
-		closeAndWarn(ctx, "torrent storage", st)
-		closeAndWarn(ctx, "listener after client failure", listener)
-		closeAndWarn(ctx, "packet conn after client failure", packetConn)
-		return nil, fmt.Errorf("start torrent client: %w", err)
-	}
-	client.AddListener(listener)
+	client, listener, packetConn := peers.client, peers.listener, peers.packetConn
 	var bindAddr string
-	// cc.DisableTCP above stops anacrolix from creating any TCP socket of its
-	// own, and cl.dialers is populated only from sockets it created — so
-	// without a dialer added here, nothing ever dials TCP and every outbound
-	// peer connection is uTP-only. Both branches exist to supply the TCP
-	// dialer anacrolix then does not; only the *binding* differs.
 	if bindIP != nil {
-		network := "tcp6"
-		if bindIP.To4() != nil {
-			network = "tcp4"
-		}
-		client.AddDialer(antorrent.NetworkDialer{
-			Network: network,
-			Dialer:  &net.Dialer{LocalAddr: &net.TCPAddr{IP: bindIP}},
-		})
 		bindAddr = bindIP.String()
-	} else {
-		client.AddDialer(antorrent.NetworkDialer{
-			Network: "tcp4",
-			Dialer:  &net.Dialer{},
-		})
-		client.AddDialer(antorrent.NetworkDialer{
-			Network: "tcp6",
-			Dialer:  &net.Dialer{},
-		})
 	}
 	e := &Engine{
 		client:      client,
@@ -202,6 +174,8 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		bindAddr:    bindAddr,
 		listener:    listener,
 		packetConn:  packetConn,
+		entry:       entry,
+		bindIP:      bindIP,
 		state:       map[string]*torrentState{},
 		sample:      map[string]speedSample{},
 		refusals:    map[string]string{},
@@ -217,6 +191,66 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	e.registerEngineGauges(ctx)
 	e.wg.Go(e.enforceSeedLimits)
 	return e, nil
+}
+
+// peerClient is an anacrolix client and the peer sockets it rides. The sockets
+// are the caller's to close, after the client.
+type peerClient struct {
+	client     *antorrent.Client
+	listener   *rebindableListener
+	packetConn *rebindablePacketConn
+}
+
+// newPeerClient starts an anacrolix client on its own peer sockets, bound to
+// bindIP when one is set, with the TCP dialers the config leaves out.
+func newPeerClient(
+	ctx context.Context,
+	entry config.DownloadClientEntry,
+	bindIP net.IP,
+	st storage.ClientImpl,
+	port uint16,
+) (*peerClient, error) {
+	packetConn, listener, err := newPeerSockets(ctx, bindIP, port)
+	if err != nil {
+		return nil, err
+	}
+
+	cc := newClientConfig(entry, bindIP, st, packetConn)
+
+	client, err := antorrent.NewClient(cc)
+	if err != nil {
+		closeAndWarn(ctx, "listener after client failure", listener)
+		closeAndWarn(ctx, "packet conn after client failure", packetConn)
+		return nil, fmt.Errorf("start torrent client: %w", err)
+	}
+	client.AddListener(listener)
+	// cc.DisableTCP stops anacrolix from creating any TCP socket of its own,
+	// and cl.dialers is populated only from sockets it created — so without a
+	// dialer added here, nothing ever dials TCP and every outbound peer
+	// connection is uTP-only. Both branches exist to supply the TCP dialer
+	// anacrolix then does not; only the *binding* differs.
+	if bindIP != nil {
+		network := "tcp6"
+		if bindIP.To4() != nil {
+			network = "tcp4"
+		}
+		client.AddDialer(antorrent.NetworkDialer{
+			Network: network,
+			Dialer:  &net.Dialer{LocalAddr: &net.TCPAddr{IP: bindIP}},
+		})
+	} else {
+		client.AddDialer(antorrent.NetworkDialer{
+			Network: "tcp4",
+			Dialer:  &net.Dialer{},
+		})
+		client.AddDialer(antorrent.NetworkDialer{
+			Network: "tcp6",
+			Dialer:  &net.Dialer{},
+		})
+	}
+	return &peerClient{
+		client: client, listener: listener, packetConn: packetConn,
+	}, nil
 }
 
 // closeAndWarn closes a socket whose close is not the caller's outcome — a
@@ -644,9 +678,8 @@ func (e *Engine) startWhenReady(t *antorrent.Torrent, seedStopped, magnet bool) 
 // the next boot re-adds it with its files known instead of waiting on the
 // swarm for the metadata again.
 func (e *Engine) keepMetainfo(t *antorrent.Torrent, hash string) {
-	mi := t.Metainfo()
-	var buf bytes.Buffer
-	if err := mi.Write(&buf); err != nil {
+	raw, err := encodeMetainfo(t)
+	if err != nil {
 		slog.WarnContext(context.Background(),
 			"encoding a resolved magnet's metainfo failed",
 			"info_hash", hash, "error", err)
@@ -654,11 +687,11 @@ func (e *Engine) keepMetainfo(t *antorrent.Torrent, hash string) {
 	}
 	// restore drops a session whose source it cannot parse, and specFromSource
 	// refuses anything over this cap: such a torrent stays a magnet.
-	if buf.Len() > download.MaxTorrentFileSize {
+	if len(raw) > download.MaxTorrentFileSize {
 		return
 	}
 	if err := e.store.SetTorrentSessionSource(
-		context.Background(), hash, buf.Bytes(),
+		context.Background(), hash, raw,
 	); err != nil {
 		slog.WarnContext(context.Background(),
 			"persisting a resolved magnet's metainfo failed",

@@ -846,7 +846,7 @@ paths:
          would keep and import. `episodes` is the season's; 404 for a season the show does not have. Each episode says whether it holds a file, whether a
          grab without `replace_existing` is for it (`wanted`: still wanted and aired, or its file is missing from disk), and whether
          the release seems to carry it. The body is an item of the search response, unchanged. A
-         magnet answers 422 with `code: files_unavailable`; an indexer that does not hand a
+         magnet whose file list its download client could not fetch from peers answers 422 with `code: files_unavailable`; an indexer that does not hand a
          readable `.torrent` over answers 422 with `code: torrent_unreadable`; a link outside the
          configured indexers answers 422 with `code: grab_rejected`.
       tags: [series]
@@ -997,7 +997,7 @@ paths:
          would keep and import. `episodes` is every episode of the show, specials included. Each episode says whether it holds a file, whether a
          grab without `replace_existing` is for it (`wanted`: still wanted and aired, or its file is missing from disk), and whether
          the release seems to carry it. The body is an item of the search response, unchanged. A
-         magnet answers 422 with `code: files_unavailable`; an indexer that does not hand a
+         magnet whose file list its download client could not fetch from peers answers 422 with `code: files_unavailable`; an indexer that does not hand a
          readable `.torrent` over answers 422 with `code: torrent_unreadable`; a link outside the
          configured indexers answers 422 with `code: grab_rejected`.
       tags: [series]
@@ -1949,7 +1949,7 @@ paths:
          failed); empty means the grab would be refused. A folder naming an album that is not
          among them has `waiting: false` and is skipped by the import. Inside a waiting folder each
          file carries the `track_id` its **name** points at; the import matches by tags, so that
-         half is a preview. The body is an item of the browse response, unchanged. A magnet answers
+         half is a preview. The body is an item of the browse response, unchanged. A magnet whose file list its download client could not fetch from peers answers
          422 with `code: files_unavailable`; an indexer that does not hand a readable `.torrent`
          over answers 422 with `code: torrent_unreadable`; a link outside the configured indexers
          answers 422 with `code: grab_rejected`.
@@ -1987,8 +1987,9 @@ paths:
          prefix, track number, then a loose title), and every track of the album says whether it
          already holds a file and whether the release seems to carry it. The import itself
          matches by tags, so this is a preview: a file named for no track may still fill one.
-         The body is an item of the search response, unchanged. A magnet has no file list until
-         peers supply it and answers 422 with `code: files_unavailable`; an indexer that does
+         The body is an item of the search response, unchanged. A magnet's file list is fetched from its
+         peers by the download client when it can (up to 30 seconds), else it answers 422 with
+         `code: files_unavailable`; an indexer that does
          not hand a readable `.torrent` over answers 422 with `code: torrent_unreadable`; a link
          outside the configured indexers answers 422 with `code: grab_rejected`.
       tags: [music]

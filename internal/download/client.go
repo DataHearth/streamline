@@ -64,10 +64,10 @@ type TorrentFile struct {
 // MagnetMetadataFetcher is an optional Client capability: resolve a magnet's
 // metainfo without (or before) admitting the torrent, so a selective magnet
 // grab can take the exact .torrent path instead of the pending fallback.
-// Deluge implements it via core.prefetch_magnet_metadata (spec §4.2). The
-// builtin engine and Transmission don't — skipped pending evidence it's worth
-// the cost — but either could adopt it later by implementing this same
-// interface.
+// Deluge implements it via core.prefetch_magnet_metadata (spec §4.2).
+// Transmission does not. The builtin engine fetches a magnet's metainfo only
+// for a person's file preview (ProbeMagnet), not through this interface: its
+// probe starts a client of its own, a cost a grab should not pay.
 type MagnetMetadataFetcher interface {
 	FetchMagnetMetadata(ctx context.Context, magnet string) ([]byte, error)
 }
