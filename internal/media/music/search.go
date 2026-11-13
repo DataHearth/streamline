@@ -39,8 +39,8 @@ type AlbumRelease struct {
 
 func (r AlbumRelease) Rejected() bool { return r.Score < 0 }
 
-// otherAlbumReason sets aside an album search result named for something else.
-const otherAlbumReason = "names a different album or artist"
+// otherAlbumReason sets aside an album search result not named for the album.
+const otherAlbumReason = "is not named for this album and artist"
 
 // judge scores every result, dropping what the scope never lists and keeping
 // the rest, best first with the rejected ones after. other, when set, names
@@ -82,16 +82,41 @@ func judge(
 	return releases
 }
 
-// namingAlbum keeps the releases whose name is this artist and this album. An
-// indexer answers a search with whatever loosely matches it, and an automatic
-// grab has no person to notice that "Artist - Other Album" is not the album.
-func namingAlbum(releases []AlbumRelease, a *ent.Album) []AlbumRelease {
-	artist := a.Edges.Artist
-	if artist == nil {
-		return nil
+// answeringQuery drops, from what one search brought back, every result of an
+// indexer none of whose results names the artist or could be the album. That
+// is an indexer that did not search for the query: The Pirate Bay answers a
+// term it cannot read with the hundred most seeded torrents of the category,
+// and RuTracker matches a title it cannot read on the year alone. Judged per
+// search, since the same indexer answers the artist's Latin name properly.
+func answeringQuery(
+	results []indexer.SearchResult,
+	artist *ent.Artist,
+	a *ent.Album,
+) []indexer.SearchResult {
+	answered := make(map[string]bool)
+	for _, r := range results {
+		if library.ReleaseOpensOnArtist(r.Title, artist) ||
+			library.ReleaseNamesAlbum(r.Title, artist, a) {
+			answered[r.Indexer] = true
+		}
 	}
-	return slices.DeleteFunc(slices.Clone(releases), func(r AlbumRelease) bool {
-		return !library.ReleaseNamesAlbum(r.Result.Title, artist, a)
+	return slices.DeleteFunc(results, func(r indexer.SearchResult) bool {
+		return !answered[r.Indexer]
+	})
+}
+
+// withoutRepeats drops the releases a later query of one search found again.
+func withoutRepeats(results []indexer.SearchResult) []indexer.SearchResult {
+	type release struct {
+		title, indexer string
+		size           int64
+	}
+	seen := make(map[release]struct{}, len(results))
+	return slices.DeleteFunc(results, func(r indexer.SearchResult) bool {
+		k := release{r.Title, r.Indexer, r.Size}
+		_, dup := seen[k]
+		seen[k] = struct{}{}
+		return dup
 	})
 }
 
@@ -114,11 +139,11 @@ func notRejected(
 }
 
 // SearchAlbumReleases queries the indexers for the album and judges every
-// result against the artist's profile. A discography never appears: it is
-// rejected by scope, not listed. A release whose name reads as another album
-// or another artist stays listed but rejected: an indexer answers with
-// whatever loosely matches the query, and a lossless "Artist - Other Album"
-// would otherwise score like the album itself.
+// result against the artist's profile; the automatic search grabs from the
+// same list. A discography never appears: it is rejected by scope, not
+// listed. A release whose name does not read as this artist and this album
+// stays listed but rejected: an indexer answers with whatever loosely matches
+// the query, and a name that cannot be read is not known to be the album.
 func (s *Service) SearchAlbumReleases(
 	ctx context.Context,
 	albumID uint32,
@@ -145,14 +170,38 @@ func (s *Service) SearchAlbumReleases(
 	if a.ReleaseDate != nil {
 		year = numeric.SaturateU16(a.ReleaseDate.Year())
 	}
-	results, err := s.indexer.SearchAlbum(ctx, artist.Name, a.Title, year)
+	found, err := s.indexer.SearchAlbum(ctx, artist.Name, a.Title, year)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("search album: %w", err))
 	}
+	results := answeringQuery(found, artist, a)
+	if name, title, ok := library.LatinAlbumQuery(artist, a); ok {
+		// No year: one more request per indexer, not two.
+		found, err := s.indexer.SearchAlbum(ctx, name, title, 0)
+		if err != nil {
+			return nil, otelx.RecordSpanError(
+				span, fmt.Errorf("search album: %w", err))
+		}
+		results = append(results, answeringQuery(found, artist, a)...)
+		// Trackers file a translated work under names nobody can list: Этажи
+		// is "Floor" on two of them, and the artist's name is the only query
+		// that finds it. Sent last and only when nothing named the album.
+		if !slices.ContainsFunc(results, func(r indexer.SearchResult) bool {
+			return library.ReleaseNamesAlbum(r.Title, artist, a)
+		}) {
+			found, err := s.indexer.SearchArtist(ctx, name)
+			if err != nil {
+				return nil, otelx.RecordSpanError(
+					span, fmt.Errorf("search album: %w", err))
+			}
+			results = append(results, answeringQuery(found, artist, a)...)
+		}
+	}
+	results = withoutRepeats(results)
 	releases := judge(results, profile, library.MusicScopeAlbum,
 		func(p library.ParsedMusicRelease) bool { return !p.Discography },
 		func(r indexer.SearchResult) string {
-			if library.ReleaseNamesOtherAlbum(r.Title, artist, a) {
+			if !library.ReleaseNamesAlbum(r.Title, artist, a) {
 				return otherAlbumReason
 			}
 			return ""
@@ -288,7 +337,7 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) (bool, error) {
 			"album.id", a.ID, "error", err)
 	}
 	accepted := slices.DeleteFunc(
-		notRejected(ctx, namingAlbum(releases, a), blocklist, a.ID),
+		notRejected(ctx, releases, blocklist, a.ID),
 		func(r AlbumRelease) bool { return r.Rejected() || r.Result.NoSeeders() },
 	)
 	if len(accepted) == 0 {

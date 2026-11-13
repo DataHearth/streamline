@@ -102,8 +102,85 @@ var _ = Describe("Music searches", Label("unit", "integration", "music"), func()
 			Expect(got[1].Rejected()).To(BeFalse())
 			for _, r := range got[2:] {
 				Expect(r.Rejected()).To(BeTrue())
-				Expect(r.Reason).To(Equal("names a different album or artist"))
+				Expect(r.Reason).To(Equal("is not named for this album and artist"))
 			}
+		})
+
+		It("hides an indexer that answered with nothing of the artist", func() {
+			e.idx.EXPECT().
+				SearchAlbum(mock.Anything, "Nirvana", "Nevermind", uint16(1991)).
+				Return([]indexer.SearchResult{
+					{Title: "Queen - The Works [FLAC]", Indexer: "top100"},
+					{Title: "Gorillaz - The Mountain [FLAC]", Indexer: "top100"},
+					{Title: "Nirvana - Bleach (1989) [FLAC]", Indexer: "strays"},
+					{Title: "Nirvana - Nevermind (1991) [FLAC]", Indexer: "good"},
+					{Title: "Mudhoney - Superfuzz [FLAC]", Indexer: "good"},
+				}, nil).
+				Once()
+
+			got, err := e.svc.SearchAlbumReleases(e.ctx, al.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(titles(got)).To(ConsistOf(
+				"Nirvana - Nevermind (1991) [FLAC]",
+				"Nirvana - Bleach (1989) [FLAC]",
+				"Mudhoney - Superfuzz [FLAC]",
+			))
+		})
+
+		It("also searches a non-Latin album under its Latin names", func() {
+			artist, albums := e.seedArtist("星野源", albumSeed{
+				mbid: "rg-jp", title: "ばかのうた", monitored: true,
+				tracks: []string{"A"},
+			})
+			e.client.Artist.UpdateOneID(artist.ID).
+				SetSortName("Hoshino, Gen").ExecX(e.ctx)
+			e.client.Album.UpdateOneID(albums[0].ID).
+				SetAliases([]string{"Baka no Uta"}).ExecX(e.ctx)
+			same := indexer.SearchResult{Title: "Gen Hoshino - Baka no Uta [FLAC]"}
+			e.idx.EXPECT().
+				SearchAlbum(mock.Anything, "星野源", "ばかのうた", uint16(0)).
+				Return([]indexer.SearchResult{same}, nil).Once()
+			e.idx.EXPECT().
+				SearchAlbum(mock.Anything, "Gen Hoshino", "Baka no Uta", uint16(0)).
+				Return([]indexer.SearchResult{same}, nil).Once()
+
+			got, err := e.svc.SearchAlbumReleases(e.ctx, albums[0].ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(titles(got)).To(Equal([]string{same.Title}))
+			Expect(got[0].Rejected()).To(BeFalse())
+		})
+
+		It("asks for the artist alone when no query named the album", func() {
+			artist, albums := e.seedArtist("Молчат Дома", albumSeed{
+				mbid: "rg-by", title: "Этажи", monitored: true,
+				tracks: []string{"A"},
+			})
+			e.client.Artist.UpdateOneID(artist.ID).
+				SetSortName("Molchat Doma").ExecX(e.ctx)
+			e.client.Album.UpdateOneID(albums[0].ID).
+				SetAliases([]string{"Etazhi", "Floor"}).ExecX(e.ctx)
+			e.idx.EXPECT().
+				SearchAlbum(mock.Anything, "Молчат Дома", "Этажи", uint16(0)).
+				Return(nil, nil).Once()
+			e.idx.EXPECT().
+				SearchAlbum(mock.Anything, "Molchat Doma", "Etazhi", uint16(0)).
+				Return(nil, nil).Once()
+			e.idx.EXPECT().SearchArtist(mock.Anything, "Molchat Doma").
+				Return([]indexer.SearchResult{
+					{Title: "Molchat Doma - Floor (2018) [FLAC]"},
+					{Title: "Molchat Doma - Monument (2020) [FLAC]"},
+					{Title: "Molchat.Doma.Monument.2020.FLAC", Indexer: "scene"},
+				}, nil).Once()
+
+			got, err := e.svc.SearchAlbumReleases(e.ctx, albums[0].ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(titles(got)).To(Equal([]string{
+				"Molchat Doma - Floor (2018) [FLAC]",
+				"Molchat Doma - Monument (2020) [FLAC]",
+				"Molchat.Doma.Monument.2020.FLAC",
+			}))
+			Expect(got[0].Rejected()).To(BeFalse())
+			Expect(got[1].Rejected()).To(BeTrue())
 		})
 
 		It("searches with year 0 when the album has no release date", func() {

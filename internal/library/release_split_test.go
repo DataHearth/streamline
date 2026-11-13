@@ -54,13 +54,13 @@ var _ = Describe("SplitCreatorTitle", Label("unit", "library"), func() {
 	})
 })
 
-var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
+var _ = Describe("ReleaseNamesWork", Label("unit", "library"), func() {
 	DescribeTable(
 		"reads the creator and title off the release name",
 		func(name string, other bool) {
 			Expect(
-				ReleaseNamesOtherWork(name, "Gojira", "From Mars to Sirius"),
-			).To(Equal(other))
+				ReleaseNamesWork(name, "Gojira", "From Mars to Sirius"),
+			).To(Equal(!other))
 		},
 		Entry(
 			"the album",
@@ -87,9 +87,9 @@ var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
 		Entry(
 			"a scene name not led by the artist",
 			"From.Mars.to.Sirius.FLAC-GRP",
-			false,
+			true,
 		),
-		Entry("a bare artist name", "Gojira FLAC", false),
+		Entry("a bare artist name", "Gojira FLAC", true),
 		Entry(
 			"a covers album naming the artist inside",
 			"Williams.Joshua.Gojira.Relaxing.Acoustic.Covers.2024.FLAC",
@@ -98,14 +98,65 @@ var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
 		Entry(
 			"a scene name holding the album after the artist's name elsewhere",
 			"Live.Gojira.From.Mars.to.Sirius.FLAC",
+			true,
+		),
+	)
+
+	DescribeTable(
+		"reads the other names a tracker writes beside the artist and the title",
+		func(name, creator, title string, other bool) {
+			Expect(ReleaseNamesWork(name, creator, title)).To(Equal(!other))
+		},
+		Entry(
+			"a transliteration in parentheses",
+			"(Darkwave) [WEB] Kælan mikla (Kaelan mikla) - Nótt eftir nótt (Nott eftir nott) - 2018, FLAC",
+			"Kælan Mikla",
+			"Nótt eftir nótt",
 			false,
+		),
+		Entry(
+			"the searched name in the parentheses",
+			"(Synthpop) [CD] Molchat Doma (Молчат Дома) - Monument (Монумент) - 2020, FLAC",
+			"Молчат Дома",
+			"Monument",
+			false,
+		),
+		Entry(
+			"the searched name in square brackets",
+			"[UKR] [CD] ДахаБраха [DakhaBrakha] - Alambari - 2020, FLAC (tracks+.cue)",
+			"DakhaBrakha",
+			"Alambari",
+			false,
+		),
+		Entry(
+			"groups inside the name",
+			"[TR24][OF] Sheena (Shiina) Ringo (椎名林檎) - Carnival (放生会) - 2024",
+			"Sheena Ringo", "Carnival", false,
+		),
+		Entry(
+			"both sides of a slash",
+			"[WEB] Kælan Mikla / Kaelan Mikla - Mánadans / Manadans (2013-2014) - 2017, FLAC",
+			"Kaelan Mikla",
+			"Manadans",
+			false,
+		),
+		Entry(
+			"letters typed without their ligature or stroke",
+			"Kaelan Mikla - Nott eftir nott (2018) [FLAC]",
+			"Kælan Mikla", "Nótt eftir nótt", false,
+		),
+		Entry(
+			"another artist's album beside a transliteration",
+			"[WEB] Kælan Mikla (Kaelan Mikla) - Undir Köldum Norðurljósum - 2021, FLAC",
+			"Kælan Mikla",
+			"Nótt eftir nótt",
+			true,
 		),
 	)
 
 	DescribeTable(
 		"reads past the tags a tracker opens the name on",
 		func(name, creator, title string, other bool) {
-			Expect(ReleaseNamesOtherWork(name, creator, title)).To(Equal(other))
 			Expect(ReleaseNamesWork(name, creator, title)).To(Equal(!other))
 		},
 		Entry(
@@ -169,8 +220,8 @@ var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
 		"reads \"&\" as \"and\"",
 		func(name string, other bool) {
 			Expect(
-				ReleaseNamesOtherWork(name, "Avatar", "Feathers & Flesh"),
-			).To(Equal(other))
+				ReleaseNamesWork(name, "Avatar", "Feathers & Flesh"),
+			).To(Equal(!other))
 		},
 		Entry(
 			"spelled out, scene-named",
@@ -190,15 +241,14 @@ var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
 		),
 	)
 
-	It("answers false when the artist normalizes to nothing", func() {
-		Expect(ReleaseNamesOtherWork("!!! - The Link [FLAC]", "!!!", "Magma")).
+	It("names nothing when the artist normalizes to nothing", func() {
+		Expect(ReleaseNamesWork("!!! - Magma [FLAC]", "!!!", "Magma")).
 			To(BeFalse())
 	})
 
 	DescribeTable(
 		"compares an album titled in Cyrillic",
 		func(name string, other bool) {
-			Expect(ReleaseNamesOtherWork(name, "IC3PEAK", "Сказка")).To(Equal(other))
 			Expect(ReleaseNamesWork(name, "IC3PEAK", "Сказка")).To(Equal(!other))
 		},
 		Entry("in its own script", "IC3PEAK - СКАЗКА (2018) [MP3 320]", false),
@@ -218,7 +268,6 @@ var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
 	DescribeTable(
 		"compares a title mixing two scripts on all of its letters",
 		func(artist, title, name string, other bool) {
-			Expect(ReleaseNamesOtherWork(name, artist, title)).To(Equal(other))
 			Expect(ReleaseNamesWork(name, artist, title)).To(Equal(!other))
 		},
 		Entry("itself", "Ado", "患者A", "Ado - 患者A (2026) [FLAC]", false),
@@ -234,8 +283,8 @@ var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
 	)
 
 	It("compares a title in a script it cannot romanize", func() {
-		Expect(ReleaseNamesOtherWork("ゴジラ - The Link [FLAC]", "ゴジラ", "Magma")).
-			To(BeTrue())
+		Expect(ReleaseNamesWork("ゴジラ - The Link [FLAC]", "ゴジラ", "Magma")).
+			To(BeFalse())
 		Expect(ReleaseNamesWork("坂本龍一 - 千のナイフ [FLAC]", "坂本龍一", "千のナイフ")).
 			To(BeTrue())
 	})
@@ -243,11 +292,11 @@ var _ = Describe("ReleaseNamesOtherWork", Label("unit", "library"), func() {
 	It(
 		"keeps a release named for the shorter title the library holds in full",
 		func() {
-			Expect(ReleaseNamesOtherWork(
+			Expect(ReleaseNamesWork(
 				"Gojira - Live at Hellfest [FLAC]",
 				"Gojira",
 				"Live at Hellfest 2016",
-			)).To(BeFalse())
+			)).To(BeTrue())
 		},
 	)
 })

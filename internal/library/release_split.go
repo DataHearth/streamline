@@ -2,6 +2,7 @@ package library
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -76,27 +77,17 @@ func ReleaseNamedByCreator(name, creator string) bool {
 	return false
 }
 
-// ReleaseNamesOtherWork reports whether a release name names a different
-// creator or a different work than the one searched for. A name read as
-// "creator - title" is judged on both. A name it cannot read is other only
-// when it neither opens on the creator nor holds the title anywhere: an
-// indexer matched "Williams.Joshua.Rammstein.Relaxing.Acoustic", a covers
-// album, on the artist's name alone, while "From.Mars.to.Sirius.FLAC-GRP" or
-// "Gojira FLAC" may well be the album. A creator or title that normalizes to
-// nothing answers false, since an interactive search shows every result and
-// unsure is not "other".
-func ReleaseNamesOtherWork(name, creator, title string) bool {
-	if !TitleComparable(creator) || !TitleComparable(title) {
-		return false
+// ReleaseOpensOnCreator reports whether a release name reads as one of
+// creator's under any reading, a scene name led by the creator's words
+// included. It says an indexer searched for the creator, which is less than
+// ReleaseNamedByCreator needs to call a release the creator's.
+func ReleaseOpensOnCreator(name, creator string) bool {
+	for _, r := range releaseReadings(name, creator) {
+		if sameCreator(r[0], creator) {
+			return true
+		}
 	}
-	if len(releaseReadings(name, creator)) > 0 {
-		return !ReleaseNamesWork(name, creator, title)
-	}
-	n, t := normalizePair(name, title)
-	nc, c := normalizePair(name, creator)
-	bare, _ := normalizePair(releaseLeadTagsRe.ReplaceAllString(name, ""), creator)
-	return !strings.Contains(n, t) &&
-		!strings.HasPrefix(nc, c) && !strings.HasPrefix(bare, c)
+	return false
 }
 
 // releaseReadings is every (creator, title) pair a release name can be read
@@ -118,9 +109,45 @@ func releaseReadings(name, creator string) [][2]string {
 		if !ok {
 			c, t, ok = splitAtCreator(n, creator)
 		}
-		if ok && TitleComparable(c) && TitleComparable(t) {
-			out = append(out, [2]string{c, t})
+		if !ok {
+			continue
 		}
+		for _, c := range alternateNames(c) {
+			for _, t := range alternateNames(t) {
+				if TitleComparable(c) && TitleComparable(t) {
+					out = append(out, [2]string{c, t})
+				}
+			}
+		}
+	}
+	return out
+}
+
+var (
+	bracketGroupRe = regexp.MustCompile(`[(\[]([^)\]]*)[)\]]`)
+	slashRe        = regexp.MustCompile(`\s+/\s+`)
+)
+
+// alternateNames is a creator or title part and every other name a tracker
+// wrote into it: RuTracker credits "Kælan Mikla (Kaelan Mikla)", "ДахаБраха
+// [DakhaBrakha]" and "Sheena (Shiina) Ringo (椎名林檎)", and titles "Mánadans /
+// Manadans". The part as written comes first, then it without its bracketed
+// groups, each group's own text, and each side of a spaced slash.
+func alternateNames(part string) []string {
+	out := []string{part}
+	add := func(s string) {
+		if s = strings.Join(strings.Fields(s), " "); s != "" &&
+			!slices.Contains(out, s) {
+			out = append(out, s)
+		}
+	}
+	add(bracketGroupRe.ReplaceAllString(part, " "))
+	for _, m := range bracketGroupRe.FindAllStringSubmatch(part, -1) {
+		add(m[1])
+	}
+	for _, side := range slashRe.Split(part, -1) {
+		add(side)
+		add(bracketGroupRe.ReplaceAllString(side, " "))
 	}
 	return out
 }

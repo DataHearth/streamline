@@ -39,7 +39,6 @@ var _ = Describe("music names", Label("unit", "library"), func() {
 	DescribeTable("a release under a sort name or an alias",
 		func(name string, artist *ent.Artist, album *ent.Album, names bool) {
 			Expect(ReleaseNamesAlbum(name, artist, album)).To(Equal(names))
-			Expect(ReleaseNamesOtherAlbum(name, artist, album)).To(Equal(!names))
 		},
 		Entry("romanized artist, translated title",
 			"Gen Hoshino - Episode (2011) [FLAC]", hoshino, episode, true),
@@ -52,6 +51,11 @@ var _ = Describe("music names", Label("unit", "library"), func() {
 			"IC3PEAK - Fairytale (2018) [FLAC]", ic3peak, skazka, true),
 		Entry("another album",
 			"IC3PEAK - Kiss of Death - 2022 (FLAC)", ic3peak, skazka, false),
+		Entry("look-alike Latin letters",
+			"IC3PEAK - CKA3KA (2018) [MP3 320]", ic3peak, skazka, true),
+		Entry("another romanization",
+			"IC3PEAK.Sladkaja_žizn[FLAC_16bits_44.1khz](2017)", ic3peak,
+			&ent.Album{Title: "Сладкая жизнь"}, true),
 	)
 
 	It("finds a pack by an artist's sort name", func() {

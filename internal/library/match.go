@@ -25,6 +25,15 @@ var (
 	titleYearSuffix = regexp.MustCompile(`\s*\((?:19|20)\d{2}\)\s*$`)
 )
 
+// unaccentable spells out the Latin letters Unicode decomposition leaves
+// whole, the way a tracker types them: "Kælan Mikla" is uploaded as "Kaelan
+// Mikla" and "Mgła" as "Mgla", and dropped as non-ASCII they compared as
+// "klan" and "mga".
+var unaccentable = strings.NewReplacer(
+	"æ", "ae", "œ", "oe", "ø", "o", "ð", "d", "đ", "d", "þ", "th",
+	"ł", "l", "ß", "ss", "ı", "i",
+)
+
 // normalizeTitle lowercases, strips non-alphanumerics, and strips a leading
 // article ("the"/"a"/"an") for tolerant title comparison (e.g. "The Batman" vs
 // "the.batman" vs "Batman").
@@ -44,7 +53,7 @@ var (
 // another script.
 func normalizeTitle(s string) string {
 	s = titleYearSuffix.ReplaceAllString(s, "")
-	s = strings.ToLower(norm.NFD.String(s))
+	s = unaccentable.Replace(strings.ToLower(norm.NFD.String(s)))
 	if titleLatinLetter.MatchString(s) {
 		s = titleNonAlnum.ReplaceAllString(s, "")
 	} else {
@@ -63,7 +72,7 @@ func foldAllScripts(s string) string {
 // whatever the title holds.
 func normalizeAllScripts(s string) string {
 	s = titleYearSuffix.ReplaceAllString(s, "")
-	s = strings.ToLower(norm.NFD.String(s))
+	s = unaccentable.Replace(strings.ToLower(norm.NFD.String(s)))
 	return titleArticleHead.ReplaceAllString(foldAllScripts(s), "")
 }
 
@@ -80,9 +89,8 @@ func normalizePair(a, b string) (string, string) {
 	return normalizeTitle(a), normalizeTitle(b)
 }
 
-// ponytail: one romanization (the common English one, "zh", "ya", "kh"). A
-// release spelled by another convention ("Sladkaja žizn" for "Сладкая жизнь")
-// does not match; compare under several tables if such releases get missed.
+// cyrillicToLatin is the common English romanization ("zh", "ya", "kh"), the
+// one a Cyrillic name is compared under; cyrillicSpellings covers the others.
 // Runs after NFD, where й and ё are и and е plus a combining mark.
 var cyrillicToLatin = strings.NewReplacer(
 	"а", "a", "б", "b", "в", "v", "г", "g", "д", "d", "е", "e", "ж", "zh",
@@ -91,6 +99,42 @@ var cyrillicToLatin = strings.NewReplacer(
 	"ц", "ts", "ч", "ch", "ш", "sh", "щ", "shch", "ъ", "", "ы", "y", "ь", "",
 	"э", "e", "ю", "yu", "я", "ya", "і", "i", "є", "e", "ґ", "g",
 )
+
+// cyrillicScientific is the scholarly romanization as a release name carries
+// it, its carons dropped: "Сладкая жизнь" is uploaded as "Sladkaja_žizn".
+// cyrillicLookalike is the Latin letter or digit each Cyrillic letter looks
+// like, for the names typed on a Latin keyboard: "СКАЗКА" as "CKA3KA".
+var (
+	cyrillicScientific = strings.NewReplacer(
+		"а", "a", "б", "b", "в", "v", "г", "g", "д", "d", "е", "e", "ё", "e",
+		"ж", "z", "з", "z", "и", "i", "й", "j", "к", "k", "л", "l", "м", "m",
+		"н", "n", "о", "o", "п", "p", "р", "r", "с", "s", "т", "t", "у", "u",
+		"ф", "f", "х", "h", "ц", "c", "ч", "c", "ш", "s", "щ", "sc", "ъ", "",
+		"ы", "y", "ь", "", "э", "e", "ю", "ju", "я", "ja", "і", "i", "є", "je",
+	)
+	cyrillicLookalike = strings.NewReplacer(
+		"а", "a", "в", "b", "е", "e", "з", "3", "к", "k", "м", "m", "н", "h",
+		"о", "o", "р", "p", "с", "c", "т", "t", "у", "y", "х", "x", "ч", "4",
+		"б", "6", "і", "i",
+	)
+	cyrillicLetter = regexp.MustCompile(`\p{Cyrillic}`)
+)
+
+// cyrillicSpellings is a Cyrillic name under the Latin spellings a release
+// may carry besides the common romanization: the scholarly one, and its
+// look-alike letters when every letter has one. Nothing for a name with no
+// Cyrillic in it.
+func cyrillicSpellings(s string) []string {
+	s = strings.ToLower(norm.NFC.String(s))
+	if !cyrillicLetter.MatchString(s) {
+		return nil
+	}
+	out := []string{cyrillicScientific.Replace(s)}
+	if alike := cyrillicLookalike.Replace(s); !cyrillicLetter.MatchString(alike) {
+		out = append(out, alike)
+	}
+	return out
+}
 
 // TitleComparable reports whether a title survives normalization: one made of
 // punctuation alone ("!!!") normalizes to nothing and can be compared to no
