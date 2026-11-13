@@ -95,7 +95,8 @@ type Rewrite struct {
 // RootState is one configured root, how much of the library is stored under
 // it, and how much exists for that root's media type at all. Tracked == 0
 // only means the config drifted when Total > 0 — an idle download queue is
-// legitimately empty, and so is a fresh library.
+// legitimately empty, and so is a fresh library. Tracked between the two is a
+// root some of whose files are stored elsewhere.
 type RootState struct {
 	Root    Root
 	Path    string
@@ -585,9 +586,10 @@ func rewrite(path, from, to string) string {
 }
 
 // WarnOnDrift logs a CRITICAL line for every root whose stored paths all sit
-// somewhere other than where the config now points. Nothing else notices that
-// situation, and the fix — POST /library/path-migration — is only reachable
-// by an operator who knows to look. The consequence differs by root: a media
+// somewhere other than where the config now points, and a WARN for a root only
+// part of whose paths do. Nothing else notices either situation, and the fix —
+// POST /library/path-migration — is only reachable by an operator who knows
+// to look. The consequence differs by root: a media
 // root whose files cannot be reached is held offline by roothealth, while
 // dangling download paths break importing instead.
 func (s *Service) WarnOnDrift(ctx context.Context) {
@@ -598,7 +600,27 @@ func (s *Service) WarnOnDrift(ctx context.Context) {
 		return
 	}
 	for _, r := range roots {
-		if r.Total == 0 || r.Tracked > 0 {
+		if r.Total == 0 || r.Tracked >= r.Total {
+			continue
+		}
+		// Some under the root, some not: files adopted where they lay are
+		// legitimately elsewhere, so this is a warning to look, not an outage.
+		// Left unsaid, rows a re-point missed stay on the old prefix unnoticed.
+		if r.Tracked > 0 {
+			slog.WarnContext(
+				ctx,
+				"some stored paths sit outside their configured root",
+				"library.root",
+				string(r.Root),
+				"library.path",
+				r.Path,
+				"records.outside",
+				r.Total-r.Tracked,
+				"records.total",
+				r.Total,
+				"remedy",
+				"POST /api/v1/library/path-migration from their folder to this root, unless they belong there",
+			)
 			continue
 		}
 		msg := "library root does not match any stored path — held offline if those files cannot be reached"

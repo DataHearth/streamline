@@ -354,6 +354,16 @@ curl -sS -H "X-API-Key: $KEY" "$SL/api/v1/library/path-migration/roots"
 
 `tracked: 0` with a non-zero `total` is the divergence. Preview, then run:
 
+**Only some files are outside the root.** `tracked` above zero but below `total` means part of the library is stored elsewhere. That is expected for files adopted where they lay, and a problem when an earlier move left rows behind on the old path. Streamline logs it at each start:
+
+```
+WARN some stored paths sit outside their configured root
+     library.root=music library.path=/media/music records.outside=84 records.total=5120
+```
+
+Settings → Advanced shows the same count and unlocks **From**: enter the folder the stray files are under as From and the root as To to bring them along. Leaving From empty moves the root itself, as usual.
+
+
 ```bash
 curl -sS -X POST -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
   -d '{"root":"movies","from":"/mnt/media-shared/movies","to":"/srv/streamline/movies"}' \

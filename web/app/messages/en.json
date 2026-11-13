@@ -1313,6 +1313,8 @@
 	"migration_finished": "Migration finished",
 	"migration_from_locked": "{from} is the configured root, which is where your files are stored right now, so there is nothing to choose. It unlocks only if the config stops matching the database.",
 	"migration_from_needed": "Nothing is stored under {root}, so this instance no longer knows where your files used to live — name that old location yourself. This is the normal state once you have re-pointed the root in the config, as on a read-only instance.",
+	"migration_from_partial_one": "{count} of {total} stored paths is outside {root}. If it was left behind by an earlier move, enter the folder it is under as From and this root as To. Leave From empty to move the root itself.",
+	"migration_from_partial_other": "{count} of {total} stored paths are outside {root}. If they were left behind by an earlier move, enter the folder they are under as From and this root as To. Leave From empty to move the root itself.",
 	"migration_intro": "Moved your media to a new mount or remapped a volume? This rewrites every stored path under the old root so it points at the new one, and updates the configured root to match.",
 	"migration_move_files": "Move the files for me",
 	"migration_move_files_help": "Off, the files are expected to already be at the new path and only the database is updated. On, each file is relocated first — instant on the same filesystem, a full copy across different ones.",

@@ -1313,6 +1313,8 @@
 	"migration_finished": "Migration terminée",
 	"migration_from_locked": "{from} est la racine configurée, là où vos fichiers sont actuellement stockés : il n'y a rien à choisir. Le champ ne se déverrouille que si la configuration ne correspond plus à la base de données.",
 	"migration_from_needed": "Rien n'est stocké sous {root} : cette instance ne sait donc plus où se trouvaient vos fichiers — indiquez vous-même l'ancien emplacement. C'est l'état normal une fois la racine réorientée dans la configuration, comme sur une instance en lecture seule.",
+	"migration_from_partial_one": "{count} chemin enregistré sur {total} est hors de {root}. S'il est resté en arrière lors d'un déplacement précédent, indiquez son dossier dans De et cette racine dans Vers. Laissez De vide pour déplacer la racine elle-même.",
+	"migration_from_partial_other": "{count} chemins enregistrés sur {total} sont hors de {root}. S'ils sont restés en arrière lors d'un déplacement précédent, indiquez leur dossier dans De et cette racine dans Vers. Laissez De vide pour déplacer la racine elle-même.",
 	"migration_intro": "Vous avez déplacé vos médias vers un nouveau montage ou remappé un volume ? Ceci réécrit chaque chemin stocké sous l'ancienne racine pour pointer vers la nouvelle, et met à jour la racine configurée en conséquence.",
 	"migration_move_files": "Déplacer les fichiers pour moi",
 	"migration_move_files_help": "Désactivé, les fichiers sont censés déjà se trouver au nouveau chemin et seule la base de données est mise à jour. Activé, chaque fichier est d'abord déplacé — instantané sur le même système de fichiers, une copie complète entre systèmes différents.",

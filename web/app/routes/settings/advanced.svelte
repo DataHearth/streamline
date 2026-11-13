@@ -102,6 +102,13 @@
 			rootState.total > 0,
 	);
 	let rootEmpty = $derived(rootState !== undefined && rootState.total === 0);
+	// Some paths under the root and some elsewhere: files adopted where they
+	// lay, or rows an earlier re-point missed. Only the operator can tell
+	// which, so the prefix unlocks without becoming required.
+	let outside = $derived(rootState ? rootState.total - rootState.tracked : 0);
+	let partial = $derived(
+		rootState !== undefined && rootState.tracked > 0 && outside > 0,
+	);
 
 	// Mirrors filepath.Clean for the shapes a path input produces: strip the
 	// trailing separator so "/data/films/" and "/data/films" resolve alike.
@@ -261,13 +268,17 @@
 				</span>
 				<input
 					type="text"
-					value={fromNeeded ? from : configuredRoot}
+					value={fromNeeded || partial ? from : configuredRoot}
 					oninput={(e) => {
 						from = e.currentTarget.value;
 						reset();
 					}}
-					disabled={live || !fromNeeded}
-					placeholder={fromNeeded ? `/media/${PATH_EXAMPLES[root]}` : ""}
+					disabled={live || !(fromNeeded || partial)}
+					placeholder={fromNeeded
+						? `/media/${PATH_EXAMPLES[root]}`
+						: partial
+							? configuredRoot
+							: ""}
 					spellcheck="false"
 					autocapitalize="off"
 					autocorrect="off"
@@ -338,6 +349,14 @@
 							>{:else}{p.text}{/if}{/each}
 				{:else if rootEmpty}
 					{i18n.migration_root_empty()}
+				{:else if partial}
+					{(outside === 1
+						? i18n.migration_from_partial_one
+						: i18n.migration_from_partial_other)({
+						count: outside,
+						total: rootState?.total ?? 0,
+						root: configuredRoot,
+					})}
 				{:else}
 					{#each fromLockedBody as p}{#if p.slot === "from"}<em class="not-italic text-fg-subtle"
 								>{i18n.common_from()}</em

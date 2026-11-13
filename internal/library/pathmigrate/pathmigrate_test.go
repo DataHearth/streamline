@@ -188,6 +188,43 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 			Entry("music", RootMusic),
 		)
 
+		It("warns when only part of a root's files sit outside it", func() {
+			store.EXPECT().ListMediaFilesByPathPrefix(mock.Anything, root).
+				Return([]*ent.MediaFile{
+					{ID: 1, Path: filepath.Join(root, "A (2020)", "a.mkv")},
+				}, nil).Once()
+			store.EXPECT().CountMovieMediaFiles(mock.Anything).
+				Return(3, nil).Once()
+			store.EXPECT().
+				ListMediaFilesByPathPrefix(mock.Anything, mock.Anything).
+				Return(nil, nil).Times(4)
+			store.EXPECT().CountEpisodeMediaFiles(mock.Anything).
+				Return(0, nil).Once()
+			store.EXPECT().CountRootFiles(mock.Anything, mock.Anything).
+				Return(0, nil).Times(3)
+			store.EXPECT().
+				ListDownloadRecordsByPathPrefix(mock.Anything, mock.Anything).
+				Return(nil, nil).Once()
+			store.EXPECT().
+				ListTorrentSessionsByPathPrefix(mock.Anything, mock.Anything).
+				Return(nil, nil).Once()
+			store.EXPECT().CountLiveDownloadRecords(mock.Anything).
+				Return(0, nil).Once()
+			store.EXPECT().CountTorrentSessions(mock.Anything).
+				Return(0, nil).Once()
+
+			var buf bytes.Buffer
+			GinkgoWriter.TeeTo(&buf)
+			DeferCleanup(GinkgoWriter.ClearTeeWriters)
+
+			svc.WarnOnDrift(ctx)
+			Expect(buf.String()).To(ContainSubstring("level=WARN"))
+			Expect(buf.String()).To(ContainSubstring("library.root=movies"))
+			Expect(buf.String()).To(ContainSubstring("records.outside=2"))
+			Expect(buf.String()).To(ContainSubstring("records.total=3"))
+			Expect(buf.String()).NotTo(ContainSubstring("CRITICAL"))
+		})
+
 		// Download rows are never pruned on drift — hygiene walks media files
 		// only — so the media-root message would be a false alarm here.
 		It("warns about imports, not pruning, for a drifted download root", func() {
