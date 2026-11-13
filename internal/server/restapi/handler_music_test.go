@@ -110,7 +110,6 @@ var _ = Describe("Handler: Music", Label("unit", "server", "music"), func() {
 				Genre:          "Grunge",
 				Origin:         "Aberdeen, United States",
 				Since:          1987,
-				Path:           "/music/Nirvana",
 				QualityProfile: "lossless",
 				CreateTime:     released,
 			},

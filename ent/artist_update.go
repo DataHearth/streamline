@@ -316,26 +316,6 @@ func (_u *ArtistUpdate) ClearWikidataID() *ArtistUpdate {
 	return _u
 }
 
-// SetPath sets the "path" field.
-func (_u *ArtistUpdate) SetPath(v string) *ArtistUpdate {
-	_u.mutation.SetPath(v)
-	return _u
-}
-
-// SetNillablePath sets the "path" field if the given value is not nil.
-func (_u *ArtistUpdate) SetNillablePath(v *string) *ArtistUpdate {
-	if v != nil {
-		_u.SetPath(*v)
-	}
-	return _u
-}
-
-// ClearPath clears the value of the "path" field.
-func (_u *ArtistUpdate) ClearPath() *ArtistUpdate {
-	_u.mutation.ClearPath()
-	return _u
-}
-
 // SetQualityProfile sets the "quality_profile" field.
 func (_u *ArtistUpdate) SetQualityProfile(v string) *ArtistUpdate {
 	_u.mutation.SetQualityProfile(v)
@@ -799,12 +779,6 @@ func (_u *ArtistUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.WikidataIDCleared() {
 		_spec.ClearField(artist.FieldWikidataID, field.TypeString)
-	}
-	if value, ok := _u.mutation.Path(); ok {
-		_spec.SetField(artist.FieldPath, field.TypeString, value)
-	}
-	if _u.mutation.PathCleared() {
-		_spec.ClearField(artist.FieldPath, field.TypeString)
 	}
 	if value, ok := _u.mutation.QualityProfile(); ok {
 		_spec.SetField(artist.FieldQualityProfile, field.TypeString, value)
@@ -1404,26 +1378,6 @@ func (_u *ArtistUpdateOne) ClearWikidataID() *ArtistUpdateOne {
 	return _u
 }
 
-// SetPath sets the "path" field.
-func (_u *ArtistUpdateOne) SetPath(v string) *ArtistUpdateOne {
-	_u.mutation.SetPath(v)
-	return _u
-}
-
-// SetNillablePath sets the "path" field if the given value is not nil.
-func (_u *ArtistUpdateOne) SetNillablePath(v *string) *ArtistUpdateOne {
-	if v != nil {
-		_u.SetPath(*v)
-	}
-	return _u
-}
-
-// ClearPath clears the value of the "path" field.
-func (_u *ArtistUpdateOne) ClearPath() *ArtistUpdateOne {
-	_u.mutation.ClearPath()
-	return _u
-}
-
 // SetQualityProfile sets the "quality_profile" field.
 func (_u *ArtistUpdateOne) SetQualityProfile(v string) *ArtistUpdateOne {
 	_u.mutation.SetQualityProfile(v)
@@ -1917,12 +1871,6 @@ func (_u *ArtistUpdateOne) sqlSave(ctx context.Context) (_node *Artist, err erro
 	}
 	if _u.mutation.WikidataIDCleared() {
 		_spec.ClearField(artist.FieldWikidataID, field.TypeString)
-	}
-	if value, ok := _u.mutation.Path(); ok {
-		_spec.SetField(artist.FieldPath, field.TypeString, value)
-	}
-	if _u.mutation.PathCleared() {
-		_spec.ClearField(artist.FieldPath, field.TypeString)
 	}
 	if value, ok := _u.mutation.QualityProfile(); ok {
 		_spec.SetField(artist.FieldQualityProfile, field.TypeString, value)

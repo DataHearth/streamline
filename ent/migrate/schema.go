@@ -136,7 +136,6 @@ var (
 		{Name: "genre", Type: field.TypeString, Nullable: true},
 		{Name: "deezer_id", Type: field.TypeUint32, Nullable: true},
 		{Name: "wikidata_id", Type: field.TypeString, Nullable: true},
-		{Name: "path", Type: field.TypeString, Nullable: true},
 		{Name: "quality_profile", Type: field.TypeString, Nullable: true},
 		{Name: "last_refreshed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "details_fetched_at", Type: field.TypeTime, Nullable: true},

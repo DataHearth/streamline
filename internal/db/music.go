@@ -103,7 +103,6 @@ type CreateArtistParams struct {
 	Genre          string
 	DeezerID       uint32
 	WikidataID     string
-	Path           string
 	QualityProfile string
 	Members        []MemberSeed
 	Albums         []AlbumSeed
@@ -317,7 +316,6 @@ func (db *DB) CreateArtist(
 		SetGenre(p.Genre).
 		SetDeezerID(p.DeezerID).
 		SetWikidataID(p.WikidataID).
-		SetPath(p.Path).
 		SetQualityProfile(p.QualityProfile)
 	if p.Monitor != "" {
 		b = b.SetMonitor(p.Monitor)

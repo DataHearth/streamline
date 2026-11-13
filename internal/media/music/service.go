@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"slices"
 	"sync"
 	"time"
@@ -345,20 +344,16 @@ func (s *Service) Add(ctx context.Context, p AddParams) (*ent.Artist, error) {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("get artist: %w", err))
 	}
 	row, err := s.db.CreateArtist(ctx, db.CreateArtistParams{
-		MBID:       details.MBID,
-		Name:       details.Name,
-		SortName:   details.SortName,
-		Monitor:    policy,
-		Type:       details.Type,
-		Origin:     details.Origin,
-		Since:      details.Since,
-		Genre:      details.Genre,
-		DeezerID:   details.DeezerID,
-		WikidataID: details.WikidataID,
-		Path: filepath.Join(
-			config.Get().Library.MusicPath,
-			library.SanitizePath(details.Name),
-		),
+		MBID:           details.MBID,
+		Name:           details.Name,
+		SortName:       details.SortName,
+		Monitor:        policy,
+		Type:           details.Type,
+		Origin:         details.Origin,
+		Since:          details.Since,
+		Genre:          details.Genre,
+		DeezerID:       details.DeezerID,
+		WikidataID:     details.WikidataID,
 		QualityProfile: p.QualityProfile,
 		Members:        memberSeeds(details.Members),
 		Albums:         albumSeeds(details.ReleaseGroups, policy, time.Now()),

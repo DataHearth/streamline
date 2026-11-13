@@ -80,9 +80,6 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 			a, err := e.svc.Add(e.ctx, AddParams{MBID: "mbid-1"})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(a.Name).To(Equal("Nirvana"))
-			Expect(
-				a.Path,
-			).To(Equal(filepath.Join(config.Get().Library.MusicPath, "Nirvana")))
 			Expect(a.Type).To(Equal(artist.TypeGroup))
 			Expect(a.Origin).To(Equal("Aberdeen, United States"))
 			Expect(a.Genre).To(Equal("Grunge"))

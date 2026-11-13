@@ -40,7 +40,6 @@ func (Artist) Fields() []ent.Field {
 		field.String("genre").Optional(),
 		field.Uint32("deezer_id").Optional(),
 		field.String("wikidata_id").Optional(),
-		field.String("path").Optional(),
 		field.String("quality_profile").Optional(),
 		field.Time("last_refreshed_at").Optional().Nillable(),
 		// Stamped once the overview and photo steps have run, so neither is

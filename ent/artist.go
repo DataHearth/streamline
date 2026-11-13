@@ -49,8 +49,6 @@ type Artist struct {
 	DeezerID uint32 `json:"deezer_id,omitempty"`
 	// WikidataID holds the value of the "wikidata_id" field.
 	WikidataID string `json:"wikidata_id,omitempty"`
-	// Path holds the value of the "path" field.
-	Path string `json:"path,omitempty"`
 	// QualityProfile holds the value of the "quality_profile" field.
 	QualityProfile string `json:"quality_profile,omitempty"`
 	// LastRefreshedAt holds the value of the "last_refreshed_at" field.
@@ -145,7 +143,7 @@ func (*Artist) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case artist.FieldID, artist.FieldSince, artist.FieldDeezerID:
 			values[i] = new(sql.NullInt64)
-		case artist.FieldMbid, artist.FieldName, artist.FieldSortName, artist.FieldOverview, artist.FieldOverviewSource, artist.FieldOverviewFr, artist.FieldOverviewSourceFr, artist.FieldMonitor, artist.FieldType, artist.FieldOrigin, artist.FieldGenre, artist.FieldWikidataID, artist.FieldPath, artist.FieldQualityProfile, artist.FieldArtSidecarHash:
+		case artist.FieldMbid, artist.FieldName, artist.FieldSortName, artist.FieldOverview, artist.FieldOverviewSource, artist.FieldOverviewFr, artist.FieldOverviewSourceFr, artist.FieldMonitor, artist.FieldType, artist.FieldOrigin, artist.FieldGenre, artist.FieldWikidataID, artist.FieldQualityProfile, artist.FieldArtSidecarHash:
 			values[i] = new(sql.NullString)
 		case artist.FieldCreateTime, artist.FieldUpdateTime, artist.FieldLastRefreshedAt, artist.FieldDetailsFetchedAt:
 			values[i] = new(sql.NullTime)
@@ -265,12 +263,6 @@ func (_m *Artist) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field wikidata_id", values[i])
 			} else if value.Valid {
 				_m.WikidataID = value.String
-			}
-		case artist.FieldPath:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field path", values[i])
-			} else if value.Valid {
-				_m.Path = value.String
 			}
 		case artist.FieldQualityProfile:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -411,9 +403,6 @@ func (_m *Artist) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("wikidata_id=")
 	builder.WriteString(_m.WikidataID)
-	builder.WriteString(", ")
-	builder.WriteString("path=")
-	builder.WriteString(_m.Path)
 	builder.WriteString(", ")
 	builder.WriteString("quality_profile=")
 	builder.WriteString(_m.QualityProfile)

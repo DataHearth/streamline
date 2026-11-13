@@ -4,10 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"path/filepath"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/metadata"
 )
@@ -230,6 +233,15 @@ func toMusicArtistKind(t string) *MusicArtistKind {
 }
 
 // toMusicArtistDetail maps the artist and its full tree.
+// artistPath is where an artist's folder sits under the music root in force
+// now. It is worked out per response, never stored: a stored copy kept naming
+// the root the artist was added under after the root moved.
+func artistPath(name string) string {
+	return filepath.Join(
+		config.Get().Library.MusicPath, library.SanitizePath(name),
+	)
+}
+
 func toMusicArtistDetail(v *music.ArtistView) MusicArtistDetail {
 	a := v.Artist
 	out := MusicArtistDetail{
@@ -246,7 +258,7 @@ func toMusicArtistDetail(v *music.ArtistView) MusicArtistDetail {
 		Origin:         optString(a.Origin),
 		Overview:       optString(v.Overview),
 		OverviewSource: optString(v.OverviewSource),
-		Path:           a.Path,
+		Path:           artistPath(a.Name),
 		QualityProfile: a.QualityProfile,
 		Since:          optU16(a.Since),
 		Size:           v.Size,
@@ -291,7 +303,7 @@ func toMusicArtist(v music.ArtistView) MusicArtist {
 		Origin:         optString(a.Origin),
 		Overview:       optString(v.Overview),
 		OverviewSource: optString(v.OverviewSource),
-		Path:           a.Path,
+		Path:           artistPath(a.Name),
 		QualityProfile: a.QualityProfile,
 		Since:          optU16(a.Since),
 		Size:           v.Size,

@@ -3821,7 +3821,6 @@ type ArtistMutation struct {
 	deezer_id               *uint32
 	adddeezer_id            *int32
 	wikidata_id             *string
-	_path                   *string
 	quality_profile         *string
 	last_refreshed_at       *time.Time
 	details_fetched_at      *time.Time
@@ -4715,55 +4714,6 @@ func (m *ArtistMutation) ResetWikidataID() {
 	delete(m.clearedFields, artist.FieldWikidataID)
 }
 
-// SetPath sets the "path" field.
-func (m *ArtistMutation) SetPath(s string) {
-	m._path = &s
-}
-
-// Path returns the value of the "path" field in the mutation.
-func (m *ArtistMutation) Path() (r string, exists bool) {
-	v := m._path
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldPath returns the old "path" field's value of the Artist entity.
-// If the Artist object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ArtistMutation) OldPath(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldPath is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldPath requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldPath: %w", err)
-	}
-	return oldValue.Path, nil
-}
-
-// ClearPath clears the value of the "path" field.
-func (m *ArtistMutation) ClearPath() {
-	m._path = nil
-	m.clearedFields[artist.FieldPath] = struct{}{}
-}
-
-// PathCleared returns if the "path" field was cleared in this mutation.
-func (m *ArtistMutation) PathCleared() bool {
-	_, ok := m.clearedFields[artist.FieldPath]
-	return ok
-}
-
-// ResetPath resets all changes to the "path" field.
-func (m *ArtistMutation) ResetPath() {
-	m._path = nil
-	delete(m.clearedFields, artist.FieldPath)
-}
-
 // SetQualityProfile sets the "quality_profile" field.
 func (m *ArtistMutation) SetQualityProfile(s string) {
 	m.quality_profile = &s
@@ -5318,7 +5268,7 @@ func (m *ArtistMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ArtistMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 20)
 	if m.create_time != nil {
 		fields = append(fields, artist.FieldCreateTime)
 	}
@@ -5366,9 +5316,6 @@ func (m *ArtistMutation) Fields() []string {
 	}
 	if m.wikidata_id != nil {
 		fields = append(fields, artist.FieldWikidataID)
-	}
-	if m._path != nil {
-		fields = append(fields, artist.FieldPath)
 	}
 	if m.quality_profile != nil {
 		fields = append(fields, artist.FieldQualityProfile)
@@ -5422,8 +5369,6 @@ func (m *ArtistMutation) Field(name string) (ent.Value, bool) {
 		return m.DeezerID()
 	case artist.FieldWikidataID:
 		return m.WikidataID()
-	case artist.FieldPath:
-		return m.Path()
 	case artist.FieldQualityProfile:
 		return m.QualityProfile()
 	case artist.FieldLastRefreshedAt:
@@ -5473,8 +5418,6 @@ func (m *ArtistMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldDeezerID(ctx)
 	case artist.FieldWikidataID:
 		return m.OldWikidataID(ctx)
-	case artist.FieldPath:
-		return m.OldPath(ctx)
 	case artist.FieldQualityProfile:
 		return m.OldQualityProfile(ctx)
 	case artist.FieldLastRefreshedAt:
@@ -5604,13 +5547,6 @@ func (m *ArtistMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetWikidataID(v)
 		return nil
-	case artist.FieldPath:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetPath(v)
-		return nil
 	case artist.FieldQualityProfile:
 		v, ok := value.(string)
 		if !ok {
@@ -5729,9 +5665,6 @@ func (m *ArtistMutation) ClearedFields() []string {
 	if m.FieldCleared(artist.FieldWikidataID) {
 		fields = append(fields, artist.FieldWikidataID)
 	}
-	if m.FieldCleared(artist.FieldPath) {
-		fields = append(fields, artist.FieldPath)
-	}
 	if m.FieldCleared(artist.FieldQualityProfile) {
 		fields = append(fields, artist.FieldQualityProfile)
 	}
@@ -5790,9 +5723,6 @@ func (m *ArtistMutation) ClearField(name string) error {
 		return nil
 	case artist.FieldWikidataID:
 		m.ClearWikidataID()
-		return nil
-	case artist.FieldPath:
-		m.ClearPath()
 		return nil
 	case artist.FieldQualityProfile:
 		m.ClearQualityProfile()
@@ -5861,9 +5791,6 @@ func (m *ArtistMutation) ResetField(name string) error {
 		return nil
 	case artist.FieldWikidataID:
 		m.ResetWikidataID()
-		return nil
-	case artist.FieldPath:
-		m.ResetPath()
 		return nil
 	case artist.FieldQualityProfile:
 		m.ResetQualityProfile()

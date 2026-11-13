@@ -7373,7 +7373,12 @@ type MusicArtist struct {
 
 	// OverviewSource URL of the Wikipedia page the overview came from (attribution). Matches the language actually served.
 	OverviewSource *string `json:"overview_source,omitempty"`
-	Path           string  `json:"path"`
+
+	// Path Where the artist's folder sits under the music root configured now
+	// (the root joined with the sanitized name). Worked out for each
+	// response, never stored, and not checked against the disk: a custom
+	// `library.music_naming` or an adopted folder can differ.
+	Path string `json:"path"`
 
 	// QualityProfile Music quality profile name; empty means the default.
 	QualityProfile string `json:"quality_profile"`
@@ -7431,7 +7436,12 @@ type MusicArtistCore struct {
 
 	// OverviewSource URL of the Wikipedia page the overview came from (attribution). Matches the language actually served.
 	OverviewSource *string `json:"overview_source,omitempty"`
-	Path           string  `json:"path"`
+
+	// Path Where the artist's folder sits under the music root configured now
+	// (the root joined with the sanitized name). Worked out for each
+	// response, never stored, and not checked against the disk: a custom
+	// `library.music_naming` or an adopted folder can differ.
+	Path string `json:"path"`
 
 	// QualityProfile Music quality profile name; empty means the default.
 	QualityProfile string `json:"quality_profile"`
@@ -7518,7 +7528,12 @@ type MusicArtistDetail struct {
 
 	// OverviewSource URL of the Wikipedia page the overview came from (attribution). Matches the language actually served.
 	OverviewSource *string `json:"overview_source,omitempty"`
-	Path           string  `json:"path"`
+
+	// Path Where the artist's folder sits under the music root configured now
+	// (the root joined with the sanitized name). Worked out for each
+	// response, never stored, and not checked against the disk: a custom
+	// `library.music_naming` or an adopted folder can differ.
+	Path string `json:"path"`
 
 	// QualityProfile Music quality profile name; empty means the default.
 	QualityProfile string `json:"quality_profile"`

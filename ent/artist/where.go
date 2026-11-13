@@ -125,11 +125,6 @@ func WikidataID(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldEQ(FieldWikidataID, v))
 }
 
-// Path applies equality check predicate on the "path" field. It's identical to PathEQ.
-func Path(v string) predicate.Artist {
-	return predicate.Artist(sql.FieldEQ(FieldPath, v))
-}
-
 // QualityProfile applies equality check predicate on the "quality_profile" field. It's identical to QualityProfileEQ.
 func QualityProfile(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldEQ(FieldQualityProfile, v))
@@ -1108,81 +1103,6 @@ func WikidataIDEqualFold(v string) predicate.Artist {
 // WikidataIDContainsFold applies the ContainsFold predicate on the "wikidata_id" field.
 func WikidataIDContainsFold(v string) predicate.Artist {
 	return predicate.Artist(sql.FieldContainsFold(FieldWikidataID, v))
-}
-
-// PathEQ applies the EQ predicate on the "path" field.
-func PathEQ(v string) predicate.Artist {
-	return predicate.Artist(sql.FieldEQ(FieldPath, v))
-}
-
-// PathNEQ applies the NEQ predicate on the "path" field.
-func PathNEQ(v string) predicate.Artist {
-	return predicate.Artist(sql.FieldNEQ(FieldPath, v))
-}
-
-// PathIn applies the In predicate on the "path" field.
-func PathIn(vs ...string) predicate.Artist {
-	return predicate.Artist(sql.FieldIn(FieldPath, vs...))
-}
-
-// PathNotIn applies the NotIn predicate on the "path" field.
-func PathNotIn(vs ...string) predicate.Artist {
-	return predicate.Artist(sql.FieldNotIn(FieldPath, vs...))
-}
-
-// PathGT applies the GT predicate on the "path" field.
-func PathGT(v string) predicate.Artist {
-	return predicate.Artist(sql.FieldGT(FieldPath, v))
-}
-
-// PathGTE applies the GTE predicate on the "path" field.
-func PathGTE(v string) predicate.Artist {
-	return predicate.Artist(sql.FieldGTE(FieldPath, v))
-}
-
-// PathLT applies the LT predicate on the "path" field.
-func PathLT(v string) predicate.Artist {
-	return predicate.Artist(sql.FieldLT(FieldPath, v))
-}
-
-// PathLTE applies the LTE predicate on the "path" field.
-func PathLTE(v string) predicate.Artist {
-	return predicate.Artist(sql.FieldLTE(FieldPath, v))
-}
-
-// PathContains applies the Contains predicate on the "path" field.
-func PathContains(v string) predicate.Artist {
-	return predicate.Artist(sql.FieldContains(FieldPath, v))
-}
-
-// PathHasPrefix applies the HasPrefix predicate on the "path" field.
-func PathHasPrefix(v string) predicate.Artist {
-	return predicate.Artist(sql.FieldHasPrefix(FieldPath, v))
-}
-
-// PathHasSuffix applies the HasSuffix predicate on the "path" field.
-func PathHasSuffix(v string) predicate.Artist {
-	return predicate.Artist(sql.FieldHasSuffix(FieldPath, v))
-}
-
-// PathIsNil applies the IsNil predicate on the "path" field.
-func PathIsNil() predicate.Artist {
-	return predicate.Artist(sql.FieldIsNull(FieldPath))
-}
-
-// PathNotNil applies the NotNil predicate on the "path" field.
-func PathNotNil() predicate.Artist {
-	return predicate.Artist(sql.FieldNotNull(FieldPath))
-}
-
-// PathEqualFold applies the EqualFold predicate on the "path" field.
-func PathEqualFold(v string) predicate.Artist {
-	return predicate.Artist(sql.FieldEqualFold(FieldPath, v))
-}
-
-// PathContainsFold applies the ContainsFold predicate on the "path" field.
-func PathContainsFold(v string) predicate.Artist {
-	return predicate.Artist(sql.FieldContainsFold(FieldPath, v))
 }
 
 // QualityProfileEQ applies the EQ predicate on the "quality_profile" field.

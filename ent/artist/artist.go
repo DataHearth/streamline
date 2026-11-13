@@ -47,8 +47,6 @@ const (
 	FieldDeezerID = "deezer_id"
 	// FieldWikidataID holds the string denoting the wikidata_id field in the database.
 	FieldWikidataID = "wikidata_id"
-	// FieldPath holds the string denoting the path field in the database.
-	FieldPath = "path"
 	// FieldQualityProfile holds the string denoting the quality_profile field in the database.
 	FieldQualityProfile = "quality_profile"
 	// FieldLastRefreshedAt holds the string denoting the last_refreshed_at field in the database.
@@ -132,7 +130,6 @@ var Columns = []string{
 	FieldGenre,
 	FieldDeezerID,
 	FieldWikidataID,
-	FieldPath,
 	FieldQualityProfile,
 	FieldLastRefreshedAt,
 	FieldDetailsFetchedAt,
@@ -305,11 +302,6 @@ func ByDeezerID(opts ...sql.OrderTermOption) OrderOption {
 // ByWikidataID orders the results by the wikidata_id field.
 func ByWikidataID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWikidataID, opts...).ToFunc()
-}
-
-// ByPath orders the results by the path field.
-func ByPath(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldPath, opts...).ToFunc()
 }
 
 // ByQualityProfile orders the results by the quality_profile field.

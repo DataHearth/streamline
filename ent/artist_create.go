@@ -233,20 +233,6 @@ func (_c *ArtistCreate) SetNillableWikidataID(v *string) *ArtistCreate {
 	return _c
 }
 
-// SetPath sets the "path" field.
-func (_c *ArtistCreate) SetPath(v string) *ArtistCreate {
-	_c.mutation.SetPath(v)
-	return _c
-}
-
-// SetNillablePath sets the "path" field if the given value is not nil.
-func (_c *ArtistCreate) SetNillablePath(v *string) *ArtistCreate {
-	if v != nil {
-		_c.SetPath(*v)
-	}
-	return _c
-}
-
 // SetQualityProfile sets the "quality_profile" field.
 func (_c *ArtistCreate) SetQualityProfile(v string) *ArtistCreate {
 	_c.mutation.SetQualityProfile(v)
@@ -580,10 +566,6 @@ func (_c *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.WikidataID(); ok {
 		_spec.SetField(artist.FieldWikidataID, field.TypeString, value)
 		_node.WikidataID = value
-	}
-	if value, ok := _c.mutation.Path(); ok {
-		_spec.SetField(artist.FieldPath, field.TypeString, value)
-		_node.Path = value
 	}
 	if value, ok := _c.mutation.QualityProfile(); ok {
 		_spec.SetField(artist.FieldQualityProfile, field.TypeString, value)

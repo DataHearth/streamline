@@ -9,6 +9,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/media/music"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe(
@@ -17,6 +18,18 @@ var _ = Describe(
 	func() {
 		u32 := func(v uint32) *uint32 { return &v }
 		str := func(v string) *string { return &v }
+
+		It("places an artist under the music root configured now", func() {
+			configtest.Setup(map[string]any{
+				"library": map[string]any{"music_path": "/srv/music"},
+			})
+			view := music.ArtistView{
+				Artist: &ent.Artist{ID: 1, Name: "AC/DC"},
+			}
+
+			Expect(toMusicArtist(view).Path).To(Equal("/srv/music/AC-DC"))
+			Expect(toMusicArtistDetail(&view).Path).To(Equal("/srv/music/AC-DC"))
+		})
 
 		It("marks a track only when the view says its file is missing", func() {
 			track := music.TrackView{Track: &ent.Track{ID: 1}, HasFile: true}

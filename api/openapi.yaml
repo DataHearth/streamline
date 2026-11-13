@@ -10223,6 +10223,11 @@ components:
           description: Music quality profile name; empty means the default.
         path:
           type: string
+          description: |
+            Where the artist's folder sits under the music root configured now
+            (the root joined with the sanitized name). Worked out for each
+            response, never stored, and not checked against the disk: a custom
+            `library.music_naming` or an adopted folder can differ.
         status:
           $ref: "#/components/schemas/MusicArtistStatus"
         added_at:
