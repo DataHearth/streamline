@@ -70,6 +70,59 @@ var _ = Describe(
 				Expect(body.Events[0].Movie.Title).To(Equal("Anora"))
 			})
 
+			It(
+				"links an event to its download record only while Activity shows it",
+				func() {
+					m := &ent.Movie{ID: 1, Title: "Heat", Year: 1995, TmdbID: 949}
+					now := time.Now()
+					evs := []*ent.MediaEvent{
+						// Decoded from the JSON column: numbers come back float64.
+						{
+							ID: 1, Type: mediaevent.TypeGrabbed, CreateTime: now,
+							Payload: map[string]any{"download_id": float64(11)},
+						},
+						{
+							ID: 2, Type: mediaevent.TypeImported, CreateTime: now,
+							Payload: map[string]any{"download_id": float64(12)},
+						},
+						{ID: 3, Type: mediaevent.TypeAdded, CreateTime: now},
+						// 11's import: the same record, asked about once.
+						{
+							ID: 4, Type: mediaevent.TypeImported, CreateTime: now,
+							Payload: map[string]any{"download_id": float64(11)},
+						},
+					}
+					for _, e := range evs {
+						e.Edges.Movie = m
+					}
+					app.store.EXPECT().
+						RecentActivity(mock.Anything, mock.AnythingOfType("db.ActivityFilter")).
+						Return(&db.ActivityResult{Events: evs}, nil).
+						Once()
+					// 12's history row was cleared.
+					app.store.EXPECT().
+						ShownDownloadRecordIDs(mock.Anything, []uint32{11, 12}).
+						Return(map[uint32]struct{}{11: {}}, nil).
+						Once()
+
+					resp, err := http.Get(app.srv.URL + "/api/v1/activity")
+					Expect(err).NotTo(HaveOccurred())
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+					var body ActivityList
+					Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+					Expect(body.Events).To(HaveLen(4))
+					Expect(
+						body.Events[0].DownloadId,
+					).To(HaveValue(Equal(uint32(11))))
+					Expect(body.Events[1].DownloadId).To(BeNil())
+					Expect(body.Events[2].DownloadId).To(BeNil())
+					Expect(
+						body.Events[3].DownloadId,
+					).To(HaveValue(Equal(uint32(11))))
+				},
+			)
+
 			It("rejects a limit above the documented maximum", func() {
 				resp, err := http.Get(
 					app.srv.URL + "/api/v1/activity?limit=2147483647",

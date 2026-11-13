@@ -887,6 +887,18 @@ type Store interface {
 		limit int,
 		cursor string,
 	) (*DownloadHistoryResult, error)
+	// FindDownloadHistoryEntry is one history row by record id, NotFound
+	// unless the record is terminal.
+	FindDownloadHistoryEntry(
+		ctx context.Context,
+		id uint32,
+	) (*ent.DownloadRecord, error)
+	// ShownDownloadRecordIDs reports which of ids Activity still shows, in
+	// its queue or its history.
+	ShownDownloadRecordIDs(
+		ctx context.Context,
+		ids []uint32,
+	) (map[uint32]struct{}, error)
 	DeleteDownloadRecord(ctx context.Context, id uint32) error
 	DeleteAllCompletedDownloadRecords(
 		ctx context.Context,

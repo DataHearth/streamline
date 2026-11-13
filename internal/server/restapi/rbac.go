@@ -28,6 +28,7 @@ import (
 var minRole = map[string]string{
 	"ListActivity":              roleRequestOnly,
 	"ListDownloadHistory":       roleRequestOnly,
+	"GetHistoryItem":            roleRequestOnly,
 	"ClearCompletedHistory":     roleAdmin,
 	"DeleteHistoryItem":         roleAdmin,
 	"RetryFailedImport":         roleAdmin,
