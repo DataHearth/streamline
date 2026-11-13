@@ -112,6 +112,8 @@ var _ = Describe("Write", Label("unit", "audiotags"), func() {
 			raw = rawTags(flac)
 			Expect(raw).To(HaveKeyWithValue(taglib.TrackNumber, []string{"5"}))
 			Expect(raw).To(HaveKeyWithValue(TrackTotal, []string{"12"}))
+			Expect(raw).To(HaveKeyWithValue(totalTracks, []string{"12"}))
+			Expect(raw).To(HaveKeyWithValue(totalDiscs, []string{"1"}))
 		},
 	)
 

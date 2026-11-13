@@ -45,6 +45,12 @@ const (
 	DiscTotal  = "DISCTOTAL"
 )
 
+// Picard writes each Vorbis total under two names, and players read either.
+const (
+	totalTracks = "TOTALTRACKS"
+	totalDiscs  = "TOTALDISCS"
+)
+
 // DefaultStrip lists the keys deleted on every write: the comment and link
 // fields a release carries its tracker or ripper notes in, and the encoder
 // credit of whoever made the copy.
@@ -531,6 +537,12 @@ func fold(ext string, tags Tags) map[string][]string {
 		out[taglib.Performer] = plain
 	}
 	if ext != ".mp3" && ext != ".m4a" {
+		for _, pair := range [][2]string{{TrackTotal, totalTracks}, {DiscTotal, totalDiscs}} {
+			totals, named := out[pair[0]]
+			if _, explicit := out[pair[1]]; named && !explicit {
+				out[pair[1]] = totals
+			}
+		}
 		return out
 	}
 	for _, pair := range [][2]string{
