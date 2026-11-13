@@ -2107,6 +2107,7 @@
 	"torrent_agg_down": "Débit ↓",
 	"torrent_agg_up": "Débit ↑",
 	"torrent_aggregate_down": "Débit ↓",
+	"torrent_blocklist_release": "Bloquer cette release, pour que les recherches automatiques ne la reprennent pas",
 	"torrent_also_delete_files": "Supprimer aussi les fichiers téléchargés",
 	"torrent_builtin_disabled": "Le client intégré n'est pas activé",
 	"torrent_choose_file": "Choisir un fichier .torrent",

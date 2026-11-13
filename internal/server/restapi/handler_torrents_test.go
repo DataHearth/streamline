@@ -121,6 +121,21 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 		Expect(body.Code).To(HaveValue(Equal("files_unknown")))
 	})
 
+	It("blocklists the release of a torrent removed with blocklist", func() {
+		app.torrents.EXPECT().RemoveTorrent(mock.Anything, testHash, false).
+			Return(nil).Once()
+		app.downloads.EXPECT().RejectRecordForHash(mock.Anything, testHash).
+			Return(nil).Once()
+
+		req, err := http.NewRequest(http.MethodDelete,
+			app.srv.URL+"/api/v1/torrents/"+testHash+"?blocklist=true", nil)
+		Expect(err).NotTo(HaveOccurred())
+		resp, err := http.DefaultClient.Do(req)
+		Expect(err).NotTo(HaveOccurred())
+		defer resp.Body.Close()
+		Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+	})
+
 	It("maps unknown hashes to 404", func() {
 		app.torrents.EXPECT().Details(mock.Anything, testHash).
 			Return(bittorrent.TorrentDetails{}, download.ErrTorrentNotFound).Once()

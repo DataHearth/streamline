@@ -305,6 +305,10 @@ type Downloader interface {
 		deleteFiles bool,
 	) error
 	PurgeRecordForHash(ctx context.Context, torrentHash string) error
+	// RejectRecordForHash is PurgeRecordForHash for a removal that also says
+	// the release is not wanted: the record stays, rejected, so no automatic
+	// pick takes that release for the title again.
+	RejectRecordForHash(ctx context.Context, torrentHash string) error
 	ListTorrentFiles(
 		ctx context.Context,
 		downloadClientName string,
@@ -1840,6 +1844,42 @@ func (d *download) PurgeRecordForHash(
 	}
 	d.purgeOrphanedRecord(ctx, rec)
 	return d.ReconcileStrandedMedia(ctx)
+}
+
+const removedByHandReason = "removed and blocklisted by hand"
+
+func (d *download) RejectRecordForHash(
+	ctx context.Context,
+	torrentHash string,
+) error {
+	ctx, span := tracer.Start(ctx, "download.reject_record_for_hash")
+	defer span.End()
+
+	rec, err := d.db.FindLiveDownloadRecordByHash(ctx, torrentHash)
+	if err != nil {
+		return otelx.RecordSpanError(
+			span, fmt.Errorf("find record for %s: %w", torrentHash, err),
+		)
+	}
+	if rec == nil {
+		return nil
+	}
+	switch rec.Status {
+	case downloadrecord.StatusDownloading:
+		err = d.db.RejectDownloadingRecord(ctx, rec.ID, removedByHandReason)
+	case downloadrecord.StatusHeld:
+		err = d.db.FailHeldDownloadRecord(ctx, rec.ID, removedByHandReason, true)
+	default:
+		// Importing: the importer owns the record, and its files may already
+		// be in the library.
+		return otelx.RecordSpanError(span, d.PurgeRecordForHash(ctx, torrentHash))
+	}
+	if err != nil {
+		return otelx.RecordSpanError(
+			span, fmt.Errorf("reject record %d: %w", rec.ID, err),
+		)
+	}
+	return otelx.RecordSpanError(span, d.ReconcileStrandedMedia(ctx))
 }
 
 // ReconcileStrandedMedia reverts episodes, albums and book slots stranded in

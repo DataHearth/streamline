@@ -191,12 +191,12 @@
 	const removeTorrent = createMutation<
 		unknown,
 		Error,
-		{ hash: string; deleteFiles: boolean }
+		{ hash: string; deleteFiles: boolean; blocklist: boolean }
 	>(() => ({
 		// delete_files is a query param — DELETE request bodies are poorly
 		// supported (reconciled contract).
-		mutationFn: ({ hash, deleteFiles }) =>
-			api(`/torrents/${hash}?delete_files=${deleteFiles}`, {
+		mutationFn: ({ hash, deleteFiles, blocklist }) =>
+			api(`/torrents/${hash}?delete_files=${deleteFiles}&blocklist=${blocklist}`, {
 				method: "DELETE",
 			}),
 		onSuccess: () => {
@@ -615,7 +615,8 @@
 	onClose={() => (selectedHash = null)}
 	onPause={(hash) => pauseTorrent.mutate(hash)}
 	onResume={(hash) => resumeTorrent.mutate(hash)}
-	onRemove={(hash, deleteFiles) => removeTorrent.mutate({ hash, deleteFiles })}
+	onRemove={(hash, deleteFiles, blocklist) =>
+		removeTorrent.mutate({ hash, deleteFiles, blocklist })}
 	onSetPriority={(hash, index, priority) =>
 		setPriority.mutate({ hash, index, priority })}
 />
@@ -623,7 +624,8 @@
 <TorrentRemoveDialog
 	torrent={swipeRemoveTorrent}
 	onClose={() => (swipeRemoveHash = null)}
-	onRemove={(hash, deleteFiles) => removeTorrent.mutate({ hash, deleteFiles })}
+	onRemove={(hash, deleteFiles, blocklist) =>
+		removeTorrent.mutate({ hash, deleteFiles, blocklist })}
 />
 
 {#if compact}

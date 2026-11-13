@@ -64,7 +64,7 @@
 		onClose: () => void;
 		onPause: (hash: string) => void;
 		onResume: (hash: string) => void;
-		onRemove: (hash: string, deleteFiles: boolean) => void;
+		onRemove: (hash: string, deleteFiles: boolean, blocklist: boolean) => void;
 		onSetPriority: (hash: string, index: number, priority: TorrentFilePriority) => void;
 	} = $props();
 

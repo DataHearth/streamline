@@ -2107,6 +2107,7 @@
 	"torrent_agg_down": "Agg ↓",
 	"torrent_agg_up": "Agg ↑",
 	"torrent_aggregate_down": "Aggregate ↓",
+	"torrent_blocklist_release": "Blocklist this release, so automatic searches do not grab it again",
 	"torrent_also_delete_files": "Also delete downloaded files",
 	"torrent_builtin_disabled": "The built-in client isn’t enabled",
 	"torrent_choose_file": "Choose a .torrent file",

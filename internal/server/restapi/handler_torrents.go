@@ -219,7 +219,11 @@ func (s *Server) DeleteTorrent(
 	// The torrent is gone for good, so the record tracking it is too. Leaving it
 	// to the monitor's orphan sweep would park the queue row on "downloading"
 	// for the length of its grace window with nothing behind it.
-	if err := s.downloads.PurgeRecordForHash(ctx, request.Hash); err != nil {
+	settle := s.downloads.PurgeRecordForHash
+	if request.Params.Blocklist != nil && *request.Params.Blocklist {
+		settle = s.downloads.RejectRecordForHash
+	}
+	if err := settle(ctx, request.Hash); err != nil {
 		return nil, err
 	}
 	return DeleteTorrent204Response{}, nil

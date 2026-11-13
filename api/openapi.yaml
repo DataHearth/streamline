@@ -4016,6 +4016,7 @@ paths:
       tags: [torrents]
       parameters:
         - $ref: "#/components/parameters/DeleteFiles"
+        - $ref: "#/components/parameters/BlocklistRelease"
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -7023,6 +7024,18 @@ components:
       name: delete_files
       in: query
       required: false
+      schema:
+        type: boolean
+        default: false
+    BlocklistRelease:
+      name: blocklist
+      in: query
+      required: false
+      description: >-
+        Keep the download record behind the torrent as a rejected release, so
+        no automatic search or feed takes that release for the title again. The
+        title goes back to wanted either way. Nothing to do for a torrent no
+        record tracks, or one already importing.
       schema:
         type: boolean
         default: false

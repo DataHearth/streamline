@@ -19,17 +19,21 @@
 		// null keeps the dialog closed.
 		torrent: Torrent | null;
 		onClose: () => void;
-		onRemove: (hash: string, deleteFiles: boolean) => void;
+		onRemove: (hash: string, deleteFiles: boolean, blocklist: boolean) => void;
 	} = $props();
 
 	// Unticked again whenever a dialog opens. Keyed on the hash, not the object:
 	// the list refetches every 2 s, and a fresh object mid-question would clear
 	// the box under the user's thumb.
 	let deleteFiles = $state(false);
+	let blocklist = $state(false);
 	let openFor = $derived(torrent?.hash ?? null);
 	$effect(() => {
 		openFor;
-		untrack(() => (deleteFiles = false));
+		untrack(() => {
+			deleteFiles = false;
+			blocklist = false;
+		});
 	});
 </script>
 
@@ -43,7 +47,7 @@
 		{
 			label: i18n.common_remove(),
 			variant: "danger",
-			onClick: () => torrent && onRemove(torrent.hash, deleteFiles),
+			onClick: () => torrent && onRemove(torrent.hash, deleteFiles, blocklist),
 		},
 	]}
 >
@@ -60,4 +64,14 @@
 			{#each deleteFilesBody as p}{#if p.slot === "action"}<span class="font-medium text-fg">{i18n.torrent_also_delete_files()}</span>{:else}{p.text}{/if}{/each}
 		</span>
 	</Checkbox>
+	<!-- Only a torrent a download record tracks has a release to blocklist. -->
+	{#if torrent?.tracked}
+		<Checkbox
+			checked={blocklist}
+			onChange={(v) => (blocklist = v)}
+			class="mt-2 rounded-md border border-border bg-bg-card p-3"
+		>
+			<span class="text-sm text-fg-muted">{i18n.torrent_blocklist_release()}</span>
+		</Checkbox>
+	{/if}
 </Dialog>

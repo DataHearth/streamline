@@ -154,6 +154,26 @@ var _ = Describe("Manager.Grab", Label("integration", "downloads"), func() {
 		Expect(refreshed.Status).To(Equal(movie.StatusDownloading))
 	})
 
+	It("keeps a removed torrent's record as a rejected release", func() {
+		rec, err := mgr.Grab(ctx, indexer.SearchResult{
+			Title:    "Fight.Club.1999.1080p.BluRay.x264-GROUP",
+			Download: "magnet:?xt=urn:btih:abc123&dn=fightclub",
+		}, m.ID)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(mgr.RejectRecordForHash(ctx, rec.TorrentHash)).To(Succeed())
+
+		kept, err := dbClient.DownloadRecord.Get(ctx, rec.ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(kept.Rejected).To(BeTrue())
+		refreshed, err := dbClient.Movie.Get(ctx, m.ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(refreshed.Status).To(Equal(movie.StatusWanted))
+		blocklist, err := db.New(dbClient).RejectedReleases(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(blocklist.Movie(m.ID, rec.TorrentHash, rec.Title)).To(BeTrue())
+	})
+
 	Describe("a title that already has a download in flight", func() {
 		first := indexer.SearchResult{
 			Title:    "Fight.Club.1999.1080p.BluRay.x264-GROUP",

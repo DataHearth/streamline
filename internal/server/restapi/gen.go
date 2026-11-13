@@ -10301,6 +10301,9 @@ type AlbumSearchTypes = []MusicAlbumType
 // ApiKeyID defines model for ApiKeyID.
 type ApiKeyID = uint32
 
+// BlocklistRelease defines model for BlocklistRelease.
+type BlocklistRelease = bool
+
 // BookDefaultKind A classifier heuristic over Hardcover genres and original language, correctable through `PATCH /books/{id}`.
 type BookDefaultKind = BookKind
 
@@ -11701,6 +11704,9 @@ type GetStatsParams struct {
 // DeleteTorrentParams defines parameters for DeleteTorrent.
 type DeleteTorrentParams struct {
 	DeleteFiles *DeleteFiles `form:"delete_files,omitempty" json:"delete_files,omitempty"`
+
+	// Blocklist Keep the download record behind the torrent as a rejected release, so no automatic search or feed takes that release for the title again. The title goes back to wanted either way. Nothing to do for a torrent no record tracks, or one already importing.
+	Blocklist *BlocklistRelease `form:"blocklist,omitempty" json:"blocklist,omitempty"`
 }
 
 // ListUsersParams defines parameters for ListUsers.
@@ -22422,6 +22428,19 @@ func (siw *ServerInterfaceWrapper) DeleteTorrent(w http.ResponseWriter, r *http.
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "delete_files"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "delete_files", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "blocklist" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "blocklist", r.URL.Query(), &params.Blocklist, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "blocklist"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "blocklist", Err: err})
 		}
 		return
 	}
