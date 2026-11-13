@@ -364,6 +364,8 @@ var _ = Describe("Torznab Client", Label("unit", "indexers"), func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(1))
 				Expect(results[0].Seeders).To(Equal(uint32(0)))
+				Expect(results[0].HasSeeders).To(BeFalse())
+				Expect(results[0].NoSeeders()).To(BeFalse())
 				Expect(results[0].Leechers).To(Equal(uint32(0)))
 				Expect(results[0].Category).To(BeEmpty())
 			})

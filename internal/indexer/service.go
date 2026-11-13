@@ -1270,6 +1270,8 @@ func (i *indexer) Feed(
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	countFeed("success")
+	// The feed only serves automatic grabs.
+	results = slices.DeleteFunc(results, SearchResult.NoSeeders)
 	for k := range results {
 		// Prowlarr stamps the real sub-tracker; only fall back to the config
 		// name when the client left it blank (Torznab). Mirrors Search.

@@ -240,7 +240,7 @@ func (s *FeedScanner) tryUpgrade(
 	mf := files[0]
 	file := qualityctx.ContextFromRow(mf)
 	release := qualityctx.ContextFromRelease(
-		item.Title, item.Size, item.Seeders, singleRelease,
+		item.Title, item.Size, item.Seeders, item.HasSeeders, singleRelease,
 	)
 	if !quality.ReplacesFile(p, file, release) {
 		// Evaluate again here (cheap, pure) so the log can tell a band refusal

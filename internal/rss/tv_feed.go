@@ -215,7 +215,7 @@ func (s *TVFeedScanner) processItems(
 		// on the release and the library's season length, not on which show
 		// index (wanted/upgrade) ends up using it.
 		release := qualityctx.ContextFromRelease(
-			item.Title, item.Size, item.Seeders, episodes,
+			item.Title, item.Size, item.Seeders, item.HasSeeders, episodes,
 		)
 		if n := s.grabWanted(ctx, ws, us, parsed, item, p, release, pass); n > 0 {
 			matched += n

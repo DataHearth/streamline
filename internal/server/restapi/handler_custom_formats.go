@@ -335,14 +335,17 @@ func (s *Server) TestCustomFormat(
 		size = *sample.Size
 	}
 	var seeders uint32
-	if sample.Seeders != nil {
+	hasSeeders := sample.Seeders != nil
+	if hasSeeders {
 		seeders = *sample.Seeders
 	}
 	episodes := 1
 	if sample.Episodes != nil && *sample.Episodes > 0 {
 		episodes = *sample.Episodes
 	}
-	rc := qualityctx.ContextFromRelease(sample.Title, size, seeders, episodes)
+	rc := qualityctx.ContextFromRelease(
+		sample.Title, size, seeders, hasSeeders, episodes,
+	)
 
 	explain := f.Explain(rc)
 	conds := make([]CustomFormatConditionResult, len(explain))

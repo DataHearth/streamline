@@ -1461,6 +1461,9 @@ func toSearchResult(r indexer.SearchResult) SearchResult {
 		Size:        r.Size,
 		Seeders:     r.Seeders,
 	}
+	if r.NoSeeders() {
+		item.NoSeeders = new(true)
+	}
 	parsed := library.Parse(filepath.Base(r.Title))
 	if r.InfoURL != "" {
 		// A details page, for a human to open: the host and path are the
@@ -1562,8 +1565,11 @@ func annotateResults(
 		return
 	}
 	for i := range items {
+		noSeeders := items[i].NoSeeders != nil && *items[i].NoSeeders
 		res := quality.Evaluate(p, qualityctx.ContextFromRelease(
-			items[i].Title, items[i].Size, items[i].Seeders, episodes(items[i]),
+			items[i].Title, items[i].Size,
+			items[i].Seeders, items[i].Seeders > 0 || noSeeders,
+			episodes(items[i]),
 		))
 		items[i].Score = &res.Score
 		items[i].Rejected = &res.Rejected

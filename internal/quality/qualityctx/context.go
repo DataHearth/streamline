@@ -11,10 +11,9 @@ import (
 	"github.com/datahearth/streamline/internal/quality"
 )
 
-// ContextFromRelease scores an indexer result. Torznab leaves Seeders at 0
-// when the attribute is absent, which is indistinguishable from a real zero,
-// so unknown is reported as HasSeeders=false: a negated seeders condition
-// would otherwise score every silent indexer's results as confirmed-low.
+// ContextFromRelease scores an indexer result. hasSeeders is false when the
+// indexer gave no seeder count: a negated seeders condition would otherwise
+// score every silent indexer's results as confirmed-low.
 //
 // episodes is how many episodes the release carries and scales every size
 // bound. Pass 1 for a movie or a single episode, and the season's (or the
@@ -24,12 +23,13 @@ func ContextFromRelease(
 	title string,
 	size int64,
 	seeders uint32,
+	hasSeeders bool,
 	episodes int,
 ) quality.ReleaseContext {
 	p := library.Parse(title)
 	r := quality.ReleaseContext{
 		Title: title, Size: size,
-		Seeders: int(seeders), HasSeeders: seeders > 0,
+		Seeders: int(seeders), HasSeeders: hasSeeders,
 		Resolution: p.Resolution, Source: p.Source,
 		Group: p.Group, Codec: p.Codec,
 		EpisodeCount: episodes,

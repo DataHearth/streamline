@@ -913,6 +913,7 @@
 								"shrink-0 font-mono text-[11.5px] tabular font-medium",
 								seederClass(r.seeders),
 							)}
+							title={r.no_seeders ? i18n.releases_no_seeders() : undefined}
 						>
 							▲ {r.seeders}
 						</span>
@@ -1165,6 +1166,7 @@
 									"whitespace-nowrap px-3 py-2.5 text-right font-mono text-[11.5px] tabular font-medium",
 									seederClass(r.seeders),
 								)}
+								title={r.no_seeders ? i18n.releases_no_seeders() : undefined}
 							>
 								▲ {r.seeders}
 							</td>

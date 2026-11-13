@@ -399,12 +399,13 @@ func (e *Engine) field(
 		if !ok {
 			return "", fmt.Errorf("%s %q", name, value)
 		}
-		if (name == "seeders" || name == "leechers") && n >= 5_000_000 {
+		bogus := (name == "seeders" || name == "leechers") && n >= 5_000_000
+		if bogus {
 			n = 0
 		}
 		switch name {
 		case "seeders":
-			rel.Seeders = n
+			rel.Seeders, rel.HasSeeders = n, !bogus
 		case "leechers":
 			rel.Leechers = n
 		}

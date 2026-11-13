@@ -2387,6 +2387,7 @@
 	"releases_seen_help": "Ce même résultat a déjà été sélectionné pour ce titre.",
 	"releases_select": "Sélectionner",
 	"releases_speed_fast": "Rapide",
+	"releases_no_seeders": "L'indexeur n'annonce aucune source. Les recherches automatiques ignorent cette release.",
 	"releases_speed_help": "Vitesse probable, d'après {count} sources",
 	"releases_speed_ok": "Correct",
 	"releases_speed_slow": "Lent",

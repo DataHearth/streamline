@@ -152,6 +152,17 @@ var _ = Describe("scoreBest", Label("unit", "rss"), func() {
 		Expect(got.Seeders).To(Equal(uint32(50)))
 	})
 
+	It("skips a release its indexer reports with no seeders", func() {
+		results := []indexer.SearchResult{
+			{Title: "Movie.2024.2160p.BluRay.REMUX.HDR", HasSeeders: true},
+			{Title: "Movie.2024.1080p.WEB-DL.x264"},
+		}
+
+		got, ok := scoreBest(scoringTestProfile(0), results)
+		Expect(ok).To(BeTrue())
+		Expect(got.Title).To(Equal("Movie.2024.1080p.WEB-DL.x264"))
+	})
+
 	It("returns false when every release is outside the band", func() {
 		results := []indexer.SearchResult{
 			{Title: "Movie.2024.720p.WEB-DL.x264", Seeders: 900},

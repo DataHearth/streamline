@@ -50,6 +50,8 @@ var _ = Describe("Prowlarr Client", Label("unit", "indexers"), func() {
 				Expect(res[0].Download).To(Equal("http://x/a.torrent"))
 				Expect(res[0].Size).To(Equal(int64(8000000000)))
 				Expect(res[0].Seeders).To(Equal(uint32(50)))
+				Expect(res[0].HasSeeders).To(BeTrue())
+				Expect(res[1].HasSeeders).To(BeFalse())
 				Expect(res[0].Indexer).To(Equal("TrackerA"))
 				Expect(res[0].PublishDate.IsZero()).To(BeFalse())
 				// Falls back to magnetUrl when downloadUrl is absent.

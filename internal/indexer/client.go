@@ -8,11 +8,14 @@ import (
 )
 
 type SearchResult struct {
-	Title       string
-	InfoURL     string
-	Download    string
-	Size        int64
-	Seeders     uint32
+	Title    string
+	InfoURL  string
+	Download string
+	Size     int64
+	Seeders  uint32
+	// HasSeeders is false when the indexer gave no seeder count, which
+	// leaves Seeders at 0 without saying nobody seeds the release.
+	HasSeeders  bool
 	Leechers    uint32
 	Category    string
 	PublishDate time.Time
@@ -55,6 +58,11 @@ type SearchResult struct {
 	// carries no verdict and must not read as a rejected one.
 	TitleMismatch bool
 }
+
+// NoSeeders reports a release its indexer says nobody seeds. Every automatic
+// pick skips one, since it would sit in the client until it stalls; a count
+// the indexer never gave is not a zero.
+func (r SearchResult) NoSeeders() bool { return r.HasSeeders && r.Seeders == 0 }
 
 // MediaKind is the library kind a search is scoped to. It decides the newznab
 // category root and Prowlarr's search type — derived from whichever id

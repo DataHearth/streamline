@@ -469,6 +469,7 @@ func mapReleases(releases []engine.Release) []SearchResult {
 			Download:    link,
 			Size:        r.Size,
 			Seeders:     clampU32(r.Seeders),
+			HasSeeders:  r.HasSeeders,
 			Leechers:    clampU32(r.Leechers),
 			Category:    releaseCategory(r.Category),
 			PublishDate: r.Published,

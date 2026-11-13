@@ -2387,6 +2387,7 @@
 	"releases_seen_help": "This exact result was picked for this title before.",
 	"releases_select": "Select",
 	"releases_speed_fast": "Fast",
+	"releases_no_seeders": "The indexer reports no seeders. Automatic searches skip this release.",
 	"releases_speed_help": "Likely speed, from {count} seeders",
 	"releases_speed_ok": "Fair",
 	"releases_speed_slow": "Slow",

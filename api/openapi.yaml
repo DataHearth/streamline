@@ -9954,6 +9954,12 @@ components:
         release_type:
           type: string
           enum: [album, ep, single, compilation, live, other]
+        tracks:
+          type: integer
+          description: Album only — how many tracks the import placed.
+        track_title:
+          type: string
+          description: Album only — the track's title, when the import placed exactly one.
         author:
           type: string
         book_kind:
@@ -12563,6 +12569,12 @@ components:
         seeders:
           type: integer
           x-go-type: uint32
+        no_seeders:
+          type: boolean
+          description: >-
+            Set when the indexer reported zero seeders, as opposed to giving
+            no count, which also reads `seeders: 0`. Automatic searches and
+            feeds skip such a release; a grab by hand still takes it.
         leechers:
           type: integer
           x-go-type: uint32

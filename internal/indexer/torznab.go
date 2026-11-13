@@ -197,7 +197,7 @@ func parseItems(items []torznabItem) []SearchResult {
 				magnet = attr.Value
 			case "seeders":
 				if v, err := strconv.ParseUint(attr.Value, 10, 32); err == nil {
-					r.Seeders = uint32(v)
+					r.Seeders, r.HasSeeders = uint32(v), true
 				}
 			case "peers":
 				if v, err := strconv.ParseUint(attr.Value, 10, 32); err == nil {

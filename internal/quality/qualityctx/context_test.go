@@ -15,7 +15,7 @@ import (
 var _ = Describe("ContextFromRelease", Label("unit", "quality"), func() {
 	It("fills parsed fields and marks seeders present", func() {
 		title := "Movie.2024.2160p.BluRay.REMUX.HDR.x265-GRP"
-		r := qualityctx.ContextFromRelease(title, 8<<30, 50, 1)
+		r := qualityctx.ContextFromRelease(title, 8<<30, 50, true, 1)
 		Expect(r.Title).To(Equal(title))
 		Expect(r.Size).To(Equal(int64(8 << 30)))
 		Expect(r.Seeders).To(Equal(50))
@@ -26,15 +26,16 @@ var _ = Describe("ContextFromRelease", Label("unit", "quality"), func() {
 		Expect(r.Group).To(Equal("GRP"))
 	})
 
-	It("reports a seeder count of 0 as unknown, not as zero seeders", func() {
-		r := qualityctx.ContextFromRelease("Movie.2024.1080p.WEB", 1<<30, 0, 1)
-		Expect(r.Seeders).To(Equal(0))
+	It("reports a count the indexer never gave as unknown", func() {
+		r := qualityctx.ContextFromRelease(
+			"Movie.2024.1080p.WEB", 1<<30, 0, false, 1)
 		Expect(r.HasSeeders).To(BeFalse())
 	})
 
-	It("reports a single seeder as present", func() {
-		r := qualityctx.ContextFromRelease("Movie.2024.1080p.WEB", 1<<30, 1, 1)
-		Expect(r.Seeders).To(Equal(1))
+	It("reports a count of 0 the indexer gave as zero seeders", func() {
+		r := qualityctx.ContextFromRelease(
+			"Movie.2024.1080p.WEB", 1<<30, 0, true, 1)
+		Expect(r.Seeders).To(Equal(0))
 		Expect(r.HasSeeders).To(BeTrue())
 	})
 })
@@ -169,7 +170,7 @@ var _ = Describe("stream fields", Label("unit", "quality"), func() {
 			"reads MULTi as a floor of two tracks and says nothing about which",
 			func() {
 				r := qualityctx.ContextFromRelease(
-					"Show.S01E01.MULTi.1080p.WEB.x264-GRP", 0, 0, 1)
+					"Show.S01E01.MULTi.1080p.WEB.x264-GRP", 0, 0, false, 1)
 				Expect(r.AudioTracks).To(HaveValue(Equal(2)))
 				Expect(r.AudioLangs).To(BeNil())
 			},
@@ -179,20 +180,20 @@ var _ = Describe("stream fields", Label("unit", "quality"), func() {
 			// Reading it as a dub is the one mistake that would score a
 			// subtitled release and a dubbed one alike.
 			r := qualityctx.ContextFromRelease(
-				"Show.S01E01.VOSTFR.1080p.WEB.x265-KAF", 0, 0, 1)
+				"Show.S01E01.VOSTFR.1080p.WEB.x265-KAF", 0, 0, false, 1)
 			Expect(r.SubLangs).To(Equal([]string{"fra"}))
 			Expect(r.AudioLangs).To(BeNil())
 		})
 
 		It("reads VFF as French audio", func() {
 			r := qualityctx.ContextFromRelease(
-				"Movie.2024.TRUEFRENCH.1080p.BluRay-GRP", 0, 0, 1)
+				"Movie.2024.TRUEFRENCH.1080p.BluRay-GRP", 0, 0, false, 1)
 			Expect(r.AudioLangs).To(Equal([]string{"fra"}))
 		})
 
 		It("leaves every stream field unknown when the name claims nothing", func() {
 			r := qualityctx.ContextFromRelease(
-				"Movie.2024.1080p.BluRay.x264-GRP", 0, 0, 1)
+				"Movie.2024.1080p.BluRay.x264-GRP", 0, 0, false, 1)
 			Expect(r.AudioTracks).To(BeNil())
 			Expect(r.AudioLangs).To(BeNil())
 			Expect(r.SubLangs).To(BeNil())

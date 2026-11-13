@@ -42,19 +42,21 @@ type Query struct {
 
 // Release is one result row.
 type Release struct {
-	Title     string
-	Details   string
-	Download  string
-	Magnet    string
-	InfoHash  string
-	Size      int64
-	Seeders   int64
-	Leechers  int64
-	Category  []int
-	Published time.Time
-	IMDbID    int64
-	TMDBID    int64
-	TVDBID    int64
+	Title    string
+	Details  string
+	Download string
+	Magnet   string
+	InfoHash string
+	Size     int64
+	Seeders  int64
+	// HasSeeders is set once the definition's seeders field yields a number.
+	HasSeeders bool
+	Leechers   int64
+	Category   []int
+	Published  time.Time
+	IMDbID     int64
+	TMDBID     int64
+	TVDBID     int64
 }
 
 func (k Kind) mode(m cardigann.Modes) (string, []string) {

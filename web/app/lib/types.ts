@@ -392,6 +392,8 @@ export type SearchResult = {
 	download_url: string;
 	size: number;
 	seeders: number;
+	// The indexer said zero, rather than giving no count (also `seeders: 0`).
+	no_seeders?: boolean;
 	leechers?: number;
 	release_group?: string;
 	resolution?: string;
@@ -646,6 +648,9 @@ export type LibraryArrival = {
 	artist_id?: number;
 	artist_name?: string;
 	release_type?: ReleaseType;
+	// How many tracks the import placed, and the track's title when it was one.
+	tracks?: number;
+	track_title?: string;
 	// Book: the slot that arrived, or the volume of a series.
 	author?: string;
 	book_kind?: BookKind;

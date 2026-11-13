@@ -289,7 +289,7 @@ func (s *Service) searchAlbum(ctx context.Context, a *ent.Album) (bool, error) {
 	}
 	accepted := slices.DeleteFunc(
 		notRejected(ctx, namingAlbum(releases, a), blocklist, a.ID),
-		AlbumRelease.Rejected,
+		func(r AlbumRelease) bool { return r.Rejected() || r.Result.NoSeeders() },
 	)
 	if len(accepted) == 0 {
 		return false, nil

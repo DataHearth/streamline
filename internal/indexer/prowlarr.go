@@ -34,17 +34,17 @@ func NewProwlarr(baseURL, apiKey string) *Prowlarr {
 // prowlarrRelease is one entry of the /api/v1/search JSON array. Servarr
 // serialises camelCase; only the fields streamline needs are decoded.
 type prowlarrRelease struct {
-	Title       string `json:"title"`
-	InfoURL     string `json:"infoUrl"`
-	DownloadURL string `json:"downloadUrl"`
-	MagnetURL   string `json:"magnetUrl"`
-	Size        int64  `json:"size"`
-	Seeders     uint32 `json:"seeders"`
-	Leechers    uint32 `json:"leechers"`
-	Indexer     string `json:"indexer"`
-	Protocol    string `json:"protocol"` // "torrent" | "usenet"
-	PublishDate string `json:"publishDate"`
-	InfoHash    string `json:"infoHash"`
+	Title       string  `json:"title"`
+	InfoURL     string  `json:"infoUrl"`
+	DownloadURL string  `json:"downloadUrl"`
+	MagnetURL   string  `json:"magnetUrl"`
+	Size        int64   `json:"size"`
+	Seeders     *uint32 `json:"seeders"`
+	Leechers    uint32  `json:"leechers"`
+	Indexer     string  `json:"indexer"`
+	Protocol    string  `json:"protocol"` // "torrent" | "usenet"
+	PublishDate string  `json:"publishDate"`
+	InfoHash    string  `json:"infoHash"`
 
 	// Provider ids the tracker published on the release, parsed by Prowlarr
 	// out of the torznab attrs and re-emitted here. Absent decodes to 0, which
@@ -202,6 +202,10 @@ func mapProwlarrReleases(releases []prowlarrRelease) []SearchResult {
 		if dl == "" {
 			dl = r.MagnetURL
 		}
+		var seeders uint32
+		if r.Seeders != nil {
+			seeders = *r.Seeders
+		}
 		results = append(results, SearchResult{
 			// Some trackers hand Prowlarr an HTML-escaped title ("Feathers
 			// &amp; Flesh"), which no name match then reads as "&".
@@ -209,7 +213,8 @@ func mapProwlarrReleases(releases []prowlarrRelease) []SearchResult {
 			InfoURL:     r.InfoURL,
 			Download:    dl,
 			Size:        r.Size,
-			Seeders:     r.Seeders,
+			Seeders:     seeders,
+			HasSeeders:  r.Seeders != nil,
 			Leechers:    r.Leechers,
 			PublishDate: parsePubDate(r.PublishDate),
 			// The meaningful indexer is the sub-tracker Prowlarr fanned out to,

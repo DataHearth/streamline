@@ -6552,6 +6552,12 @@ type LibraryArrival struct {
 	SeriesId *uint32 `json:"series_id,omitempty"`
 	Title    string  `json:"title"`
 
+	// TrackTitle Album only — the track's title, when the import placed exactly one.
+	TrackTitle *string `json:"track_title,omitempty"`
+
+	// Tracks Album only — how many tracks the import placed.
+	Tracks *int `json:"tracks,omitempty"`
+
 	// Volume The volume's position in its series; may be fractional.
 	Volume *float64 `json:"volume,omitempty"`
 	Year   *uint16  `json:"year,omitempty"`
@@ -8877,6 +8883,9 @@ type SearchResult struct {
 
 	// MatchedFormats Names of the custom formats that matched, relative to the queried item's quality profile. Ignored on grab request bodies.
 	MatchedFormats *[]string `json:"matched_formats,omitempty"`
+
+	// NoSeeders Set when the indexer reported zero seeders, as opposed to giving no count, which also reads `seeders: 0`. Automatic searches and feeds skip such a release; a grab by hand still takes it.
+	NoSeeders *bool `json:"no_seeders,omitempty"`
 
 	// PreviouslyGrabbedAt When this exact release was last grabbed for the queried item — the movie, or for an episode, season or series search any episode of the show. Matched on info hash when both the release and the download record carry one, otherwise on the release title (case-insensitive). Adoption proposals do not count. Absent when it was never grabbed. Ignored on grab request bodies.
 	PreviouslyGrabbedAt *time.Time `json:"previously_grabbed_at,omitempty"`

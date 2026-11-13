@@ -104,6 +104,8 @@ For TV, a release is matched to a show by name: its title, its original title or
 
 **Missing search** (every 12 hours) takes the opposite approach: it walks through everything still marked Wanted and actively searches for it. This is what eventually finds older titles that will never appear in an RSS feed.
 
+Neither takes a release its indexer reports with zero seeders, for movies, TV, music and books alike: it would sit in the download client until it stalls. It is only skipped, so a later run takes it once someone seeds it, and a release from an indexer that gives no seeder count is not affected. A manual search still lists such a release (hover its seeder count for the note) and lets you grab it.
+
 Both exist separately for movies and TV (`movie_rss_sync`, `tv_rss_sync`, `movie_missing_search`, `tv_missing_search`) and all four can be retimed, paused or run on demand from **Settings → Schedules**.
 
 ```mermaid

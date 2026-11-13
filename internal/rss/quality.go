@@ -89,7 +89,9 @@ func evaluateRelease(
 ) quality.Result {
 	return quality.Evaluate(
 		p,
-		qualityctx.ContextFromRelease(r.Title, r.Size, r.Seeders, episodes),
+		qualityctx.ContextFromRelease(
+			r.Title, r.Size, r.Seeders, r.HasSeeders, episodes,
+		),
 	)
 }
 
@@ -117,7 +119,7 @@ func rankAccepted(
 
 	accepted := make([]scored, 0, len(results))
 	for _, r := range results {
-		if r.TitleMismatch {
+		if r.TitleMismatch || r.NoSeeders() {
 			continue
 		}
 		res := evaluateRelease(p, r, episodes)

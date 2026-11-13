@@ -162,9 +162,6 @@ func (c Condition) eval(r ReleaseContext) (ok, known bool) {
 		ok = (c.MinGB == 0 || gb >= c.MinGB*n) &&
 			(c.MaxGB == 0 || gb <= c.MaxGB*n)
 	case ConditionSeeders:
-		// HasSeeders is already the "was this reported" flag — Torznab leaves
-		// the attribute at 0 when the indexer omits it, and a file has no
-		// seeders to report in the first place.
 		if !r.HasSeeders {
 			return false, false
 		}

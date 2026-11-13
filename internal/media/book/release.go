@@ -122,6 +122,8 @@ func judge(
 	case auto && WrongLanguage(b, kind, parsed):
 		res.Rejected = true
 		res.Reason = "released in a different language than the edition"
+	case auto && r.NoSeeders():
+		res.Rejected, res.Reason = true, "no seeders"
 	}
 	return res
 }

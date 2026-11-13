@@ -387,7 +387,7 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 		// Left undeduped: computeKeepSet and unionEpisodes both key by episode
 		// ID and collapse it, and the importer never reads this list.
 		release := qualityctx.ContextFromRelease(
-			r.Title, r.Size, r.Seeders, episodes,
+			r.Title, r.Size, r.Seeders, r.HasSeeders, episodes,
 		)
 		beat := beatEpisodes(us, se.Number, profile, release, grabbed)
 		wantedIDs := make([]uint32, 0, len(wanted)+len(beat))
