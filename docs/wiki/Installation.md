@@ -111,7 +111,7 @@ library:
   download_path: /srv/data/downloads
 ```
 
-Set the music and book roots even if you start with films only: their defaults (`/data/music`, `/data/books`, `/data/audiobooks`) sit inside the container's `/data` volume, beside the database rather than under your media share.
+Set the music and book roots even if you start with films only: their defaults (`/media/music`, `/media/books`, `/media/audiobooks`) only suit a share mounted at `/media`. Earlier releases defaulted them to `/data/music`, `/data/books` and `/data/audiobooks`, inside the container's `/data` volume beside the database; a config file written by Streamline names its roots, so an existing instance stays where it is.
 
 ### 3. Start it
 

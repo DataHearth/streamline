@@ -1143,6 +1143,21 @@ quality_profiles:
 	})
 })
 
+var _ = Describe("default library roots", Label("unit", "config"), func() {
+	// /data is the container's data volume: a media root defaulting there puts
+	// the library beside the database, on a volume sized and backed up for it.
+	DescribeTable("sit under /media, never the data volume",
+		func(key, want string) {
+			Expect(defaults()[key]).To(Equal(want))
+		},
+		Entry("movies", "library.movie_path", "/media/movies"),
+		Entry("series", "library.series_path", "/media/series"),
+		Entry("music", "library.music_path", "/media/music"),
+		Entry("ebooks", "library.ebook_path", "/media/books"),
+		Entry("audiobooks", "library.audiobook_path", "/media/audiobooks"),
+	)
+})
+
 var _ = Describe("MusicBrainzIntervalDuration", Label("unit", "config"), func() {
 	DescribeTable("parses the interval, keeping a typo off the public server",
 		func(raw string, want time.Duration) {

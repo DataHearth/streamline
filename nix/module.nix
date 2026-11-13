@@ -11,7 +11,7 @@ let
   # library.download_path is also where torrents land, so it needs write access
   # alongside the media roots. A relative path (the `./data` style default) is
   # not something the sandbox can grant. The music and book roots are granted
-  # only when set: their binary defaults (/data/music, …) sit outside the state
+  # only when set: their binary defaults (/media/music, …) sit outside the state
   # dir, and an unset key must not name a directory that does not exist, which
   # would fail the unit's mount namespace.
   derivedPaths = lib.filter (p: p != null && lib.hasPrefix "/" p) [
