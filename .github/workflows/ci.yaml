@@ -290,10 +290,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # A published chart version is immutable in practice — re-pushing it
-      # silently swaps the artifact under everyone who pinned it. Touch the
-      # chart, bump the chart.
-      - name: Chart version must be bumped
+      # A chart change needs no bump of its own: only a chart-v* tag publishes,
+      # and `task release:chart` writes the version it tags, against the whole
+      # diff. A version below main's is a stale branch overwriting Chart.yaml,
+      # and the next release would be numbered from it.
+      - name: Chart version must not go backwards
         if: needs.changes.outputs.chart == 'true' && github.event_name == 'pull_request'
         run: |
           git fetch --depth=1 origin "${GITHUB_BASE_REF}"
@@ -302,11 +303,7 @@ jobs:
           head_v=$(read_version < "$chart")
           base_v=$(git show "origin/${GITHUB_BASE_REF}:${chart}" | read_version)
 
-          if [ "$head_v" = "$base_v" ]; then
-            echo "::error file=${chart}::chart changed but version is still ${head_v} — bump it"
-            exit 1
-          fi
-          # sort -V so 0.10.0 > 0.9.0; a backwards bump is as broken as none.
+          # sort -V so 0.10.0 > 0.9.0.
           newest=$(printf '%s\n%s\n' "$base_v" "$head_v" | sort -V | tail -1)
           if [ "$newest" != "$head_v" ]; then
             echo "::error file=${chart}::version went backwards: ${base_v} -> ${head_v}"

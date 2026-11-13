@@ -26,8 +26,7 @@ name: Renovate pins
 # the Actions token does start CI on the new commit, but every run it creates
 # waits at "approval required" until someone approves it — so each derived pin
 # would leave its PR without checks until the owner comes by. An App
-# installation token is an ordinary actor and CI starts by itself.
-# renovate-chart.yaml pushes the same way. Setup, once:
+# installation token is an ordinary actor and CI starts by itself. Setup, once:
 #
 #   1. Create a GitHub App on the owning account (no webhook), repository
 #      permission Contents: Read and write, and nothing else — never Workflows,
