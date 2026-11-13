@@ -20,9 +20,11 @@ data:
 {{- $_ = set $lib "audiobook_path" (default (printf "%s/media/audiobooks" $mount) $lib.audiobook_path) }}
 {{- $_ = set $cfg "library" $lib }}
 {{- else if .Values.library.media.enabled }}
-{{- /* Movies and series already land on the media volume through the binary
-       defaults (/media/movies, /media/series). Without this, music and books
-       would stay on the persistence volume, /data/music and friends. */}}
+{{- /* The binary's defaults put every media root under /media, which is the
+       media volume only while mountPath is left at /media. Movies and series
+       are the operator's to set when it is moved; music and books are set
+       here, as they have been since the binary defaulted them to the
+       persistence volume. */}}
 {{- $mount := .Values.library.media.mountPath }}
 {{- $lib := $cfg.library | default dict }}
 {{- $_ = set $lib "music_path" (default (printf "%s/music" $mount) $lib.music_path) }}

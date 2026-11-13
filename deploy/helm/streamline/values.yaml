@@ -369,10 +369,10 @@ library:
   # the chart leaves it as-is.
   #
   # UPGRADING from chart 2.4.0 or older: those versions left music_path,
-  # ebook_path and audiobook_path at the binary defaults (/data/music,
-  # /data/books, /data/audiobooks) on the persistence PVC, where a hardlink
-  # import from the shared downloads failed. If you already keep albums or
-  # books there, pin the old paths (config.library.music_path: /data/music,
+  # ebook_path and audiobook_path at the binary's defaults of the time
+  # (/data/music, /data/books, /data/audiobooks) on the persistence PVC, where a
+  # hardlink import from the shared downloads failed. If you already keep albums
+  # or books there, pin the old paths (config.library.music_path: /data/music,
   # and so on) or move the folders under this mount before upgrading.
   # With media/downloads below instead, the three default to
   # <media.mountPath>/music, /books and /audiobooks.
