@@ -191,6 +191,23 @@ func (s *Server) DeleteTorrent(
 	if request.Params.DeleteFiles != nil {
 		deleteFiles = *request.Params.DeleteFiles
 	}
+	if deleteFiles {
+		d, err := s.torrents.Details(ctx, request.Hash)
+		if err != nil && !errors.Is(err, download.ErrTorrentNotFound) {
+			return nil, err
+		}
+		// The removal itself would answer 204 and delete nothing.
+		if err == nil && len(d.Files) == 0 {
+			code := codeFilesUnknown
+			refusal := errConflict(
+				"This torrent's metadata was never fetched, so its folder is " +
+					"unknown. Remove it without deleting its data, then delete " +
+					"the folder by hand.",
+			)
+			refusal.Code = &code
+			return DeleteTorrent409JSONResponse{ConflictJSONResponse: refusal}, nil
+		}
+	}
 	switch err := s.torrents.RemoveTorrent(ctx, request.Hash, deleteFiles); {
 	case errors.Is(err, download.ErrTorrentNotFound):
 		return DeleteTorrent404JSONResponse{

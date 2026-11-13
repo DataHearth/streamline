@@ -139,6 +139,8 @@ export function errorText(err: unknown, fallback?: string): string {
 		// the request body, which sent an operator hunting through releases for
 		// a reason this message had already named.
 		if (code === "grab_rejected" && err.message) return err.message;
+		// A torrent whose data cannot be deleted says why and what to do.
+		if (code === "files_unknown" && err.message) return err.message;
 		// A search no indexer answered names each indexer and what went wrong
 		// with it (timed out, API key rejected…): the generic 502/504 would not
 		// say which one to go and look at.

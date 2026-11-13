@@ -42303,6 +42303,20 @@ func (response DeleteTorrent404JSONResponse) VisitDeleteTorrentResponse(w http.R
 	return err
 }
 
+type DeleteTorrent409JSONResponse struct{ ConflictJSONResponse }
+
+func (response DeleteTorrent409JSONResponse) VisitDeleteTorrentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetTorrentRequestObject struct {
 	Hash TorrentHash `json:"hash"`
 }

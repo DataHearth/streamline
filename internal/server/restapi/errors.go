@@ -164,6 +164,10 @@ func errInvalidCondition(msg string) UnprocessableEntityJSONResponse {
 // they picked instead of at the reason, which the message already names.
 const codeGrabRejected = "grab_rejected"
 
+// codeFilesUnknown marks a removal with data refused because the torrent has
+// no metadata to name its folder. The SPA renders the message verbatim.
+const codeFilesUnknown = "files_unknown"
+
 // codeLibraryOffline marks a change refused because the library root it touches
 // looks gone. The SPA renders the message verbatim.
 const codeLibraryOffline = "library_offline"

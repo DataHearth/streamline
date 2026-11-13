@@ -4008,7 +4008,10 @@ paths:
       description: |
         Also drops the in-flight download record tracking this torrent, if any,
         reverting its media to wanted — the queue does not wait for the
-        monitor's orphan sweep to notice.
+        monitor's orphan sweep to notice. With `delete_files=true`, a torrent
+        whose metadata was never fetched answers 409 with `code: files_unknown`
+        and is left in place: the engine places data by the name the metadata
+        carries, so it cannot tell which folder is this torrent's.
       tags: [torrents]
       parameters:
         - $ref: "#/components/parameters/DeleteFiles"
@@ -4017,6 +4020,8 @@ paths:
           $ref: "#/components/responses/NoContent"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "404":
           $ref: "#/components/responses/NotFound"
 

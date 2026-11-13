@@ -105,6 +105,22 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 		Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 	})
 
+	It("refuses to delete the data of a torrent with no metadata", func() {
+		app.torrents.EXPECT().Details(mock.Anything, testHash).
+			Return(bittorrent.TorrentDetails{}, nil).Once()
+
+		req, err := http.NewRequest(http.MethodDelete,
+			app.srv.URL+"/api/v1/torrents/"+testHash+"?delete_files=true", nil)
+		Expect(err).NotTo(HaveOccurred())
+		resp, err := http.DefaultClient.Do(req)
+		Expect(err).NotTo(HaveOccurred())
+		defer resp.Body.Close()
+		Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+		var body Error
+		Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+		Expect(body.Code).To(HaveValue(Equal("files_unknown")))
+	})
+
 	It("maps unknown hashes to 404", func() {
 		app.torrents.EXPECT().Details(mock.Anything, testHash).
 			Return(bittorrent.TorrentDetails{}, download.ErrTorrentNotFound).Once()
