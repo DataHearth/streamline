@@ -201,11 +201,11 @@ func (s *ImportService) ImportAudiobook(
 	}
 
 	// A folder is the unit: a half-placed audiobook would make every retry
-	// fail on ErrDestExists, so a failure mid-loop removes what this run put
+	// fail on ErrDestExists, so a failure mid-loop takes out what this run put
 	// there before returning.
 	placed := make([]ImportedFile, 0, len(cands))
-	var created []string
-	undo := func() { removePlaced(ctx, created, destDir, destWasEmpty) }
+	var created []placedFile
+	undo := func() { removePlaced(ctx, created, destDir, destWasEmpty, mode) }
 	for _, c := range cands {
 		dst := filepath.Join(destDir, c.rel)
 		if !PathUnderRoot(dst, destDir) {
@@ -241,7 +241,7 @@ func (s *ImportService) ImportAudiobook(
 				span, fmt.Errorf("transfer file: %w", err),
 			)
 		}
-		created = append(created, dst)
+		created = append(created, placedFile{src: c.path, dst: dst})
 		info, err := os.Stat(dst)
 		if err != nil {
 			outcome = "stat_dest_failed"
@@ -260,23 +260,43 @@ func (s *ImportService) ImportAudiobook(
 	return placed, nil
 }
 
-// removePlaced deletes the files one failed audiobook import placed and, when
-// the destination folder did not exist or was empty before the run, the
-// folder itself. Nothing here can fail the import further, so errors are
-// logged, not returned.
+// placedFile is one file an audiobook import transferred: where it came from
+// and where it went.
+type placedFile struct{ src, dst string }
+
+// removePlaced takes back the files one failed audiobook import placed and,
+// when the destination folder did not exist or was empty before the run, the
+// folder itself. A hardlink or a copy is deleted, its source being intact. A
+// moved file is the only copy there is, so it is moved back to where it came
+// from; one that cannot be is kept where it is, and so is the folder holding
+// it. Nothing here can fail the import further, so errors are logged, not
+// returned.
 func removePlaced(
 	ctx context.Context,
-	created []string,
+	created []placedFile,
 	destDir string,
 	destWasEmpty bool,
+	mode string,
 ) {
+	kept := false
 	for _, p := range created {
-		if err := os.Remove(p); err != nil {
+		if mode == "move" {
+			if err := moveFile(p.dst, p.src); err != nil {
+				kept = true
+				slog.ErrorContext(ctx,
+					"audiobook import: could not move placed file back, "+
+						"it stays in the library folder",
+					"media_file.path", p.dst, "media_file.src", p.src,
+					"error", err)
+			}
+			continue
+		}
+		if err := os.Remove(p.dst); err != nil {
 			slog.WarnContext(ctx, "audiobook import: could not remove placed file",
-				"media_file.path", p, "error", err)
+				"media_file.path", p.dst, "error", err)
 		}
 	}
-	if !destWasEmpty {
+	if !destWasEmpty || kept {
 		return
 	}
 	if err := os.RemoveAll(destDir); err != nil {
