@@ -244,6 +244,98 @@ var _ = Describe("Deluge Client", Label("unit", "downloads"), func() {
 		})
 	})
 
+	Describe("ListTorrents", func() {
+		listing := func(labelled bool) map[string]any {
+			row := func(name, label string) map[string]any {
+				st := map[string]any{
+					"name": name, "progress": 100.0, "state": "Seeding",
+					"is_finished": true,
+				}
+				if labelled {
+					st["label"] = label
+				}
+				return st
+			}
+			return map[string]any{
+				"aaa": row("tagged by hand", "streamline"),
+				"bbb": row("the operator's", "linux-isos"),
+				"ccc": row("unlabelled", ""),
+			}
+		}
+		foreignOf := func(torrents []Torrent) map[string]bool {
+			out := map[string]bool{}
+			for _, t := range torrents {
+				out[t.Hash] = t.Foreign
+			}
+			return out
+		}
+
+		It("reads the Label plugin's label and keeps only streamline's", func() {
+			srv := delugeServer(
+				func(method string, params []json.RawMessage) (any, string) {
+					switch method {
+					case "core.get_enabled_plugins":
+						return []string{"Blocklist", "Label"}, ""
+					case "core.get_torrents_status":
+						var keys []string
+						Expect(json.Unmarshal(params[1], &keys)).To(Succeed())
+						Expect(keys).To(ContainElement("label"))
+						return listing(true), ""
+					}
+					Fail("unexpected method " + method)
+					return nil, ""
+				},
+			)
+			DeferCleanup(srv.Close)
+
+			torrents, err := NewDeluge(srv.URL, "pw").
+				ListTorrents(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(foreignOf(torrents)).To(Equal(map[string]bool{
+				"aaa": false, "bbb": true, "ccc": true,
+			}))
+		})
+
+		It("marks every torrent foreign when the Label plugin is off", func() {
+			srv := delugeServer(
+				func(method string, params []json.RawMessage) (any, string) {
+					switch method {
+					case "core.get_enabled_plugins":
+						return []string{}, ""
+					case "core.get_torrents_status":
+						var keys []string
+						Expect(json.Unmarshal(params[1], &keys)).To(Succeed())
+						Expect(keys).NotTo(ContainElement("label"))
+						return listing(false), ""
+					}
+					Fail("unexpected method " + method)
+					return nil, ""
+				},
+			)
+			DeferCleanup(srv.Close)
+
+			torrents, err := NewDeluge(srv.URL, "pw").
+				ListTorrents(context.Background())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(foreignOf(torrents)).To(Equal(map[string]bool{
+				"aaa": true, "bbb": true, "ccc": true,
+			}))
+		})
+
+		It("fails the listing when the plugin list cannot be read", func() {
+			srv := delugeServer(
+				func(method string, _ []json.RawMessage) (any, string) {
+					Expect(method).To(Equal("core.get_enabled_plugins"))
+					return nil, "boom"
+				},
+			)
+			DeferCleanup(srv.Close)
+
+			_, err := NewDeluge(srv.URL, "pw").ListTorrents(context.Background())
+			Expect(err).To(MatchError(ContainSubstring("boom")))
+		})
+	})
+
 	Describe("RemoveTorrent", func() {
 		It("passes the hash and remove-data flag", func() {
 			srv := delugeServer(

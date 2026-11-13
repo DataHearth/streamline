@@ -2,9 +2,13 @@ package download
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -490,6 +494,156 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ids).To(BeEmpty())
 		})
+
+		// Transmission and Deluge list the whole client, so the listing holds
+		// the operator's own torrents. The one here is named like a wanted
+		// movie and its files are where an adoption would look: without the
+		// label check it is auto-imported, and the importer's cleanup then
+		// removes it from the client.
+		It("leaves a Transmission torrent without the streamline label alone",
+			func() {
+				const (
+					foreignHash = "1111111111111111111111111111111111111111"
+					foreignName = "The.Batman.2022.1080p.BluRay-X"
+					taggedName  = "Good.Omens.S03.MULTi.VF2.1080p.WEB.H264-FW"
+				)
+				srv := trServer(
+					func(method string, _ json.RawMessage) (string, any) {
+						Expect(method).To(Equal("torrent-get"))
+						return "success", map[string]any{
+							"torrents": []map[string]any{
+								{
+									"hashString": foreignHash, "name": foreignName,
+									"status": 6, "percentDone": 1.0,
+									"totalSize": int64(4096),
+									"labels":    []string{"personal"},
+								},
+								{
+									"hashString": adoptHash, "name": taggedName,
+									"status": 6, "percentDone": 1.0,
+									"totalSize": int64(4096),
+									"labels":    []string{"streamline"},
+								},
+							},
+						}
+					},
+				)
+				DeferCleanup(srv.Close)
+				host, portStr, err := net.SplitHostPort(
+					strings.TrimPrefix(srv.URL, "http://"),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				port, err := strconv.Atoi(portStr)
+				Expect(err).NotTo(HaveOccurred())
+
+				root := adoptRoot(foreignName, taggedName)
+				configtest.Setup(map[string]any{
+					"library": map[string]any{"download_path": root},
+					"download_clients": []map[string]any{{
+						"name": "tr", "client_type": "transmission",
+						"host": host, "port": port, "auth_method": "password",
+						"enabled": true,
+					}},
+				})
+
+				store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+					Return(map[string]struct{}{}, nil).Once()
+				// The foreign hash is not live either: a proposal an earlier
+				// release filed for it is pruned.
+				store.EXPECT().
+					DeleteStalePendingAdoptions(mock.Anything, "tr", []string{adoptHash}).
+					Return(0, nil).Once()
+				store.EXPECT().
+					DeleteOrphanedPendingAdoptions(mock.Anything, []string{"tr"}).
+					Return(0, nil).Once()
+				store.EXPECT().ListMoviesForAdoption(mock.Anything).
+					Return([]*ent.Movie{{
+						ID: 3, Title: "The Batman", Year: 2022, TmdbID: 414906,
+					}}, nil).Once()
+				store.EXPECT().ListTvShowsForAdoption(mock.Anything).
+					Return(nil, nil).Once()
+
+				// Exactly one record: the labelled torrent's proposal. A
+				// second call, for the wanted movie, fails the mock.
+				var got db.CreateDownloadRecordParams
+				store.EXPECT().CreateDownloadRecord(mock.Anything, mock.Anything).
+					Run(func(_ context.Context, p db.CreateDownloadRecordParams) {
+						got = p
+					}).
+					Return(&ent.DownloadRecord{ID: 7}, nil).Once()
+
+				ids, err := mgr.AdoptManualTorrents(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids).To(BeEmpty())
+				Expect(got.TorrentHash).To(Equal(adoptHash))
+				Expect(got.MovieID).To(BeZero())
+				Expect(got.Status).To(Equal(downloadrecord.StatusPending))
+			},
+		)
+
+		// Deluge's default state: no Label plugin, so nothing can carry the
+		// mark and the whole listing is the operator's. The torrent is named
+		// like a wanted movie and its files are in place.
+		It("leaves every Deluge torrent alone when the Label plugin is off",
+			func() {
+				const foreignName = "The.Batman.2022.1080p.BluRay-X"
+				srv := delugeServer(
+					func(method string, _ []json.RawMessage) (any, string) {
+						switch method {
+						case "core.get_enabled_plugins":
+							return []string{}, ""
+						case "core.get_torrents_status":
+							return map[string]any{
+								adoptHash: map[string]any{
+									"name": foreignName, "progress": 100.0,
+									"state": "Seeding", "is_finished": true,
+									"total_size": int64(4096),
+								},
+							}, ""
+						}
+						Fail("unexpected method " + method)
+						return nil, ""
+					},
+				)
+				DeferCleanup(srv.Close)
+				host, portStr, err := net.SplitHostPort(
+					strings.TrimPrefix(srv.URL, "http://"),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				port, err := strconv.Atoi(portStr)
+				Expect(err).NotTo(HaveOccurred())
+
+				root := adoptRoot(foreignName)
+				configtest.Setup(map[string]any{
+					"library": map[string]any{"download_path": root},
+					"download_clients": []map[string]any{{
+						"name": "dg", "client_type": "deluge",
+						"host": host, "port": port, "auth_method": "password",
+						"password": "pw", "enabled": true,
+					}},
+				})
+
+				store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+					Return(map[string]struct{}{}, nil).Once()
+				// Nothing is live, so a proposal an earlier release filed
+				// for this torrent is pruned.
+				store.EXPECT().
+					DeleteStalePendingAdoptions(mock.Anything, "dg", []string{}).
+					Return(0, nil).Once()
+				store.EXPECT().
+					DeleteOrphanedPendingAdoptions(mock.Anything, []string{"dg"}).
+					Return(0, nil).Once()
+
+				// Nothing is untracked, so the pass exits before loading the
+				// library: a library read or a CreateDownloadRecord fails
+				// the mock.
+				ids, err := mgr.AdoptManualTorrents(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids).To(BeEmpty())
+			},
+		)
 
 		It("files a torrent that is the library's own file as completed", func() {
 			root := adoptRoot("The.Batman.2022.1080p.BluRay-X")
