@@ -396,6 +396,8 @@ Streamline ships a web-app manifest, so the browser can pin it to a home screen 
 - **Android / desktop Chrome and Edge** — open Streamline, then use the browser's install prompt (the icon in the address bar, or the browser menu → *Install app*).
 - **iOS Safari** — Safari never prompts. Tap *Share* → *Add to Home Screen*.
 
+On iOS the installed app draws under the status bar instead of below a light band. iOS reads that setting when the icon is added, so an icon added before the release that changed it keeps the band: remove it from the home screen and add it again.
+
 The installed app uses the same session cookie as the tab, so a login in one is a login in both. If you sign in through OIDC, see the [standalone note](Authentication-and-SSO#oidc-from-an-installed-app) on the Authentication page.
 
 ---

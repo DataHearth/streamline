@@ -61,7 +61,7 @@
 </script>
 
 <div
-	class="flex flex-col px-4 py-6 md:px-6 lg:h-[calc(100dvh-4rem)] lg:min-h-0 lg:overflow-hidden"
+	class="flex flex-col px-4 py-6 md:px-6 lg:h-[calc(100dvh-var(--top-bar-height))] lg:min-h-0 lg:overflow-hidden"
 >
 	<ImportsHeader {counts} onNewScan={() => (modalOpen = true)} />
 
