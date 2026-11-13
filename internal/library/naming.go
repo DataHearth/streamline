@@ -18,7 +18,7 @@ import (
 var templateTokenRe = regexp.MustCompile(`(\s*)([\[(])?\{(\w+)(?::(\d+))?\}([\])])?`)
 
 // templateGroupRe matches a bracket pair, with the whitespace before it, that
-// holds no bracket and no path separator: "[{BitDepth}-{SampleRate}]". A pair
+// holds no bracket and no path separator: "[{BitDepth}bit-{SampleRate}kHz]". A pair
 // holding several tokens that all render empty goes whole, separator included,
 // where the per-token rule would leave "[-]".
 var templateGroupRe = regexp.MustCompile(`\s*(?:\[[^\[\]()/]*\]|\([^\[\]()/]*\))`)

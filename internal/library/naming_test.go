@@ -74,7 +74,7 @@ var _ = Describe("BuildAlbumTrackVars", Label("unit", "library"), func() {
 			AudioNaming{Quality: "lossless", BitDepth: 16, SampleRateHz: 44100},
 		)
 		Expect(ApplyTemplate(config.Get().Library.MusicNaming, vars)).
-			To(Equal("A/B (2000)/01 - Song [16-44.1].flac"))
+			To(Equal("A/B (2000)/01 - Song [16bit-44.1kHz].flac"))
 		vars = BuildAlbumTrackVars(
 			"A", "B", 2000, 1, false, 1, "Song", "flac",
 			AudioNaming{Quality: "hires", BitDepth: 24, SampleRateHz: 96000},
@@ -87,6 +87,24 @@ var _ = Describe("BuildAlbumTrackVars", Label("unit", "library"), func() {
 		).
 			To(Equal("Song [hires] (24/96).flac"))
 	})
+
+	It(
+		"renders the default template's units, and no bracket for a lossy file",
+		func() {
+			configtest.Setup()
+			tpl := config.Get().Library.MusicNaming
+			lossless := BuildAlbumTrackVars(
+				"A", "B", 2000, 1, false, 1, "Song", "flac",
+				AudioNaming{BitDepth: 24, SampleRateHz: 44100},
+			)
+			Expect(ApplyTemplate(tpl, lossless)).
+				To(Equal("A/B (2000)/01 - Song [24bit-44.1kHz].flac"))
+			lossy := BuildAlbumTrackVars(
+				"A", "B", 2000, 1, false, 1, "Song", "mp3", AudioNaming{},
+			)
+			Expect(ApplyTemplate(tpl, lossy)).To(Equal("A/B (2000)/01 - Song.mp3"))
+		},
+	)
 
 	It("keeps a bracket pair when one of its tokens has a value", func() {
 		vars := BuildAlbumTrackVars(

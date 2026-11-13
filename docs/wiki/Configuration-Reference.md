@@ -260,7 +260,7 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.movie_path` | path | `/media/movies` | Movie library root |
 | `library.series_path` | path | `/media/series` | TV library root |
 | `library.music_path` | path | `/media/music` | Music library root. File-only. Earlier releases defaulted to `/data/music`. A config file that never named the root follows the new default: set it explicitly if your library is still there |
-| `library.music_naming` | template | `{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title} [{BitDepth}-{SampleRate}].{ext}` | Editable at runtime, on Settings → Library. Tokens: [Music and book naming](Quality-Profiles-and-Naming#music-and-book-naming) |
+| `library.music_naming` | template | `{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title} [{BitDepth}bit-{SampleRate}kHz].{ext}` | Editable at runtime, on Settings → Library. Tokens: [Music and book naming](Quality-Profiles-and-Naming#music-and-book-naming) |
 | `library.ebook_path` | path | `/media/books` | Ebook library root. File-only. Earlier releases defaulted to `/data/books` |
 | `library.ebook_naming` | template | `{Author}/{Title} ({Year})` | Also `{Language}`, `{Series}`, `{Volume}`; the extension is appended. Editable at runtime, on Settings → Library. Tokens: [Music and book naming](Quality-Profiles-and-Naming#music-and-book-naming) |
 | `library.book_series_naming` | template | `{Author}/{Series}/{Series} - Vol. {Volume:02}` | Ebook volumes of a book series; audiobooks keep `audiobook_naming`. Not `library.series_naming`, which is the TV template. Editable at runtime, on Settings → Library |

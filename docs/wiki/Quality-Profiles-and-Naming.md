@@ -245,7 +245,7 @@ Music and books have templates of their own, with **capitalised** tokens — a t
 
 ```yaml
 library:
-  music_naming: '{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title} [{BitDepth}-{SampleRate}].{ext}'
+  music_naming: '{Artist}/{Album} ({Year})/{Disc}{Track:02} - {Title} [{BitDepth}bit-{SampleRate}kHz].{ext}'
   ebook_naming: '{Author}/{Title} ({Year})'
   audiobook_naming: '{Author}/{Title} ({Year})'
   book_series_naming: '{Author}/{Series}/{Series} - Vol. {Volume:02}'
@@ -266,7 +266,7 @@ library:
 | `{BitDepth}` | Bit depth of a lossless file — omitted for a lossy file and for one that was never measured | `24` |
 | `{SampleRate}` | Sample rate of a lossless file in kHz — omitted like `{BitDepth}` | `96`, `44.1` |
 
-`{BitDepth}` and `{SampleRate}` are measured with ffprobe when a file is imported or adopted, so they need [`ffmpeg.enabled`](Configuration-Reference#ffmpeg). Files already in the library are measured in the background by the `media-probe` job, 25 per run; until a file is measured its bracket is simply left out, and **Rename** on the artist adds it afterwards. The default template ends `[{BitDepth}-{SampleRate}]`: a bracket pair whose tokens are all empty disappears whole, so an MP3 is named `03 - Digital Love.mp3` and a FLAC `03 - Digital Love [16-44.1].flac`.
+`{BitDepth}` and `{SampleRate}` are measured with ffprobe when a file is imported or adopted, so they need [`ffmpeg.enabled`](Configuration-Reference#ffmpeg). Files already in the library are measured in the background by the `media-probe` job, 25 per run; until a file is measured its bracket is simply left out, and **Rename** on the artist adds it afterwards. The default template ends `[{BitDepth}bit-{SampleRate}kHz]`: a bracket pair whose tokens are all empty disappears whole, the `bit` and `kHz` written inside it included, so an MP3 is named `03 - Digital Love.mp3` and a FLAC `03 - Digital Love [16bit-44.1kHz].flac`.
 
 These three are per file. In a folder segment (`{Album} [{Quality}]`) an album whose tracks differ would be split across two folders, so keep them in the file name.
 
