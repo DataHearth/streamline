@@ -73,9 +73,10 @@ var (
 		"a download for this title is already in flight",
 	)
 	// ErrUnsafeTorrentName is returned when a client-supplied torrent name
-	// would place the save path outside the configured download directory.
+	// would place the save path outside the configured download directory, or
+	// on data another torrent owns.
 	ErrUnsafeTorrentName = errors.New(
-		"torrent name escapes the download path",
+		"torrent name cannot be used in the download path",
 	)
 	// ErrRecordHeld is returned by the queue verbs for a record parked by
 	// import verification. Its download is finished, so pause/resume/cancel

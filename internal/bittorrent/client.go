@@ -135,9 +135,12 @@ func (e *Engine) AddTorrent(
 		var info metainfo.Info
 		if err := bencode.Unmarshal(spec.InfoBytes, &info); err == nil &&
 			!e.paths.admits(e.downloadDir, &info, spec.InfoHash) {
+			why := "is already the name of another torrent or of other files there"
+			if !safeContentName(info.BestName()) {
+				why = "is not a plain folder name"
+			}
 			return "", otelx.RecordSpanError(span, fmt.Errorf(
-				"%w: %q is taken or unsafe", download.ErrUnsafeTorrentName,
-				info.BestName(),
+				"%w: %q %s", download.ErrUnsafeTorrentName, info.BestName(), why,
 			))
 		}
 	}
