@@ -14260,6 +14260,7 @@ components:
         - book_series_naming
         - import_mode
         - keep_torrent_seeding
+        - convert_wav
         - no_match_cooldown
         - max_grab_failures
         - import_max_attempts
@@ -14313,6 +14314,12 @@ components:
           enum: [hardlink, copy, move]
         keep_torrent_seeding:
           type: boolean
+        convert_wav:
+          type: boolean
+          description: >-
+            Convert WAV files to FLAC when a music download or upload is
+            imported. Needs ffmpeg; off, or without it, a WAV release is
+            rejected at search.
         no_match_cooldown:
           type: string
           description: Go duration string.
@@ -14399,6 +14406,12 @@ components:
           enum: [hardlink, copy, move]
         keep_torrent_seeding:
           type: boolean
+        convert_wav:
+          type: boolean
+          description: >-
+            Convert WAV files to FLAC when a music download or upload is
+            imported. Needs ffmpeg; off, or without it, a WAV release is
+            rejected at search.
         no_match_cooldown:
           type: string
           description: Go duration string.

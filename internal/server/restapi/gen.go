@@ -6593,7 +6593,10 @@ type LibraryConfigPatch struct {
 	BookLanguage         *string   `json:"book_language,omitempty"`
 
 	// BookSeriesNaming Ebook volumes of a book series (`library.book_series_naming`); not `series_naming`, the TV template.
-	BookSeriesNaming   *string                       `json:"book_series_naming,omitempty"`
+	BookSeriesNaming *string `json:"book_series_naming,omitempty"`
+
+	// ConvertWav Convert WAV files to FLAC when a music download or upload is imported. Needs ffmpeg; off, or without it, a WAV release is rejected at search.
+	ConvertWav         *bool                         `json:"convert_wav,omitempty"`
 	DriftGraceTicks    *int                          `json:"drift_grace_ticks,omitempty"`
 	EbookNaming        *string                       `json:"ebook_naming,omitempty"`
 	ImportMaxAttempts  *int                          `json:"import_max_attempts,omitempty"`
@@ -6637,7 +6640,10 @@ type LibraryConfigView struct {
 	BookLanguage string `json:"book_language"`
 
 	// BookSeriesNaming Ebook volumes of a book series (`library.book_series_naming`); not `series_naming`, the TV template.
-	BookSeriesNaming   string                      `json:"book_series_naming"`
+	BookSeriesNaming string `json:"book_series_naming"`
+
+	// ConvertWav Convert WAV files to FLAC when a music download or upload is imported. Needs ffmpeg; off, or without it, a WAV release is rejected at search.
+	ConvertWav         bool                        `json:"convert_wav"`
 	DownloadPath       *string                     `json:"download_path,omitempty"`
 	DriftGraceTicks    int                         `json:"drift_grace_ticks"`
 	EbookNaming        string                      `json:"ebook_naming"`

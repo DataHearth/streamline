@@ -72,6 +72,16 @@ A discography pack in the *Whole discography* search has the same *Files* view, 
 
 When a download completes, music is imported renamed per `library.music_naming`, and Streamline writes its own tags into the files (see [Tags and artwork](#tags-and-artwork)).
 
+#### WAV releases
+
+The library never holds a WAV file: the format has no dependable tags or cover art. A WAV release, or a WAV upload, is converted to FLAC as it is imported. FLAC holds the same audio in less space, and the converted file is tagged and named like any other. A 32- or 64-bit floating-point WAV, a studio format FLAC cannot store, is rounded to 24-bit.
+
+- The conversion needs `ffmpeg` and `ffprobe` (see [Installation](Installation#optional-ffmpeg-and-ffprobe)). Without them, or with **Convert WAV to FLAC on import** off under Settings → Music (`library.convert_wav`), a WAV release is listed as rejected in a manual search, never grabbed automatically, and a WAV upload is refused.
+- Each FLAC is checked against its WAV (sample rate and duration) before it is placed. A file that fails is left out, like a file that could not be copied.
+- The WAV itself is not touched. It stays with its torrent, so the album takes about 1.6 times its size until the torrent is removed; under `import_mode: move` without seeding it goes with the torrent.
+- A WAV rip usually carries no tags, so its files are matched to tracks by their names.
+- Importing an existing folder (Imports) still skips WAV files.
+
 Books are never modified: an ebook is placed as one file named per `library.ebook_naming` (a volume of a series per `library.book_series_naming`), an audiobook as one folder per `library.audiobook_naming` with its original file names. The templates can use `{Author}`, `{Title}` (the slot edition's), `{Year}`, `{Language}`, `{Series}` and `{Volume}` / `{Volume:02}`. A downloaded book whose details Hardcover has not delivered yet (a series placeholder) is held rather than filed under a wrong name; resolve it once the series has finished hydrating. **Rename files** on a book or series page moves the files already in the library to their template paths, never onto a file that exists.
 
 ## Tags and artwork

@@ -1027,6 +1027,7 @@ export type LibraryConfig = {
 	book_series_naming: string;
 	import_mode: ImportTransferMode;
 	keep_torrent_seeding: boolean;
+	convert_wav: boolean;
 	no_match_cooldown: string;
 	max_grab_failures: number;
 	import_max_attempts: number;

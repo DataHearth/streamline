@@ -124,6 +124,28 @@ var _ = Describe("Handler: Config API", Label("unit", "server", "config"), func(
 			Expect(got.MonitorSpecials).To(BeTrue())
 		})
 
+		It("round-trips convert_wav, on by default", func() {
+			read := func() LibraryConfigView {
+				GinkgoHelper()
+				get := app.do(app.req(
+					http.MethodGet, "/api/v1/config/library", app.adminKey, nil,
+				))
+				defer get.Body.Close()
+				var got LibraryConfigView
+				Expect(json.NewDecoder(get.Body).Decode(&got)).To(Succeed())
+				return got
+			}
+			Expect(read().ConvertWav).To(BeTrue())
+
+			resp := app.do(jsonReq(
+				app, http.MethodPatch, "/api/v1/config/library",
+				strings.NewReader(`{"convert_wav":false}`),
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			Expect(read().ConvertWav).To(BeFalse())
+		})
+
 		It("round-trips music_monitored_types, dropping repeats", func() {
 			Expect(config.Get().Library.MusicMonitoredTypes).
 				To(Equal([]string{"album", "ep", "single"}))

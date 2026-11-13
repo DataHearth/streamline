@@ -1943,6 +1943,8 @@
 	"music_monitored_types": "Monitored release types",
 	"music_monitored_types_help": "An artist monitored for all or future releases only monitors these types. The others are still listed on the artist page, unmonitored — nothing is searched or grabbed for them until you turn one on.",
 	"music_settings_saved": "Music settings saved",
+	"music_convert_wav": "Convert WAV to FLAC on import",
+	"music_convert_wav_help": "A WAV download or upload is converted to FLAC as it is imported: the same audio, smaller, with tags and cover art. The WAV stays with its torrent, so the album takes more space until the torrent is removed. Needs ffmpeg. Off, WAV releases are rejected.",
 	"music_apply_existing": "Apply to existing artists",
 	"music_apply_existing_help": "Re-applies the monitoring of every artist set to all or future releases, including releases switched on or off by hand on those artists.",
 	"music_tags_title": "Tags and artwork",

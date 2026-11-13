@@ -141,6 +141,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `library.monitor_specials` | ✅ | Settings → Series |
 | `library.music_monitored_types` | ✅ | Settings → Music |
 | `library.music_tags.*` | ✅ | Settings → Music |
+| `library.convert_wav` | ✅ | Settings → Music |
 | `library.probe.*` | ✅ Applies to the next import — see [Import verification](#import-verification) | Settings → Media probe |
 | `library.{movie,series,music,ebook,audiobook,book_series}_naming` | ✅ Applies to the next import or rename | Settings → Library |
 | `library.book_language` | ✅ Applies to books added from then on | Settings → Library (Books) |
@@ -284,6 +285,7 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.no_match_cooldown` | duration | `6h` | Quiet period after a search finds nothing acceptable |
 | `library.max_grab_failures` | int | `3` | Consecutive failures before an item is marked failed |
 | `library.keep_torrent_seeding` | bool | `true` | Leave torrents seeding after import. Ignored under `import_mode: move`: a moved torrent has nothing left to seed, so it is removed from the client, with any files the import left behind, as soon as its record imports |
+| `library.convert_wav` | bool | `true` | Convert WAV files to FLAC when a music download or upload is imported. Needs `ffmpeg` and `ffprobe` found and `ffmpeg.enabled`; without them, or with this off, a WAV release is rejected at search. **Runtime-editable** |
 | `library.import_max_attempts` | int | `3` | Import retries before giving up |
 | `library.allowed_download_roots` | []path | `[]` | If non-empty, a torrent's save path must sit under one of these or import is refused. Security fence — empty disables the check |
 | `library.drift_grace_ticks` | int | `3` | Consecutive `drift_check` ticks a file may be gone before it counts as missing from disk (1–20). At the default 15m interval, 3 ticks ≈ 45 minutes of tolerance for a flaky mount |

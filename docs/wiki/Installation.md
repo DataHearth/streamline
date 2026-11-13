@@ -341,6 +341,7 @@ These features are gated behind them, and only these:
 | **Measured music and audiobook quality** | `ffprobe` | An imported album's real tier (a "FLAC" that is a 128k transcode) and an audiobook's real bit rate are checked against the profile only when they can be measured; the import review shows a file's extension instead of `FLAC 24/96` |
 | **[Transcoding](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files)** | `ffmpeg` | `ffprobe` alone is not enough. Without `ffmpeg` the transcode worker stays idle and **Scan library** refuses |
 | **Converted [Subsonic](Subsonic#transcoding) streams** | `ffmpeg` | Apps always get the original file, whatever bitrate or format they ask for, and an account's maximum bitrate cannot be enforced |
+| **WAV music releases** | `ffmpeg` + `ffprobe` | A WAV release is rejected at search and a WAV upload is refused. With both, its files are [converted to FLAC](Music-and-Books#wav-releases) as they are imported |
 
 Everything else — searching, grabbing, importing, renaming, requests, notifications — works
 identically either way. A missing binary is a **graceful degrade, never a boot error**: nothing

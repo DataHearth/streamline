@@ -166,6 +166,16 @@
 			</div>
 		</section>
 
+		<section class="mt-4 rounded-lg border border-border bg-bg-card p-4">
+			<Checkbox
+				checked={cfg.data.convert_wav}
+				disabled={config.readOnly || save.isPending}
+				onChange={(v) => save.mutate({ convert_wav: v })}
+				label={i18n.music_convert_wav()}
+				description={i18n.music_convert_wav_help()}
+			/>
+		</section>
+
 		{@const tags = cfg.data.music_tags}
 		<section class="mt-4 space-y-4 rounded-lg border border-border bg-bg-card p-4">
 			<div>

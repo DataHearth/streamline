@@ -1943,6 +1943,8 @@
 	"music_monitored_types": "Types de sorties suivis",
 	"music_monitored_types_help": "Un artiste suivi pour toutes ses sorties ou les sorties à venir ne suit que ces types. Les autres restent listés sur la page de l'artiste, non suivis — rien n'est recherché ni récupéré pour eux tant que vous ne les activez pas.",
 	"music_settings_saved": "Paramètres de la musique enregistrés",
+	"music_convert_wav": "Convertir les WAV en FLAC à l'import",
+	"music_convert_wav_help": "Un téléchargement ou un envoi en WAV est converti en FLAC à l'import : le même son, plus léger, avec tags et pochette. Le WAV reste avec son torrent, donc l'album prend plus de place jusqu'à la suppression du torrent. Nécessite ffmpeg. Désactivé, les sorties WAV sont rejetées.",
 	"music_apply_existing": "Appliquer aux artistes existants",
 	"music_apply_existing_help": "Réapplique le suivi de chaque artiste suivi pour toutes ses sorties ou les sorties à venir, y compris les sorties activées ou désactivées à la main sur ces artistes.",
 	"music_tags_title": "Tags et pochettes",
