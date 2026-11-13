@@ -29,6 +29,8 @@ func (e *Engine) enforceOnce(ctx context.Context) {
 	ctx, span := tracer.Start(ctx, "bittorrent.enforce_seed_limits")
 	defer span.End()
 
+	e.removals.retryAll(ctx)
+
 	var evaluated, stopped int
 	for _, t := range e.client.Torrents() {
 		evaluated++

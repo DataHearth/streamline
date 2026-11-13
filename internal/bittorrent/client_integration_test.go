@@ -601,6 +601,43 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		Expect(os.IsNotExist(err)).To(BeTrue())
 	})
 
+	It(
+		"drops a torrent whose files cannot be deleted and deletes them later",
+		func() {
+			if os.Geteuid() == 0 {
+				Skip("root deletes from a read-only directory")
+			}
+			hash, err := engine.AddTorrent(ctx, download.TorrentSource{
+				Bytes: torrentBytes,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			partPath := filepath.Join(dlDir, "payload.bin.part")
+			Expect(os.WriteFile(partPath, []byte("partial"), 0o644)).To(Succeed())
+			Expect(os.Chmod(dlDir, 0o555)).To(Succeed())
+			DeferCleanup(func() { Expect(os.Chmod(dlDir, 0o755)).To(Succeed()) })
+
+			Expect(engine.RemoveTorrent(ctx, hash, true)).To(Succeed())
+
+			_, err = engine.GetTorrent(ctx, hash)
+			Expect(err).To(MatchError(download.ErrTorrentNotFound))
+			Expect(partPath).To(BeAnExistingFile())
+			pending := engine.PendingRemovals()
+			Expect(pending).To(HaveLen(1))
+			Expect(pending[0].Hash).To(Equal(hash))
+			Expect(pending[0].Error).To(ContainSubstring("permission denied"))
+			rows, err := store.ListTorrentDataRemovals(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rows).To(HaveLen(1))
+
+			Expect(os.Chmod(dlDir, 0o755)).To(Succeed())
+			engine.enforceOnce(ctx)
+
+			Expect(partPath).NotTo(BeAnExistingFile())
+			Expect(engine.PendingRemovals()).To(BeEmpty())
+			Expect(store.ListTorrentDataRemovals(ctx)).To(BeEmpty())
+		},
+	)
+
 	It("removes a torrent and deletes its data on request", func() {
 		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
 			Bytes: torrentBytes,

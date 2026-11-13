@@ -84,6 +84,8 @@ type Tx struct {
 	Share *ShareClient
 	// TVShow is the client for interacting with the TVShow builders.
 	TVShow *TVShowClient
+	// TorrentDataRemoval is the client for interacting with the TorrentDataRemoval builders.
+	TorrentDataRemoval *TorrentDataRemovalClient
 	// TorrentSession is the client for interacting with the TorrentSession builders.
 	TorrentSession *TorrentSessionClient
 	// Track is the client for interacting with the Track builders.
@@ -259,6 +261,7 @@ func (tx *Tx) init() {
 	tx.Session = NewSessionClient(tx.config)
 	tx.Share = NewShareClient(tx.config)
 	tx.TVShow = NewTVShowClient(tx.config)
+	tx.TorrentDataRemoval = NewTorrentDataRemovalClient(tx.config)
 	tx.TorrentSession = NewTorrentSessionClient(tx.config)
 	tx.Track = NewTrackClient(tx.config)
 	tx.TranscodeJob = NewTranscodeJobClient(tx.config)

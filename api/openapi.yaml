@@ -13678,15 +13678,42 @@ components:
 
     TorrentList:
       type: object
-      required: [items, refreshed_at]
+      required: [items, pending_removals, refreshed_at]
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/TorrentInfo"
+        pending_removals:
+          type: array
+          description: |
+            Torrents already removed whose files are still on disk because
+            deleting them failed. The engine retries every minute and at
+            start; an entry goes once its files are gone.
+          items:
+            $ref: "#/components/schemas/TorrentPendingRemoval"
         refreshed_at:
           type: string
           format: date-time
+
+    TorrentPendingRemoval:
+      type: object
+      required: [hash, name, path, since]
+      properties:
+        hash:
+          type: string
+        name:
+          type: string
+        path:
+          type: string
+          description: The folder or file under the download directory the torrent's data sits at.
+        error:
+          type: string
+          description: Why the last attempt failed. Absent until one has been made since the server started.
+        since:
+          type: string
+          format: date-time
+          description: When the torrent was removed.
 
     AddTorrentRequest:
       type: object

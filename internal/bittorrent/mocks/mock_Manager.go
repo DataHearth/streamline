@@ -290,6 +290,52 @@ func (_c *MockManager_PauseTorrent_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// PendingRemovals provides a mock function for the type MockManager
+func (_mock *MockManager) PendingRemovals() []bittorrent.PendingRemoval {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for PendingRemovals")
+	}
+
+	var r0 []bittorrent.PendingRemoval
+	if returnFunc, ok := ret.Get(0).(func() []bittorrent.PendingRemoval); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]bittorrent.PendingRemoval)
+		}
+	}
+	return r0
+}
+
+// MockManager_PendingRemovals_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PendingRemovals'
+type MockManager_PendingRemovals_Call struct {
+	*mock.Call
+}
+
+// PendingRemovals is a helper method to define mock.On call
+func (_e *MockManager_Expecter) PendingRemovals() *MockManager_PendingRemovals_Call {
+	return &MockManager_PendingRemovals_Call{Call: _e.mock.On("PendingRemovals")}
+}
+
+func (_c *MockManager_PendingRemovals_Call) Run(run func()) *MockManager_PendingRemovals_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockManager_PendingRemovals_Call) Return(pendingRemovals []bittorrent.PendingRemoval) *MockManager_PendingRemovals_Call {
+	_c.Call.Return(pendingRemovals)
+	return _c
+}
+
+func (_c *MockManager_PendingRemovals_Call) RunAndReturn(run func() []bittorrent.PendingRemoval) *MockManager_PendingRemovals_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RemoveTorrent provides a mock function for the type MockManager
 func (_mock *MockManager) RemoveTorrent(ctx context.Context, hash string, deleteFiles bool) error {
 	ret := _mock.Called(ctx, hash, deleteFiles)

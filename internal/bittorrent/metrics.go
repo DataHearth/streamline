@@ -64,6 +64,16 @@ func (e *Engine) registerEngineGauges(ctx context.Context) {
 		slog.ErrorContext(ctx, "torrent gauges unavailable", "error", err)
 		return
 	}
+	pending, err := meter.Int64ObservableGauge(
+		"streamline.bittorrent.pending_data_removals",
+		metric.WithDescription(
+			"Removed torrents whose files are still on disk, awaiting a retry",
+		),
+	)
+	if err != nil {
+		slog.ErrorContext(ctx, "torrent gauges unavailable", "error", err)
+		return
+	}
 
 	if _, err := meter.RegisterCallback(
 		func(_ context.Context, o metric.Observer) error {
@@ -82,9 +92,10 @@ func (e *Engine) registerEngineGauges(ctx context.Context) {
 			o.ObserveInt64(stalled, stalledCount)
 			o.ObserveInt64(downRate, down)
 			o.ObserveInt64(upRate, up)
+			o.ObserveInt64(pending, int64(len(e.removals.views())))
 			return nil
 		},
-		active, stalled, downRate, upRate,
+		active, stalled, downRate, upRate, pending,
 	); err != nil {
 		slog.ErrorContext(ctx, "torrent gauges not registered", "error", err)
 	}

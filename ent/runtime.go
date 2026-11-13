@@ -41,6 +41,7 @@ import (
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
 	"github.com/datahearth/streamline/ent/share"
+	"github.com/datahearth/streamline/ent/torrentdataremoval"
 	"github.com/datahearth/streamline/ent/torrentsession"
 	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/transcodejob"
@@ -955,6 +956,37 @@ func init() {
 	tvshowDescRating := tvshowFields[14].Descriptor()
 	// tvshow.DefaultRating holds the default value on creation for the rating field.
 	tvshow.DefaultRating = tvshowDescRating.Default.(float64)
+	torrentdataremovalMixin := schema.TorrentDataRemoval{}.Mixin()
+	torrentdataremovalMixinFields1 := torrentdataremovalMixin[1].Fields()
+	_ = torrentdataremovalMixinFields1
+	torrentdataremovalFields := schema.TorrentDataRemoval{}.Fields()
+	_ = torrentdataremovalFields
+	// torrentdataremovalDescCreateTime is the schema descriptor for create_time field.
+	torrentdataremovalDescCreateTime := torrentdataremovalMixinFields1[0].Descriptor()
+	// torrentdataremoval.DefaultCreateTime holds the default value on creation for the create_time field.
+	torrentdataremoval.DefaultCreateTime = torrentdataremovalDescCreateTime.Default.(func() time.Time)
+	// torrentdataremovalDescUpdateTime is the schema descriptor for update_time field.
+	torrentdataremovalDescUpdateTime := torrentdataremovalMixinFields1[1].Descriptor()
+	// torrentdataremoval.DefaultUpdateTime holds the default value on creation for the update_time field.
+	torrentdataremoval.DefaultUpdateTime = torrentdataremovalDescUpdateTime.Default.(func() time.Time)
+	// torrentdataremoval.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	torrentdataremoval.UpdateDefaultUpdateTime = torrentdataremovalDescUpdateTime.UpdateDefault.(func() time.Time)
+	// torrentdataremovalDescInfoHash is the schema descriptor for info_hash field.
+	torrentdataremovalDescInfoHash := torrentdataremovalFields[0].Descriptor()
+	// torrentdataremoval.InfoHashValidator is a validator for the "info_hash" field. It is called by the builders before save.
+	torrentdataremoval.InfoHashValidator = torrentdataremovalDescInfoHash.Validators[0].(func(string) error)
+	// torrentdataremovalDescName is the schema descriptor for name field.
+	torrentdataremovalDescName := torrentdataremovalFields[1].Descriptor()
+	// torrentdataremoval.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	torrentdataremoval.NameValidator = torrentdataremovalDescName.Validators[0].(func(string) error)
+	// torrentdataremovalDescDir is the schema descriptor for dir field.
+	torrentdataremovalDescDir := torrentdataremovalFields[2].Descriptor()
+	// torrentdataremoval.DirValidator is a validator for the "dir" field. It is called by the builders before save.
+	torrentdataremoval.DirValidator = torrentdataremovalDescDir.Validators[0].(func(string) error)
+	// torrentdataremovalDescInfo is the schema descriptor for info field.
+	torrentdataremovalDescInfo := torrentdataremovalFields[3].Descriptor()
+	// torrentdataremoval.InfoValidator is a validator for the "info" field. It is called by the builders before save.
+	torrentdataremoval.InfoValidator = torrentdataremovalDescInfo.Validators[0].(func([]byte) error)
 	torrentsessionMixin := schema.TorrentSession{}.Mixin()
 	torrentsessionMixinFields1 := torrentsessionMixin[1].Fields()
 	_ = torrentsessionMixinFields1

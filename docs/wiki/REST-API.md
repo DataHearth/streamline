@@ -387,7 +387,7 @@ Built-in custom formats are listed alongside user-defined ones (`builtin: true`)
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` | `/torrents` · `/torrents/{hash}` | List / fetch a torrent (files, trackers, peers) | 🔒 Admin |
+| `GET` | `/torrents` · `/torrents/{hash}` | List / fetch a torrent (files, trackers, peers). The list also carries `pending_removals`: removed torrents whose files could not be deleted yet, each with its path and the last error | 🔒 Admin |
 | `POST` | `/torrents` | Add a torrent by magnet link or base64 `.torrent` (body cap 24 MiB, `413` past it) | 🔒 Admin |
 | `DELETE` | `/torrents/{hash}` | Remove a torrent, optionally with its data. Also drops the download record tracking it and puts its media back to wanted at once, without waiting for the monitor's orphan sweep | 🔒 Admin |
 | `POST` | `/torrents/{hash}/pause` · `/resume` | Pause / resume | 🔒 Admin |

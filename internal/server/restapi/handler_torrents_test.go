@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -34,6 +35,7 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 				Progress: 1, Size: 100, Uploaded: 250, Ratio: 2.5, PeerCount: 3,
 			}},
 		).Once()
+		app.torrents.EXPECT().PendingRemovals().Return(nil).Once()
 
 		resp, err := http.Get(app.srv.URL + "/api/v1/torrents")
 		Expect(err).NotTo(HaveOccurred())
@@ -47,6 +49,30 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 		Expect(list.RefreshedAt).NotTo(BeZero())
 	})
 
+	It("lists the removed torrents whose files are still on disk", func() {
+		since := time.Date(2026, 3, 1, 10, 0, 0, 0, time.UTC)
+		app.torrents.EXPECT().ListViews(mock.Anything).
+			Return(nil).Once()
+		app.torrents.EXPECT().PendingRemovals().Return(
+			[]bittorrent.PendingRemoval{{
+				Hash: testHash, Name: "Test", Path: "/downloads/Test",
+				Error: "permission denied", Since: since,
+			}},
+		).Once()
+
+		resp, err := http.Get(app.srv.URL + "/api/v1/torrents")
+		Expect(err).NotTo(HaveOccurred())
+		defer resp.Body.Close()
+		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		var list TorrentList
+		Expect(json.NewDecoder(resp.Body).Decode(&list)).To(Succeed())
+		Expect(list.PendingRemovals).To(HaveLen(1))
+		Expect(list.PendingRemovals[0].Name).To(Equal("Test"))
+		Expect(list.PendingRemovals[0].Path).To(Equal("/downloads/Test"))
+		Expect(*list.PendingRemovals[0].Error).To(Equal("permission denied"))
+		Expect(list.PendingRemovals[0].Since).To(BeTemporally("==", since))
+	})
+
 	It("names the library title a tracked torrent is for", func() {
 		app.torrents.EXPECT().ListViews(mock.Anything).Return(
 			[]bittorrent.TorrentView{{
@@ -57,6 +83,7 @@ var _ = Describe("Handler: Torrents", Label("unit", "server", "torrents"), func(
 				},
 			}},
 		).Once()
+		app.torrents.EXPECT().PendingRemovals().Return(nil).Once()
 
 		resp, err := http.Get(app.srv.URL + "/api/v1/torrents")
 		Expect(err).NotTo(HaveOccurred())

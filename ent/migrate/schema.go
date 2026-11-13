@@ -1846,6 +1846,22 @@ var (
 			},
 		},
 	}
+	// TorrentDataRemovalsColumns holds the columns for the "torrent_data_removals" table.
+	TorrentDataRemovalsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "info_hash", Type: field.TypeString, Unique: true},
+		{Name: "name", Type: field.TypeString},
+		{Name: "dir", Type: field.TypeString},
+		{Name: "info", Type: field.TypeBytes},
+	}
+	// TorrentDataRemovalsTable holds the schema information for the "torrent_data_removals" table.
+	TorrentDataRemovalsTable = &schema.Table{
+		Name:       "torrent_data_removals",
+		Columns:    TorrentDataRemovalsColumns,
+		PrimaryKey: []*schema.Column{TorrentDataRemovalsColumns[0]},
+	}
 	// TorrentSessionsColumns holds the columns for the "torrent_sessions" table.
 	TorrentSessionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -2096,6 +2112,7 @@ var (
 		SessionsTable,
 		SharesTable,
 		TvShowsTable,
+		TorrentDataRemovalsTable,
 		TorrentSessionsTable,
 		TracksTable,
 		TranscodeJobsTable,

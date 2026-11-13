@@ -441,6 +441,18 @@ func (f TVShowFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, erro
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TVShowMutation", m)
 }
 
+// The TorrentDataRemovalFunc type is an adapter to allow the use of ordinary
+// function as TorrentDataRemoval mutator.
+type TorrentDataRemovalFunc func(context.Context, *ent.TorrentDataRemovalMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TorrentDataRemovalFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TorrentDataRemovalMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TorrentDataRemovalMutation", m)
+}
+
 // The TorrentSessionFunc type is an adapter to allow the use of ordinary
 // function as TorrentSession mutator.
 type TorrentSessionFunc func(context.Context, *ent.TorrentSessionMutation) (ent.Value, error)

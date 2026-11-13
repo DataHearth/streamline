@@ -114,6 +114,9 @@ type Share func(*sql.Selector)
 // TVShow is the predicate function for tvshow builders.
 type TVShow func(*sql.Selector)
 
+// TorrentDataRemoval is the predicate function for torrentdataremoval builders.
+type TorrentDataRemoval func(*sql.Selector)
+
 // TorrentSession is the predicate function for torrentsession builders.
 type TorrentSession func(*sql.Selector)
 

@@ -93,6 +93,7 @@ type Engine struct {
 	client      *antorrent.Client
 	storageImpl storage.ClientImplCloser
 	paths       *contentPaths
+	removals    *dataRemovals
 	store       db.Store
 	downloadDir string
 	seedRatio   float64
@@ -168,6 +169,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		client:      client,
 		storageImpl: st,
 		paths:       paths,
+		removals:    newDataRemovals(store, paths),
 		store:       store,
 		downloadDir: entry.DownloadDir,
 		seedRatio:   entry.SeedRatio,
@@ -189,6 +191,15 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		}
 		return nil, fmt.Errorf("restore torrent sessions: %w", err)
 	}
+	if err := e.removals.load(ctx); err != nil {
+		if cerr := e.Close(); cerr != nil {
+			slog.WarnContext(ctx, "engine close after failed load", "error", cerr)
+		}
+		return nil, err
+	}
+	// After restore: a name a restored torrent claimed is that torrent's, and
+	// the retry leaves its files alone.
+	e.removals.retryAll(ctx)
 	e.registerEngineGauges(ctx)
 	e.wg.Go(e.enforceSeedLimits)
 	return e, nil

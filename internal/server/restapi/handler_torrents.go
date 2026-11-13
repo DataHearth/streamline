@@ -29,10 +29,22 @@ func (s *Server) ListTorrents(
 	for _, v := range views {
 		items = append(items, torrentInfoToAPI(v))
 	}
+	owed := s.torrents.PendingRemovals()
+	pending := make([]TorrentPendingRemoval, 0, len(owed))
+	for _, p := range owed {
+		item := TorrentPendingRemoval{
+			Hash: p.Hash, Name: p.Name, Path: p.Path, Since: p.Since,
+		}
+		if p.Error != "" {
+			item.Error = &p.Error
+		}
+		pending = append(pending, item)
+	}
 	return ListTorrents200JSONResponse{
 		TorrentListJSONResponse: TorrentListJSONResponse(TorrentList{
-			Items:       items,
-			RefreshedAt: time.Now(),
+			Items:           items,
+			PendingRemovals: pending,
+			RefreshedAt:     time.Now(),
 		}),
 	}, nil
 }

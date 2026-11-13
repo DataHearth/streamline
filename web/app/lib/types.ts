@@ -1581,7 +1581,19 @@ export type TorrentDetails = Torrent & {
 	peers: TorrentPeer[];
 };
 
-export type TorrentList = { items: Torrent[]; refreshed_at: string };
+export type TorrentPendingRemoval = {
+	hash: string;
+	name: string;
+	path: string;
+	error?: string;
+	since: string;
+};
+
+export type TorrentList = {
+	items: Torrent[];
+	pending_removals: TorrentPendingRemoval[];
+	refreshed_at: string;
+};
 
 // POST /torrents — exactly one of magnet / torrent (base64 .torrent) is set.
 export type AddTorrentRequest = {

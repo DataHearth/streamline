@@ -6394,6 +6394,63 @@ func (_c *MockTx_DeleteTVShow_Call) RunAndReturn(run func(ctx context.Context, i
 	return _c
 }
 
+// DeleteTorrentDataRemoval provides a mock function for the type MockTx
+func (_mock *MockTx) DeleteTorrentDataRemoval(ctx context.Context, infoHash string) error {
+	ret := _mock.Called(ctx, infoHash)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteTorrentDataRemoval")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, infoHash)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_DeleteTorrentDataRemoval_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteTorrentDataRemoval'
+type MockTx_DeleteTorrentDataRemoval_Call struct {
+	*mock.Call
+}
+
+// DeleteTorrentDataRemoval is a helper method to define mock.On call
+//   - ctx context.Context
+//   - infoHash string
+func (_e *MockTx_Expecter) DeleteTorrentDataRemoval(ctx any, infoHash any) *MockTx_DeleteTorrentDataRemoval_Call {
+	return &MockTx_DeleteTorrentDataRemoval_Call{Call: _e.mock.On("DeleteTorrentDataRemoval", ctx, infoHash)}
+}
+
+func (_c *MockTx_DeleteTorrentDataRemoval_Call) Run(run func(ctx context.Context, infoHash string)) *MockTx_DeleteTorrentDataRemoval_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_DeleteTorrentDataRemoval_Call) Return(err error) *MockTx_DeleteTorrentDataRemoval_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_DeleteTorrentDataRemoval_Call) RunAndReturn(run func(ctx context.Context, infoHash string) error) *MockTx_DeleteTorrentDataRemoval_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteTorrentSessionByHash provides a mock function for the type MockTx
 func (_mock *MockTx) DeleteTorrentSessionByHash(ctx context.Context, infoHash string) error {
 	ret := _mock.Called(ctx, infoHash)
@@ -11654,6 +11711,63 @@ func (_c *MockTx_IsAlbumMonitoredByMBID_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// KeepTorrentDataRemoval provides a mock function for the type MockTx
+func (_mock *MockTx) KeepTorrentDataRemoval(ctx context.Context, p db.TorrentDataRemovalParams) error {
+	ret := _mock.Called(ctx, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for KeepTorrentDataRemoval")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.TorrentDataRemovalParams) error); ok {
+		r0 = returnFunc(ctx, p)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_KeepTorrentDataRemoval_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'KeepTorrentDataRemoval'
+type MockTx_KeepTorrentDataRemoval_Call struct {
+	*mock.Call
+}
+
+// KeepTorrentDataRemoval is a helper method to define mock.On call
+//   - ctx context.Context
+//   - p db.TorrentDataRemovalParams
+func (_e *MockTx_Expecter) KeepTorrentDataRemoval(ctx any, p any) *MockTx_KeepTorrentDataRemoval_Call {
+	return &MockTx_KeepTorrentDataRemoval_Call{Call: _e.mock.On("KeepTorrentDataRemoval", ctx, p)}
+}
+
+func (_c *MockTx_KeepTorrentDataRemoval_Call) Run(run func(ctx context.Context, p db.TorrentDataRemovalParams)) *MockTx_KeepTorrentDataRemoval_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.TorrentDataRemovalParams
+		if args[1] != nil {
+			arg1 = args[1].(db.TorrentDataRemovalParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_KeepTorrentDataRemoval_Call) Return(err error) *MockTx_KeepTorrentDataRemoval_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_KeepTorrentDataRemoval_Call) RunAndReturn(run func(ctx context.Context, p db.TorrentDataRemovalParams) error) *MockTx_KeepTorrentDataRemoval_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // LatestImportedRecordForEpisode provides a mock function for the type MockTx
 func (_mock *MockTx) LatestImportedRecordForEpisode(ctx context.Context, episodeID uint32) (*ent.DownloadRecord, error) {
 	ret := _mock.Called(ctx, episodeID)
@@ -16278,6 +16392,68 @@ func (_c *MockTx_ListTVShowsStaleSince_Call) Return(tVShows []*ent.TVShow, err e
 }
 
 func (_c *MockTx_ListTVShowsStaleSince_Call) RunAndReturn(run func(ctx context.Context, cutoff time.Time) ([]*ent.TVShow, error)) *MockTx_ListTVShowsStaleSince_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListTorrentDataRemovals provides a mock function for the type MockTx
+func (_mock *MockTx) ListTorrentDataRemovals(ctx context.Context) ([]*ent.TorrentDataRemoval, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListTorrentDataRemovals")
+	}
+
+	var r0 []*ent.TorrentDataRemoval
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]*ent.TorrentDataRemoval, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) []*ent.TorrentDataRemoval); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.TorrentDataRemoval)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_ListTorrentDataRemovals_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListTorrentDataRemovals'
+type MockTx_ListTorrentDataRemovals_Call struct {
+	*mock.Call
+}
+
+// ListTorrentDataRemovals is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockTx_Expecter) ListTorrentDataRemovals(ctx any) *MockTx_ListTorrentDataRemovals_Call {
+	return &MockTx_ListTorrentDataRemovals_Call{Call: _e.mock.On("ListTorrentDataRemovals", ctx)}
+}
+
+func (_c *MockTx_ListTorrentDataRemovals_Call) Run(run func(ctx context.Context)) *MockTx_ListTorrentDataRemovals_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_ListTorrentDataRemovals_Call) Return(torrentDataRemovals []*ent.TorrentDataRemoval, err error) *MockTx_ListTorrentDataRemovals_Call {
+	_c.Call.Return(torrentDataRemovals, err)
+	return _c
+}
+
+func (_c *MockTx_ListTorrentDataRemovals_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.TorrentDataRemoval, error)) *MockTx_ListTorrentDataRemovals_Call {
 	_c.Call.Return(run)
 	return _c
 }

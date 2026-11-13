@@ -275,6 +275,16 @@ func (e *Engine) RemoveTorrent(
 	if info != nil && !safeContentName(info.BestName()) {
 		info = nil
 	}
+	// Owed before anything is dropped: once the torrent is gone no listing
+	// names its files, so a delete that fails below, or a process that dies
+	// before it, would leave them for nobody.
+	if deleteFiles && info != nil {
+		if err := e.removals.owe(ctx, hash, e.downloadDir, info); err != nil {
+			return otelx.RecordSpanError(
+				span, fmt.Errorf("record torrent data removal: %w", err),
+			)
+		}
+	}
 	// The row goes first. Dropped first, a failed row delete would leave a
 	// torrent no API can reach (every call looks it up live) whose row the
 	// next boot restores — an admin's removal undone by a restart. This way
@@ -286,14 +296,14 @@ func (e *Engine) RemoveTorrent(
 	}
 	t.Drop()
 	e.forget(hash)
-	if deleteFiles && info != nil {
-		if err := removeTorrentData(e.downloadDir, info); err != nil {
-			return otelx.RecordSpanError(
-				span, fmt.Errorf("delete torrent data: %w", err),
-			)
-		}
-	}
+	// The removal itself is done: a delete that fails here is kept and
+	// retried on the enforcer's tick, and reported by PendingRemovals.
+	e.removals.attempt(ctx, hash)
 	return nil
+}
+
+func (e *Engine) PendingRemovals() []PendingRemoval {
+	return e.removals.views()
 }
 
 // refuseTorrent is the path guard's verdict on a magnet whose info just

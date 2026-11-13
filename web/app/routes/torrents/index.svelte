@@ -41,6 +41,7 @@
 	import { listOf, oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import ActivityFilterSheet from "@components/activity/ActivityFilterSheet.svelte";
 	import TouchStatLine from "@components/activity/TouchStatLine.svelte";
+	import TorrentPendingRemovals from "@components/activity/TorrentPendingRemovals.svelte";
 	import TorrentTable from "@components/activity/TorrentTable.svelte";
 	import TorrentTouchList from "@components/activity/TorrentTouchList.svelte";
 	import TorrentDrawer from "@components/activity/TorrentDrawer.svelte";
@@ -418,6 +419,8 @@
 			</div>
 		{/if}
 	</header>
+
+	<TorrentPendingRemovals removals={torrents.data?.pending_removals ?? []} />
 
 	{#if torrentsNotConfigured}
 		<div

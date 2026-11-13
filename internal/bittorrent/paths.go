@@ -241,6 +241,27 @@ func (p *contentPaths) release(ih metainfo.Hash) {
 	delete(p.trusted, ih)
 }
 
+// hold claims name for no torrent, so that nothing is placed under it while a
+// removed torrent's files there are being deleted. It reports false when a
+// torrent owns the name.
+func (p *contentPaths) hold(name string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, taken := p.owners[name]; taken {
+		return false
+	}
+	p.owners[name] = metainfo.Hash{}
+	return true
+}
+
+func (p *contentPaths) unhold(name string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.owners[name] == (metainfo.Hash{}) {
+		delete(p.owners, name)
+	}
+}
+
 func safeContentName(name string) bool {
 	return name != "" && name != "." && name != ".." &&
 		name != sessionDirName && !strings.ContainsAny(name, `/\`)

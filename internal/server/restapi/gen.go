@@ -9762,8 +9762,13 @@ type TorrentInfoStatus string
 
 // TorrentList defines model for TorrentList.
 type TorrentList struct {
-	Items       []TorrentInfo `json:"items"`
-	RefreshedAt time.Time     `json:"refreshed_at"`
+	Items []TorrentInfo `json:"items"`
+
+	// PendingRemovals Torrents already removed whose files are still on disk because
+	// deleting them failed. The engine retries every minute and at
+	// start; an entry goes once its files are gone.
+	PendingRemovals []TorrentPendingRemoval `json:"pending_removals"`
+	RefreshedAt     time.Time               `json:"refreshed_at"`
 }
 
 // TorrentMedia The library title the newest download record holding a torrent is
@@ -9785,6 +9790,20 @@ type TorrentPeer struct {
 	Client       *string  `json:"client,omitempty"`
 	DownloadRate *float64 `json:"download_rate,omitempty"`
 	UploadRate   *float64 `json:"upload_rate,omitempty"`
+}
+
+// TorrentPendingRemoval defines model for TorrentPendingRemoval.
+type TorrentPendingRemoval struct {
+	// Error Why the last attempt failed. Absent until one has been made since the server started.
+	Error *string `json:"error,omitempty"`
+	Hash  string  `json:"hash"`
+	Name  string  `json:"name"`
+
+	// Path The folder or file under the download directory the torrent's data sits at.
+	Path string `json:"path"`
+
+	// Since When the torrent was removed.
+	Since time.Time `json:"since"`
 }
 
 // TrackAssignment defines model for TrackAssignment.

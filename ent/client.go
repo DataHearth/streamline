@@ -50,6 +50,7 @@ import (
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/session"
 	"github.com/datahearth/streamline/ent/share"
+	"github.com/datahearth/streamline/ent/torrentdataremoval"
 	"github.com/datahearth/streamline/ent/torrentsession"
 	"github.com/datahearth/streamline/ent/track"
 	"github.com/datahearth/streamline/ent/transcodejob"
@@ -134,6 +135,8 @@ type Client struct {
 	Share *ShareClient
 	// TVShow is the client for interacting with the TVShow builders.
 	TVShow *TVShowClient
+	// TorrentDataRemoval is the client for interacting with the TorrentDataRemoval builders.
+	TorrentDataRemoval *TorrentDataRemovalClient
 	// TorrentSession is the client for interacting with the TorrentSession builders.
 	TorrentSession *TorrentSessionClient
 	// Track is the client for interacting with the Track builders.
@@ -189,6 +192,7 @@ func (c *Client) init() {
 	c.Session = NewSessionClient(c.config)
 	c.Share = NewShareClient(c.config)
 	c.TVShow = NewTVShowClient(c.config)
+	c.TorrentDataRemoval = NewTorrentDataRemovalClient(c.config)
 	c.TorrentSession = NewTorrentSessionClient(c.config)
 	c.Track = NewTrackClient(c.config)
 	c.TranscodeJob = NewTranscodeJobClient(c.config)
@@ -283,48 +287,49 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:              ctx,
-		config:           cfg,
-		Album:            NewAlbumClient(cfg),
-		ApiKey:           NewApiKeyClient(cfg),
-		Artist:           NewArtistClient(cfg),
-		ArtistMember:     NewArtistMemberClient(cfg),
-		Author:           NewAuthorClient(cfg),
-		Book:             NewBookClient(cfg),
-		BookContribution: NewBookContributionClient(cfg),
-		BookEdition:      NewBookEditionClient(cfg),
-		BookSeries:       NewBookSeriesClient(cfg),
-		Bookmark:         NewBookmarkClient(cfg),
-		Credit:           NewCreditClient(cfg),
-		DownloadRecord:   NewDownloadRecordClient(cfg),
-		Episode:          NewEpisodeClient(cfg),
-		ImportScan:       NewImportScanClient(cfg),
-		ImportScanAlbum:  NewImportScanAlbumClient(cfg),
-		ImportScanBook:   NewImportScanBookClient(cfg),
-		ImportScanFile:   NewImportScanFileClient(cfg),
-		ImportScanShow:   NewImportScanShowClient(cfg),
-		IndexerSession:   NewIndexerSessionClient(cfg),
-		Invite:           NewInviteClient(cfg),
-		MediaEvent:       NewMediaEventClient(cfg),
-		MediaFile:        NewMediaFileClient(cfg),
-		Movie:            NewMovieClient(cfg),
-		MusicAnnotation:  NewMusicAnnotationClient(cfg),
-		MusicCredit:      NewMusicCreditClient(cfg),
-		OIDCIdentity:     NewOIDCIdentityClient(cfg),
-		Person:           NewPersonClient(cfg),
-		PlayQueue:        NewPlayQueueClient(cfg),
-		Playlist:         NewPlaylistClient(cfg),
-		RadioStation:     NewRadioStationClient(cfg),
-		Request:          NewRequestClient(cfg),
-		ScheduledJob:     NewScheduledJobClient(cfg),
-		Season:           NewSeasonClient(cfg),
-		Session:          NewSessionClient(cfg),
-		Share:            NewShareClient(cfg),
-		TVShow:           NewTVShowClient(cfg),
-		TorrentSession:   NewTorrentSessionClient(cfg),
-		Track:            NewTrackClient(cfg),
-		TranscodeJob:     NewTranscodeJobClient(cfg),
-		User:             NewUserClient(cfg),
+		ctx:                ctx,
+		config:             cfg,
+		Album:              NewAlbumClient(cfg),
+		ApiKey:             NewApiKeyClient(cfg),
+		Artist:             NewArtistClient(cfg),
+		ArtistMember:       NewArtistMemberClient(cfg),
+		Author:             NewAuthorClient(cfg),
+		Book:               NewBookClient(cfg),
+		BookContribution:   NewBookContributionClient(cfg),
+		BookEdition:        NewBookEditionClient(cfg),
+		BookSeries:         NewBookSeriesClient(cfg),
+		Bookmark:           NewBookmarkClient(cfg),
+		Credit:             NewCreditClient(cfg),
+		DownloadRecord:     NewDownloadRecordClient(cfg),
+		Episode:            NewEpisodeClient(cfg),
+		ImportScan:         NewImportScanClient(cfg),
+		ImportScanAlbum:    NewImportScanAlbumClient(cfg),
+		ImportScanBook:     NewImportScanBookClient(cfg),
+		ImportScanFile:     NewImportScanFileClient(cfg),
+		ImportScanShow:     NewImportScanShowClient(cfg),
+		IndexerSession:     NewIndexerSessionClient(cfg),
+		Invite:             NewInviteClient(cfg),
+		MediaEvent:         NewMediaEventClient(cfg),
+		MediaFile:          NewMediaFileClient(cfg),
+		Movie:              NewMovieClient(cfg),
+		MusicAnnotation:    NewMusicAnnotationClient(cfg),
+		MusicCredit:        NewMusicCreditClient(cfg),
+		OIDCIdentity:       NewOIDCIdentityClient(cfg),
+		Person:             NewPersonClient(cfg),
+		PlayQueue:          NewPlayQueueClient(cfg),
+		Playlist:           NewPlaylistClient(cfg),
+		RadioStation:       NewRadioStationClient(cfg),
+		Request:            NewRequestClient(cfg),
+		ScheduledJob:       NewScheduledJobClient(cfg),
+		Season:             NewSeasonClient(cfg),
+		Session:            NewSessionClient(cfg),
+		Share:              NewShareClient(cfg),
+		TVShow:             NewTVShowClient(cfg),
+		TorrentDataRemoval: NewTorrentDataRemovalClient(cfg),
+		TorrentSession:     NewTorrentSessionClient(cfg),
+		Track:              NewTrackClient(cfg),
+		TranscodeJob:       NewTranscodeJobClient(cfg),
+		User:               NewUserClient(cfg),
 	}, nil
 }
 
@@ -342,48 +347,49 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:              ctx,
-		config:           cfg,
-		Album:            NewAlbumClient(cfg),
-		ApiKey:           NewApiKeyClient(cfg),
-		Artist:           NewArtistClient(cfg),
-		ArtistMember:     NewArtistMemberClient(cfg),
-		Author:           NewAuthorClient(cfg),
-		Book:             NewBookClient(cfg),
-		BookContribution: NewBookContributionClient(cfg),
-		BookEdition:      NewBookEditionClient(cfg),
-		BookSeries:       NewBookSeriesClient(cfg),
-		Bookmark:         NewBookmarkClient(cfg),
-		Credit:           NewCreditClient(cfg),
-		DownloadRecord:   NewDownloadRecordClient(cfg),
-		Episode:          NewEpisodeClient(cfg),
-		ImportScan:       NewImportScanClient(cfg),
-		ImportScanAlbum:  NewImportScanAlbumClient(cfg),
-		ImportScanBook:   NewImportScanBookClient(cfg),
-		ImportScanFile:   NewImportScanFileClient(cfg),
-		ImportScanShow:   NewImportScanShowClient(cfg),
-		IndexerSession:   NewIndexerSessionClient(cfg),
-		Invite:           NewInviteClient(cfg),
-		MediaEvent:       NewMediaEventClient(cfg),
-		MediaFile:        NewMediaFileClient(cfg),
-		Movie:            NewMovieClient(cfg),
-		MusicAnnotation:  NewMusicAnnotationClient(cfg),
-		MusicCredit:      NewMusicCreditClient(cfg),
-		OIDCIdentity:     NewOIDCIdentityClient(cfg),
-		Person:           NewPersonClient(cfg),
-		PlayQueue:        NewPlayQueueClient(cfg),
-		Playlist:         NewPlaylistClient(cfg),
-		RadioStation:     NewRadioStationClient(cfg),
-		Request:          NewRequestClient(cfg),
-		ScheduledJob:     NewScheduledJobClient(cfg),
-		Season:           NewSeasonClient(cfg),
-		Session:          NewSessionClient(cfg),
-		Share:            NewShareClient(cfg),
-		TVShow:           NewTVShowClient(cfg),
-		TorrentSession:   NewTorrentSessionClient(cfg),
-		Track:            NewTrackClient(cfg),
-		TranscodeJob:     NewTranscodeJobClient(cfg),
-		User:             NewUserClient(cfg),
+		ctx:                ctx,
+		config:             cfg,
+		Album:              NewAlbumClient(cfg),
+		ApiKey:             NewApiKeyClient(cfg),
+		Artist:             NewArtistClient(cfg),
+		ArtistMember:       NewArtistMemberClient(cfg),
+		Author:             NewAuthorClient(cfg),
+		Book:               NewBookClient(cfg),
+		BookContribution:   NewBookContributionClient(cfg),
+		BookEdition:        NewBookEditionClient(cfg),
+		BookSeries:         NewBookSeriesClient(cfg),
+		Bookmark:           NewBookmarkClient(cfg),
+		Credit:             NewCreditClient(cfg),
+		DownloadRecord:     NewDownloadRecordClient(cfg),
+		Episode:            NewEpisodeClient(cfg),
+		ImportScan:         NewImportScanClient(cfg),
+		ImportScanAlbum:    NewImportScanAlbumClient(cfg),
+		ImportScanBook:     NewImportScanBookClient(cfg),
+		ImportScanFile:     NewImportScanFileClient(cfg),
+		ImportScanShow:     NewImportScanShowClient(cfg),
+		IndexerSession:     NewIndexerSessionClient(cfg),
+		Invite:             NewInviteClient(cfg),
+		MediaEvent:         NewMediaEventClient(cfg),
+		MediaFile:          NewMediaFileClient(cfg),
+		Movie:              NewMovieClient(cfg),
+		MusicAnnotation:    NewMusicAnnotationClient(cfg),
+		MusicCredit:        NewMusicCreditClient(cfg),
+		OIDCIdentity:       NewOIDCIdentityClient(cfg),
+		Person:             NewPersonClient(cfg),
+		PlayQueue:          NewPlayQueueClient(cfg),
+		Playlist:           NewPlaylistClient(cfg),
+		RadioStation:       NewRadioStationClient(cfg),
+		Request:            NewRequestClient(cfg),
+		ScheduledJob:       NewScheduledJobClient(cfg),
+		Season:             NewSeasonClient(cfg),
+		Session:            NewSessionClient(cfg),
+		Share:              NewShareClient(cfg),
+		TVShow:             NewTVShowClient(cfg),
+		TorrentDataRemoval: NewTorrentDataRemovalClient(cfg),
+		TorrentSession:     NewTorrentSessionClient(cfg),
+		Track:              NewTrackClient(cfg),
+		TranscodeJob:       NewTranscodeJobClient(cfg),
+		User:               NewUserClient(cfg),
 	}, nil
 }
 
@@ -419,8 +425,8 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ImportScanFile, c.ImportScanShow, c.IndexerSession, c.Invite, c.MediaEvent,
 		c.MediaFile, c.Movie, c.MusicAnnotation, c.MusicCredit, c.OIDCIdentity,
 		c.Person, c.PlayQueue, c.Playlist, c.RadioStation, c.Request, c.ScheduledJob,
-		c.Season, c.Session, c.Share, c.TVShow, c.TorrentSession, c.Track,
-		c.TranscodeJob, c.User,
+		c.Season, c.Session, c.Share, c.TVShow, c.TorrentDataRemoval, c.TorrentSession,
+		c.Track, c.TranscodeJob, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -436,8 +442,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ImportScanFile, c.ImportScanShow, c.IndexerSession, c.Invite, c.MediaEvent,
 		c.MediaFile, c.Movie, c.MusicAnnotation, c.MusicCredit, c.OIDCIdentity,
 		c.Person, c.PlayQueue, c.Playlist, c.RadioStation, c.Request, c.ScheduledJob,
-		c.Season, c.Session, c.Share, c.TVShow, c.TorrentSession, c.Track,
-		c.TranscodeJob, c.User,
+		c.Season, c.Session, c.Share, c.TVShow, c.TorrentDataRemoval, c.TorrentSession,
+		c.Track, c.TranscodeJob, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -518,6 +524,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Share.mutate(ctx, m)
 	case *TVShowMutation:
 		return c.TVShow.mutate(ctx, m)
+	case *TorrentDataRemovalMutation:
+		return c.TorrentDataRemoval.mutate(ctx, m)
 	case *TorrentSessionMutation:
 		return c.TorrentSession.mutate(ctx, m)
 	case *TrackMutation:
@@ -6839,6 +6847,139 @@ func (c *TVShowClient) mutate(ctx context.Context, m *TVShowMutation) (Value, er
 	}
 }
 
+// TorrentDataRemovalClient is a client for the TorrentDataRemoval schema.
+type TorrentDataRemovalClient struct {
+	config
+}
+
+// NewTorrentDataRemovalClient returns a client for the TorrentDataRemoval from the given config.
+func NewTorrentDataRemovalClient(c config) *TorrentDataRemovalClient {
+	return &TorrentDataRemovalClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `torrentdataremoval.Hooks(f(g(h())))`.
+func (c *TorrentDataRemovalClient) Use(hooks ...Hook) {
+	c.hooks.TorrentDataRemoval = append(c.hooks.TorrentDataRemoval, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `torrentdataremoval.Intercept(f(g(h())))`.
+func (c *TorrentDataRemovalClient) Intercept(interceptors ...Interceptor) {
+	c.inters.TorrentDataRemoval = append(c.inters.TorrentDataRemoval, interceptors...)
+}
+
+// Create returns a builder for creating a TorrentDataRemoval entity.
+func (c *TorrentDataRemovalClient) Create() *TorrentDataRemovalCreate {
+	mutation := newTorrentDataRemovalMutation(c.config, OpCreate)
+	return &TorrentDataRemovalCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of TorrentDataRemoval entities.
+func (c *TorrentDataRemovalClient) CreateBulk(builders ...*TorrentDataRemovalCreate) *TorrentDataRemovalCreateBulk {
+	return &TorrentDataRemovalCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *TorrentDataRemovalClient) MapCreateBulk(slice any, setFunc func(*TorrentDataRemovalCreate, int)) *TorrentDataRemovalCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &TorrentDataRemovalCreateBulk{err: fmt.Errorf("calling to TorrentDataRemovalClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*TorrentDataRemovalCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &TorrentDataRemovalCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for TorrentDataRemoval.
+func (c *TorrentDataRemovalClient) Update() *TorrentDataRemovalUpdate {
+	mutation := newTorrentDataRemovalMutation(c.config, OpUpdate)
+	return &TorrentDataRemovalUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TorrentDataRemovalClient) UpdateOne(_m *TorrentDataRemoval) *TorrentDataRemovalUpdateOne {
+	mutation := newTorrentDataRemovalMutation(c.config, OpUpdateOne, withTorrentDataRemoval(_m))
+	return &TorrentDataRemovalUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TorrentDataRemovalClient) UpdateOneID(id uint32) *TorrentDataRemovalUpdateOne {
+	mutation := newTorrentDataRemovalMutation(c.config, OpUpdateOne, withTorrentDataRemovalID(id))
+	return &TorrentDataRemovalUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for TorrentDataRemoval.
+func (c *TorrentDataRemovalClient) Delete() *TorrentDataRemovalDelete {
+	mutation := newTorrentDataRemovalMutation(c.config, OpDelete)
+	return &TorrentDataRemovalDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TorrentDataRemovalClient) DeleteOne(_m *TorrentDataRemoval) *TorrentDataRemovalDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TorrentDataRemovalClient) DeleteOneID(id uint32) *TorrentDataRemovalDeleteOne {
+	builder := c.Delete().Where(torrentdataremoval.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TorrentDataRemovalDeleteOne{builder}
+}
+
+// Query returns a query builder for TorrentDataRemoval.
+func (c *TorrentDataRemovalClient) Query() *TorrentDataRemovalQuery {
+	return &TorrentDataRemovalQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeTorrentDataRemoval},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a TorrentDataRemoval entity by its id.
+func (c *TorrentDataRemovalClient) Get(ctx context.Context, id uint32) (*TorrentDataRemoval, error) {
+	return c.Query().Where(torrentdataremoval.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TorrentDataRemovalClient) GetX(ctx context.Context, id uint32) *TorrentDataRemoval {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *TorrentDataRemovalClient) Hooks() []Hook {
+	return c.hooks.TorrentDataRemoval
+}
+
+// Interceptors returns the client interceptors.
+func (c *TorrentDataRemovalClient) Interceptors() []Interceptor {
+	return c.inters.TorrentDataRemoval
+}
+
+func (c *TorrentDataRemovalClient) mutate(ctx context.Context, m *TorrentDataRemovalMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TorrentDataRemovalCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TorrentDataRemovalUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TorrentDataRemovalUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TorrentDataRemovalDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown TorrentDataRemoval mutation op: %q", m.Op())
+	}
+}
+
 // TorrentSessionClient is a client for the TorrentSession schema.
 type TorrentSessionClient struct {
 	config
@@ -7635,8 +7776,8 @@ type (
 		ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow,
 		IndexerSession, Invite, MediaEvent, MediaFile, Movie, MusicAnnotation,
 		MusicCredit, OIDCIdentity, Person, PlayQueue, Playlist, RadioStation, Request,
-		ScheduledJob, Season, Session, Share, TVShow, TorrentSession, Track,
-		TranscodeJob, User []ent.Hook
+		ScheduledJob, Season, Session, Share, TVShow, TorrentDataRemoval,
+		TorrentSession, Track, TranscodeJob, User []ent.Hook
 	}
 	inters struct {
 		Album, ApiKey, Artist, ArtistMember, Author, Book, BookContribution,
@@ -7644,7 +7785,7 @@ type (
 		ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow,
 		IndexerSession, Invite, MediaEvent, MediaFile, Movie, MusicAnnotation,
 		MusicCredit, OIDCIdentity, Person, PlayQueue, Playlist, RadioStation, Request,
-		ScheduledJob, Season, Session, Share, TVShow, TorrentSession, Track,
-		TranscodeJob, User []ent.Interceptor
+		ScheduledJob, Season, Session, Share, TVShow, TorrentDataRemoval,
+		TorrentSession, Track, TranscodeJob, User []ent.Interceptor
 	}
 )

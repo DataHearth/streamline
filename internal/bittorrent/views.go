@@ -24,6 +24,9 @@ type Manager interface {
 	ResumeTorrent(ctx context.Context, hash string) error
 	RemoveTorrent(ctx context.Context, hash string, deleteFiles bool) error
 	ListViews(ctx context.Context) []TorrentView
+	// PendingRemovals lists the removed torrents whose files are still on
+	// disk, oldest first.
+	PendingRemovals() []PendingRemoval
 	Details(ctx context.Context, hash string) (TorrentDetails, error)
 	SetFilePriorities(ctx context.Context, hash string, prios []FilePriority) error
 	SetListenPort(ctx context.Context, port uint16) error

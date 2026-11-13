@@ -501,6 +501,14 @@ type Store interface {
 	) (*ent.TorrentSession, error)
 	ListTorrentSessions(ctx context.Context) ([]*ent.TorrentSession, error)
 	DeleteTorrentSessionByHash(ctx context.Context, infoHash string) error
+	KeepTorrentDataRemoval(
+		ctx context.Context,
+		p TorrentDataRemovalParams,
+	) error
+	ListTorrentDataRemovals(
+		ctx context.Context,
+	) ([]*ent.TorrentDataRemoval, error)
+	DeleteTorrentDataRemoval(ctx context.Context, infoHash string) error
 	SetTorrentSessionPaused(
 		ctx context.Context,
 		infoHash string,
