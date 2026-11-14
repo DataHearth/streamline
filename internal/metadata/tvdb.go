@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -186,7 +187,23 @@ func (t *TVDB) get(ctx context.Context, path string, out any) error {
 	}
 	defer resp.Body.Close()
 	recordTVDBRequest(ctx, path, resp.StatusCode, started)
-	if resp.StatusCode != http.StatusOK {
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusTooManyRequests:
+		retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"), time.Now())
+		slog.WarnContext(ctx, "tvdb rate limited",
+			"tvdb.endpoint", path,
+			"retry_after", retryAfter.Round(time.Second))
+		return &RateLimitedError{RetryAfter: retryAfter}
+	case http.StatusNotFound:
+		// Debug, because a 404 is how TVDB says "no record", which several
+		// callers expect and handle (a season with no translation in the
+		// language). The error still reaches the caller, and a caller for
+		// which a 404 is a real fault (a series TVDB deleted) logs it there.
+		slog.DebugContext(ctx, "tvdb request returned 404",
+			"tvdb.endpoint", path)
+		return fmt.Errorf("tvdb: unexpected status %d", resp.StatusCode)
+	default:
 		slog.WarnContext(
 			ctx,
 			"tvdb request returned non-200",
@@ -375,7 +392,11 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 				ID     uint64 `json:"id"`
 				Number uint16 `json:"number"`
 				Name   string `json:"name"`
-				Type   struct {
+				// The languages the season's name is translated into, as
+				// codes, not the names themselves. nil when TVDB left the
+				// field out, which says nothing either way.
+				NameTranslations []string `json:"nameTranslations"`
+				Type             struct {
 					Type string `json:"type"`
 				} `json:"type"`
 			} `json:"seasons"`
@@ -443,11 +464,14 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 	if inferAnime(d.Genres, ext.Data.OriginalLanguage, ext.Data.OriginalCountry) {
 		d.Type = SeriesAnime
 	}
-	seasonIDs := make([]uint64, 0, len(ext.Data.Seasons))
+	seasonRefs := make([]tvdbSeasonRef, 0, len(ext.Data.Seasons))
 	for _, s := range ext.Data.Seasons {
 		if s.Type.Type == "official" || s.Type.Type == "" {
 			d.Seasons = append(d.Seasons, SeasonInfo{Number: s.Number, Name: s.Name})
-			seasonIDs = append(seasonIDs, s.ID)
+			seasonRefs = append(seasonRefs, tvdbSeasonRef{
+				id:        s.ID,
+				nameLangs: s.NameTranslations,
+			})
 		}
 	}
 
@@ -466,7 +490,7 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 				break
 			}
 		}
-		t.translateSeasons(ctx, d.Seasons, seasonIDs)
+		t.translateSeasons(ctx, d.Seasons, seasonRefs)
 	}
 	d.Title = stripDisambiguationYear(d.Title, d.Year)
 	d.OriginalTitle = stripDisambiguationYear(d.OriginalTitle, d.Year)
@@ -758,27 +782,45 @@ type tvdbBiography struct {
 	Language  string `json:"language"`
 }
 
+// tvdbSeasonRef is what translateSeasons needs of a season from the extended
+// series record: its id, and the languages TVDB lists for its name.
+type tvdbSeasonRef struct {
+	id        uint64
+	nameLangs []string
+}
+
 // translateSeasons replaces each season's name with the configured language's,
-// in place. seasons and ids are index-aligned.
+// in place. seasons and refs are index-aligned.
 //
-// It costs one request per season because TVDB offers no bulk form: the
-// extended series record carries only the original-language season name, and
-// its ?meta=translations covers the series, not its seasons. Left untranslated,
-// an anime's arc names stay Japanese on a French install while everything
-// around them is translated.
+// TVDB offers no bulk form: the extended series record carries only the
+// original-language season name, and its ?meta=translations covers the
+// series, not its seasons, so a translated name costs one request per season.
+// Left untranslated, an anime's arc names stay Japanese on a French install
+// while everything around them is translated.
 //
-// A miss is ordinary, not exceptional, and there are two kinds: TVDB answers
-// 404 for a language it holds no record for, and a record it does hold can
-// still carry a null name (an overview-only translation). Both keep the
-// original name, which is why the error is dropped rather than surfaced — one
-// season without a translation must not fail a metadata refresh.
+// The extended record does list, per season, the languages its name is
+// translated into (nameTranslations), so only a season listing the configured
+// language is asked for. Most seasons have no name in any language and list
+// none: asking for every one cost a request and a 404 per season of every
+// show on every refresh. A season whose record leaves the field out is asked
+// for anyway, since its absence says nothing.
+//
+// A miss is still ordinary: TVDB can answer 404 for a language it lists, and a
+// record it does hold can carry a null name (an overview-only translation).
+// Both keep the original name, which is why the error is dropped rather than
+// surfaced — one season without a translation must not fail a metadata
+// refresh. A rate limit ends the pass: every later request would be refused
+// too.
 func (t *TVDB) translateSeasons(
 	ctx context.Context,
 	seasons []SeasonInfo,
-	ids []uint64,
+	refs []tvdbSeasonRef,
 ) {
-	for i, id := range ids {
-		if i >= len(seasons) || id == 0 {
+	for i, ref := range refs {
+		if i >= len(seasons) || ref.id == 0 {
+			continue
+		}
+		if ref.nameLangs != nil && !listsLanguage(ref.nameLangs, t.language) {
 			continue
 		}
 		var tr struct {
@@ -786,21 +828,38 @@ func (t *TVDB) translateSeasons(
 				Name string `json:"name"`
 			} `json:"data"`
 		}
-		path := fmt.Sprintf("/seasons/%d/translations/%s", id, t.language)
+		path := fmt.Sprintf("/seasons/%d/translations/%s", ref.id, t.language)
 		if err := t.get(ctx, path, &tr); err != nil {
 			// Debug, because the ordinary miss above is not worth a line per
-			// season per show. But it must leave *some* trace: a TVDB outage
-			// or an expired token silently reverts every season of every show
-			// to its original-language name through this exact path, and with
+			// season. But it must leave *some* trace: a TVDB outage or an
+			// expired token silently reverts every season of every show to
+			// its original-language name through this exact path, and with
 			// nothing recorded at all the two are indistinguishable.
 			slog.DebugContext(ctx, "tvdb season translation unavailable",
-				"tvdb.season_id", id, "error", err)
+				"tvdb.season_id", ref.id, "error", err)
+			if errors.Is(err, ErrRateLimited) {
+				return
+			}
 			continue
 		}
 		if tr.Data.Name != "" {
 			seasons[i].Name = tr.Data.Name
 		}
 	}
+}
+
+// listsLanguage reports whether a TVDB nameTranslations list names lang. TVDB
+// sends it either one code per element or as one comma-joined string
+// (["eng,deu,spa,fra"]), so each element is split.
+func listsLanguage(langs []string, lang string) bool {
+	for _, l := range langs {
+		for code := range strings.SplitSeq(l, ",") {
+			if strings.EqualFold(strings.TrimSpace(code), lang) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func normalizeStatus(s string) string {

@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -522,7 +523,13 @@ var _ = Describe("TVDB season translations", Label("unit", "metadata"), func() {
 			{Number: 6, Name: "無限城編"},
 			{Number: 7, Name: "Arc 7"},
 		}
-		client.translateSeasons(ctx, seasons, []uint64{11, 22, 33})
+		client.translateSeasons(ctx, seasons, []tvdbSeasonRef{
+			{id: 11, nameLangs: []string{"eng", "fra"}},
+			// TVDB's own shape: every code in one comma-joined element.
+			{id: 22, nameLangs: []string{"eng,deu,fra,ita"}},
+			// Left out by TVDB: says nothing, so it is asked for.
+			{id: 33},
+		})
 
 		Expect(seasons[0].Name).To(Equal("Entraînement des Piliers"))
 		// A null name is an overview-only translation, not a name to adopt.
@@ -534,11 +541,93 @@ var _ = Describe("TVDB season translations", Label("unit", "metadata"), func() {
 
 	It("skips a season TVDB gave no id for", func() {
 		seasons := []SeasonInfo{{Number: 5, Name: "柱稽古編"}}
-		client.translateSeasons(ctx, seasons, []uint64{0})
+		client.translateSeasons(ctx, seasons, []tvdbSeasonRef{{id: 0}})
 
 		Expect(seasons[0].Name).To(Equal("柱稽古編"))
 		Expect(asked).To(BeEmpty())
 	})
+
+	It("asks only for a season whose name TVDB lists in the language", func() {
+		seasons := []SeasonInfo{
+			{Number: 1},
+			{Number: 2, Name: "柱稽古編"},
+			{Number: 3, Name: "無限城編"},
+		}
+		client.translateSeasons(ctx, seasons, []tvdbSeasonRef{
+			// No name in any language: the ordinary season, and the 404.
+			{id: 33, nameLangs: []string{}},
+			{id: 11, nameLangs: []string{"eng,deu"}},
+			{id: 22, nameLangs: []string{"jpn"}},
+		})
+
+		Expect(asked).To(BeEmpty())
+		Expect(seasons[1].Name).To(Equal("柱稽古編"))
+	})
+
+	It("stops at a rate limit", func() {
+		limited := 0
+		mux := http.NewServeMux()
+		mux.HandleFunc("/login", func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"data":{"token":"t"}}`))
+		})
+		mux.HandleFunc("/seasons/", func(w http.ResponseWriter, _ *http.Request) {
+			limited++
+			w.Header().Set("Retry-After", "30")
+			w.WriteHeader(http.StatusTooManyRequests)
+		})
+		srv := httptest.NewServer(mux)
+		DeferCleanup(srv.Close)
+		client.BaseURL = srv.URL
+
+		seasons := []SeasonInfo{{Number: 1, Name: "a"}, {Number: 2, Name: "b"}}
+		client.translateSeasons(ctx, seasons, []tvdbSeasonRef{{id: 1}, {id: 2}})
+
+		Expect(limited).To(Equal(1))
+		Expect(seasons[0].Name).To(Equal("a"))
+	})
+})
+
+var _ = Describe("TVDB rate limit", Label("unit", "metadata"), func() {
+	It("answers a 429 with a RateLimitedError carrying Retry-After", func() {
+		mux := http.NewServeMux()
+		mux.HandleFunc("/login", func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`{"data":{"token":"t"}}`))
+		})
+		mux.HandleFunc(
+			"/series/1/extended",
+			func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Retry-After", "42")
+				w.WriteHeader(http.StatusTooManyRequests)
+			},
+		)
+		srv := httptest.NewServer(mux)
+		DeferCleanup(srv.Close)
+		client := NewTVDB()
+		client.BaseURL = srv.URL
+		client.apiKey = "x"
+
+		_, err := client.GetSeries(context.Background(), 1)
+
+		Expect(err).To(MatchError(ErrRateLimited))
+		var rl *RateLimitedError
+		Expect(errors.As(err, &rl)).To(BeTrue())
+		Expect(rl.RetryAfter).To(Equal(42 * time.Second))
+	})
+})
+
+var _ = Describe("listsLanguage", Label("unit", "metadata"), func() {
+	DescribeTable("reads both shapes TVDB sends",
+		func(langs []string, want bool) {
+			Expect(listsLanguage(langs, "fra")).To(Equal(want))
+		},
+		Entry("one code per element", []string{"eng", "fra"}, true),
+		Entry("comma-joined", []string{"eng,deu,spa,pt,fra,ita,tur"}, true),
+		Entry("comma-joined with spaces", []string{"eng, fra"}, true),
+		Entry("case-insensitive", []string{"FRA"}, true),
+		Entry("absent", []string{"eng,deu"}, false),
+		Entry("empty", []string{}, false),
+		Entry("a prefix is not a match", []string{"fr,fraX"}, false),
+	)
 })
 
 var _ = Describe(

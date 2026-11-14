@@ -145,6 +145,21 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Expect(svc.RefreshStale(ctx)).To(Succeed())
 	})
 
+	It("RefreshStale stops at a TVDB rate limit", func() {
+		storeMk.ListTVShowsStaleSince(mock.Anything, mock.Anything).
+			Return([]*ent.TVShow{{ID: 1, TvdbID: 11}, {ID: 2, TvdbID: 22}}, nil).
+			Once()
+		storeMk.FindTVShowByID(mock.Anything, uint32(1)).
+			Return(&ent.TVShow{ID: 1, TvdbID: 11}, nil).
+			Once()
+		metaMk.GetSeries(mock.Anything, uint32(11)).
+			Return(nil, &metadata.RateLimitedError{RetryAfter: time.Minute}).
+			Once()
+		// The mocks fail the spec on any call for show 2.
+
+		Expect(svc.RefreshStale(ctx)).To(Succeed())
+	})
+
 	DescribeTable(
 		"seedSeasons leaves specials unmonitored unless opted in",
 		func(monitorSpecials, wantSpecialsMonitored bool) {

@@ -1275,6 +1275,15 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 	for i, sh := range rows {
 		scheduler.Progress(ctx, i, len(rows))
 		if _, err := s.RefreshOne(ctx, sh.ID); err != nil {
+			// A rate limit ends the pass: every show after this one would be
+			// refused too, each costing a request. What is left is still
+			// stale, so the next tick picks it up.
+			if errors.Is(err, metadata.ErrRateLimited) {
+				slog.WarnContext(ctx, "tv refresh stopped by tvdb rate limit",
+					"tvshow.id", sh.ID, "remaining", len(rows)-i, "error", err)
+				skipped += len(rows) - i
+				break
+			}
 			slog.WarnContext(ctx, "tv refresh failed",
 				"tvshow.id", sh.ID, "error", err)
 			skipped++
