@@ -17,7 +17,7 @@
 	} from "@lib/status";
 	import { formatBytes } from "@lib/format";
 	import { episodeMedia } from "@lib/media-info";
-	import { formatDateShort } from "@lib/dates";
+	import { formatDateShort, withinDays } from "@lib/dates";
 	import type { Episode, Season, SeriesType } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -137,7 +137,7 @@
 
 	// An air date only explains a wanted episode while it is recent, when the
 	// release may simply not be out yet; on an old one it is noise.
-	const RECENT_AIRING_MS = 7 * 86_400_000;
+	const RECENT_AIRING_DAYS = 7;
 
 	// One line per episode, and it says the thing that matters for the state it
 	// is in: what the file is, how far a download has got, or what a wanted
@@ -161,7 +161,7 @@
 		if (st === "skipped") return i18n.ep_state_not_monitored();
 		if (st === "paused") return i18n.ep_state_paused();
 		if (st === "missing") return i18n.ep_state_missing();
-		return ep.air_date && Date.now() - Date.parse(ep.air_date) < RECENT_AIRING_MS
+		return withinDays(ep.air_date, RECENT_AIRING_DAYS)
 			? i18n.ep_wanted_aired({ date: formatDateShort(ep.air_date) })
 			: i18n.ep_state_wanted();
 	}

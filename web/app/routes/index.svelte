@@ -20,7 +20,7 @@
 	import LibraryLedger from "@components/dashboard/LibraryLedger.svelte";
 	import LiveQueuePanel from "@components/dashboard/LiveQueuePanel.svelte";
 	import UpcomingList from "@components/shared/UpcomingList.svelte";
-	import { upcomingEvents } from "@lib/calendar";
+	import { next30Range, upcomingEvents } from "@lib/calendar";
 	import { booksRow, freeSpace, movieRow, musicRow, seriesRow, type LedgerRow } from "@lib/dashboard";
 	import { entryHeading } from "@lib/activity-touch";
 	import { KIND_CHIPS, KIND_MEDIA } from "@lib/requests-touch";
@@ -84,15 +84,10 @@
 		meta: SILENT,
 	}));
 
-	function upcomingRange() {
-		const now = new Date();
-		const to = new Date(now.getTime() + 30 * 86_400_000);
-		return { from: now.toISOString(), to: to.toISOString() };
-	}
 	const upcomingQuery = createQuery<UpcomingResponse>(() => ({
 		queryKey: ["calendar", "upcoming", 30],
 		queryFn: () => {
-			const { from, to } = upcomingRange();
+			const { from, to } = next30Range();
 			return api<UpcomingResponse>(
 				`/calendar/upcoming?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
 			);

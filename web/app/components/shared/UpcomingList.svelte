@@ -2,6 +2,7 @@
 	import { Calendar } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { dotToken, kindLabel, statusPill, type CalendarEvent } from "@lib/calendar";
+	import { DAY } from "@lib/dates";
 	import StatusPill from "./StatusPill.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { getLocale } from "@lib/paraglide/runtime.js";
@@ -43,7 +44,7 @@
 	function daysUntil(d: Date): string {
 		const target = d.getTime();
 		if (Number.isNaN(target)) return "";
-		const days = Math.max(0, Math.round((target - Date.now()) / 86_400_000));
+		const days = Math.max(0, Math.round((target - Date.now()) / DAY));
 		return days === 0 ? i18n.lc_today() : i18n.upcoming_in_days({ days });
 	}
 </script>

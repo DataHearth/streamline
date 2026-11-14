@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Key, Trash2 } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
-	import { formatDate, formatDateTime, formatRelative } from "@lib/dates";
+	import { formatDate, formatDateTime, formatRelative, withinDays } from "@lib/dates";
 	import type { ApiKey } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -23,9 +23,9 @@
 
 	// Inside a month a relative "in 12 days" says more than a date; past it a
 	// 90- or 365-day key reads better as the day it stops working.
-	const MONTH_MS = 30 * 86_400_000;
+	const MONTH_DAYS = 30;
 	function expiryText(iso: string): string {
-		return Math.abs(new Date(iso).getTime() - Date.now()) < MONTH_MS
+		return withinDays(iso, MONTH_DAYS)
 			? formatRelative(iso)
 			: formatDate(iso);
 	}
