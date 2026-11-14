@@ -64,9 +64,18 @@ export function formatDate(iso: string | null | undefined): string {
 
 const MIN = 60_000;
 const HR = 3_600_000;
-const DAY = 86_400_000;
+export const DAY = 86_400_000;
 const MONTH = 30 * DAY;
 const YEAR = 365 * DAY;
+
+// withinDays reports whether a moment lies less than `days` days from now,
+// on either side. The window itself is each caller's choice — a screen's own
+// sense of "recent" — so only the arithmetic lives here.
+export function withinDays(iso: string | null | undefined, days: number): boolean {
+	if (!iso) return false;
+	const t = parseDay(iso);
+	return !Number.isNaN(t) && Math.abs(t - Date.now()) < days * DAY;
+}
 
 // One formatter per unit, so the number and its noun agree in the locale's own
 // grammar ("1 year" / "2 years", "1 an" / "2 ans") rather than an English "s".

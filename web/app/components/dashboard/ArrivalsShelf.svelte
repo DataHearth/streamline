@@ -5,6 +5,7 @@
 	import Img from "@components/shared/Img.svelte";
 	import ArrivalCard from "./ArrivalCard.svelte";
 	import { arrivalArt, arrivalTally } from "@lib/dashboard";
+	import { withinDays } from "@lib/dates";
 	import type { LibraryArrival } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -26,8 +27,7 @@
 		top?: Snippet;
 	} = $props();
 
-	const WEEK = 7 * 86_400_000;
-	let week = $derived(arrivals.filter((a) => Date.now() - Date.parse(a.at) < WEEK));
+	let week = $derived(arrivals.filter((a) => withinDays(a.at, 7)));
 	// A quiet week keeps the shelf filled with the latest few, under a title
 	// that does not promise a week.
 	let shown = $derived(week.length > 0 ? week : arrivals.slice(0, 12));

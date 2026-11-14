@@ -1,6 +1,7 @@
 import type { StatusKind } from "@components/shared/StatusPill.svelte";
 import { albumPosterUrl, bookPosterUrl, posterUrl, tvPosterUrl } from "./posters";
 import { releaseTypeLabel } from "./music-books";
+import { DAY } from "./dates";
 import type {
 	EpisodeStatus,
 	UpcomingAlbum,
@@ -316,6 +317,6 @@ export function next30Range(): { from: string; to: string } {
 	const now = new Date();
 	return {
 		from: now.toISOString(),
-		to: new Date(now.getTime() + 30 * 86_400_000).toISOString(),
+		to: new Date(now.getTime() + 30 * DAY).toISOString(),
 	};
 }
