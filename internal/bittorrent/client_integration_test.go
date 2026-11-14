@@ -934,6 +934,60 @@ func newUnboundEngineNoPortForwarding(
 // empty, and the announce has to read that as a configured no-op rather than
 // iterating torrents against nothing.
 var _ = Describe(
+	"Engine DHT announce after a listen port move",
+	Label("integration", "bittorrent"),
+	func() {
+		// torrentOf builds a one-file torrent named name, private or not.
+		torrentOf := func(dir, name string, private bool) []byte {
+			GinkgoHelper()
+			path := filepath.Join(dir, name)
+			Expect(os.WriteFile(path, bytes.Repeat([]byte(name), 4096), 0o644)).
+				To(Succeed())
+			info := metainfo.Info{PieceLength: 16 << 10}
+			Expect(info.BuildFromFilePath(path)).To(Succeed())
+			if private {
+				info.Private = &private
+			}
+			ib, err := bencode.Marshal(info)
+			Expect(err).NotTo(HaveOccurred())
+			var buf bytes.Buffer
+			Expect((&metainfo.MetaInfo{InfoBytes: ib}).Write(&buf)).To(Succeed())
+			return buf.Bytes()
+		}
+
+		It("leaves private torrents out", func() {
+			ctx := context.Background()
+			tmp := GinkgoT().TempDir()
+			srcDir := filepath.Join(tmp, "src")
+			dlDir := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(srcDir, 0o755)).To(Succeed())
+			Expect(os.MkdirAll(dlDir, 0o755)).To(Succeed())
+
+			entClient := dbtest.SetupTestDB(ctx)
+			DeferCleanup(entClient.Close)
+			engine, _ := newEngine(ctx, dlDir, db.New(entClient))
+
+			public, err := engine.AddTorrent(ctx, download.TorrentSource{
+				Bytes: torrentOf(srcDir, "public.bin", false),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = engine.AddTorrent(ctx, download.TorrentSource{
+				Bytes: torrentOf(srcDir, "private.bin", true),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(engine.client.Torrents()).To(HaveLen(2))
+
+			announceable := engine.dhtAnnounceable()
+			hashes := make([]string, 0, len(announceable))
+			for _, t := range announceable {
+				hashes = append(hashes, t.InfoHash().HexString())
+			}
+			Expect(hashes).To(ConsistOf(public))
+		})
+	},
+)
+
+var _ = Describe(
 	"Engine listen port move with DHT disabled",
 	Label("integration", "bittorrent"),
 	func() {
