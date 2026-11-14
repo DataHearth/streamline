@@ -57,8 +57,9 @@
 		onRetry: (id: number) => void;
 	} = $props();
 
-	// Mounted only while open.
-	closeOnBack(() => true, () => onClose());
+	// Mounted with the page; open while it has an item. A watcher armed while closed
+	// would take the phone's Back from the page.
+	closeOnBack(() => !!item, () => onClose());
 
 	let confirm = $state<DownloadConfirm | null>(null);
 
