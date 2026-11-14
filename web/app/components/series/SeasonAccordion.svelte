@@ -157,10 +157,13 @@
 		if (st === "skipped") return i18n.ep_state_not_monitored();
 		if (st === "paused") return i18n.ep_state_paused();
 		if (st === "missing") return i18n.ep_state_missing();
-		return ep.air_date
+		// An air date only explains a wanted episode while it is recent, when
+		// the release may simply not be out yet; on an old one it is noise.
+		return ep.air_date && Date.now() - Date.parse(ep.air_date) < RECENT_AIRING_MS
 			? i18n.ep_wanted_aired({ date: formatDateShort(ep.air_date) })
 			: i18n.ep_state_wanted();
 	}
+	const RECENT_AIRING_MS = 7 * 86_400_000;
 	const DOT: Record<string, string> = {
 		available: "bg-status-available",
 		wanted: "bg-status-wanted",
