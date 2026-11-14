@@ -678,11 +678,15 @@ func (e *Engine) movePeerSockets(ctx context.Context, port uint16) (bool, error)
 	return true, nil
 }
 
-// announceToDHT re-announces every torrent on every DHT server the client
-// holds. Unlike the tracker side this is a real forced announce, and
+// announceToDHT re-announces every public torrent on every DHT server the
+// client holds. Unlike the tracker side this is a real forced announce, and
 // AnnounceToDht reads the peer port live (Client.incomingPeerPort) at announce
 // time, so one issued after a rebind carries the new port with no extra
 // plumbing.
+//
+// A private torrent is left out (dhtAnnounceable): BEP 27 keeps it off the
+// DHT, and Torrent.AnnounceToDht announces whatever it is handed — the check
+// anacrolix makes sits in its own announce loop, not in that call.
 //
 // Failures are logged and skipped: a torrent that cannot announce is one
 // torrent findable by fewer peers until its next scheduled announce, not a
@@ -699,7 +703,7 @@ func (e *Engine) announceToDHT(ctx context.Context) {
 	if len(servers) == 0 {
 		return
 	}
-	for _, t := range e.client.Torrents() {
+	for _, t := range e.dhtAnnounceable() {
 		for _, s := range servers {
 			// The discarded stop func force-ends an announce early; this one
 			// is meant to run to completion on its own goroutine.
@@ -709,6 +713,22 @@ func (e *Engine) announceToDHT(ctx context.Context) {
 			}
 		}
 	}
+}
+
+// dhtAnnounceable lists the torrents the engine may announce to the DHT:
+// every one whose metainfo does not carry BEP 27's private flag. A torrent
+// whose metadata has not resolved is listed, as anacrolix's own DHT announcer
+// treats it: the flag is in the metadata, and the DHT is where a magnet finds
+// the peers to fetch it from.
+func (e *Engine) dhtAnnounceable() []*antorrent.Torrent {
+	var out []*antorrent.Torrent
+	for _, t := range e.client.Torrents() {
+		if info := t.Info(); info != nil && info.Private != nil && *info.Private {
+			continue
+		}
+		out = append(out, t)
+	}
+	return out
 }
 
 // portOf reads the port off a net.Addr as returned by a rebindableListener
