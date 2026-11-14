@@ -135,6 +135,10 @@
 		return (s.episodes ?? []).reduce((n, ep) => n + (ep.size ?? 0), 0);
 	}
 
+	// An air date only explains a wanted episode while it is recent, when the
+	// release may simply not be out yet; on an old one it is noise.
+	const RECENT_AIRING_MS = 7 * 86_400_000;
+
 	// One line per episode, and it says the thing that matters for the state it
 	// is in: what the file is, how far a download has got, or what a wanted
 	// episode has to search against.
@@ -157,13 +161,10 @@
 		if (st === "skipped") return i18n.ep_state_not_monitored();
 		if (st === "paused") return i18n.ep_state_paused();
 		if (st === "missing") return i18n.ep_state_missing();
-		// An air date only explains a wanted episode while it is recent, when
-		// the release may simply not be out yet; on an old one it is noise.
 		return ep.air_date && Date.now() - Date.parse(ep.air_date) < RECENT_AIRING_MS
 			? i18n.ep_wanted_aired({ date: formatDateShort(ep.air_date) })
 			: i18n.ep_state_wanted();
 	}
-	const RECENT_AIRING_MS = 7 * 86_400_000;
 	const DOT: Record<string, string> = {
 		available: "bg-status-available",
 		wanted: "bg-status-wanted",
