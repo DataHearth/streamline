@@ -37,6 +37,15 @@ export function formatEta(seconds: number | undefined | null): string {
 	return `${h}h ${String(m % 60).padStart(2, "0")}m`;
 }
 
+// percentDone renders a completion fraction as a whole percentage that
+// reads 100 only once the work is actually complete: rounding to nearest put
+// "100%" on a file still 0.4% short, which reads as finished when it is not.
+export function percentDone(fraction: number | undefined | null): number {
+	if (!fraction || fraction <= 0) return 0;
+	if (fraction >= 1) return 100;
+	return Math.min(99, Math.floor(fraction * 100));
+}
+
 // formatRatio renders a torrent share ratio ("1.84"). Em dash when unknown.
 export function formatRatio(ratio: number | undefined | null): string {
 	if (ratio == null || ratio < 0) return "—";

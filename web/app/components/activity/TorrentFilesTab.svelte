@@ -8,7 +8,7 @@
 	} from "@lucide/svelte";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
 	import { cn } from "@lib/cn";
-	import { formatBytes } from "@lib/format";
+	import { formatBytes, percentDone } from "@lib/format";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
 		TorrentFile,
@@ -266,7 +266,7 @@
 							class="ml-1 shrink-0 whitespace-nowrap font-mono text-[10px] tabular-nums text-fg-subtle"
 						>
 							{row.count} · {formatBytes(row.size)}
-							{#if row.size > 0}· {Math.round((row.done / row.size) * 100)}%{/if}
+							{#if row.size > 0}· {percentDone(row.done / row.size)}%{/if}
 						</span>
 					</button>
 					{#if canControl}
@@ -336,7 +336,7 @@
 								<ProgressBar value={f.progress} {status} height={2} />
 							</div>
 							<span class="font-mono tabular-nums text-[10px] text-fg-subtle">
-								{Math.round(f.progress * 100)}%
+								{percentDone(f.progress)}%
 							</span>
 						{/if}
 					</div>
@@ -347,7 +347,7 @@
 						     size and the bar along the row's bottom edge instead. -->
 						{#if !skip}
 							<span class="block text-[10px] text-fg-faint sm:hidden">
-								{Math.round(f.progress * 100)}%
+								{percentDone(f.progress)}%
 							</span>
 						{/if}
 					</span>
