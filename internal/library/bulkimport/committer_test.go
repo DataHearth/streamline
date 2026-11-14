@@ -304,12 +304,15 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 	)
 
 	It("replaces the movie's current file once the new row is written", func() {
-		old := filepath.Join(GinkgoT().TempDir(), "old.mkv")
+		dir := GinkgoT().TempDir()
+		old := filepath.Join(dir, "old.mkv")
 		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		scanned := filepath.Join(dir, "Movie.mkv")
+		Expect(os.WriteFile(scanned, []byte("new"), 0o644)).To(Succeed())
 		f := &ent.ImportScanFile{
 			ID:              7,
 			ExistingMovieID: 42,
-			SourcePath:      "/import/Movie.mkv",
+			SourcePath:      scanned,
 			Size:            1_500_000_000,
 		}
 
@@ -326,7 +329,7 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 				mock.Anything,
 				[]uint32{9},
 				mock.MatchedBy(func(p db.CreateMediaFileParams) bool {
-					return p.MovieID == 42 && p.Path == "/import/Movie.mkv"
+					return p.MovieID == 42 && p.Path == scanned
 				}),
 			).
 			Run(func(context.Context, []uint32, db.CreateMediaFileParams) {
@@ -343,13 +346,17 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 		Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
 		Expect(movieID).To(Equal(uint32(42)))
 		Expect(old).NotTo(BeAnExistingFile())
+		Expect(scanned).To(BeAnExistingFile())
 	})
 
 	It("keeps the movie's current file when the new row cannot be written", func() {
-		old := filepath.Join(GinkgoT().TempDir(), "old.mkv")
+		dir := GinkgoT().TempDir()
+		old := filepath.Join(dir, "old.mkv")
 		Expect(os.WriteFile(old, []byte("old"), 0o644)).To(Succeed())
+		scanned := filepath.Join(dir, "Movie.mkv")
+		Expect(os.WriteFile(scanned, []byte("new"), 0o644)).To(Succeed())
 		f := &ent.ImportScanFile{
-			ID: 7, ExistingMovieID: 42, SourcePath: "/import/Movie.mkv",
+			ID: 7, ExistingMovieID: 42, SourcePath: scanned,
 		}
 
 		store.EXPECT().

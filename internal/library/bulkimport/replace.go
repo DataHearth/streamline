@@ -2,9 +2,13 @@ package bulkimport
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/datahearth/streamline/internal/library"
 )
@@ -64,3 +68,76 @@ func undoPlacement(ctx context.Context, src, placed, mode string) {
 }
 
 func samePath(a, b string) bool { return filepath.Clean(a) == filepath.Clean(b) }
+
+// sameFile reports whether a tracked path and a scanned one name one file on
+// disk. The scanner stores symlink-resolved paths while a tracked row keeps
+// the path it was imported under, so a library root reached through a symlink
+// gives one file two spellings, and a hardlink of a tracked file is that file
+// too. Read as a replacement, either would have the commit remove the very
+// file it is adopting.
+//
+// "Different" is an answer only a successful comparison gives. A scanned file
+// that is gone or is no regular file is an error: taken for a replacement, it
+// would cost the title the file it has and leave a row pointing at nothing.
+// So is a tracked path that cannot be read for any reason but its absence,
+// which leaves nothing to protect.
+func sameFile(tracked, scanned string) (bool, error) {
+	if tracked == scanned {
+		return true, nil
+	}
+	si, err := os.Stat(scanned)
+	if err != nil {
+		return false, err
+	}
+	if !si.Mode().IsRegular() {
+		return false, fmt.Errorf("%s is not a regular file", scanned)
+	}
+	ti, err := os.Stat(tracked)
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return os.SameFile(ti, si), nil
+}
+
+// keyedMutex is one mutex per key, kept only while someone holds or waits for
+// it. The zero value is ready to use.
+type keyedMutex struct {
+	mu    sync.Mutex
+	locks map[uint32]*keyedLock
+}
+
+type keyedLock struct {
+	sync.Mutex
+	// refs counts the holder and the waiters, under keyedMutex.mu.
+	refs int
+}
+
+// lock takes key's mutex and returns its release. It is not reentrant, and
+// k.mu is never held while waiting for a key, so two callers can only block
+// each other by each holding one key and asking for the other's.
+func (k *keyedMutex) lock(key uint32) (unlock func()) {
+	k.mu.Lock()
+	if k.locks == nil {
+		k.locks = map[uint32]*keyedLock{}
+	}
+	l, ok := k.locks[key]
+	if !ok {
+		l = &keyedLock{}
+		k.locks[key] = l
+	}
+	l.refs++
+	k.mu.Unlock()
+
+	l.Lock()
+	return func() {
+		l.Unlock()
+		k.mu.Lock()
+		if l.refs--; l.refs == 0 {
+			delete(k.locks, key)
+		}
+		k.mu.Unlock()
+	}
+}

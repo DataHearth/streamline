@@ -759,5 +759,36 @@ var _ = Describe(
 			// Nothing was imported the second time, so no second event.
 			Expect(importedEvents()).To(Equal(1))
 		})
+
+		It(
+			"keeps a tracked episode when its folder is committed again under its symlink-resolved path",
+			func() {
+				// The library root is a symlink: rows keep the path the show
+				// was adopted under, a later scan stores the resolved one.
+				realLib := filepath.Join(root, "real-tv")
+				Expect(os.MkdirAll(realLib, 0o755)).To(Succeed())
+				symlinkOrSkip(realLib, libDir)
+				showFolder = filepath.Join(libDir, "Breaking Bad")
+				Expect(os.MkdirAll(showFolder, 0o755)).To(Succeed())
+				placeSource("Breaking Bad S01E01.mkv")
+				first := commit(entimportscan.ModeInPlace, nil)
+				Expect(first.Outcome).To(Equal(entimportscanshow.OutcomeCreated))
+				tracked := client.MediaFile.Query().OnlyX(ctx)
+
+				resolved, err := filepath.EvalSymlinks(showFolder)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(resolved).NotTo(Equal(showFolder))
+				showFolder = resolved
+				again := commit(entimportscan.ModeInPlace, first.CreatedTvshowID)
+
+				Expect(again.Outcome).To(Equal(entimportscanshow.OutcomeAttached))
+				Expect(again.OutcomeMessage).To(BeEmpty())
+				Expect(tracked.Path).To(BeAnExistingFile())
+				row := client.MediaFile.Query().OnlyX(ctx)
+				Expect(row.ID).To(Equal(tracked.ID))
+				Expect(row.Path).To(Equal(tracked.Path))
+				Expect(importedEvents()).To(Equal(1))
+			},
+		)
 	},
 )
