@@ -25,8 +25,9 @@
 		onEditInterval: (s: Schedule) => void;
 	} = $props();
 
-	// Mounted only while open.
-	closeOnBack(() => true, () => onClose());
+	// Mounted with the page; open while it has a job. A watcher armed while closed
+	// would take the phone's Back from the page.
+	closeOnBack(() => !!job, () => onClose());
 
 	const actions = createScheduleActions();
 
