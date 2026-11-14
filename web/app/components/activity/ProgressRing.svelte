@@ -9,6 +9,7 @@
 		X,
 	} from "@lucide/svelte";
 	import { ringReading } from "@lib/activity-touch";
+	import { percentDone } from "@lib/format";
 	import type { StatusKind } from "@components/shared/StatusPill.svelte";
 
 	// The leading mark of every touch row: an arc for progress, the status colour
@@ -32,7 +33,7 @@
 
 	let reading = $derived(ringReading(status));
 	let value = $derived(Math.min(1, Math.max(0, progress ?? 0)));
-	let arc = $derived(reading.mode === "full" ? 100 : Math.round(value * 100));
+	let arc = $derived(reading.mode === "full" ? 100 : percentDone(value));
 </script>
 
 <div
