@@ -202,6 +202,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	e.removals.retryAll(ctx)
 	e.registerEngineGauges(ctx)
 	e.wg.Go(e.enforceSeedLimits)
+	e.wg.Go(e.dropRedundantSeeders)
 	return e, nil
 }
 
