@@ -31,9 +31,14 @@ export function formatDateTime(iso: string | null | undefined): string {
 	return dtf.format(new Date(iso));
 }
 
+// A day and month, with the year only when it is not the current one: "5 avr."
+// alone reads as this April, so a pilot that aired in 2007 must say so.
 export function formatDateShort(iso: string | null | undefined): string {
 	if (!iso) return "";
-	return dateShort.format(new Date(iso));
+	const t = parseDay(iso);
+	if (Number.isNaN(t)) return "";
+	if (new Date(t).getFullYear() !== new Date().getFullYear()) return formatDate(iso);
+	return dateShort.format(new Date(t));
 }
 
 // A date-only string is a wall-clock fact, not an instant: `Date.parse` reads
