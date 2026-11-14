@@ -231,7 +231,7 @@
 			<div
 				class={cn(
 					"flex items-center gap-2 border-b border-border/50 px-3",
-					virtual && "absolute inset-x-0",
+					virtual ? "absolute inset-x-0" : "relative",
 				)}
 				style:height="{ROW_H}px"
 				style:top={virtual ? `${(start + i) * ROW_H}px` : undefined}
@@ -342,7 +342,20 @@
 					</div>
 					<span class="w-16 shrink-0 text-right font-mono tabular-nums text-[11px] text-fg-subtle">
 						{formatBytes(f.size)}
+						<!-- Below sm the progress column above is hidden to leave the
+						     priority buttons their width; the percentage rides under the
+						     size and the bar along the row's bottom edge instead. -->
+						{#if !skip}
+							<span class="block text-[10px] text-fg-faint sm:hidden">
+								{Math.round(f.progress * 100)}%
+							</span>
+						{/if}
 					</span>
+					{#if !skip}
+						<div class="absolute inset-x-3 bottom-0 sm:hidden">
+							<ProgressBar value={f.progress} {status} height={1.5} />
+						</div>
+					{/if}
 					{#if canControl}
 						<div
 							class={cn(
