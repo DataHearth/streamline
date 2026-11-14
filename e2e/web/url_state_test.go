@@ -1,7 +1,9 @@
 package web
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -114,5 +116,131 @@ var _ = Describe("Query-string state", Label("e2e"), func() {
 
 		page = newSessionPage("/calendar?month=2026-13")
 		expectPath(page, "/calendar")
+	})
+
+	// The specs below arrive by a link inside the app. Routify sets the active
+	// route first and writes history from a timer after it, so the page's own
+	// write-back has a window in which the address bar is still the URL left.
+	historyLength := func(page *rod.Page) int {
+		GinkgoHelper()
+		return page.MustEval(`() => history.length`).Int()
+	}
+	const moviesSort = `() => localStorage.setItem("streamline:movies:sort", "year-desc")`
+
+	It("settles a list reached by a link, for its URL and the back link", func() {
+		id := seedMovie()
+		page := newSessionPage("/movies?status=failed")
+		expectPath(page, "/movies?status=failed")
+		page.MustEval(moviesSort)
+
+		visibleElement(page, `a[href="/series"]`).MustClick()
+		expectPath(page, "/series")
+		visibleElement(page, `a[href="/movies"]`).MustClick()
+		// The remembered sort is the page's state: the bare link is rewritten.
+		expectPath(page, "/movies?sort=year&order=desc")
+
+		// The detail page's back link returns to the list as it was left, not
+		// to the filter of an earlier visit.
+		visibleElement(page, fmt.Sprintf(`a[href="/movies/%d"]`, id)).MustClick()
+		expectPath(page, fmt.Sprintf("/movies/%d", id))
+		Eventually(func() string {
+			return *visibleElement(page, `section.hero a`).MustAttribute("href")
+		}).Should(Equal("/movies?sort=year&order=desc"))
+	})
+
+	It("keeps Back when a link to the same page is rewritten", func() {
+		seedMovie()
+		page := newSessionPage("/movies")
+		visibleElement(page, `a[href="/movies"]`)
+		page.MustEval(moviesSort)
+		page.MustNavigate(baseURL + "/movies?status=failed")
+		expectPath(page, "/movies?status=failed&sort=year&order=desc")
+		before := historyLength(page)
+
+		// The sidebar's bare /movies is not how the page spells its state.
+		visibleElement(page, `a[href="/movies"]`).MustClick()
+		expectPath(page, "/movies?sort=year&order=desc")
+		Expect(historyLength(page)).To(Equal(before + 1))
+
+		page.MustEval(`() => history.back()`)
+		expectPath(page, "/movies?status=failed&sort=year&order=desc")
+	})
+
+	It("keeps Back when the URL a same-page link leaves has a hash", func() {
+		seedMovie()
+		page := newSessionPage("/movies?status=failed")
+		expectPath(page, "/movies?status=failed")
+		// The skip link is off screen until focused, so it is clicked in page.
+		page.MustElement(`a[href="#main"]`).MustEval(`() => this.click()`)
+		expectPath(page, "/movies?status=failed#main")
+		before := historyLength(page)
+
+		visibleElement(page, `a[href="/movies"]`).MustClick()
+		Eventually(func() string {
+			return strings.TrimPrefix(page.MustInfo().URL, baseURL)
+		}).Should(Equal("/movies"))
+		Expect(historyLength(page)).To(Equal(before + 1))
+
+		page.MustEval(`() => history.back()`)
+		expectPath(page, "/movies?status=failed#main")
+	})
+
+	// A show with specials and two seasons, one episode each; returns its path
+	// and the id of season 1's episode. Specials are what season 0 selects, and
+	// season 2 is the one the page picks by default.
+	seedShow := func() (string, uint32) {
+		GinkgoHelper()
+		ctx := context.Background()
+		show := app.DB.TVShow.Create().
+			SetTitle("Query State").SetYear(2005).SetTvdbID(990134).
+			SaveX(ctx)
+		DeferCleanup(func() {
+			app.DB.TVShow.DeleteOneID(show.ID).ExecX(context.Background())
+		})
+		var target uint32
+		for n := range uint16(3) {
+			season := app.DB.Season.Create().
+				SetNumber(n).SetTvShow(show).SaveX(ctx)
+			ep := app.DB.Episode.Create().
+				SetNumber(1).SetTitle(fmt.Sprintf("Part %d", n)).
+				SetSeason(season).SaveX(ctx)
+			if n == 1 {
+				target = ep.ID
+			}
+		}
+		return fmt.Sprintf("/series/%d", show.ID), target
+	}
+
+	It("opens an episode link naming no season on the episode's season", func() {
+		path, episode := seedShow()
+		page := newSessionPage(fmt.Sprintf("%s?episode=%d", path, episode))
+		expectPath(
+			page,
+			fmt.Sprintf("%s?tab=episodes&season=1&episode=%d", path, episode),
+		)
+		Expect(
+			visibleElement(page, `button[aria-current=true]`).MustText(),
+		).To(MatchRegexp(`(?i)^season 0?1\b`))
+	})
+
+	It("closes the episode sheet a link opened when Back leaves it", func() {
+		path, episode := seedShow()
+		page := newSessionPage(path + "?tab=history")
+		expectPath(page, path+"?tab=history")
+
+		// What picking the episode in the global search does from this page.
+		link := fmt.Sprintf("%s?tab=episodes&season=1&episode=%d", path, episode)
+		page.MustEval(fmt.Sprintf(`() => history.pushState(null, "", %q)`, link))
+		visibleElement(page, `[role=dialog]`)
+		expectPath(page, link)
+
+		page.MustEval(`() => history.back()`)
+		expectPath(page, path+"?tab=history")
+		Eventually(func() int {
+			return len(visibleElements(page, `[role=dialog]`))
+		}).Should(BeZero())
+		// The entry left is not rewritten to carry the episode.
+		Consistently(func() string { return page.MustInfo().URL }, "500ms").
+			Should(HaveSuffix(path + "?tab=history"))
 	})
 })
