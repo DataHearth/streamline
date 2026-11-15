@@ -180,6 +180,46 @@ var _ = Describe("Extension view catalogue", Label("integration", "db"), func() 
 		Expect(locked()).To(Equal(0))
 	})
 
+	It("reports a measured file's bit depth and sample rate, else NULL", func() {
+		v, _ := ExtensionViewByName("music_files")
+		_, err := conn.ExecContext(
+			ctx,
+			"CREATE TEMP VIEW streamline_music_files AS "+v.SQL,
+		)
+		Expect(err).NotTo(HaveOccurred())
+		artist := client.Artist.Create().SetMbid("a").SetName("Artist").SaveX(ctx)
+		album := client.Album.Create().
+			SetMbid("rg").SetTitle("Album").SetArtist(artist).SaveX(ctx)
+		track := client.Track.Create().
+			SetTitle("One").SetPosition(1).SetAlbum(album).SaveX(ctx)
+		file := func(path string) *ent.MediaFileCreate {
+			return client.MediaFile.Create().
+				SetPath(path).SetSize(1).SetTrackID(track.ID)
+		}
+		file("/m/hires.flac").SetBitDepth(24).SetSampleRate(96000).ExecX(ctx)
+		file("/m/lossy.mp3").SetSampleRate(0).ExecX(ctx)
+		file("/m/unmeasured.flac").ExecX(ctx)
+
+		facts := func(path string) (sql.NullInt64, sql.NullInt64) {
+			GinkgoHelper()
+			var depth, rate sql.NullInt64
+			Expect(conn.QueryRowContext(
+				ctx,
+				"SELECT bit_depth, sample_rate FROM streamline_music_files WHERE path = ?",
+				path,
+			).Scan(&depth, &rate)).To(Succeed())
+			return depth, rate
+		}
+		depth, rate := facts("/m/hires.flac")
+		Expect(depth).To(Equal(sql.NullInt64{Int64: 24, Valid: true}))
+		Expect(rate).To(Equal(sql.NullInt64{Int64: 96000, Valid: true}))
+		for _, p := range []string{"/m/lossy.mp3", "/m/unmeasured.flac"} {
+			depth, rate = facts(p)
+			Expect(depth.Valid).To(BeFalse(), p)
+			Expect(rate.Valid).To(BeFalse(), p)
+		}
+	})
+
 	It("lowercases the email in user_logins", func() {
 		v, _ := ExtensionViewByName("user_logins")
 		_, err := conn.ExecContext(

@@ -199,7 +199,8 @@ FROM core.music_credits`,
 		},
 		SQL: `SELECT id, track_media_files AS track_id, path, format, quality,
 	size, duration_seconds AS duration, bitrate,
-	NULL AS sample_rate, NULL AS bit_depth, audio_channels AS channels,
+	NULLIF(sample_rate, 0) AS sample_rate, NULLIF(bit_depth, 0) AS bit_depth,
+	audio_channels AS channels,
 	missing_since IS NOT NULL AS missing, create_time AS added_at
 FROM core.media_files
 WHERE track_media_files IS NOT NULL`,

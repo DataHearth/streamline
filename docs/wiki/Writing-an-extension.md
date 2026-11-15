@@ -223,7 +223,7 @@ Each granted view appears as `streamline_<name>`, read-only. Columns are stable 
 | `album_artists` | Read the music library | `album_id`, `artist_id`, `owner` (1 for the owner, 0 for every other artist the album is listed under) |
 | `tracks` | Read the music library | `id`, `mbid`, `album_id`, `title`, `disc`, `position`, `duration` (seconds), `bonus`, `artist_credit`, `added_at`, `updated_at` |
 | `music_credits` | Read the music library | `id`, `album_id`, `track_id`, `kind`, `role`, `name`, `mbid`, `instruments`, `guest`, `ordinal` |
-| `music_files` | Read the music library | `id`, `track_id`, `path` (absolute, on the server), `format`, `quality`, `size`, `duration` (seconds), `bitrate`, `sample_rate` and `bit_depth` (always NULL), `channels`, `missing` (1 when the file is gone from disk), `added_at` (when the file joined the library) |
+| `music_files` | Read the music library | `id`, `track_id`, `path` (absolute, on the server), `format`, `quality`, `size`, `duration` (seconds), `bitrate`, `sample_rate` (Hz) and `bit_depth` (a lossless file's, NULL for a lossy one or one not measured yet), `channels`, `missing` (1 when the file is gone from disk), `added_at` (when the file joined the library) |
 | `genres` | Read the music library | `name`, `album_count` |
 | `movies` | Read the movie and series library | `id`, `tmdb_id`, `imdb_id`, `title`, `original_title`, `year`, `overview`, `runtime` (minutes), `release_date`, `rating`, `genres` (a JSON list), `added_at`, `updated_at` |
 | `series` | Read the movie and series library | `id`, `tvdb_id`, `imdb_id`, `title`, `original_title`, `year`, `first_aired`, `overview`, `status`, `type`, `network`, `runtime` (minutes), `rating`, `genres` (a JSON list), `added_at`, `updated_at` |
