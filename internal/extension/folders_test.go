@@ -41,7 +41,7 @@ var _ = Describe("Folders", Label("integration"), func() {
 		entry := config.ExtensionEntry{
 			Name: "echo", Source: src, Enabled: true,
 			Grants: config.ExtensionGrants{
-				Mounts:   []string{"/echo"},
+				Mounts:   []string{"/", "/inner"},
 				Views:    []string{"books"},
 				Services: []string{"serve_file"},
 				Folders:  folders,

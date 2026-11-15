@@ -67,7 +67,7 @@ var _ = Describe("ffmpeg service", Ordered, Label("integration"), func() {
 		cfg.Extensions = []config.ExtensionEntry{{
 			Name: "echo", Source: src, Enabled: true,
 			Grants: config.ExtensionGrants{
-				Mounts:   []string{"/echo"},
+				Mounts:   []string{"/", "/inner"},
 				Views:    []string{"books"},
 				Services: append([]string{"serve_file"}, services...),
 				Folders:  []string{"music", "artwork", "cache"},
@@ -110,7 +110,7 @@ var _ = Describe("ffmpeg service", Ordered, Label("integration"), func() {
 			q.Set("fallback", fallback)
 		}
 		return httptest.NewRequest(
-			http.MethodGet, "/echo/ffmpeg/stream?"+q.Encode(), nil,
+			http.MethodGet, "/extensions/echo/ffmpeg/stream?"+q.Encode(), nil,
 		).WithContext(reqCtx)
 	}
 

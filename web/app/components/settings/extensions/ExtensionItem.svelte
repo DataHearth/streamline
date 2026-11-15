@@ -5,6 +5,7 @@
 	import {
 		AUTH_LABEL,
 		STATE_PILL,
+		clientPath,
 		diffPermissions,
 		hasFullAccess,
 		permissionSummary,
@@ -117,7 +118,7 @@
 			<span class="text-xs text-fg-subtle">{i18n.extensions_serving()}</span>
 			{#each ext.granted.mounts as m (m.path)}
 				<span class="inline-flex min-w-0 items-baseline gap-1.5">
-					<code class="font-mono text-[12.5px] text-fg">{m.path}</code>
+					<code class="font-mono text-[12.5px] text-fg">{clientPath(ext.path, m.path)}</code>
 					{#if m.auth}<span class="text-xs text-fg-subtle">· {AUTH_LABEL[m.auth]()}</span>{/if}
 				</span>
 			{/each}
@@ -127,7 +128,7 @@
 			<p class="text-[13px] leading-relaxed text-fg">
 				{i18n.extensions_needs_approval_lead({ version: version || ext.name })}
 			</p>
-			<ExtensionPermissions permissions={added} mark="added" class="mt-2.5" />
+			<ExtensionPermissions permissions={added} base={ext.path} mark="added" class="mt-2.5" />
 			<button
 				type="button"
 				onclick={onApprove}
@@ -174,7 +175,7 @@
 		</button>
 		{#if open}
 			<div class="px-4 pb-4 pt-1 md:px-5">
-				<ExtensionPermissions permissions={perms} />
+				<ExtensionPermissions permissions={perms} base={ext.path} />
 			</div>
 		{/if}
 	</div>

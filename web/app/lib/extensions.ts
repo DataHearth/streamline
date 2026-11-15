@@ -60,6 +60,8 @@ export type ExtensionCardDecl = {
 
 export type Extension = {
 	name: string;
+	// /extensions/<name>: every mount below is relative to it.
+	path: string;
 	// Read from the module, so absent when it could not be read.
 	version?: string;
 	source: string;
@@ -180,6 +182,15 @@ export const BUNDLE_LABEL: Record<ExtensionBundle, () => string> = {
 // ffmpeg runs uncaged with the module's own arguments, so holding it means
 // holding everything Streamline can reach.
 export const hasFullAccess = (p: { services: ExtensionService[] }) => p.services.includes("ffmpeg");
+
+// Where an extension named name is served, under the instance's address and
+// not the API's. The server answers it as Extension.path; the add flow needs
+// it before the entry exists.
+export const servedPath = (name: string) => `/extensions/${name}`;
+
+// A mount, relative to the extension's path, as the address a client uses:
+// "/" is the path itself.
+export const clientPath = (base: string, mount: string) => (mount === "/" ? base : `${base}${mount}`);
 
 export const NO_PERMISSIONS: ExtensionPermissions = { mounts: [], views: [], folders: [], services: [] };
 

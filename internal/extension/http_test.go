@@ -122,7 +122,7 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 			Source:  wasm,
 			Enabled: true,
 			Grants: config.ExtensionGrants{
-				Mounts:   []string{"/echo"},
+				Mounts:   []string{"/", "/inner"},
 				Views:    []string{"books", "book_files", "authors"},
 				Services: []string{"serve_file", "serve_poster"},
 			},
@@ -144,19 +144,23 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 			Expect(rr.Code).To(Equal(http.StatusOK))
 			Expect(rr.Body.String()).To(Equal(want))
 		},
-		Entry("bare prefix", "/echo", "/"),
-		Entry("trailing slash", "/echo/", "/"),
-		Entry("nested with a query", "/echo/a/b?x=1", "/a/b"),
+		Entry("bare prefix", "/extensions/echo", "/"),
+		Entry("trailing slash", "/extensions/echo/", "/"),
+		Entry("nested with a query", "/extensions/echo/a/b?x=1", "/a/b"),
 	)
 
 	It("passes the raw query string", func() {
-		Expect(do(http.MethodGet, "/echo/query?x=1&y=2").Body.String()).
+		Expect(do(http.MethodGet, "/extensions/echo/query?x=1&y=2").Body.String()).
 			To(Equal("x=1&y=2"))
 	})
 
 	It("falls through for a path no extension holds", func() {
 		Expect(do(http.MethodGet, "/other").Code).To(Equal(http.StatusTeapot))
-		Expect(do(http.MethodGet, "/echoes").Code).To(Equal(http.StatusTeapot))
+		Expect(
+			do(http.MethodGet, "/extensions/echoes").Code,
+		).To(Equal(http.StatusTeapot))
+		Expect(do(http.MethodGet, "/extensions/").Code).To(Equal(http.StatusTeapot))
+		Expect(do(http.MethodGet, "/echo/x").Code).To(Equal(http.StatusTeapot))
 		Expect(do(http.MethodGet, "/api/v1/extensions").Code).
 			To(Equal(http.StatusTeapot))
 		Expect(do(http.MethodGet, "/api/v1/extensions/echo").Code).
@@ -166,8 +170,8 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 	It(
 		"lets a self-authenticated mount, and a stopped one, past the session check",
 		func() {
-			Expect(mgr.SelfAuthenticated("/echo/x")).To(BeTrue())
-			Expect(mgr.SelfAuthenticated("/echo")).To(BeTrue())
+			Expect(mgr.SelfAuthenticated("/extensions/echo/x")).To(BeTrue())
+			Expect(mgr.SelfAuthenticated("/extensions/echo")).To(BeTrue())
 			Expect(mgr.SelfAuthenticated("/other/x")).To(BeFalse())
 			Expect(
 				mgr.SelfAuthenticated("/api/v1/extensions/echo/api/x"),
@@ -176,7 +180,7 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 			entry.Enabled = false
 			cfg.Extensions = []config.ExtensionEntry{entry}
 			Expect(mgr.Reconcile(ctx)).To(Succeed())
-			Expect(mgr.SelfAuthenticated("/echo/x")).To(BeTrue())
+			Expect(mgr.SelfAuthenticated("/extensions/echo/x")).To(BeTrue())
 		},
 	)
 
@@ -184,32 +188,47 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 		entry.Enabled = false
 		cfg.Extensions = []config.ExtensionEntry{entry}
 		Expect(mgr.Reconcile(ctx)).To(Succeed())
-		Expect(do(http.MethodGet, "/echo/x").Code).To(Equal(http.StatusNotFound))
+		Expect(
+			do(http.MethodGet, "/extensions/echo/x").Code,
+		).To(Equal(http.StatusNotFound))
 
 		cfg.Extensions = nil
 		Expect(mgr.Reconcile(ctx)).To(Succeed())
-		Expect(do(http.MethodGet, "/echo/x").Code).To(Equal(http.StatusTeapot))
+		Expect(
+			do(http.MethodGet, "/extensions/echo/x").Code,
+		).To(Equal(http.StatusTeapot))
 	})
 
-	It("never claims a reserved prefix for a stopped extension", func() {
-		entry.Enabled = false
-		entry.Grants.Mounts = []string{"/movies"}
-		cfg.Extensions = []config.ExtensionEntry{entry}
-		Expect(mgr.Reconcile(ctx)).To(Succeed())
-		Expect(do(http.MethodGet, "/movies").Code).To(Equal(http.StatusTeapot))
-	})
+	It(
+		"tells a guest its mount, its path and the origin the request came to",
+		func() {
+			rr := do(http.MethodGet, "http://media.example/extensions/echo/request")
+			Expect(rr.Body.String()).To(MatchJSON(`{
+			"mount": "/", "base_path": "/extensions/echo", "path": "/request",
+			"origin": "http://media.example"
+		}`))
+		},
+	)
 
-	It("tells a guest its mount and the origin the request came to", func() {
-		rr := do(http.MethodGet, "http://media.example/echo/request")
-		Expect(rr.Body.String()).To(MatchJSON(
-			`{"mount": "/echo", "origin": "http://media.example"}`,
-		))
+	It("routes a path to the longest mount below the extension's path", func() {
+		rr := do(
+			http.MethodGet,
+			"http://media.example/extensions/echo/inner/request",
+		)
+		Expect(rr.Body.String()).To(MatchJSON(`{
+			"mount": "/inner", "base_path": "/extensions/echo", "path": "/request",
+			"origin": "http://media.example"
+		}`))
+		Expect(do(http.MethodGet, "/extensions/echo/innermost").Body.String()).
+			To(Equal("/innermost"))
+		Expect(mgr.SelfAuthenticated("/extensions/echo/inner/x")).To(BeFalse())
+		Expect(mgr.SelfAuthenticated("/extensions/echo/innermost")).To(BeTrue())
 	})
 
 	DescribeTable(
 		"lets a guest cache privately and nothing wider",
 		func(query, want string) {
-			rr := do(http.MethodGet, "/echo/cache?"+query)
+			rr := do(http.MethodGet, "/extensions/echo/cache?"+query)
 			Expect(rr.Header().Values("Cache-Control")).To(Equal([]string{want}))
 		},
 		Entry(
@@ -232,7 +251,7 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 	)
 
 	It("forces its own content policy on what a guest serves", func() {
-		rr := do(http.MethodGet, "/echo/x")
+		rr := do(http.MethodGet, "/extensions/echo/x")
 		Expect(rr.Header().Get("Content-Security-Policy")).To(Equal(guestCSP))
 		Expect(guestCSP).To(Equal(
 			"sandbox; default-src 'none'; img-src 'self' data:; " +
@@ -247,7 +266,7 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 	})
 
 	It("withholds credentials from a guest", func() {
-		rr := do(http.MethodGet, "/echo/headers", func(r *http.Request) {
+		rr := do(http.MethodGet, "/extensions/echo/headers", func(r *http.Request) {
 			r.Header.Set("Cookie", "streamline_session=secret")
 			r.Header.Set("Authorization", "Basic abc")
 		})
@@ -255,7 +274,9 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 		Expect(json.Unmarshal(rr.Body.Bytes(), &got)).To(Succeed())
 		Expect(got).NotTo(HaveKey("Cookie"))
 		Expect(got).To(HaveKey("Authorization"))
-		Expect(do(http.MethodGet, "/echo/headers", asCaller).Body.String()).
+		Expect(
+			do(http.MethodGet, "/extensions/echo/headers", asCaller).Body.String(),
+		).
 			NotTo(ContainSubstring("Caller"))
 	})
 
@@ -337,14 +358,16 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 
 	Context("a failing guest", func() {
 		It("answers 500 and serves the next request", func() {
-			rr := do(http.MethodGet, "/echo/trap")
+			rr := do(http.MethodGet, "/extensions/echo/trap")
 			Expect(rr.Code).To(Equal(http.StatusInternalServerError))
 			Expect(rr.Body.String()).To(ContainSubstring("internal error"))
-			Expect(do(http.MethodGet, "/echo/ok").Code).To(Equal(http.StatusOK))
+			Expect(
+				do(http.MethodGet, "/extensions/echo/ok").Code,
+			).To(Equal(http.StatusOK))
 		})
 
 		It("refuses a body over the limit", func() {
-			rr := do(http.MethodGet, "/echo/oversize")
+			rr := do(http.MethodGet, "/extensions/echo/oversize")
 			Expect(rr.Code).To(Equal(http.StatusInternalServerError))
 		})
 	})
@@ -352,7 +375,7 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 	Context("serve_file", func() {
 		It("serves a present book file with the directive's headers", func() {
 			id := bookFile("0123456789")
-			rr := do(http.MethodGet, fmt.Sprintf("/echo/file/%d", id))
+			rr := do(http.MethodGet, fmt.Sprintf("/extensions/echo/file/%d", id))
 			Expect(rr.Code).To(Equal(http.StatusOK))
 			Expect(rr.Body.String()).To(Equal("0123456789"))
 			Expect(rr.Header().Get("Content-Type")).To(Equal("application/epub+zip"))
@@ -364,7 +387,7 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 			id := bookFile("0123456789")
 			rr := do(
 				http.MethodGet,
-				fmt.Sprintf("/echo/file/%d", id),
+				fmt.Sprintf("/extensions/echo/file/%d", id),
 				func(r *http.Request) {
 					r.Header.Set("Range", "bytes=0-3")
 				},
@@ -379,7 +402,9 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 			id := bookFile("x")
 			mf := client.MediaFile.GetX(ctx, id)
 			Expect(os.Remove(mf.Path)).To(Succeed())
-			Expect(do(http.MethodGet, fmt.Sprintf("/echo/file/%d", id)).Code).
+			Expect(
+				do(http.MethodGet, fmt.Sprintf("/extensions/echo/file/%d", id)).Code,
+			).
 				To(Equal(http.StatusNotFound))
 		})
 
@@ -388,7 +413,9 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 			Expect(os.WriteFile(path, []byte("m"), 0o600)).To(Succeed())
 			id := client.MediaFile.Create().
 				SetPath(path).SetSize(1).SetQuality("1080p").SaveX(ctx).ID
-			Expect(do(http.MethodGet, fmt.Sprintf("/echo/file/%d", id)).Code).
+			Expect(
+				do(http.MethodGet, fmt.Sprintf("/extensions/echo/file/%d", id)).Code,
+			).
 				To(Equal(http.StatusNotFound))
 		})
 
@@ -398,14 +425,16 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 			entry.Grants.Views = []string{"books"}
 			cfg.Extensions = []config.ExtensionEntry{entry}
 			Expect(mgr.Reconcile(ctx)).To(Succeed())
-			Expect(do(http.MethodGet, fmt.Sprintf("/echo/file/%d", id)).Code).
+			Expect(
+				do(http.MethodGet, fmt.Sprintf("/extensions/echo/file/%d", id)).Code,
+			).
 				To(Equal(http.StatusNotFound))
 		})
 	})
 
 	Context("serve_poster", func() {
 		It("hands a granted kind to the poster server", func() {
-			rr := do(http.MethodGet, "/echo/poster/books/9")
+			rr := do(http.MethodGet, "/extensions/echo/poster/books/9")
 			Expect(rr.Code).To(Equal(http.StatusOK))
 			Expect(rr.Body.String()).To(Equal("poster"))
 			Expect(posters.kind).To(Equal("books"))
@@ -413,16 +442,16 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 		})
 
 		It("answers 404 for a kind it has no view for", func() {
-			Expect(do(http.MethodGet, "/echo/poster/movies/9").Code).
+			Expect(do(http.MethodGet, "/extensions/echo/poster/movies/9").Code).
 				To(Equal(http.StatusNotFound))
-			Expect(do(http.MethodGet, "/echo/poster/artists/9").Code).
+			Expect(do(http.MethodGet, "/extensions/echo/poster/artists/9").Code).
 				To(Equal(http.StatusNotFound))
 			Expect(posters.kind).To(BeEmpty())
 
 			entry.Grants.Views = []string{"books"}
 			cfg.Extensions = []config.ExtensionEntry{entry}
 			Expect(mgr.Reconcile(ctx)).To(Succeed())
-			Expect(do(http.MethodGet, "/echo/poster/authors/9").Code).
+			Expect(do(http.MethodGet, "/extensions/echo/poster/authors/9").Code).
 				To(Equal(http.StatusNotFound))
 		})
 	})
@@ -448,7 +477,7 @@ var _ = Describe("send_file", Label("integration"), func() {
 
 	send := func(path string) *httptest.ResponseRecorder {
 		GinkgoHelper()
-		target := "/echo/send?" + url.Values{
+		target := "/extensions/echo/send?" + url.Values{
 			"path": {path}, "type": {"audio/flac"},
 		}.Encode()
 		req := httptest.NewRequest(http.MethodGet, target, nil)
@@ -499,7 +528,7 @@ var _ = Describe("send_file", Label("integration"), func() {
 		cfg.Extensions = []config.ExtensionEntry{{
 			Name: "echo", Source: wasm, Enabled: true,
 			Grants: config.ExtensionGrants{
-				Mounts:   []string{"/echo"},
+				Mounts:   []string{"/", "/inner"},
 				Views:    []string{"books"},
 				Services: []string{"serve_file"},
 				Folders:  []string{"music"},
@@ -516,7 +545,7 @@ var _ = Describe("send_file", Label("integration"), func() {
 	It("serves a granted file with ranges", func() {
 		req := httptest.NewRequest(
 			http.MethodGet,
-			"/echo/send?"+url.Values{
+			"/extensions/echo/send?"+url.Values{
 				"path": {filepath.Join(music, "a.flac")},
 			}.Encode(),
 			nil,
@@ -533,7 +562,7 @@ var _ = Describe("send_file", Label("integration"), func() {
 	It("names the download when the guest gives a filename", func() {
 		req := httptest.NewRequest(
 			http.MethodGet,
-			"/echo/send?"+url.Values{
+			"/extensions/echo/send?"+url.Values{
 				"path": {filepath.Join(music, "a.flac")}, "name": {"x.flac"},
 			}.Encode(),
 			nil,
@@ -591,7 +620,7 @@ var _ = Describe("send_file", Label("integration"), func() {
 				defer GinkgoRecover()
 				req := httptest.NewRequest(
 					http.MethodGet,
-					"/echo/send?"+url.Values{
+					"/extensions/echo/send?"+url.Values{
 						"path": {filepath.Join(music, "a.flac")},
 					}.Encode(),
 					nil,

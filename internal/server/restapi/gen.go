@@ -5888,6 +5888,9 @@ type Extension struct {
 	Granted ExtensionPermissions `json:"granted"`
 	Name    string               `json:"name"`
 
+	// Path The path the extension is served under (`/opds`), its mounts below it: the entry's own, else `/<name>`.
+	Path string `json:"path"`
+
 	// Reason Why the extension is not running, when it is not.
 	Reason *string `json:"reason,omitempty"`
 
@@ -5929,7 +5932,7 @@ type ExtensionCard struct {
 	// Kind `credential` is the only kind.
 	Kind string `json:"kind"`
 
-	// Mount The mount a client is pointed at.
+	// Mount Where a client is pointed, as the module declares it: relative to the extension's path, `/` being the path itself.
 	Mount string `json:"mount"`
 	Title string `json:"title"`
 
@@ -5964,7 +5967,10 @@ type ExtensionCreate struct {
 	Enabled *bool            `json:"enabled,omitempty"`
 	Grants  *ExtensionGrants `json:"grants,omitempty"`
 	Name    string           `json:"name"`
-	Sha256  *string          `json:"sha256,omitempty"`
+
+	// Path One path segment to serve the extension under (`/subsonic`). Surrounding whitespace and slashes are trimmed; absent or empty serves it under `/<name>`.
+	Path   *string `json:"path,omitempty"`
+	Sha256 *string `json:"sha256,omitempty"`
 
 	// Source An https URL (which needs `sha256`) or an absolute path.
 	Source string `json:"source"`
@@ -6020,6 +6026,9 @@ type ExtensionPermissions struct {
 type ExtensionUpdate struct {
 	Enabled *bool            `json:"enabled,omitempty"`
 	Grants  *ExtensionGrants `json:"grants,omitempty"`
+
+	// Path One path segment to serve the extension under, trimmed like on create; an empty string returns it to `/<name>`.
+	Path *string `json:"path,omitempty"`
 
 	// Sha256 An empty string clears the checksum.
 	Sha256 *string `json:"sha256,omitempty"`

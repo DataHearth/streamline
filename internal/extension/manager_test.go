@@ -52,7 +52,7 @@ var _ = Describe("Manager", Label("integration"), func() {
 			Source:  echoWas,
 			Enabled: true,
 			Grants: config.ExtensionGrants{
-				Mounts:   []string{"/echo"},
+				Mounts:   []string{"/", "/inner"},
 				Views:    []string{"books"},
 				Services: []string{"serve_file"},
 			},
@@ -65,10 +65,10 @@ var _ = Describe("Manager", Label("integration"), func() {
 		Expect(status("echo").State).To(Equal(StateRunning))
 		Expect(status("echo").Manifest).NotTo(BeNil())
 
-		r, mount, ok := mgr.Acquire("/echo")
+		r, mounts, ok := mgr.Acquire("/extensions/echo")
 		Expect(ok).To(BeTrue())
 		defer r.Release()
-		Expect(mount.Auth).To(Equal("self"))
+		Expect(mounts).To(ContainElement(Mount{Prefix: "/", Auth: "self"}))
 		_, _, ok = mgr.Acquire("/other")
 		Expect(ok).To(BeFalse())
 	})
@@ -79,7 +79,7 @@ var _ = Describe("Manager", Label("integration"), func() {
 		Expect(mgr.Reconcile(ctx)).To(Succeed())
 		st := status("echo")
 		Expect(st.State).To(Equal(StateNeedsApproval))
-		_, _, ok := mgr.Acquire("/echo")
+		_, _, ok := mgr.Acquire("/extensions/echo")
 		Expect(ok).To(BeFalse())
 	})
 
@@ -139,7 +139,7 @@ var _ = Describe("Manager", Label("integration"), func() {
 		Expect(mgr.Reconcile(ctx)).To(Succeed())
 		Expect(status("echo").State).To(Equal(StateDisabled))
 		Expect(mgr.DataPaths()["echo"]).To(BeAnExistingFile())
-		_, _, ok := mgr.Acquire("/echo")
+		_, _, ok := mgr.Acquire("/extensions/echo")
 		Expect(ok).To(BeFalse())
 	})
 
@@ -154,7 +154,7 @@ var _ = Describe("Manager", Label("integration"), func() {
 	It("replaces a module whose grants changed", func() {
 		Expect(mgr.Reconcile(ctx)).To(Succeed())
 		before := mgr.running["echo"]
-		echo.Grants.Mounts = []string{"/echo", "/extra"}
+		echo.Grants.Mounts = []string{"/", "/inner", "/extra"}
 		cfg.Extensions = []config.ExtensionEntry{echo}
 		Expect(mgr.Reconcile(ctx)).To(Succeed())
 		Expect(mgr.running["echo"]).NotTo(BeIdenticalTo(before))
@@ -208,7 +208,7 @@ var _ = Describe("Manager", Label("integration"), func() {
 
 	It("lets a held request finish before the old module closes", func() {
 		Expect(mgr.Reconcile(ctx)).To(Succeed())
-		r, _, ok := mgr.Acquire("/echo")
+		r, _, ok := mgr.Acquire("/extensions/echo")
 		Expect(ok).To(BeTrue())
 
 		held := make(chan error, 1)
@@ -225,7 +225,7 @@ var _ = Describe("Manager", Label("integration"), func() {
 		echo.Enabled = false
 		cfg.Extensions = []config.ExtensionEntry{echo}
 		Expect(mgr.Reconcile(ctx)).To(Succeed())
-		_, _, again := mgr.Acquire("/echo")
+		_, _, again := mgr.Acquire("/extensions/echo")
 		Expect(again).To(BeFalse())
 		Expect(r.Done()).NotTo(BeClosed())
 
@@ -237,33 +237,55 @@ var _ = Describe("Manager", Label("integration"), func() {
 })
 
 var _ = Describe("mount rules", Label("unit"), func() {
-	DescribeTable("checkMounts",
-		func(prefix string, table map[string]mountEntry, fails bool) {
-			err := checkMounts(Manifest{Mounts: []Mount{{Prefix: prefix}}}, table)
-			if fails {
-				Expect(err).To(HaveOccurred())
-			} else {
+	DescribeTable(
+		"a manifest's mounts",
+		func(mounts string, problem string) {
+			_, err := parseManifest([]byte(
+				`{"name":"x","streamline_api":2,"mounts":` + mounts + `}`,
+			))
+			if problem == "" {
 				Expect(err).NotTo(HaveOccurred())
+				return
 			}
+			Expect(err).To(MatchError(ErrBadManifest))
+			Expect(err).To(MatchError(ContainSubstring(problem)))
 		},
-		Entry("a plain prefix", "/opds", map[string]mountEntry{}, false),
-		Entry("the Subsonic API", "/rest", map[string]mountEntry{}, false),
-		Entry("Subsonic's public shares", "/share", map[string]mountEntry{}, false),
-		Entry("a reserved prefix", "/api", map[string]mountEntry{}, true),
-		Entry("an SPA route", "/movies", map[string]mountEntry{}, true),
-		Entry("no leading slash", "opds", map[string]mountEntry{}, true),
-		Entry("the root", "/", map[string]mountEntry{}, true),
-		Entry("two segments", "/a/b", map[string]mountEntry{}, true),
-		Entry("already held", "/opds", map[string]mountEntry{"/opds": {}}, true),
+		Entry("the whole path", `[{"prefix":"/","auth":"self"}]`, ""),
+		Entry(
+			"Subsonic's two",
+			`[{"prefix":"/rest","auth":"self"},{"prefix":"/share","auth":"self"}]`,
+			"",
+		),
+		Entry(
+			"two segments",
+			`[{"prefix":"/a/b","auth":"self"}]`,
+			"one plain path segment",
+		),
+		Entry(
+			"no leading slash",
+			`[{"prefix":"rest","auth":"self"}]`,
+			"one plain path segment",
+		),
+		Entry(
+			"an escape",
+			`[{"prefix":"/a%20b","auth":"self"}]`,
+			"one plain path segment",
+		),
+		Entry(
+			"one twice",
+			`[{"prefix":"/rest","auth":"self"},{"prefix":"/rest","auth":"session"}]`,
+			"declared twice",
+		),
+		Entry("an unknown auth", `[{"prefix":"/","auth":"basic"}]`, "auth must be"),
 	)
 
-	It("reserves every first-level SPA route", func() {
-		entries, err := os.ReadDir("../../web/app/routes")
-		Expect(err).NotTo(HaveOccurred())
-		for _, e := range entries {
-			if e.IsDir() {
-				Expect(reservedPrefixes).To(ContainElement("/" + e.Name()))
-			}
-		}
+	It("refuses a module built for contract version 1", func() {
+		_, err := parseManifest([]byte(`{"name":"x","streamline_api":1}`))
+		Expect(err).To(MatchError(ContainSubstring("contract version 1")))
+	})
+
+	It("leaves /extensions to the extensions", func() {
+		_, err := os.Stat("../../web/app/routes/extensions")
+		Expect(err).To(MatchError(os.ErrNotExist))
 	})
 })

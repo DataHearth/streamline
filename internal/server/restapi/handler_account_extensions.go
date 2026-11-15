@@ -133,7 +133,7 @@ func (s *Server) ListAccountExtensions(
 			Extension: st.Name,
 			Kind:      card.Kind,
 			Title:     card.Title,
-			Mount:     card.Mount,
+			Mount:     extension.ClientPath(st.Path, card.Mount),
 			Username:  card.Username,
 			Enabled:   access.Enabled,
 		})

@@ -37,7 +37,10 @@ var _ = Describe("Module", Label("unit"), func() {
 	It("reads the manifest", func() {
 		Expect(
 			m.Manifest().Mounts,
-		).To(Equal([]Mount{{Prefix: "/echo", Auth: "self"}}))
+		).To(Equal([]Mount{
+			{Prefix: "/", Auth: "self"},
+			{Prefix: "/inner", Auth: "session"},
+		}))
 	})
 
 	It("answers a request", func() {
@@ -104,21 +107,21 @@ var _ = Describe("Module", Label("unit"), func() {
 var _ = Describe("parseManifest", Label("unit"), func() {
 	It("refuses another contract version", func() {
 		_, err := parseManifest(
-			[]byte(`{"name":"x","version":"1","streamline_api":2}`),
+			[]byte(`{"name":"x","version":"1","streamline_api":3}`),
 		)
 		Expect(err).To(MatchError(ErrBadManifest))
 	})
 
 	It("refuses a bad name", func() {
 		_, err := parseManifest(
-			[]byte(`{"name":"Bad Name","version":"1","streamline_api":1}`),
+			[]byte(`{"name":"Bad Name","version":"1","streamline_api":2}`),
 		)
 		Expect(err).To(MatchError(ErrBadManifest))
 	})
 
 	It("accepts a good manifest", func() {
 		mf, err := parseManifest(
-			[]byte(`{"name":"ok-1","version":"1","streamline_api":1}`),
+			[]byte(`{"name":"ok-1","version":"1","streamline_api":2}`),
 		)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(mf.Name).To(Equal("ok-1"))

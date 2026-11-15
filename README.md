@@ -451,7 +451,7 @@ Direct-to-binary installs need no change.
 | Download clients | qBittorrent, Transmission, Deluge, built-in BitTorrent engine             |
 | Media servers    | Plex, Jellyfin, Emby (books: Jellyfin and Emby — Plex has no book library) |
 | Metadata         | TMDB (movies, TV), TVDB (TV), MusicBrainz (music), Hardcover (books) — TMDB, TVDB and Hardcover take an API key of your own; Deezer, Cover Art Archive and Wikipedia for artwork and artist overviews, keyless |
-| Clients          | OPDS 1.2 readers (`/opds`, with the OPDS extension), e-readers by email (EPUB, PDF) |
+| Clients          | OPDS 1.2 readers (`/extensions/opds`, with the OPDS extension), e-readers by email (EPUB, PDF) |
 
 ## Verifying images
 

@@ -23,6 +23,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// extensionsPrefix holds every extension, each at /extensions/<name>.
+const extensionsPrefix = "/extensions/"
+
 const (
 	authSelf    = "self"
 	authSession = "session"
@@ -74,45 +77,85 @@ type PosterServer interface {
 	Serve(w http.ResponseWriter, r *http.Request, kind string, id uint32)
 }
 
+// target is where in an extension a request lands: rel is the path below
+// the mount, which is the manifest mount (empty on the /api and /cards
+// subtrees) under the extension's base path.
+type target struct {
+	rel, auth, mount, base string
+}
+
 // route finds the extension a path is addressed to. handled is false when the
 // path is none of an extension's, and true with a nil run when it is but the
-// extension is not running, or the path names an extension's subtree in a
-// form the auth middleware did not see (a dot segment).
-func (m *Manager) route(
-	path string,
-) (run *Running, rel, authKind string, handled bool) {
+// extension is not running, no mount of it holds the path, or the path names
+// an extension's subtree in a form the auth middleware did not see (a dot
+// segment).
+func (m *Manager) route(path string) (*Running, target, bool) {
 	if rest, ok := strings.CutPrefix(path, "/api/v1/extensions/"); ok {
 		name, after, _ := strings.Cut(rest, "/")
 		sub := "/" + after
 		if name == "" || !isExtensionSubtree(sub) {
-			return nil, "", "", false
+			return nil, target{}, false
 		}
 		if clean := pathpkg.Clean(path); path != clean && path != clean+"/" {
-			return nil, "", "", true
+			return nil, target{}, true
 		}
 		run, ok := m.AcquireNamed(name)
 		if !ok {
-			return nil, "", "", true
+			return nil, target{}, true
 		}
 		// A settings card is written for another account by an admin, through
 		// the host's own endpoint and its value check. Reached here, the guest
 		// would see any signed-in user as the caller with no target.
 		if run.settingsCardPath(sub) {
 			run.Release()
-			return nil, "", "", true
+			return nil, target{}, true
 		}
-		return run, sub, authSession, true
+		return run, target{rel: sub, auth: authSession}, true
 	}
 
-	prefix, tail := splitMount(path)
-	if prefix == "" {
-		return nil, "", "", false
+	base, tail := splitMount(path)
+	if base == "" {
+		return nil, target{}, false
 	}
-	run, mt, ok := m.Acquire(prefix)
+	run, mounts, ok := m.Acquire(base)
 	if !ok {
-		return nil, "", "", (*m.stopped.Load())[prefix]
+		return nil, target{}, (*m.stopped.Load())[base]
 	}
-	return run, tail, mt.Auth, true
+	mt, rel, ok := matchMount(mounts, tail)
+	if !ok {
+		run.Release()
+		return nil, target{}, true
+	}
+	return run, target{rel: rel, auth: mt.Auth, mount: mt.Prefix, base: base}, true
+}
+
+// matchMount picks the mount holding tail, the path below the extension's
+// base: the longest prefix, so "/rest" wins over "/" for /rest/ping. rel is
+// what is left below it, always led by a slash.
+func matchMount(mounts []Mount, tail string) (Mount, string, bool) {
+	var (
+		best  Mount
+		found bool
+	)
+	for _, mt := range mounts {
+		if mt.Prefix == "/" || tail == mt.Prefix ||
+			strings.HasPrefix(tail, mt.Prefix+"/") {
+			if !found || len(mt.Prefix) > len(best.Prefix) {
+				best, found = mt, true
+			}
+		}
+	}
+	if !found {
+		return Mount{}, "", false
+	}
+	if best.Prefix == "/" {
+		return best, tail, true
+	}
+	rel := strings.TrimPrefix(tail, best.Prefix)
+	if rel == "" {
+		rel = "/"
+	}
+	return best, rel, true
 }
 
 func (r *Running) settingsCardPath(sub string) bool {
@@ -138,15 +181,28 @@ func isExtensionSubtree(sub string) bool {
 	return false
 }
 
-func splitMount(path string) (prefix, tail string) {
-	if len(path) < 2 || path[0] != '/' {
+// ClientPath is where a client is pointed for mount, relative to an
+// extension served under base: base itself for "/".
+func ClientPath(base, mount string) string {
+	if mount == "" || mount == "/" {
+		return base
+	}
+	return base + mount
+}
+
+// splitMount cuts path into the extension's base path (/extensions/<name>)
+// and what lies below it, always led by a slash; base is empty for a path
+// under no extension.
+func splitMount(path string) (base, tail string) {
+	rest, ok := strings.CutPrefix(path, extensionsPrefix)
+	if !ok {
 		return "", ""
 	}
-	i := strings.IndexByte(path[1:], '/')
-	if i < 0 {
-		return path, "/"
+	name, below, _ := strings.Cut(rest, "/")
+	if name == "" {
+		return "", ""
 	}
-	return path[:i+1], path[i+1:]
+	return extensionsPrefix + name, "/" + below
 }
 
 // SelfAuthenticated reports whether the auth middleware must let path
@@ -155,15 +211,21 @@ func splitMount(path string) (prefix, tail string) {
 // self-authenticated mount never holds a session, and redirecting it to the
 // login page would read as the server being there.
 func (m *Manager) SelfAuthenticated(path string) bool {
-	prefix, _ := splitMount(path)
-	if prefix == "" {
+	base, tail := splitMount(path)
+	if base == "" {
 		return false
 	}
-	if (*m.stopped.Load())[prefix] {
+	if (*m.stopped.Load())[base] {
 		return true
 	}
-	e, ok := (*m.table.Load())[prefix]
-	return ok && e.mount.Auth == authSelf
+	e, ok := (*m.table.Load())[base]
+	if !ok {
+		return false
+	}
+	mt, _, held := matchMount(e.mounts, tail)
+	// A path below the base that no mount holds answers 404, which a session
+	// check in front of it would turn into a login redirect.
+	return !held || mt.Auth == authSelf
 }
 
 func (m *Manager) Middleware(
@@ -173,14 +235,14 @@ func (m *Manager) Middleware(
 	d := &dispatcher{files: files, posters: posters}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			run, rel, authKind, handled := m.route(r.URL.Path)
+			run, t, handled := m.route(r.URL.Path)
 			switch {
 			case !handled:
 				next.ServeHTTP(w, r)
 			case run == nil:
 				http.NotFound(w, r)
 			default:
-				d.serve(w, r, run, rel, authKind)
+				d.serve(w, r, run, t)
 			}
 		})
 	}
@@ -195,7 +257,7 @@ func (d *dispatcher) serve(
 	w http.ResponseWriter,
 	r *http.Request,
 	run *Running,
-	rel, authKind string,
+	t target,
 ) {
 	defer run.Release()
 	ctx, span := tracer.Start(
@@ -203,7 +265,7 @@ func (d *dispatcher) serve(
 		"extension.request",
 		trace.WithAttributes(
 			attribute.String("extension.name", run.name),
-			attribute.String("extension.mount_auth", authKind),
+			attribute.String("extension.mount_auth", t.auth),
 		),
 	)
 	defer span.End()
@@ -211,7 +273,7 @@ func (d *dispatcher) serve(
 	w.Header().Set("Content-Security-Policy", guestCSP)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Cache-Control", "no-store, private")
-	outcome := d.handle(ctx, w, r, run, rel, authKind, span)
+	outcome := d.handle(ctx, w, r, run, t, span)
 	requests.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("extension", run.name),
 		attribute.String("outcome", outcome),
@@ -223,10 +285,10 @@ func (d *dispatcher) handle(
 	w http.ResponseWriter,
 	r *http.Request,
 	run *Running,
-	rel, authKind string,
+	t target,
 	span trace.Span,
 ) string {
-	req, err := buildRequest(r, rel, authKind)
+	req, err := buildRequest(r, t)
 	if err != nil {
 		var tooBig *http.MaxBytesError
 		if errors.As(err, &tooBig) || errors.Is(err, errBodyTooLarge) {
@@ -379,7 +441,7 @@ func failRequest(
 
 var errBodyTooLarge = errors.New("request body too large")
 
-func buildRequest(r *http.Request, rel, authKind string) (Request, error) {
+func buildRequest(r *http.Request, t target) (Request, error) {
 	var body []byte
 	if r.Body != nil {
 		var err error
@@ -396,16 +458,14 @@ func buildRequest(r *http.Request, rel, authKind string) (Request, error) {
 	headers.Del("Cookie")
 	req := Request{
 		Method:  r.Method,
-		Path:    rel,
+		Path:    t.rel,
 		Query:   r.URL.RawQuery,
 		Headers: headers,
 		Body:    body,
 		Origin:  httputil.RequestOrigin(r),
 	}
-	if !strings.HasPrefix(r.URL.Path, "/api/v1/extensions/") {
-		req.Mount, _ = splitMount(r.URL.Path)
-	}
-	if authKind == authSelf {
+	req.Mount, req.BasePath = t.mount, t.base
+	if t.auth == authSelf {
 		return req, nil
 	}
 	headers.Del("Authorization")

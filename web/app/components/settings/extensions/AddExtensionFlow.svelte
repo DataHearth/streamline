@@ -10,6 +10,7 @@
 		EXTENSIONS_PATH,
 		extensionYaml,
 		grantsOf,
+		servedPath,
 		hasFullAccess,
 		shaProblem,
 		shortSha,
@@ -225,7 +226,7 @@
 			</div>
 
 			<p class="mt-5 text-sm font-medium text-fg">{i18n.extensions_review_lead()}</p>
-			<ExtensionPermissions permissions={found.requested} class="mt-3" />
+			<ExtensionPermissions permissions={found.requested} base={servedPath(found.name)} class="mt-3" />
 
 			<div class="mt-5 flex flex-col gap-2 border-t border-border pt-4">
 				{#if found.card}

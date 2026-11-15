@@ -67,7 +67,7 @@
             "mounts": {
               "type": "array",
               "items": { "type": "string" },
-              "description": "URL prefixes the extension answers."
+              "description": "The manifest's mounts, relative to /extensions/<name> (/ or /rest)."
             },
             "views": {
               "type": "array",

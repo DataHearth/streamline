@@ -54,7 +54,7 @@ A new entry has no grants, so it sits in **needs approval** and does not run. Ap
 
 ```yaml
     grants:
-      mounts: [/opds]
+      mounts: [/]
       views: [users, user_logins, books, book_series, authors, book_contributions, book_files]
       services: [serve_file, serve_poster]
 ```
@@ -69,7 +69,7 @@ A module holding the `http` service reaches only the servers named in `hosts`, w
 
 `hosts` is written in the config file only: neither the web UI nor the API changes it, and approving an update never touches it. The port is part of the match, and a redirect is handed back to the extension rather than followed, so a listed server cannot send the call somewhere else.
 
-A module can never use a mount that Streamline itself owns (`/api`, `/books`, `/music`, `/settings` and the other app pages), and two extensions cannot share a prefix. `/rest` and `/share` are not Streamline's: they are left for a Subsonic extension.
+Every extension is served under `/extensions/<name>`: the OPDS extension at `https://your-host/extensions/opds`, the Subsonic one at `https://your-host/extensions/subsonic` (apps add `/rest` themselves). That prefix is Streamline's alone, so an extension can never take an address Streamline uses now or later, and the name you give the entry is the address. The `mounts` an extension asks for are relative to it: `/` is the whole of `/extensions/<name>`, `/rest` the part below `/extensions/<name>/rest`. Modules built for contract version 1, whose mounts were addresses of their own, are refused.
 
 ## States
 

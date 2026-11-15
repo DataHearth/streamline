@@ -33,7 +33,7 @@ var _ = Describe("http service", Label("integration"), func() {
 		cfg.Extensions = []config.ExtensionEntry{{
 			Name: "echo", Source: src, Enabled: true, Hosts: hosts,
 			Grants: config.ExtensionGrants{
-				Mounts:   []string{"/echo"},
+				Mounts:   []string{"/", "/inner"},
 				Views:    []string{"books"},
 				Services: services,
 			},

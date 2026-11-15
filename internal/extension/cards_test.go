@@ -9,7 +9,7 @@ import (
 
 var _ = Describe("settings cards", Label("unit"), func() {
 	manifestWith := func(fields string) []byte {
-		return fmt.Appendf(nil, `{"name":"x","version":"1","streamline_api":1,
+		return fmt.Appendf(nil, `{"name":"x","version":"1","streamline_api":2,
 			"account_cards":[{"id":"s","kind":"settings","title":"S","fields":%s}]}`, fields)
 	}
 

@@ -368,6 +368,7 @@ func extensionToAPI(e config.ExtensionEntry, statuses []extension.Status) Extens
 	out := Extension{
 		Name:    e.Name,
 		Source:  e.Source,
+		Path:    e.BasePath(),
 		Enabled: e.Enabled,
 		State:   ExtensionState("starting"),
 		Granted: permissionsToAPI(e.Grants, nil),

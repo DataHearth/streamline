@@ -1,4 +1,4 @@
-// Package sdk is the guest side of Streamline's extension contract, version 1.
+// Package sdk is the guest side of Streamline's extension contract, version 2.
 // The types mirror internal/extension/contract.go field for field: the JSON tags
 // are the wire.
 package sdk
@@ -14,6 +14,10 @@ import (
 	"github.com/extism/go-pdk"
 )
 
+// APIVersion is the contract version this SDK speaks; a manifest's
+// StreamlineAPI must name it.
+const APIVersion = 2
+
 type Manifest struct {
 	Name          string        `json:"name"`
 	Version       string        `json:"version"`
@@ -25,11 +29,19 @@ type Manifest struct {
 	AccountCards  []AccountCard `json:"account_cards"`
 }
 
+// Mount is a prefix the module answers, relative to the path the config
+// serves it under: "/" is the whole of that path, "/rest" one segment below.
 type Mount struct {
 	Prefix string `json:"prefix"`
 	Auth   string `json:"auth"`
 }
 
+// AccountCard.Mount is the address the account page shows for a credential
+// card: what a user pastes into their app, relative to the extension's path
+// like a Mount ("/" is /extensions/<name> itself). Name what the app expects
+// to be given, never a path the app adds on its own: a Subsonic app appends
+// /rest to its server address, so the Subsonic card is "/", and "/rest" would
+// make it call /rest/rest.
 type AccountCard struct {
 	ID       string      `json:"id"`
 	Kind     string      `json:"kind"`
@@ -63,13 +75,17 @@ type Request struct {
 	Query   string              `json:"query"`
 	Headers map[string][]string `json:"headers"`
 	Body    []byte              `json:"body"`
-	// Mount is the prefix the request arrived under, empty for the
-	// extension's own /api and /cards subtrees. Origin is the scheme and host
-	// the client used, as Streamline works it out behind its trusted proxies.
-	Mount   string   `json:"mount,omitempty"`
-	Origin  string   `json:"origin,omitempty"`
-	Caller  *Caller  `json:"caller,omitempty"`
-	Folders []Folder `json:"folders,omitempty"`
+	// Mount is the manifest mount the request arrived under and BasePath the
+	// path the config serves the extension under, so the client asked for
+	// BasePath+Mount+Path; both are empty for the extension's own /api and
+	// /cards subtrees. Origin is the scheme and host the client used, as
+	// Streamline works it out behind its trusted proxies: an absolute link
+	// back to the extension is Origin+BasePath+Mount+...
+	Mount    string   `json:"mount,omitempty"`
+	BasePath string   `json:"base_path,omitempty"`
+	Origin   string   `json:"origin,omitempty"`
+	Caller   *Caller  `json:"caller,omitempty"`
+	Folders  []Folder `json:"folders,omitempty"`
 	// TargetUser is the account a settings card is read or written for: an
 	// admin editing another user, so it can differ from Caller.
 	TargetUser uint32 `json:"target_user,omitempty"`

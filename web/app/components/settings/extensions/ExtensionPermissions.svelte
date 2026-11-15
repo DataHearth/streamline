@@ -4,6 +4,7 @@
 	import {
 		AUTH_LABEL,
 		BUNDLE_LABEL,
+		clientPath,
 		FOLDER_META,
 		SERVICE_META,
 		hasFullAccess,
@@ -22,12 +23,16 @@
 	//
 	// `mark` is for the approval: what the new version adds (+), what is
 	// already granted (✓), and what it no longer asks for (−).
+	// `base` is the extension's path; mounts are relative to it and are shown
+	// as the address a client uses.
 	let {
 		permissions,
+		base,
 		mark,
 		class: cls = "",
 	}: {
 		permissions: ExtensionPermissions;
+		base: string;
 		mark?: "added" | "kept" | "dropped";
 		class?: string;
 	} = $props();
@@ -80,7 +85,7 @@
 				{#each permissions.mounts as m (m.path)}
 					<li class="flex min-w-0 items-baseline gap-2">
 						{@render marker()}
-						<code class={cn("shrink-0 font-mono text-[12.5px]", ink)}>{m.path}</code>
+						<code class={cn("shrink-0 font-mono text-[12.5px]", ink)}>{clientPath(base, m.path)}</code>
 						{#if m.auth}
 							<span class="min-w-0 text-[12.5px] text-fg-subtle">{AUTH_LABEL[m.auth]()}</span>
 						{/if}

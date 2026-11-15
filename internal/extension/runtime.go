@@ -18,7 +18,12 @@ var (
 	ErrGuestFailed = errors.New("extension failed")
 )
 
-var namePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,31}$`)
+var (
+	namePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,31}$`)
+	// pathPattern is one URL path segment that needs no escaping, which is
+	// what an extension's path and each mount below it must be.
+	pathPattern = regexp.MustCompile(`^/[a-z0-9][a-z0-9._-]*$`)
+)
 
 type SQL interface {
 	Query(ctx context.Context, sql string, args []any) (SQLResult, error)
@@ -86,6 +91,9 @@ func parseManifest(raw []byte) (Manifest, error) {
 			namePattern,
 		)
 	}
+	if err := checkManifestMounts(mf); err != nil {
+		return Manifest{}, err
+	}
 	for _, c := range mf.AccountCards {
 		if c.Kind == CardSettings {
 			if err := c.checkFields(); err != nil {
@@ -94,6 +102,34 @@ func parseManifest(raw []byte) (Manifest, error) {
 		}
 	}
 	return mf, nil
+}
+
+// checkManifestMounts holds each mount to "/" or one plain segment below the
+// extension's path, once each, with a known auth.
+func checkManifestMounts(mf Manifest) error {
+	seen := map[string]bool{}
+	for _, mt := range mf.Mounts {
+		switch {
+		case mt.Prefix != "/" && !pathPattern.MatchString(mt.Prefix):
+			return fmt.Errorf(
+				"%w: mount %q must be / or one plain path segment",
+				ErrBadManifest, mt.Prefix,
+			)
+		case seen[mt.Prefix]:
+			return fmt.Errorf(
+				"%w: mount %q is declared twice",
+				ErrBadManifest,
+				mt.Prefix,
+			)
+		case mt.Auth != authSelf && mt.Auth != authSession:
+			return fmt.Errorf(
+				"%w: mount %q: auth must be %q or %q",
+				ErrBadManifest, mt.Prefix, authSelf, authSession,
+			)
+		}
+		seen[mt.Prefix] = true
+	}
+	return nil
 }
 
 func (m *Module) Manifest() Manifest { return m.manifest }

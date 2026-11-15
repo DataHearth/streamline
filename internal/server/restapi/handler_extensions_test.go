@@ -96,7 +96,8 @@ var _ = Describe(
 			))
 			Expect(in.Requested.Views[0].Description).NotTo(BeEmpty())
 			Expect(in.Requested.Mounts).To(ConsistOf(
-				ExtensionMount{Path: "/echo", Auth: new("self")},
+				ExtensionMount{Path: "/", Auth: new("self")},
+				ExtensionMount{Path: "/inner", Auth: new("session")},
 			))
 			Expect(in.Card).To(HaveValue(HaveField("Title", "Echo")))
 			Expect(config.Get().Extensions).To(BeEmpty())
@@ -152,7 +153,8 @@ var _ = Describe(
 			Expect(e.Granted).To(Equal(*e.Requested))
 			Expect(
 				config.Get().Extensions[0].Grants.Mounts,
-			).To(ContainElement("/echo"))
+			).To(ConsistOf("/", "/inner"))
+			Expect(e.Path).To(Equal("/extensions/echo"))
 		})
 
 		It("approves the folders the manifest asks for", func() {
@@ -228,7 +230,7 @@ var _ = Describe(
 			)
 			Expect(resp.StatusCode).To(Equal(http.StatusOK), string(raw))
 			Expect(decode(raw).State).To(Equal(ExtensionState("disabled")))
-			_, _, ok := app.extensions.Acquire("/echo")
+			_, _, ok := app.extensions.Acquire("/extensions/echo")
 			Expect(ok).To(BeFalse())
 		})
 
@@ -277,7 +279,7 @@ var _ = Describe(
 			createEcho("")
 			resp, raw := send(http.MethodPost, "/extensions/echo/approve", "")
 			Expect(resp.StatusCode).To(Equal(http.StatusOK), string(raw))
-			Expect(decode(raw).Card).To(HaveValue(HaveField("Mount", "/echo")))
+			Expect(decode(raw).Card).To(HaveValue(HaveField("Mount", "/")))
 
 			const credential = "/account/extensions/echo/credential"
 			resp, raw = send(http.MethodGet, "/account/extensions", "")
@@ -285,7 +287,7 @@ var _ = Describe(
 			var cards []ExtensionAccountCard
 			Expect(json.Unmarshal(raw, &cards)).To(Succeed())
 			Expect(cards).To(HaveLen(1))
-			Expect(cards[0].Mount).To(Equal("/echo"))
+			Expect(cards[0].Mount).To(Equal("/extensions/echo"))
 			Expect(cards[0].Enabled).To(BeFalse())
 
 			resp, raw = send(http.MethodPost, credential, "")

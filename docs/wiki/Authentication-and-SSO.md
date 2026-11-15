@@ -85,7 +85,7 @@ These bypass auth entirely:
 | `/auth/oidc/` | Prefix match — the whole OIDC start/callback flow |
 | A mount of an [extension](Extensions) declared `self` | Passed through while the extension is running; the extension checks credentials itself (the OPDS extension, by HTTP Basic with your email and its token) |
 
-The OPDS token works nowhere else, and no session cookie, Bearer token or API key works on `/opds`. An extension never sees your session cookie, and sees your Bearer token or API key only on a `self` mount.
+The OPDS token works nowhere else, and no session cookie, Bearer token or API key works on `/extensions/opds`. An extension never sees your session cookie, and sees your Bearer token or API key only on a `self` mount.
 
 ---
 

@@ -33,11 +33,11 @@ Hardcover's free plan allows 60 requests a minute and 5,000 a day. Streamline pa
 
 | Protocol | Path | Clients | Credentials |
 | --- | --- | --- | --- |
-| OPDS 1.2 (the [OPDS extension](Extensions)) | `/opds` | KOReader, Moon+ Reader, Foliate, Thorium | your email plus a generated OPDS token |
+| OPDS 1.2 (the [OPDS extension](Extensions)) | `/extensions/opds` | KOReader, Moon+ Reader, Foliate, Thorium | your email plus a generated OPDS token |
 
 The token is per user and separate from your login password. It is generated, rotated or turned off on the extension's card on your account page (`/api/v1/account/extensions/opds/credential`), since OPDS only exists once its [extension is added](Extensions#adding-an-extension). It is shown **once**, when you generate it; a lost one is replaced, not read back, and rotating signs every reader out. It works neither for the web UI nor for the REST API.
 
-The catalogue URL carries no secret: point the reader at `https://your-host/opds` and sign in with your **email** as the user name and the **token** as the password. The server stores only a hash of the token.
+The catalogue URL carries no secret: point the reader at `https://your-host/extensions/opds` and sign in with your **email** as the user name and the **token** as the password. The server stores only a hash of the token.
 
 OPDS serves an author catalogue (authors and writers, series volumes listed under theirs), a recently-added feed and search over titles and every credited name, and downloads the best available ebook format per book. Audiobooks never appear in OPDS. Cover thumbnails are served from an OPDS route too, so readers that only hold the OPDS token show them.
 

@@ -32,7 +32,9 @@ const (
 )
 
 type Status struct {
-	Name     string
+	Name string
+	// Path is the path the entry is served under, whatever its state.
+	Path     string
 	State    State
 	Reason   string
 	Manifest *Manifest
@@ -47,17 +49,6 @@ func (mf Manifest) Grants() config.ExtensionGrants {
 		g.Mounts = append(g.Mounts, m.Prefix)
 	}
 	return g
-}
-
-// reservedPrefixes are the core's own first path segments, plus every
-// first-level SPA route (the spec in manager_test.go fails when a route
-// directory is missing here).
-var reservedPrefixes = []string{
-	"/api", "/static", "/health", "/login", "/register", "/auth", "/posters",
-	"/search", "/forbidden",
-	"/account", "/activity", "/books", "/calendar", "/imports", "/movies",
-	"/music", "/people", "/requests", "/series", "/settings", "/stats",
-	"/torrents", "/transcoding",
 }
 
 const (
@@ -170,9 +161,11 @@ func (r *Running) close() {
 	close(r.closed)
 }
 
+// mountEntry is one extension's path: the module serving it and the
+// manifest mounts below it.
 type mountEntry struct {
 	running *Running
-	mount   Mount
+	mounts  []Mount
 }
 
 // Tools is where the host's ffmpeg suite lives; *ffmpeg.CLI satisfies it.
@@ -283,16 +276,10 @@ func (m *Manager) Reconcile(ctx context.Context) error {
 	}
 
 	stopped := map[string]bool{}
-	for i, e := range cfg.Extensions {
-		claimed := e.Grants.Mounts
-		if mf := statuses[i].Manifest; mf != nil {
-			claimed = append(slices.Clone(claimed), mf.Grants().Mounts...)
-		}
-		for _, p := range claimed {
-			_, live := table[p]
-			if !live && mountable(p) == nil {
-				stopped[p] = true
-			}
+	for _, e := range cfg.Extensions {
+		p := e.BasePath()
+		if _, live := table[p]; !live {
+			stopped[p] = true
 		}
 	}
 
@@ -318,7 +305,7 @@ func (m *Manager) reconcileOne(
 	e config.ExtensionEntry,
 	table map[string]mountEntry,
 ) (Status, *Running) {
-	st := Status{Name: e.Name}
+	st := Status{Name: e.Name, Path: e.BasePath()}
 	fail := func(format string, a ...any) (Status, *Running) {
 		st.State = StateFailed
 		st.Reason = fmt.Sprintf(format, a...)
@@ -366,11 +353,6 @@ func (m *Manager) reconcileOne(
 		st.Reason = "the module asks for more than it was granted"
 		return st, nil
 	}
-	if err := checkMounts(mf, table); err != nil {
-		discard()
-		return fail("%s", err)
-	}
-
 	run := prev
 	if !reuse {
 		store, err := OpenStore(
@@ -388,9 +370,7 @@ func (m *Manager) reconcileOne(
 		}
 		run = newRunning(m, e.Name, mod, store, hash, e.Grants)
 	}
-	for _, mt := range mf.Mounts {
-		table[mt.Prefix] = mountEntry{running: run, mount: mt}
-	}
+	table[st.Path] = mountEntry{running: run, mounts: mf.Mounts}
 	st.State = StateRunning
 	return st, run
 }
@@ -426,29 +406,6 @@ func covers(held, asked config.ExtensionGrants) bool {
 		subset(asked.Folders, held.Folders)
 }
 
-func checkMounts(mf Manifest, table map[string]mountEntry) error {
-	for _, mt := range mf.Mounts {
-		p := mt.Prefix
-		if err := mountable(p); err != nil {
-			return err
-		}
-		if _, taken := table[p]; taken {
-			return fmt.Errorf("mount %q is already held by another extension", p)
-		}
-	}
-	return nil
-}
-
-func mountable(p string) error {
-	switch {
-	case !strings.HasPrefix(p, "/") || len(p) < 2 || strings.Contains(p[1:], "/"):
-		return fmt.Errorf("mount %q must be one path segment led by /", p)
-	case slices.Contains(reservedPrefixes, p):
-		return fmt.Errorf("mount %q is reserved by Streamline", p)
-	}
-	return nil
-}
-
 func grantedViews(e config.ExtensionEntry) []View {
 	views := make([]View, 0, len(e.Grants.Views))
 	for _, name := range e.Grants.Views {
@@ -472,14 +429,14 @@ func sameSet(a, b []string) bool {
 	return slices.Equal(a, b)
 }
 
-// Acquire returns the running extension holding prefix; the caller must call
-// Release on it once its request has finished.
-func (m *Manager) Acquire(prefix string) (*Running, Mount, bool) {
-	e, ok := (*m.table.Load())[prefix]
+// Acquire returns the running extension served under path and its manifest
+// mounts; the caller must call Release on it once its request has finished.
+func (m *Manager) Acquire(path string) (*Running, []Mount, bool) {
+	e, ok := (*m.table.Load())[path]
 	if !ok || !e.running.acquire() {
-		return nil, Mount{}, false
+		return nil, nil, false
 	}
-	return e.running, e.mount, true
+	return e.running, e.mounts, true
 }
 
 // AcquireNamed is Acquire for a request addressed to an extension by name

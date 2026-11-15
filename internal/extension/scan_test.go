@@ -45,7 +45,7 @@ var _ = Describe("library scan service", Label("integration"), func() {
 		cfg.Extensions = []config.ExtensionEntry{{
 			Name: "echo", Source: src, Enabled: true,
 			Grants: config.ExtensionGrants{
-				Mounts:   []string{"/echo"},
+				Mounts:   []string{"/", "/inner"},
 				Views:    []string{"books"},
 				Services: services,
 				Folders:  folderGrantsFor(wasm),

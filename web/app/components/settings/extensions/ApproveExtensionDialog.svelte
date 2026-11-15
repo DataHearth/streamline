@@ -88,19 +88,19 @@
 			{#if !isEmpty(diff.added)}
 				<section class="rounded-md border border-status-wanted/30 bg-status-wanted/[0.06] p-3">
 					<h3 class="{head} text-status-wanted">{i18n.extensions_new()}</h3>
-					<ExtensionPermissions permissions={diff.added} mark="added" class="mt-2.5" />
+					<ExtensionPermissions permissions={diff.added} base={shown?.path ?? ""} mark="added" class="mt-2.5" />
 				</section>
 			{/if}
 			{#if !isEmpty(diff.kept)}
 				<section class="px-3">
 					<h3 class="{head} text-fg-muted">{i18n.extensions_already_granted()}</h3>
-					<ExtensionPermissions permissions={diff.kept} mark="kept" class="mt-2.5" />
+					<ExtensionPermissions permissions={diff.kept} base={shown?.path ?? ""} mark="kept" class="mt-2.5" />
 				</section>
 			{/if}
 			{#if !isEmpty(diff.dropped)}
 				<section class="px-3">
 					<h3 class="{head} text-fg-muted">{i18n.extensions_dropped()}</h3>
-					<ExtensionPermissions permissions={diff.dropped} mark="dropped" class="mt-2.5" />
+					<ExtensionPermissions permissions={diff.dropped} base={shown?.path ?? ""} mark="dropped" class="mt-2.5" />
 				</section>
 			{/if}
 		</div>

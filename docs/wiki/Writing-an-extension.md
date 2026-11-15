@@ -24,8 +24,8 @@ func manifest() int32 {
 	return sdk.WriteManifest(sdk.Manifest{
 		Name:          "myext",
 		Version:       "1.0.0",
-		StreamlineAPI: 1,
-		Mounts:        []sdk.Mount{{Prefix: "/myext", Auth: "session"}},
+		StreamlineAPI: sdk.APIVersion,
+		Mounts:        []sdk.Mount{{Prefix: "/", Auth: "session"}},
 		Views:         []string{"books"},
 	})
 }
@@ -38,7 +38,7 @@ func handle() int32 {
 }
 ```
 
-A fresh instance of the module handles **every** request, so nothing in memory survives between two: keep state in your database, or files in your cache folder. The request says where it came from: `Mount` is the prefix it arrived under (empty on your `/api` and `/cards` subtrees) and `Origin` the scheme and host the client used (`https://media.example`), worked out by Streamline behind its trusted proxies; build absolute links from it, never from `X-Forwarded-*`. Nothing you serve is cached unless you ask: a `Cache-Control` header on your answer is honoured when it is `private` with any of `max-age=N`, `immutable`, `must-revalidate`, `no-cache` (on a body, `send_file`, `serve_file` or `serve_poster` answer that succeeds), and ignored otherwise, `public` included. Each instance gets random bytes from the operating system, so `crypto/rand` is safe for tokens.
+A fresh instance of the module handles **every** request, so nothing in memory survives between two: keep state in your database, or files in your cache folder. Your module is served under `/extensions/<name>`. The request says where it came from: `BasePath` is that path, `Mount` the mount of yours it arrived under (both empty on your `/api` and `/cards` subtrees) and `Origin` the scheme and host the client used (`https://media.example`), worked out by Streamline behind its trusted proxies; build absolute links as `Origin + BasePath + Mount + …`, never from `X-Forwarded-*`. Nothing you serve is cached unless you ask: a `Cache-Control` header on your answer is honoured when it is `private` with any of `max-age=N`, `immutable`, `must-revalidate`, `no-cache` (on a body, `send_file`, `serve_file` or `serve_poster` answer that succeeds), and ignored otherwise, `public` included. Each instance gets random bytes from the operating system, so `crypto/rand` is safe for tokens.
 
 ## Manifest
 
@@ -46,18 +46,18 @@ A fresh instance of the module handles **every** request, so nothing in memory s
 | --- | --- |
 | `name` | `^[a-z0-9][a-z0-9-]{0,31}$`; must equal the entry's `name` |
 | `version` | Free text, shown in the API |
-| `streamline_api` | Must be `1`. A module for another version is refused |
-| `mounts[]` | `{prefix, auth}`. `prefix` is one path segment (`/opds`); `auth` is `session` (Streamline signs the user in first and tells you who) or `self` (you check credentials, e.g. HTTP Basic). A prefix that is one of Streamline's own routes is refused; `/rest` and `/share` are free |
+| `streamline_api` | Must be `2` (`sdk.APIVersion`). A module for another version is refused |
+| `mounts[]` | `{prefix, auth}`, each relative to `/extensions/<name>`: `prefix` is `/` (all of it) or one plain path segment (`/rest`: lowercase letters, digits, `.`, `_` and `-`), each declared once; a request goes to the longest that holds it, and one no mount holds is a `404`. `auth` is `session` (Streamline signs the user in first and tells you who) or `self` (you check credentials, e.g. HTTP Basic) |
 | `views[]` | Names from [the table below](#views) |
 | `folders[]` | `music`, `movies`, `series`, `artwork`, `cache`, see [Folders](#folders) |
 | `services[]` | `serve_file`, `serve_poster`, `ffmpeg`, `library_scan`, `http` |
-| `account_cards[]` | `{id, kind, title, mount, username, fields}`. `kind: credential` is a credential the account page manages (`mount`, `username`); `kind: settings` is a set of per-user controls an admin edits (`fields`, see [Settings cards](#settings-cards)). Your module answers both at `/api/v1/extensions/<name>/cards/<id>` |
+| `account_cards[]` | `{id, kind, title, mount, username, fields}`. `kind: credential` is a credential the account page manages (`mount`, `username`). `mount` is the address the account page shows, the one a user pastes into their app, relative to your path like a mount (`/` is `/extensions/<name>` itself): name what the app expects to be given, never a path the app adds by itself. A Subsonic app appends `/rest` to its server address, so the Subsonic card is `/`; `/rest` there would send the app to `/rest/rest`; `kind: settings` is a set of per-user controls an admin edits (`fields`, see [Settings cards](#settings-cards)). Your module answers both at `/api/v1/extensions/<name>/cards/<id>` |
 
 Whatever you list must be granted by the admin, exactly. A settings card that declares no field, two fields with one id, a field of another kind or a number whose `min` is above its `max` makes the manifest unusable, and the extension fails to start.
 
 ## Requests and responses
 
-`sdk.Request` carries `Method`, `Path` (relative to your mount: `/opds/authors` arrives as `/authors`), the raw `Query` string, `Headers`, the `Body` (at most 16 MiB; more is a 413), `Caller`, `Folders` and `TargetUser`. `Caller` is `{ID, Role, KeyID, KeyName}` (the last two name the API key the request came with and are zero for a browser session, so with one key per device the key is the device) and is set only on a `session` mount for a signed-in user; on a `self` mount it is nil and `Authorization` is passed through. The `Cookie` header never reaches you, and `Authorization` and `X-Api-Key` are removed on a `session` mount. `Folders` lists the granted folders this call has mounted, and `TargetUser` is set only on a settings card call from the admin endpoints.
+`sdk.Request` carries `Method`, `Path` (relative to your mount: on a `/` mount `/extensions/opds/authors` arrives as `/authors`, on a `/rest` one `/extensions/subsonic/rest/ping` as `/ping`), the raw `Query` string, `Headers`, the `Body` (at most 16 MiB; more is a 413), `Caller`, `Folders` and `TargetUser`. `Caller` is `{ID, Role, KeyID, KeyName}` (the last two name the API key the request came with and are zero for a browser session, so with one key per device the key is the device) and is set only on a `session` mount for a signed-in user; on a `self` mount it is nil and `Authorization` is passed through. The `Cookie` header never reaches you, and `Authorization` and `X-Api-Key` are removed on a `session` mount. `Folders` lists the granted folders this call has mounted, and `TargetUser` is set only on a settings card call from the admin endpoints.
 
 `sdk.Response` is `Status` (0 means 200; outside 100-599 is a 500), `Headers`, `Body` (at most 16 MiB) and, instead of a body, a directive. `Set-Cookie`, `Content-Length`, `Transfer-Encoding`, `Connection`, `Content-Security-Policy` and `X-Content-Type-Options` are dropped from what you send: Streamline sets the last two itself (`sandbox; default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'` and `nosniff`), so an HTML page you serve can carry inline styles, images and `<audio>` or `<video>` from Streamline's own address, but no script.
 

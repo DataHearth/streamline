@@ -829,6 +829,11 @@ type ExtensionEntry struct {
 	Hosts []string `koanf:"hosts"`
 }
 
+// BasePath is the path the extension is served under; its manifest's mounts
+// sit below it. One prefix holds every extension, so none can take a route
+// core adds later.
+func (e ExtensionEntry) BasePath() string { return "/extensions/" + e.Name }
+
 type ExtensionGrants struct {
 	Mounts   []string `koanf:"mounts"`
 	Views    []string `koanf:"views"`

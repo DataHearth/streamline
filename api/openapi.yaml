@@ -15399,7 +15399,7 @@ components:
 
     Extension:
       type: object
-      required: [name, source, enabled, state, granted]
+      required: [name, source, path, enabled, state, granted]
       properties:
         name:
           type: string
@@ -15407,6 +15407,11 @@ components:
           type: string
         sha256:
           type: string
+        path:
+          type: string
+          description: >-
+            The path the extension is served under, `/extensions/<name>`; its
+            mounts sit below it.
         enabled:
           type: boolean
         state:
@@ -15473,7 +15478,9 @@ components:
           type: string
         mount:
           type: string
-          description: The mount a client is pointed at.
+          description: >-
+            Where a client is pointed, as the module declares it: relative to
+            the extension's path, `/` being the path itself.
         username:
           type: string
           description: "`email` or `none`: what the client signs in with."

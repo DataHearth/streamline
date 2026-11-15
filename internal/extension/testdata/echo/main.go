@@ -23,13 +23,16 @@ func manifest() int32 {
 	mf := sdk.Manifest{
 		Name:          "echo",
 		Version:       "0.0.1",
-		StreamlineAPI: 1,
-		Mounts:        []sdk.Mount{{Prefix: "/echo", Auth: "self"}},
-		Views:         []string{"books"},
-		Services:      []string{"serve_file"},
+		StreamlineAPI: sdk.APIVersion,
+		Mounts: []sdk.Mount{
+			{Prefix: "/", Auth: "self"},
+			{Prefix: "/inner", Auth: "session"},
+		},
+		Views:    []string{"books"},
+		Services: []string{"serve_file"},
 		AccountCards: []sdk.AccountCard{{
 			ID: "secret", Kind: "credential", Title: "Echo",
-			Mount: "/echo", Username: "email",
+			Mount: "/", Username: "email",
 		}, {
 			ID: "prefs", Kind: "settings", Title: "Echo settings",
 			Fields: []sdk.CardField{
@@ -74,7 +77,13 @@ func handle() int32 {
 			}
 			return sdk.Response{Status: 200, Body: []byte(hex.EncodeToString(b))}
 		case "/file":
-			return sdk.Response{ServeFile: &sdk.ServeFile{FileID: 7, Filename: "a.epub", ContentType: "application/epub+zip"}}
+			return sdk.Response{
+				ServeFile: &sdk.ServeFile{
+					FileID:      7,
+					Filename:    "a.epub",
+					ContentType: "application/epub+zip",
+				},
+			}
 		case "/query":
 			return sdk.Response{Status: 200, Body: []byte(r.Query)}
 		case "/cache":
@@ -86,7 +95,10 @@ func handle() int32 {
 				Body:    []byte("x"),
 			}
 		case "/request":
-			b, _ := json.Marshal(map[string]string{"mount": r.Mount, "origin": r.Origin})
+			b, _ := json.Marshal(map[string]string{
+				"mount": r.Mount, "base_path": r.BasePath, "origin": r.Origin,
+				"path": r.Path,
+			})
 			return sdk.Response{Status: 200, Body: b}
 		case "/headers", "/api/headers":
 			b, _ := json.Marshal(r.Headers)
@@ -117,7 +129,11 @@ func handle() int32 {
 		case "/send":
 			q, _ := url.ParseQuery(r.Query)
 			return sdk.Response{SendFile: &sdk.SendFile{
-				Path: q.Get("path"), Filename: q.Get("name"), ContentType: q.Get("type"),
+				Path: q.Get(
+					"path",
+				),
+				Filename:    q.Get("name"),
+				ContentType: q.Get("type"),
 			}}
 		case "/ffmpeg/run":
 			var call sdk.FFmpegCall
@@ -160,7 +176,11 @@ func handle() int32 {
 			if err != nil {
 				return sdk.Response{Status: 502, Body: []byte(err.Error())}
 			}
-			return sdk.Response{Status: res.Status, Headers: res.Headers, Body: res.Body}
+			return sdk.Response{
+				Status:  res.Status,
+				Headers: res.Headers,
+				Body:    res.Body,
+			}
 		case "/fs/folders":
 			folders := r.Folders
 			if folders == nil {
@@ -180,12 +200,20 @@ func handle() int32 {
 		}
 		if id, ok := strings.CutPrefix(r.Path, "/file/"); ok {
 			n, _ := strconv.ParseUint(id, 10, 32)
-			return sdk.Response{ServeFile: &sdk.ServeFile{FileID: uint32(n), Filename: "a\"/b\n.epub", ContentType: "application/epub+zip"}}
+			return sdk.Response{
+				ServeFile: &sdk.ServeFile{
+					FileID:      uint32(n),
+					Filename:    "a\"/b\n.epub",
+					ContentType: "application/epub+zip",
+				},
+			}
 		}
 		if rest, ok := strings.CutPrefix(r.Path, "/poster/"); ok {
 			kind, id, _ := strings.Cut(rest, "/")
 			n, _ := strconv.ParseUint(id, 10, 32)
-			return sdk.Response{ServePoster: &sdk.ServePoster{Kind: kind, ID: uint32(n)}}
+			return sdk.Response{
+				ServePoster: &sdk.ServePoster{Kind: kind, ID: uint32(n)},
+			}
 		}
 		if strings.HasPrefix(r.Path, "/api/") {
 			b, _ := json.Marshal(r.Caller)
