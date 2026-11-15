@@ -42,8 +42,9 @@
 		onSkipToggle: (entry: TouchEntry) => void;
 	} = $props();
 
-	// Mounted only while open.
-	closeOnBack(() => true, () => onClose());
+	// Mounted with the page; open while it renders an entry. A watcher armed while closed
+	// would take the phone's Back from the page.
+	closeOnBack(() => !!(entry && cls && word), () => onClose());
 
 	$effect(() => {
 		if (!entry) return;

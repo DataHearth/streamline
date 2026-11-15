@@ -70,8 +70,9 @@
 		onReopen: (r: MediaRequest) => void;
 	} = $props();
 
-	// Mounted only while open.
-	closeOnBack(() => true, () => onClose());
+	// Mounted with the page; open while it renders a request. A watcher armed while closed
+	// would take the phone's Back from the page.
+	closeOnBack(() => !!(request && meta), () => onClose());
 
 	$effect(() => {
 		if (!request) return;
