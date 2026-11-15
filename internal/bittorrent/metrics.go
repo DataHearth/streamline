@@ -19,6 +19,13 @@ var (
 			"Torrents whose upload was stopped by a seed ratio or time limit",
 		),
 	))
+
+	seederDrops = otelx.Must(meter.Int64Counter(
+		"streamline.bittorrent.seeder_drops",
+		metric.WithDescription(
+			"Connections to seeders closed on torrents holding every wanted piece",
+		),
+	))
 )
 
 // registerEngineGauges publishes the live view of the swarm the engine already
