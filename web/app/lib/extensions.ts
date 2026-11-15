@@ -47,10 +47,10 @@ export type ExtensionGrants = {
 	services: ExtensionService[];
 };
 
-// An account card the module declares. `credential` is the only kind in
-// version 1: core draws it and owns every word on it; the module gives a
-// title, the mount the client is pointed at, and whether the client signs in
-// with the account's email or with no username at all.
+// The credential card the module declares, the one card the account page
+// draws: core owns every word on it; the module gives a title, the mount the
+// client is pointed at (relative to /extensions/<name>), and whether the
+// client signs in with the account's email or with no username at all.
 export type ExtensionCardDecl = {
 	kind: "credential";
 	title: string;

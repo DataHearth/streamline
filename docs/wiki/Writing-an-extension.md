@@ -1,6 +1,6 @@
 # Writing an extension
 
-For what an extension is and how to add one, see [Extensions](Extensions). This page is the contract: version **1** of the guest API. The reference implementation is the [OPDS extension](https://github.com/Streamline-HQ/streamline-opds); the SDK it imports is `extensions/sdk` in the Streamline repository.
+For what an extension is and how to add one, see [Extensions](Extensions). This page is the contract: version **2** of the guest API. The reference implementation is the [OPDS extension](https://github.com/Streamline-HQ/streamline-opds); the SDK it imports is `extensions/sdk` in the Streamline repository.
 
 ## Building
 
@@ -206,7 +206,7 @@ A settings card is reachable only this way: `/api/v1/extensions/<name>/cards/<id
 
 ## Views
 
-Each granted view appears as `streamline_<name>`, read-only. Columns are stable within API version 1: new ones are added, none renamed or removed.
+Each granted view appears as `streamline_<name>`, read-only. Columns are stable within an API version: new ones are added, none renamed or removed.
 
 | View | Grant text | Columns |
 | --- | --- | --- |
