@@ -13,7 +13,15 @@ tasks:
     # Frontend assets must exist before the Go typechecker resolves the
     # //go:embed paths in web/embed.go.
     deps: [":build:js", ":build:css"]
-    cmd: go tool golangci-lint run ./... {{.CLI_ARGS}}
+    cmds:
+      - go tool golangci-lint run ./... {{.CLI_ARGS}}
+      # The guest SDK only type-checks as wasip1, and the tool directive
+      # lives in the root module, so run its binary from inside the SDK's.
+      # `unused` cannot see a //go:wasmexport as a root, so every function a
+      # guest's handler reaches reads as dead.
+      - |
+        lint="$(go tool -n golangci-lint)"
+        cd extensions/sdk && GOOS=wasip1 GOARCH=wasm "$lint" run --disable unused ./... {{.CLI_ARGS}}
 
   frontend:
     desc: Lint the SPA and static JS/CSS (biome)

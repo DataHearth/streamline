@@ -117,7 +117,6 @@ Filter by status and media type, or search by title or requester.
 - **Clear a lockout** — resets the failed-login counter after too many bad password attempts
 - **Revoke individual sessions** — kick a specific device without touching the others
 - **Revoke their API keys**
-- **Set what they may do from Subsonic apps** — the **Subsonic apps** card switches streaming, downloading, playlists, share links, rating and changing their own Subsonic password on or off, and caps their stream bitrate. These limit Subsonic apps only, never the web UI; see [Subsonic](Subsonic#users)
 - **Delete the account** — permanently removes it and every resource they own
 
 Two guard rails: you can't delete your own account, and Streamline refuses to remove or demote the last remaining admin. It will not let you lock yourself out of your own instance.
@@ -137,7 +136,7 @@ The avatar menu, top right → **Account settings**.
 - **Change your password**
 - **Sessions** — every device you're logged in on, with the option to revoke any of them
 - **API keys** — create keys for scripts and mobile apps, each **read-only** or **full** and lasting 30, 90 or 365 days, or never expiring. Shown once at creation; store it immediately
-- **Subsonic password** and **OPDS token** — the separate credentials music players and e-readers sign in with; see [Music and Books](Music-and-Books#listening-and-reading-from-other-apps)
+- **Players & readers** — a separate credential for each app an extension serves, such as the OPDS token an e-reader signs in with (see the [OPDS extension](Extensions) and [Music and Books](Music-and-Books#reading-from-other-apps))
 - **Send to Kindle / e-reader** — your e-reader's email address, for [Send to Kindle](Send-to-Kindle)
 
 > [!IMPORTANT]

@@ -22,8 +22,8 @@ https://github.com/user-attachments/assets/f08f3d32-3172-4de7-afeb-163a484403ce
 ## Features
 
 - One library for movies, TV, music and books — see the [roadmap](docs/wiki/Roadmap.md) for what is shipped and what is next
-- **Music**: MusicBrainz metadata, album and discography-pack grabs, tags and artwork written into your files, and a built-in Subsonic/OpenSubsonic server, so any Subsonic app streams the library
-- **Books**: Hardcover metadata, books and series with an ebook and an audiobook slot each, an OPDS catalog for e-reader apps, and send-to-Kindle by email
+- **Music**: MusicBrainz metadata, album and discography-pack grabs, and tags and artwork written into your files
+- **Books**: Hardcover metadata, books and series with an ebook and an audiobook slot each, an OPDS catalog for e-reader apps (as an [extension](docs/wiki/Extensions.md)), and send-to-Kindle by email
 - Adopt an existing library: scan untracked files and import them under review — and torrents you added by hand
 - Upload albums, discographies and books from the browser, imported like a finished download — no access to the server's disk needed
 - Monitoring, RSS auto-grab, manual search, and a calendar of upcoming releases
@@ -40,7 +40,7 @@ https://github.com/user-attachments/assets/f08f3d32-3172-4de7-afeb-163a484403ce
 - OpenTelemetry traces, metrics, logs
 - GitOps-friendly: `read_only` config mode rejects runtime config writes
 - CGO-free SQLite — single binary, no database server, no runtime, nothing to install alongside it
-- Optional `ffprobe` and `ffmpeg`, each on its own: `ffprobe` unlocks media info and import verification, `ffmpeg` transcoding and Subsonic transcoding; without them Streamline runs exactly as before, just without those ([details](#optional-ffmpeg-and-ffprobe))
+- Optional `ffprobe` and `ffmpeg`, each on its own: `ffprobe` unlocks media info and import verification, `ffmpeg` transcoding; without them Streamline runs exactly as before, just without those ([details](#optional-ffmpeg-and-ffprobe))
 
 ## Quick start (Docker Compose)
 
@@ -240,14 +240,11 @@ when that is empty, and uses whichever it finds:
 - **`ffmpeg`** writes files:
   - **Transcoding**: re-encoding imported files to a quality profile's rules (`transcoding.enabled`,
     off by default), including VAAPI hardware encoding
-  - **Subsonic transcoding**: MP3/Opus/AAC for an app that asks for a format or a lower bit rate,
-    and the per-account maximum bit rate
 
 Without `ffprobe`, imports fall back to the release name, exactly as before the feature existed, and
 `GET /api/v1/system/info` reports `ffmpeg_warn` so you know why media info is missing. Without
-`ffmpeg`, the transcode worker stays idle (logged at boot) and Subsonic apps get the original file.
-Neither case errors or blocks anything. `ffmpeg.enabled: false` switches off everything in both
-lists.
+`ffmpeg`, the transcode worker stays idle (logged at boot). Neither case errors or blocks anything.
+`ffmpeg.enabled: false` switches off everything in both lists.
 
 **The official Docker image ships both binaries.** Static `ffmpeg` and `ffprobe` are copied into
 `/usr/local/bin` from a digest-pinned [`mwader/static-ffmpeg`](https://hub.docker.com/r/mwader/static-ffmpeg)
@@ -454,7 +451,7 @@ Direct-to-binary installs need no change.
 | Download clients | qBittorrent, Transmission, Deluge, built-in BitTorrent engine             |
 | Media servers    | Plex, Jellyfin, Emby (books: Jellyfin and Emby — Plex has no book library) |
 | Metadata         | TMDB (movies, TV), TVDB (TV), MusicBrainz (music), Hardcover (books) — TMDB, TVDB and Hardcover take an API key of your own; Deezer, Cover Art Archive and Wikipedia for artwork and artist overviews, keyless |
-| Clients          | Subsonic / OpenSubsonic apps (`/rest`), OPDS 1.2 readers (`/opds`), e-readers by email (EPUB, PDF) |
+| Clients          | OPDS 1.2 readers (`/opds`, with the OPDS extension), e-readers by email (EPUB, PDF) |
 
 ## Verifying images
 

@@ -55,7 +55,7 @@ var _ = Describe("DatabaseBackup", Label("integration"), func() {
 	}
 
 	It("takes a backup when none is recent, and skips the next boot tick", func() {
-		job := DatabaseBackup(dbPath, dir, every(24*time.Hour))
+		job := DatabaseBackup(dbPath, dir, every(24*time.Hour), nil)
 		Expect(job(context.Background())).To(Succeed())
 		Expect(scheduled()).To(HaveLen(1))
 		Expect(scheduled()[0].Version).To(Equal(uint(3)))
@@ -74,7 +74,7 @@ var _ = Describe("DatabaseBackup", Label("integration"), func() {
 			filepath.Join(dir, "streamline-scheduled-3-"+last+".db"), nil, 0o600,
 		)).To(Succeed())
 		Expect(
-			DatabaseBackup(dbPath, dir, every(time.Hour))(context.Background()),
+			DatabaseBackup(dbPath, dir, every(time.Hour), nil)(context.Background()),
 		).To(Succeed())
 		Expect(scheduled()).To(HaveLen(2))
 	})
@@ -87,7 +87,7 @@ var _ = Describe("DatabaseBackup", Label("integration"), func() {
 		} {
 			Expect(os.WriteFile(filepath.Join(dir, n), nil, 0o600)).To(Succeed())
 		}
-		job := DatabaseBackup(dbPath, dir, every(time.Hour))
+		job := DatabaseBackup(dbPath, dir, every(time.Hour), nil)
 		Expect(job(scheduler.WithManual(context.Background()))).To(Succeed())
 		Expect(job(scheduler.WithManual(context.Background()))).To(Succeed())
 		got := scheduled()
@@ -97,5 +97,41 @@ var _ = Describe("DatabaseBackup", Label("integration"), func() {
 				b.Name,
 			).NotTo(ContainSubstring("2026010"), "the seeded old ones went first")
 		}
+	})
+
+	Describe("extension databases", func() {
+		makeDB := func(path string) {
+			GinkgoHelper()
+			conn, err := sql.Open("sqlite", "file:"+path)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = conn.Exec(`CREATE TABLE t (x int)`)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(conn.Close()).To(Succeed())
+		}
+
+		It("snapshots each that has a database file", func() {
+			good := filepath.Join(GinkgoT().TempDir(), "good.db")
+			makeDB(good)
+			paths := map[string]string{
+				"good": good,
+				"gone": filepath.Join(GinkgoT().TempDir(), "missing.db"),
+			}
+			job := DatabaseBackup(
+				dbPath,
+				dir,
+				every(time.Hour),
+				func() map[string]string {
+					return paths
+				},
+			)
+			Expect(job(scheduler.WithManual(context.Background()))).To(Succeed())
+
+			got, err := dbbackup.List(filepath.Join(dir, "extensions", "good"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got).To(HaveLen(1))
+			Expect(scheduled()).To(HaveLen(1))
+			_, err = os.Stat(filepath.Join(dir, "extensions", "gone"))
+			Expect(os.IsNotExist(err)).To(BeTrue())
+		})
 	})
 })

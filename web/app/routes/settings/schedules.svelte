@@ -46,6 +46,7 @@
 		"purge-sessions": i18n.schedule_purge_sessions(),
 		"purge-api-keys": i18n.schedule_purge_api_keys(),
 		"purge-uploads": i18n.schedule_purge_uploads(),
+		"extension-cache-sweep": i18n.schedule_extension_cache_sweep(),
 		"drift-check":
 			i18n.schedule_verify_files(),
 		"file-selection": i18n.schedule_file_selection(),

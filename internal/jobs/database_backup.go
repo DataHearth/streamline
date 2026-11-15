@@ -2,7 +2,10 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/datahearth/streamline/internal/config"
@@ -22,9 +25,14 @@ import (
 // of a full interval after the last backup, from skipping too. interval reads
 // the job's current interval, since a retime does not rebuild the JobFunc. A
 // manual run always takes one.
+//
+// extensions names each running extension's database file; every one is
+// snapshotted into <dir>/extensions/<name> under the same retention, and one
+// that fails is logged without failing the job.
 func DatabaseBackup(
 	dbPath, dir string,
 	interval func() time.Duration,
+	extensions func() map[string]string,
 ) scheduler.JobFunc {
 	return func(ctx context.Context) error {
 		if !scheduler.Manual(ctx) {
@@ -55,7 +63,40 @@ func DatabaseBackup(
 			slog.InfoContext(ctx, "database-backup: pruned old backups",
 				"removed", removed)
 		}
+		if extensions != nil {
+			backUpExtensions(ctx, dir, keep, extensions())
+		}
 		return nil
+	}
+}
+
+func backUpExtensions(
+	ctx context.Context,
+	dir string,
+	keep int,
+	paths map[string]string,
+) {
+	for name, path := range paths {
+		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		extDir := filepath.Join(dir, "extensions", name)
+		b, err := dbbackup.SnapshotFile(ctx, path, extDir, dbbackup.KindScheduled)
+		if err != nil {
+			slog.WarnContext(ctx, "database-backup: extension backup failed",
+				"extension", name, "error", err)
+			continue
+		}
+		slog.InfoContext(ctx, "database-backup: extension database backed up",
+			"extension", name, "backup.path", b.Path, "backup.size_bytes", b.Size)
+		if _, err := dbbackup.Prune(
+			extDir,
+			dbbackup.KindScheduled,
+			keep,
+		); err != nil {
+			slog.WarnContext(ctx, "database-backup: extension prune failed",
+				"extension", name, "error", err)
+		}
 	}
 }
 

@@ -59,4 +59,4 @@ body:
       label: Anything else?
       description: >
         Integrations involved (which indexer, download client, media server,
-        Subsonic or OPDS app), screenshots, browser console output for UI bugs.
+        extension or OPDS app), screenshots, browser console output for UI bugs.

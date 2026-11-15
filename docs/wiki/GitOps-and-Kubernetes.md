@@ -332,6 +332,8 @@ Streamline backs the database up itself, into **`<data_dir>/backups`**:
 
 Each backup is one self-contained file written with SQLite's `VACUUM INTO`: consistent, safe to take while Streamline runs, and with no `-wal`/`-shm` to carry along. It is named `streamline-<kind>-<schema version>-<UTC time>.db`, owner-only (`0600`, in a `0700` directory), since it holds password hashes, API key hashes and sessions.
 
+[Extensions](Extensions) keep their own databases at `<data_dir>/extensions/<name>/data.db`. The daily `scheduled` job snapshots each running one into `<data_dir>/backups/extensions/<name>` (same retention), after Streamline's own and only when that backup is not skipped. `streamline restore` does not touch them: to restore one, stop Streamline, copy the snapshot over its `data.db`, start it. Extension data lives under `data_dir`, so a PVC or volume that holds `data_dir` already carries it.
+
 **The pre-migration backup is what makes automated updates safe.** With Renovate, Flux or Argo CD rolling out new images, a new version boots and migrates with nobody there to take a copy. Streamline takes it first; if the copy fails (a full disk, most often) it **refuses to migrate** and the pod fails to start with the reason in its log, rather than migrating without a way back. For a database too large to copy on every upgrade, set `backup.pre_migration: false` and back up some other way.
 
 ### From the command line

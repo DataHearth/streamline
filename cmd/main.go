@@ -312,6 +312,9 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
 		logger.ErrorContext(shutdownCtx, "http shutdown error", "error", err)
 	}
+	if err := app.Extensions.Close(shutdownCtx); err != nil {
+		logger.ErrorContext(shutdownCtx, "extension shutdown error", "error", err)
+	}
 	// Wait for in-flight background touches before closing the DB so SQLite's
 	// WAL checkpoint on last connection close is not raced by a late writer.
 	if err := app.Auth.Shutdown(shutdownCtx); err != nil {

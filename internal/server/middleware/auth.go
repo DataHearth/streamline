@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 
 	"github.com/datahearth/streamline/ent"
@@ -48,6 +49,10 @@ type Authenticator interface {
 // apiLimiter meters /api/v1 credential failures per client address; nil turns
 // that off (tests, and any caller that has not wired one).
 //
+// selfAuth names paths that authenticate themselves, like excludePaths but
+// decided at request time (an extension mount that checks its own
+// credentials); nil means none.
+//
 // In "disabled" mode all requests pass through without auth.
 // In "trusted-network" mode requests from trusted CIDRs are assigned the
 // configured role; others must authenticate. In "full" mode requests under
@@ -59,6 +64,7 @@ func NewAuth(
 	svc Authenticator,
 	apiLimiter auth.Limiter,
 	excludePaths []string,
+	selfAuth func(path string) bool,
 ) func(http.Handler) http.Handler {
 	cfg := config.Get()
 	mode := cfg.Auth.Mode
@@ -80,6 +86,11 @@ func NewAuth(
 					next.ServeHTTP(w, r)
 					return
 				}
+			}
+
+			if selfAuth != nil && selfAuth(r.URL.Path) {
+				next.ServeHTTP(w, r)
+				return
 			}
 
 			if mode == "disabled" {
@@ -152,6 +163,8 @@ func authenticateAPI(
 			Email:       u.Email,
 			DisplayName: u.DisplayName,
 			Role:        string(u.Role),
+			APIKeyID:    ak.ID,
+			APIKeyName:  ak.Name,
 		})
 		next.ServeHTTP(w, r.WithContext(ctx))
 		return
@@ -236,8 +249,8 @@ var identityPrefixes = []string{
 	// jwt/rotate re-issues a bearer token to the caller, so a key reaching it
 	// would bootstrap the very session credential this list denies it.
 	"/api/v1/auth/jwt",
-	// Mints per-user protocol credentials (Subsonic, OPDS) and hands back the
-	// plaintext on read.
+	// Mints per-user extension credentials and hands back the plaintext
+	// secret in the response.
 	"/api/v1/account",
 	"/api/v1/users",
 	// Registration mode and the OIDC providers decide who can get an account
@@ -251,12 +264,29 @@ func identityMutationForAPIKey(r *http.Request) bool {
 	if readMethod(r.Method) {
 		return false
 	}
+	if isExtensionIdentity(path.Clean(r.URL.Path)) {
+		return true
+	}
 	for _, p := range identityPrefixes {
 		if r.URL.Path == p || strings.HasPrefix(r.URL.Path, p+"/") {
 			return true
 		}
 	}
 	return false
+}
+
+// isExtensionIdentity matches everything under /api/v1/extensions but an
+// extension's own /api subtree: installing or approving an extension grants
+// code a slice of the database, and the account cards an extension serves
+// hold per-user credentials, so both are identity subtrees like
+// /api/v1/account.
+func isExtensionIdentity(p string) bool {
+	rest, ok := strings.CutPrefix(p, "/api/v1/extensions")
+	if !ok || rest != "" && rest[0] != '/' {
+		return false
+	}
+	_, after, _ := strings.Cut(rest[min(1, len(rest)):], "/")
+	return after != "api" && !strings.HasPrefix(after, "api/")
 }
 
 // readMethod reports whether m is one a read-only credential may use. Narrower

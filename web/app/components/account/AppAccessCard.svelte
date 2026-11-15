@@ -1,61 +1,52 @@
 <script lang="ts">
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { createQuery, createMutation, useQueryClient } from "@tanstack/svelte-query";
-	import { BookMarked, Clipboard, Headphones, Plus, RotateCw, ShieldAlert, X } from "@lucide/svelte";
+	import { Clipboard, Plus, Puzzle, RotateCw, ShieldAlert, X } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import { toast } from "@lib/toast";
 	import { formatDateTime, formatRelative } from "@lib/dates";
-	import { APP_ACCESS_PATH, appAccessKey, withoutSecret } from "@lib/app-access";
-	import type { AppAccess, AppAccessCreated, AppAccessKind } from "@lib/types";
+	import { withoutSecret } from "@lib/app-access";
+	import {
+		ACCOUNT_EXTENSIONS_KEY,
+		extensionCredentialKey,
+		extensionCredentialPath,
+		type ExtensionAccountCard,
+	} from "@lib/extensions";
+	import type { AppAccess, AppAccessCreated } from "@lib/types";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// Subsonic and OPDS. Their clients cannot do the app's sign-in, so each user
-	// gets one credential per protocol, and both work the same way: a URL to
-	// point the client at, the account's email as the username, and a secret
-	// made here as the password — a password for music players, a token for
-	// e-readers. The secret never goes in a URL. It is shown once, like an API
+	// The sign-in card an extension declares (OPDS, for one). Its clients
+	// cannot do the app's sign-in, so each user gets one credential per card:
+	// an address to point the client at, the account's email as the username
+	// (or none, when the extension says so), and a secret made here as the
+	// password. The secret never goes in a URL. It is shown once, like an API
 	// key: the server never answers a read with it, so a lost one is replaced,
 	// not recovered, and replacing it signs every client out.
-	let { kind }: { kind: AppAccessKind } = $props();
+	//
+	// The card says three things — its title, the address, whether the client
+	// signs in with the email — and every word around them is core's, so a
+	// card reads the same whichever extension declared it.
+	let { extension }: { extension: ExtensionAccountCard } = $props();
 
-	const META = {
-		subsonic: {
-			Icon: Headphones,
-			title: "Subsonic",
-			help: i18n.account_subsonic_help,
-			intro: i18n.account_subsonic_intro,
-			create: i18n.account_subsonic_create,
-			renew: i18n.account_subsonic_renew,
-			copyNow: i18n.account_subsonic_copy_now,
-			once: i18n.account_subsonic_once,
-			renewTitle: i18n.account_subsonic_renew_title,
-			renewBody: i18n.account_subsonic_renew_body,
-			offTitle: i18n.account_subsonic_off_title,
-			offBody: i18n.account_subsonic_off_body,
-			created: i18n.account_subsonic_created,
-			off: i18n.account_subsonic_off,
-		},
-		opds: {
-			Icon: BookMarked,
-			title: "OPDS",
-			help: i18n.account_opds_help,
-			intro: i18n.account_opds_intro,
-			create: i18n.account_opds_create,
-			renew: i18n.account_opds_renew,
-			copyNow: i18n.account_opds_copy_now,
-			once: i18n.account_opds_once,
-			renewTitle: i18n.account_opds_renew_title,
-			renewBody: i18n.account_opds_renew_body,
-			offTitle: i18n.account_opds_off_title,
-			offBody: i18n.account_opds_off_body,
-			created: i18n.account_opds_created,
-			off: i18n.account_opds_off,
-		},
-	} as const;
-	let meta = $derived(META[kind]);
-	let path = $derived(APP_ACCESS_PATH[kind]);
-	let server = $derived(kind === "subsonic" ? location.origin : `${location.origin}/opds`);
+	let meta = $derived({
+		title: extension.title,
+		help: () => i18n.account_ext_help({ title: extension.title }),
+		intro: extension.username === "email" ? i18n.account_ext_intro_email : i18n.account_ext_intro_none,
+		create: i18n.account_ext_create,
+		renew: i18n.account_ext_renew,
+		copyNow: i18n.account_ext_copy_now,
+		once: extension.username === "email" ? i18n.account_ext_once_email : i18n.account_ext_once_none,
+		renewTitle: () => i18n.account_ext_renew_title({ title: extension.title }),
+		renewBody: i18n.account_ext_renew_body,
+		offTitle: () => i18n.account_ext_off_title({ title: extension.title }),
+		offBody: i18n.account_ext_off_body,
+		created: () => i18n.account_ext_created({ title: extension.title }),
+		off: () => i18n.account_ext_off({ title: extension.title }),
+	});
+	let path = $derived(extensionCredentialPath(extension.extension));
+	let server = $derived(location.origin + extension.mount);
+	let showUsername = $derived(extension.username === "email");
 
 	// Last use is written in batches, up to five minutes behind the client. A
 	// credential younger than that with no recorded use may well be in use
@@ -66,7 +57,7 @@
 		!!a?.enabled && !a.last_used_at && !!a.created_at && Date.now() - new Date(a.created_at).getTime() < LAG_MS;
 
 	const qc = useQueryClient();
-	const key = () => appAccessKey(kind);
+	const key = () => extensionCredentialKey(extension.extension);
 	const q = createQuery<AppAccess>(() => ({
 		queryKey: key(),
 		queryFn: () => api<AppAccess>(path),
@@ -82,6 +73,8 @@
 		onSuccess: (resp) => {
 			revealed = resp;
 			qc.setQueryData<AppAccess>(key(), withoutSecret(resp));
+			// The account's list of cards carries each one's On / Off.
+			qc.invalidateQueries({ queryKey: ACCOUNT_EXTENSIONS_KEY });
 			toast.ok(meta.created());
 		},
 		onError: (err) => toast.err(errorText(err)),
@@ -90,7 +83,7 @@
 		mutationFn: () => api<null>(path, { method: "DELETE" }),
 		onSuccess: () => {
 			revealed = null;
-			qc.invalidateQueries({ queryKey: key() });
+			qc.invalidateQueries({ queryKey: ACCOUNT_EXTENSIONS_KEY });
 			toast.ok(meta.off());
 		},
 		onError: (err) => toast.err(errorText(err)),
@@ -116,7 +109,7 @@
 <section class="overflow-hidden rounded-lg border border-border bg-bg-elevated">
 	<header class="flex items-start gap-3 border-b border-border px-5 py-3.5">
 		<div class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-bg-card text-fg-muted" aria-hidden="true">
-			<meta.Icon size={18} />
+			<Puzzle size={18} />
 		</div>
 		<div class="min-w-0 flex-1">
 			<h3 class="text-base font-semibold text-fg">{meta.title}</h3>
@@ -156,8 +149,10 @@
 		</p>
 	{:else if data?.enabled}
 		<dl class="divide-y divide-border">
-			{@render row(kind === "subsonic" ? i18n.account_app_server() : i18n.account_app_catalog(), server)}
-			{@render row(i18n.account_app_username(), data.username)}
+			{@render row(i18n.account_app_address(), server)}
+			{#if showUsername}
+				{@render row(i18n.account_app_username(), data.username)}
+			{/if}
 			<div class="flex flex-wrap items-center gap-x-3.5 gap-y-0.5 px-5 py-3 text-xs text-fg-muted">
 				<div class="flex items-center gap-1">
 					<dt class="text-fg-subtle">{i18n.apikey_created()}</dt>
