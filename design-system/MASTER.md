@@ -386,7 +386,11 @@ Square rounded (`--radius-md`) 32/40/48 variants. Initials in sans `font-medium`
 - **No emoji ever.**
 - Every icon-only interactive element gets `aria-label`.
 - Decorative icons get `aria-hidden="true"`.
-- **App icons** (`web/static/images/`): the logo is `--accent` on `--bg-deep`, 10 px right of the canvas centre on 512 (3.5 px on 180): its heavy bar is on the left, and the offset centres it optically. `favicon-512.png` keeps its rounded tile; `icon-maskable-512.png` and `apple-touch-icon.png` are full-bleed and opaque, since the launcher applies its own mask; `icon-monochrome-512.png` is the white logo on transparent, for themed icons.
+- **App icons** (`web/static/images/`) are generated, never edited: `task generate:icons` renders every one from `web/icons/logo.svg`, the logo as one path on a 512 canvas, and `web/icons/main.go` holds the colours (copies of `--accent` and `--bg-deep`) and the tile's numbers. The logo is `--accent`, 10 px right of the canvas centre on 512 (3.5 px on 180): its heavy bar is on the left, and the offset centres it optically. `logo.svg` is the logo redrawn as vector from the original PNG: each straight edge fitted to its outline with its own slope, each corner a circular arc (a Bézier where a circle cannot follow it), within half a pixel. To change the logo, edit `logo.svg` and run the task.
+  - `favicon-512.png`: a rounded tile in `--bg-deep`, 488 px inset 12 with a 59 px corner radius, since a browser tab and an `<img>` apply no mask. It is the manifest's `any` icon and the logo in the sidebar, on the sign-in card, in the API docs and in the Unraid template.
+  - `icon-maskable-512.png` and `apple-touch-icon.png` (180 px): full-bleed and opaque `--bg-deep`, since the launcher applies its own mask.
+  - `icon-monochrome-512.png`: the white logo on transparent, for themed icons.
+  - `favicon.svg` and its fallback `favicon-48.png`: the logo alone on transparent, cropped to the smallest square centred on the canvas centre that holds it plus a 4-unit margin, so it fills a 16 px tab and keeps the offset. A dark tile reads as a muddy square on every tab colour.
 
 ---
 
@@ -446,7 +450,7 @@ Map all tokens to `@theme` block so `bg-accent`, `text-fg-muted`, `border-border
 ```
 
 ### Favicon
-`<link rel="icon" type="image/png" href="/static/images/favicon-512.png">` in the SPA shell (`web/app/index.html`).
+`<link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">`, after a `favicon-48.png` fallback, in the SPA shell (`web/app/index.html`).
 
 ### Skip link
 First focusable element inside `<body>`: `<a href="#main" class="sr-only focus:not-sr-only ...">Skip to main content</a>`.
