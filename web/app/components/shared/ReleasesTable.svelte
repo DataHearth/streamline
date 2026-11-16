@@ -433,9 +433,9 @@
 	}
 </script>
 
-{#snippet packsHidden()}
+{#snippet packsHidden(placement: string)}
 	{#if hiddenPacks > 0}
-		<p class="mb-3 flex items-start gap-1.5 text-xs text-fg-subtle">
+		<p class={cn("flex items-start gap-1.5 text-xs text-fg-subtle", placement)}>
 			<Info size={13} class="mt-px shrink-0" aria-hidden="true" />
 			<span>{i18n.grab_packs_hidden({ count: hiddenPacks })}</span>
 		</p>
@@ -703,15 +703,10 @@
 		class="rounded-lg border border-dashed border-border bg-bg-elevated px-5 py-10 text-center"
 	>
 		<p class="text-sm text-fg-muted">{i18n.grab_no_releases()}</p>
-		{#if hiddenPacks > 0}
-			<p class="mx-auto mt-3 flex max-w-md items-start justify-center gap-1.5 text-left text-xs text-fg-subtle">
-				<Info size={13} class="mt-px shrink-0" aria-hidden="true" />
-				<span>{i18n.grab_packs_hidden({ count: hiddenPacks })}</span>
-			</p>
-		{/if}
+		{@render packsHidden("mx-auto mt-3 max-w-md justify-center text-left")}
 	</div>
 {:else}
-	{@render packsHidden()}
+	{@render packsHidden("mb-3")}
 	<div class="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
 		<span class="tabular text-[11px] text-fg-subtle">
 			{#if technical}
