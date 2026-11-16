@@ -896,6 +896,9 @@ func filterToEpisode(
 		switch {
 		case packCoversSeason(sp, p, season):
 			hiddenPacks++
+		case sp.Complete:
+			// A complete pack is dropped from every episode search, a
+			// special's included, where it is not counted either.
 		case sp.From == 0 && p.Season == 0 && p.Episode == 0 &&
 			(p.AbsoluteNumber > 0 || p.AirDate != nil):
 			out = append(out, r)
@@ -904,11 +907,13 @@ func filterToEpisode(
 	return out, hiddenPacks
 }
 
-// packCoversSeason reports whether a pack release holds the season. A
-// complete pack holds the numbered seasons and never the specials — the way
-// the show-level counts and the pack sizing read it — so season 0 is covered
-// only by a pack of the specials season itself, which ParseSeasonSpan cannot
-// name (From 0 is its "no season"), hence the parse's SeasonPack flag.
+// packCoversSeason reports whether a pack release holds the season, which
+// decides the hidden-packs count only: filterToEpisode drops a complete pack
+// whatever this answers. A complete pack is read as holding the numbered
+// seasons and never the specials — the way the show-level counts leave
+// season 0 out — so season 0 is covered only by a pack of the specials season
+// itself, which ParseSeasonSpan cannot name (From 0 is its "no season"), hence
+// the parse's SeasonPack flag.
 func packCoversSeason(
 	sp library.SeasonSpan,
 	p library.ParseResult,

@@ -353,8 +353,8 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 
 		It("never counts a complete pack as covering a special", func() {
 			// An integral holds the numbered seasons; season 0 is outside it,
-			// as it is outside the show-level counts and the pack sizing. Only
-			// a pack of the specials season itself covers a special.
+			// as it is outside the show-level counts. Only a pack of the
+			// specials season itself covers a special.
 			integral := SearchResult{
 				Title: "The.Big.Bang.Theory.2007.INTEGRALE.MULTI.1080p.WEB-GRP",
 			}
@@ -374,6 +374,39 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			Expect(out).To(BeEmpty())
 			Expect(hidden).To(Equal(1))
 		})
+
+		DescribeTable(
+			"drops a complete pack carrying an absolute number or a date",
+			func(title string) {
+				// These names read as an anime or daily episode to the
+				// "names nothing" fallback, which would keep the whole
+				// series as one episode's release.
+				in := []SearchResult{{Title: title}}
+
+				out, hidden := filterToEpisode(in, 0, 1)
+				Expect(out).To(BeEmpty())
+				Expect(hidden).To(BeZero())
+
+				out, hidden = filterToEpisode(in, 1, 1)
+				Expect(out).To(BeEmpty())
+				Expect(hidden).To(Equal(1))
+			},
+			Entry(
+				"a ranged anime batch",
+				"[Group] Naruto Complete 001-220 [BD 1080p]",
+			),
+			Entry(
+				"a counted anime batch",
+				"[Group] Cowboy Bebop Complete - 26 [1080p]",
+			),
+			Entry("a bare integrale", "One Piece Integrale 1-1000"),
+			Entry(
+				"a bracketed integrale",
+				"[Group] Detective Conan Integrale 01-1100 [1080p]",
+			),
+			Entry("a total count", "[Group] Bleach Complete 366 (BD 1080p)"),
+			Entry("a dated complete", "The Daily Show 2011.09.25 COMPLETE 720p"),
+		)
 	})
 
 	Describe("filterProviderIDs", func() {
