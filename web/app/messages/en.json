@@ -364,6 +364,8 @@
 	"calendar_view": "Calendar view",
 	"cast_none": "No cast information",
 	"cast_none_help": "Cast appears once TMDB credits are fetched for this title.",
+	"cast_crew": "Crew",
+	"episode_credits": "Guests and crew",
 	"cf_add": "Add format",
 	"cf_add_condition": "Add condition",
 	"cf_builtin_badge": "built-in",

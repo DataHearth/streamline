@@ -1113,6 +1113,34 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /series/{id}/episodes/{episodeId}/credits:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+      - $ref: "#/components/parameters/EpisodeID"
+    get:
+      operationId: getEpisodeCredits
+      summary: An episode's guest stars and crew
+      description: |
+        The episode's guest stars (with their character) and crew (with
+        their `job`), in billing order, as TVDB lists them. The
+        tv-metadata-refresh job reads them, so an episode added since its
+        last run, or not aired yet, has none. An episode that is not the
+        series' answers an empty list.
+      tags: [series]
+      responses:
+        "200":
+          description: The episode's credits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CastMember"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /series/{id}/episodes/{episodeId}/search:
     parameters:
       - $ref: "#/components/parameters/ResourceID"
@@ -9397,6 +9425,15 @@ components:
             absent in list responses.
           items:
             $ref: "#/components/schemas/CastMember"
+        crew:
+          type: array
+          nullable: true
+          description: |
+            Principal crew from TMDB (directors, writers, producers, composer,
+            cinematographer, editor), each with its `job`. Only populated by
+            GET /movies/{id}.
+          items:
+            $ref: "#/components/schemas/CastMember"
         genres:
           type: array
           nullable: true
@@ -9437,6 +9474,16 @@ components:
           type: string
         character:
           type: string
+        job:
+          type: string
+          description: |
+            The crew role ("Director", "Writer"). Absent for an acting
+            credit.
+        department:
+          type: string
+          description: |
+            The provider's grouping of `job` ("Directing", "Writing"), when
+            one is known.
         profile_url:
           type: string
           description: Absolute profile image URL, when available.
@@ -10147,6 +10194,16 @@ components:
           description: |
             Top-billed cast from TVDB. Only populated by GET /series/{id};
             absent in list responses.
+          items:
+            $ref: "#/components/schemas/CastMember"
+        crew:
+          type: array
+          nullable: true
+          description: |
+            Principal crew from TVDB, each with its `job`. Only populated by
+            GET /series/{id}; TVDB often lists a show's directors and writers
+            on its episodes instead (GET
+            /series/{id}/episodes/{episodeId}/credits).
           items:
             $ref: "#/components/schemas/CastMember"
         added_at:

@@ -5384,7 +5384,15 @@ type CardigannUpstream struct {
 // CastMember defines model for CastMember.
 type CastMember struct {
 	Character *string `json:"character,omitempty"`
-	Name      string  `json:"name"`
+
+	// Department The provider's grouping of `job` ("Directing", "Writing"), when
+	// one is known.
+	Department *string `json:"department,omitempty"`
+
+	// Job The crew role ("Director", "Writer"). Absent for an acting
+	// credit.
+	Job  *string `json:"job,omitempty"`
+	Name string  `json:"name"`
 
 	// PersonId Row id of the person in the library, for GET /people/{id}. Present
 	// on the cast of a stored movie or series; absent on a provider
@@ -7272,6 +7280,11 @@ type Movie struct {
 	// "16"), the theatrical release's when it has one. Absent when no
 	// region is configured or TMDB lists none for it.
 	Certification *string `json:"certification,omitempty"`
+
+	// Crew Principal crew from TMDB (directors, writers, producers, composer,
+	// cinematographer, editor), each with its `job`. Only populated by
+	// GET /movies/{id}.
+	Crew *[]CastMember `json:"crew,omitempty"`
 
 	// DigitalReleaseDate Earliest digital (TMDB type 4) release in `metadata.tmdb_region`,
 	// ISO yyyy-mm-dd. Fetched on add and on every metadata refresh;
@@ -9694,6 +9707,12 @@ type TVShow struct {
 	// for it.
 	Certification *string `json:"certification,omitempty"`
 	Creator       *string `json:"creator,omitempty"`
+
+	// Crew Principal crew from TVDB, each with its `job`. Only populated by
+	// GET /series/{id}; TVDB often lists a show's directors and writers
+	// on its episodes instead (GET
+	// /series/{id}/episodes/{episodeId}/credits).
+	Crew *[]CastMember `json:"crew,omitempty"`
 
 	// DownloadProgress Mean progress across the show's in-flight download-client entries,
 	// 0-1. Absent when nothing is downloading, when the live queue could
@@ -13161,6 +13180,9 @@ type ServerInterface interface {
 	// PatchEpisode Toggle episode monitoring
 	// (PATCH /series/{id}/episodes/{episodeId})
 	PatchEpisode(w http.ResponseWriter, r *http.Request, id ResourceID, episodeId EpisodeID)
+	// GetEpisodeCredits An episode's guest stars and crew
+	// (GET /series/{id}/episodes/{episodeId}/credits)
+	GetEpisodeCredits(w http.ResponseWriter, r *http.Request, id ResourceID, episodeId EpisodeID)
 	// DeleteEpisodeFile Delete an episode media file
 	// (DELETE /series/{id}/episodes/{episodeId}/file)
 	DeleteEpisodeFile(w http.ResponseWriter, r *http.Request, id ResourceID, episodeId EpisodeID)
@@ -14719,6 +14741,12 @@ func (_ Unimplemented) BrowseSeriesReleases(w http.ResponseWriter, r *http.Reque
 // PatchEpisode Toggle episode monitoring
 // (PATCH /series/{id}/episodes/{episodeId})
 func (_ Unimplemented) PatchEpisode(w http.ResponseWriter, r *http.Request, id ResourceID, episodeId EpisodeID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetEpisodeCredits An episode's guest stars and crew
+// (GET /series/{id}/episodes/{episodeId}/credits)
+func (_ Unimplemented) GetEpisodeCredits(w http.ResponseWriter, r *http.Request, id ResourceID, episodeId EpisodeID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -22388,6 +22416,41 @@ func (siw *ServerInterfaceWrapper) PatchEpisode(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// GetEpisodeCredits operation middleware
+func (siw *ServerInterfaceWrapper) GetEpisodeCredits(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "episodeId" -------------
+	var episodeId EpisodeID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "episodeId", chi.URLParam(r, "episodeId"), &episodeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "episodeId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEpisodeCredits(w, r, id, episodeId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteEpisodeFile operation middleware
 func (siw *ServerInterfaceWrapper) DeleteEpisodeFile(w http.ResponseWriter, r *http.Request) {
 
@@ -23782,6 +23845,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/series/{id}/episodes/{episodeId}/file", wrapper.DeleteEpisodeFile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/series/{id}/episodes/{episodeId}/credits", wrapper.GetEpisodeCredits)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/series/{id}/episodes/{episodeId}/search", wrapper.BrowseEpisodeReleases)
@@ -41912,6 +41978,57 @@ func (response PatchEpisode500JSONResponse) VisitPatchEpisodeResponse(w http.Res
 	return err
 }
 
+type GetEpisodeCreditsRequestObject struct {
+	Id        ResourceID `json:"id"`
+	EpisodeId EpisodeID  `json:"episodeId"`
+}
+
+type GetEpisodeCreditsResponseObject interface {
+	VisitGetEpisodeCreditsResponse(w http.ResponseWriter) error
+}
+
+type GetEpisodeCredits200JSONResponse []CastMember
+
+func (response GetEpisodeCredits200JSONResponse) VisitGetEpisodeCreditsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEpisodeCredits404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetEpisodeCredits404JSONResponse) VisitGetEpisodeCreditsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetEpisodeCredits500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetEpisodeCredits500JSONResponse) VisitGetEpisodeCreditsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type DeleteEpisodeFileRequestObject struct {
 	Id        ResourceID `json:"id"`
 	EpisodeId EpisodeID  `json:"episodeId"`
@@ -45229,6 +45346,9 @@ type StrictServerInterface interface {
 	// PatchEpisode Toggle episode monitoring
 	// (PATCH /series/{id}/episodes/{episodeId})
 	PatchEpisode(ctx context.Context, request PatchEpisodeRequestObject) (PatchEpisodeResponseObject, error)
+	// GetEpisodeCredits An episode's guest stars and crew
+	// (GET /series/{id}/episodes/{episodeId}/credits)
+	GetEpisodeCredits(ctx context.Context, request GetEpisodeCreditsRequestObject) (GetEpisodeCreditsResponseObject, error)
 	// DeleteEpisodeFile Delete an episode media file
 	// (DELETE /series/{id}/episodes/{episodeId}/file)
 	DeleteEpisodeFile(ctx context.Context, request DeleteEpisodeFileRequestObject) (DeleteEpisodeFileResponseObject, error)
@@ -52177,6 +52297,33 @@ func (sh *strictHandler) PatchEpisode(w http.ResponseWriter, r *http.Request, id
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(PatchEpisodeResponseObject); ok {
 		if err := validResponse.VisitPatchEpisodeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetEpisodeCredits operation middleware
+func (sh *strictHandler) GetEpisodeCredits(w http.ResponseWriter, r *http.Request, id ResourceID, episodeId EpisodeID) {
+	var request GetEpisodeCreditsRequestObject
+
+	request.Id = id
+	request.EpisodeId = episodeId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetEpisodeCredits(ctx, request.(GetEpisodeCreditsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetEpisodeCredits")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetEpisodeCreditsResponseObject); ok {
+		if err := validResponse.VisitGetEpisodeCreditsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

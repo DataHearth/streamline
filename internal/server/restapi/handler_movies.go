@@ -210,16 +210,13 @@ func (s *Server) GetMovie(
 		}
 		result.MediaFiles = &apiFiles
 	}
-	credits, err := s.store.TitleCast(ctx, db.CastOwnerMovie, m.ID)
+	credits, err := s.store.TitleCredits(ctx, db.CastOwnerMovie, m.ID)
 	if err != nil {
 		return GetMovie500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
-	if len(credits) > 0 {
-		cast := libraryCastToAPI(credits)
-		result.Cast = &cast
-	}
+	result.Cast, result.Crew = splitCredits(credits)
 	if len(m.Genres) > 0 {
 		genres := m.Genres
 		result.Genres = &genres

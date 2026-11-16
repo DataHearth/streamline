@@ -6836,6 +6836,80 @@ func (_c *MockTx_DownloadRecordsByHash_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
+// EpisodeCredits provides a mock function for the type MockTx
+func (_mock *MockTx) EpisodeCredits(ctx context.Context, showID uint32, episodeID uint32) ([]db.CastEntry, error) {
+	ret := _mock.Called(ctx, showID, episodeID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for EpisodeCredits")
+	}
+
+	var r0 []db.CastEntry
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) ([]db.CastEntry, error)); ok {
+		return returnFunc(ctx, showID, episodeID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32) []db.CastEntry); ok {
+		r0 = returnFunc(ctx, showID, episodeID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.CastEntry)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, uint32) error); ok {
+		r1 = returnFunc(ctx, showID, episodeID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_EpisodeCredits_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EpisodeCredits'
+type MockTx_EpisodeCredits_Call struct {
+	*mock.Call
+}
+
+// EpisodeCredits is a helper method to define mock.On call
+//   - ctx context.Context
+//   - showID uint32
+//   - episodeID uint32
+func (_e *MockTx_Expecter) EpisodeCredits(ctx any, showID any, episodeID any) *MockTx_EpisodeCredits_Call {
+	return &MockTx_EpisodeCredits_Call{Call: _e.mock.On("EpisodeCredits", ctx, showID, episodeID)}
+}
+
+func (_c *MockTx_EpisodeCredits_Call) Run(run func(ctx context.Context, showID uint32, episodeID uint32)) *MockTx_EpisodeCredits_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_EpisodeCredits_Call) Return(castEntrys []db.CastEntry, err error) *MockTx_EpisodeCredits_Call {
+	_c.Call.Return(castEntrys, err)
+	return _c
+}
+
+func (_c *MockTx_EpisodeCredits_Call) RunAndReturn(run func(ctx context.Context, showID uint32, episodeID uint32) ([]db.CastEntry, error)) *MockTx_EpisodeCredits_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // EpisodesNeedingCredits provides a mock function for the type MockTx
 func (_mock *MockTx) EpisodesNeedingCredits(ctx context.Context, now time.Time) ([]db.EpisodeCreditsRef, error) {
 	ret := _mock.Called(ctx, now)
@@ -26492,12 +26566,12 @@ func (_c *MockTx_TVShowTVDBIndex_Call) RunAndReturn(run func(ctx context.Context
 	return _c
 }
 
-// TitleCast provides a mock function for the type MockTx
-func (_mock *MockTx) TitleCast(ctx context.Context, owner db.CastOwner, ownerID uint32) ([]db.CastEntry, error) {
+// TitleCredits provides a mock function for the type MockTx
+func (_mock *MockTx) TitleCredits(ctx context.Context, owner db.CastOwner, ownerID uint32) ([]db.CastEntry, error) {
 	ret := _mock.Called(ctx, owner, ownerID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for TitleCast")
+		panic("no return value specified for TitleCredits")
 	}
 
 	var r0 []db.CastEntry
@@ -26520,20 +26594,20 @@ func (_mock *MockTx) TitleCast(ctx context.Context, owner db.CastOwner, ownerID 
 	return r0, r1
 }
 
-// MockTx_TitleCast_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TitleCast'
-type MockTx_TitleCast_Call struct {
+// MockTx_TitleCredits_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TitleCredits'
+type MockTx_TitleCredits_Call struct {
 	*mock.Call
 }
 
-// TitleCast is a helper method to define mock.On call
+// TitleCredits is a helper method to define mock.On call
 //   - ctx context.Context
 //   - owner db.CastOwner
 //   - ownerID uint32
-func (_e *MockTx_Expecter) TitleCast(ctx any, owner any, ownerID any) *MockTx_TitleCast_Call {
-	return &MockTx_TitleCast_Call{Call: _e.mock.On("TitleCast", ctx, owner, ownerID)}
+func (_e *MockTx_Expecter) TitleCredits(ctx any, owner any, ownerID any) *MockTx_TitleCredits_Call {
+	return &MockTx_TitleCredits_Call{Call: _e.mock.On("TitleCredits", ctx, owner, ownerID)}
 }
 
-func (_c *MockTx_TitleCast_Call) Run(run func(ctx context.Context, owner db.CastOwner, ownerID uint32)) *MockTx_TitleCast_Call {
+func (_c *MockTx_TitleCredits_Call) Run(run func(ctx context.Context, owner db.CastOwner, ownerID uint32)) *MockTx_TitleCredits_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -26556,12 +26630,12 @@ func (_c *MockTx_TitleCast_Call) Run(run func(ctx context.Context, owner db.Cast
 	return _c
 }
 
-func (_c *MockTx_TitleCast_Call) Return(castEntrys []db.CastEntry, err error) *MockTx_TitleCast_Call {
+func (_c *MockTx_TitleCredits_Call) Return(castEntrys []db.CastEntry, err error) *MockTx_TitleCredits_Call {
 	_c.Call.Return(castEntrys, err)
 	return _c
 }
 
-func (_c *MockTx_TitleCast_Call) RunAndReturn(run func(ctx context.Context, owner db.CastOwner, ownerID uint32) ([]db.CastEntry, error)) *MockTx_TitleCast_Call {
+func (_c *MockTx_TitleCredits_Call) RunAndReturn(run func(ctx context.Context, owner db.CastOwner, ownerID uint32) ([]db.CastEntry, error)) *MockTx_TitleCredits_Call {
 	_c.Call.Return(run)
 	return _c
 }

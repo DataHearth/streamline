@@ -310,7 +310,7 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 				}),
 			).To(Succeed())
 
-			cast, err := store.TitleCast(ctx, CastOwnerSeries, show.ID)
+			cast, err := store.TitleCredits(ctx, CastOwnerSeries, show.ID)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cast).To(HaveLen(1))
 			Expect(cast[0].Name).To(Equal("Ana Vidal"))

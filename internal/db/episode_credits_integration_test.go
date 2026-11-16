@@ -109,7 +109,7 @@ var _ = Describe("Episode credits", Label("integration", "db"), func() {
 					HaveField("Job", "Director"),
 					HaveField("Department", "Directing"),
 				)))
-				cast, err := store.TitleCast(ctx, CastOwnerSeries, showID)
+				cast, err := store.TitleCredits(ctx, CastOwnerSeries, showID)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cast).To(ConsistOf(HaveField("Name", "Lead")))
 				Expect(client.Episode.GetX(ctx, ep).CreditsFetchedAt).NotTo(BeNil())
@@ -128,6 +128,37 @@ var _ = Describe("Episode credits", Label("integration", "db"), func() {
 				CountX(ctx)).To(BeZero())
 			Expect(client.Episode.GetX(ctx, ep).CreditsFetchedAt).NotTo(BeNil())
 		})
+	})
+
+	Describe("EpisodeCredits", func() {
+		It(
+			"returns guests then crew, and nothing for another show's episode",
+			func() {
+				ep := newEpisode(1, 11, time.Now().AddDate(0, -1, 0))
+				Expect(store.ReplaceEpisodeCredits(ctx, ep, []metadata.CastMember{
+					{TVDBID: 2, Name: "Visitor", Character: "Cop"},
+					{
+						TVDBID:     3,
+						Name:       "Dee Rector",
+						Job:        "Director",
+						Department: "Directing",
+					},
+				})).To(Succeed())
+
+				credits, err := store.EpisodeCredits(ctx, showID, ep)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(credits).To(HaveExactElements(
+					And(HaveField("Name", "Visitor"), HaveField("Character", "Cop")),
+					And(
+						HaveField("Name", "Dee Rector"),
+						HaveField("Job", "Director"),
+					),
+				))
+				other, err := store.EpisodeCredits(ctx, showID+1, ep)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(other).To(BeEmpty())
+			},
+		)
 	})
 
 	Describe("people", func() {

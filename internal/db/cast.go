@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/person"
 	"github.com/datahearth/streamline/ent/predicate"
+	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/metadata"
 )
@@ -128,7 +129,8 @@ func replaceCast(
 }
 
 // CastEntry is one credited person on one title: the person as the library
-// knows them, plus the character that belongs to this pairing. PersonID is the
+// knows them, plus the character or job that belongs to this pairing (Job is
+// empty for an acting credit). PersonID is the
 // persons row id, which is what the API keys /people/{id} by — a cast entry
 // without it cannot link anywhere, since a TVDB-sourced person has no tmdb id.
 type CastEntry struct {
@@ -137,12 +139,12 @@ type CastEntry struct {
 	TVDBID     uint32
 	Name       string
 	Character  string
+	Job        string
+	Department string
 	ProfileURL string
 }
 
-// TitleCast returns a title's acting credits in billing order — the order the
-// provider listed them in, stamped onto the credit at write time.
-func (db *DB) TitleCast(
+func (db *DB) TitleCredits(
 	ctx context.Context,
 	owner CastOwner,
 	ownerID uint32,
@@ -151,8 +153,27 @@ func (db *DB) TitleCast(
 	if err != nil {
 		return nil, err
 	}
+	return db.castEntries(ctx, ownedBy)
+}
+
+func (db *DB) EpisodeCredits(
+	ctx context.Context,
+	showID, episodeID uint32,
+) ([]CastEntry, error) {
+	return db.castEntries(ctx, credit.HasEpisodeWith(
+		episode.IDEQ(episodeID),
+		episode.HasSeasonWith(season.HasTvShowWith(tvshow.IDEQ(showID))),
+	))
+}
+
+// castEntries returns the matching credits in billing order — the order the
+// provider listed them in, stamped onto the credit at write time, cast first.
+func (db *DB) castEntries(
+	ctx context.Context,
+	where predicate.Credit,
+) ([]CastEntry, error) {
 	rows, err := db.client.Credit.Query().
-		Where(ownedBy, credit.Or(credit.JobIsNil(), credit.JobEQ(""))).
+		Where(where).
 		WithPerson().
 		// order is a uint8 the whole cast can share once a provider lists more
 		// entries than it can hold, so id breaks the tie and keeps the tail in
@@ -160,7 +181,7 @@ func (db *DB) TitleCast(
 		Order(ent.Asc(credit.FieldOrder), ent.Asc(credit.FieldID)).
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("title cast: %w", err)
+		return nil, fmt.Errorf("title credits: %w", err)
 	}
 
 	out := make([]CastEntry, 0, len(rows))
@@ -175,6 +196,8 @@ func (db *DB) TitleCast(
 			TVDBID:     p.TvdbID,
 			Name:       p.Name,
 			Character:  c.Character,
+			Job:        c.Job,
+			Department: c.Department,
 			ProfileURL: p.ProfileURL,
 		})
 	}

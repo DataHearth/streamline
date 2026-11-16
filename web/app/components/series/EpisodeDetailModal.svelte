@@ -23,7 +23,10 @@
 </script>
 
 <script lang="ts">
+	import { createQuery } from "@tanstack/svelte-query";
+	import { api } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
+	import DetailCast from "@components/shared/DetailCast.svelte";
 	import { Search, Trash2 } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { episodeStatus, episodeTitle } from "@lib/status";
@@ -42,11 +45,12 @@
 		resolutionBucket,
 		subtitleLanguages,
 	} from "@lib/media-info";
-	import type { Episode } from "@lib/types";
+	import type { CastMember, Episode } from "@lib/types";
 
 	// Lifted out of EpisodeTable so the phone accordion opens the same sheet the
 	// desktop table does — the two can't drift into two ideas of "episode info".
 	let {
+		seriesId,
 		episode,
 		code,
 		onClose,
@@ -54,6 +58,7 @@
 		onDeleteFile,
 		showMonitored = true,
 	}: {
+		seriesId: number;
 		episode: Episode | null;
 		code: string;
 		onClose: () => void;
@@ -63,6 +68,14 @@
 	} = $props();
 
 	let probe = $derived(episode ? probeOf(episode) : null);
+
+	const creditsQuery = createQuery<CastMember[]>(() => ({
+		queryKey: ["series", seriesId, "episodes", episode?.id, "credits"],
+		queryFn: () =>
+			api<CastMember[]>(`/series/${seriesId}/episodes/${episode?.id}/credits`),
+		enabled: episode !== null,
+	}));
+	let credits = $derived(creditsQuery.data ?? []);
 	// One row per language, not per track: the API carries language sets, and
 	// which track holds which language is not knowable from them.
 	let audioList = $derived(audioLanguages(probe));
@@ -221,6 +234,15 @@
 						subList.map(langName),
 					)}
 				{/if}
+			</div>
+		{/if}
+
+		{#if credits.length > 0}
+			<div class="mt-4 border-t border-border pt-3">
+				<h4 class="mb-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle">
+					{i18n.episode_credits()}
+				</h4>
+				<DetailCast cast={credits} dense />
 			</div>
 		{/if}
 

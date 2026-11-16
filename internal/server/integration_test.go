@@ -81,7 +81,7 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			Return(nil, nil).
 			Once()
 		store.EXPECT().
-			TitleCast(mock.Anything, db.CastOwnerMovie, uint32(1)).
+			TitleCredits(mock.Anything, db.CastOwnerMovie, uint32(1)).
 			Return(nil, nil).
 			Once()
 		searchHit := metadata.MovieResult{
@@ -206,7 +206,7 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 			Return(nil, nil).
 			Once()
 		store.EXPECT().
-			TitleCast(mock.Anything, db.CastOwnerMovie, uint32(1)).
+			TitleCredits(mock.Anything, db.CastOwnerMovie, uint32(1)).
 			Return(nil, nil).
 			Once()
 		movies.EXPECT().

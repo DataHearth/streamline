@@ -26,6 +26,24 @@
 		return !external && m.person_id ? personPhotoUrl(m.person_id) : m.profile_url;
 	}
 
+	// One tile per person: a writer-director is one face with both jobs.
+	let members = $derived.by(() => {
+		const byPerson = new Map<number, { member: CastMember; roles: string[] }>();
+		const out: { member: CastMember; roles: string[] }[] = [];
+		for (const m of cast) {
+			const role = m.character || m.job;
+			const seen = m.person_id === undefined ? undefined : byPerson.get(m.person_id);
+			if (seen) {
+				if (role && !seen.roles.includes(role)) seen.roles.push(role);
+				continue;
+			}
+			const entry = { member: m, roles: role ? [role] : [] };
+			if (m.person_id !== undefined) byPerson.set(m.person_id, entry);
+			out.push(entry);
+		}
+		return out;
+	});
+
 	function memberHref(m: CastMember): string | undefined {
 		if (external) return m.person_url;
 		return m.person_id ? `/people/${m.person_id}` : undefined;
@@ -39,7 +57,7 @@
 			dense ? "cast-grid--dense" : "cast-grid--full",
 		)}
 	>
-		{#each cast as member, i (i)}
+		{#each members as { member, roles }, i (i)}
 			{@const href = memberHref(member)}
 			{@const src = photo(member)}
 			<svelte:element
@@ -76,9 +94,9 @@
 				<div class="truncate text-[12.5px] font-medium text-fg">
 					{member.name}
 				</div>
-				{#if member.character}
+				{#if roles.length > 0}
 					<div class="mt-0.5 truncate text-[10.5px] text-fg-subtle">
-						{member.character}
+						{roles.join(", ")}
 					</div>
 				{/if}
 			</svelte:element>

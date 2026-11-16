@@ -26,6 +26,7 @@
 	// and a five-season show turns the strip into a second scroll direction.
 	// Here every season is a row carrying its own progress, one open at a time.
 	let {
+		seriesId,
 		seasons,
 		selected,
 		onSelect,
@@ -40,6 +41,7 @@
 		onDeleteSeasonFiles,
 		showMonitored = true,
 	}: {
+		seriesId: number;
 		seasons: Season[];
 		selected: number;
 		onSelect: (n: number) => void;
@@ -331,6 +333,7 @@
 </div>
 
 <EpisodeDetailModal
+	{seriesId}
 	episode={detail}
 	code={detailCode}
 	onClose={() => (detail = null)}

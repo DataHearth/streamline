@@ -15,6 +15,7 @@
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
+		seriesId,
 		episodes,
 		seasonNumber,
 		seriesType,
@@ -25,6 +26,7 @@
 		onDeleteFile,
 		showMonitored = true,
 	}: {
+		seriesId: number;
 		episodes: Episode[];
 		seasonNumber: number;
 		seriesType: SeriesType;
@@ -193,6 +195,7 @@
 </div>
 
 <EpisodeDetailModal
+	{seriesId}
 	episode={detail}
 	code={detail ? epCode(detail) : ""}
 	onClose={() => (detail = null)}

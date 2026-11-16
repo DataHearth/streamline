@@ -177,6 +177,7 @@ A change to the files of an offline library root (rename, delete with files, upl
 | `PATCH` | `/series/{id}/seasons/{number}` | Update a season | Member |
 | `POST` | `/series/{id}/seasons/{number}/search` · `/grab` | Search or grab a season | Member |
 | `PATCH` | `/series/{id}/episodes/{episodeId}` | Update an episode | Member |
+| `GET` | `/series/{id}/episodes/{episodeId}/credits` | The episode's guest stars and crew, read by the `tv-metadata-refresh` job | Authenticated |
 | `POST` | `/series/{id}/episodes/{episodeId}/search` · `/grab` | Search or grab an episode | Member |
 | `DELETE` | `/series/{id}/episodes/{episodeId}/file` | Delete the episode's file (`409` `outside_library` as for movies) | Member |
 

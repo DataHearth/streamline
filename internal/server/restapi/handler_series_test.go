@@ -158,6 +158,47 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 		})
 	})
 
+	Describe("GetEpisodeCredits", func() {
+		It("lists the episode's guests and crew", func() {
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
+				Return(&ent.TVShow{ID: 1}, nil).Once()
+			app.store.EXPECT().EpisodeCredits(mock.Anything, uint32(1), uint32(5)).
+				Return([]db.CastEntry{
+					{PersonID: 3, Name: "Visitor", Character: "Cop"},
+					{PersonID: 4, Name: "Dee Rector", Job: "Director"},
+				}, nil).Once()
+
+			resp := app.do(app.req(
+				http.MethodGet,
+				"/api/v1/series/1/episodes/5/credits",
+				app.adminKey,
+				nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var body []CastMember
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body).To(HaveExactElements(
+				HaveField("Character", HaveValue(Equal("Cop"))),
+				HaveField("Job", HaveValue(Equal("Director"))),
+			))
+		})
+
+		It("404s when the series is missing", func() {
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(42)).
+				Return(nil, errors.New("tv show 42 not found")).Once()
+
+			resp := app.do(app.req(
+				http.MethodGet,
+				"/api/v1/series/42/episodes/5/credits",
+				app.adminKey,
+				nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+	})
+
 	Describe("GetSeries", func() {
 		It("404s when the series is missing", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(42)).
@@ -179,7 +220,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				}, nil).
 				Once()
 			app.store.EXPECT().
-				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				TitleCredits(mock.Anything, db.CastOwnerSeries, uint32(1)).
 				Return([]db.CastEntry{{
 					PersonID:  14,
 					TVDBID:    203697,
@@ -220,7 +261,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return(&ent.TVShow{ID: 1, Title: "Breaking Bad", Year: 2008, TvdbID: 81189}, nil).
 				Once()
 			app.store.EXPECT().
-				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				TitleCredits(mock.Anything, db.CastOwnerSeries, uint32(1)).
 				Return(nil, nil).
 				Once()
 
@@ -272,7 +313,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
 				Return(show, nil).Once()
 			app.store.EXPECT().
-				TitleCast(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				TitleCredits(mock.Anything, db.CastOwnerSeries, uint32(1)).
 				Return(nil, nil).
 				Once()
 

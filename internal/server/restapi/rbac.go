@@ -254,6 +254,7 @@ var minRole = map[string]string{
 
 	"ListSeries":              roleRequestOnly,
 	"GetSeries":               roleRequestOnly,
+	"GetEpisodeCredits":       roleRequestOnly,
 	"ListEpisodes":            roleRequestOnly,
 	"GetSeriesCounts":         roleRequestOnly,
 	"GetSeriesSelection":      roleRequestOnly,

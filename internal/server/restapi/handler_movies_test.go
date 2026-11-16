@@ -681,6 +681,46 @@ var _ = Describe(
 		})
 
 		Describe("GetMovie", func() {
+			It("splits the credits into cast and crew", func() {
+				const movieID uint32 = 43
+				app.movies.EXPECT().
+					Get(mock.Anything, movieID).
+					Return(&ent.Movie{ID: movieID, Title: "Film", Year: 2020, TmdbID: 43}, nil).
+					Once()
+				app.store.EXPECT().
+					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
+					Return([]db.CastEntry{
+						{PersonID: 1, Name: "Lead", Character: "Hero"},
+						{
+							PersonID:   2,
+							Name:       "Dee Rector",
+							Job:        "Director",
+							Department: "Directing",
+						},
+					}, nil).
+					Once()
+				app.store.EXPECT().
+					ListMediaFilesByMovieID(mock.Anything, movieID).
+					Return(nil, nil).
+					Once()
+
+				resp, err := http.Get(
+					fmt.Sprintf("%s/api/v1/movies/%d", app.srv.URL, movieID),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				var body Movie
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Cast).To(HaveValue(ConsistOf(And(
+					HaveField("Name", "Lead"), HaveField("Job", BeNil()),
+				))))
+				Expect(body.Crew).To(HaveValue(ConsistOf(And(
+					HaveField("Name", "Dee Rector"),
+					HaveField("Job", HaveValue(Equal("Director"))),
+					HaveField("Department", HaveValue(Equal("Directing"))),
+				))))
+			})
+
 			It("returns media_files for the movie", func() {
 				const movieID uint32 = 42
 				app.movies.EXPECT().
@@ -694,7 +734,7 @@ var _ = Describe(
 					}, nil).
 					Once()
 				app.store.EXPECT().
-					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
+					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return(nil, nil).
 					Once()
 				app.store.EXPECT().
@@ -743,7 +783,7 @@ var _ = Describe(
 					}, nil).
 					Once()
 				app.store.EXPECT().
-					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
+					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return(nil, nil).
 					Once()
 				app.store.EXPECT().
@@ -799,7 +839,7 @@ var _ = Describe(
 					}, nil).
 					Once()
 				app.store.EXPECT().
-					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
+					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return(nil, nil).
 					Once()
 				app.store.EXPECT().
@@ -896,7 +936,7 @@ var _ = Describe(
 					Return(nil, nil).
 					Once()
 				app.store.EXPECT().
-					TitleCast(mock.Anything, db.CastOwnerMovie, movieID).
+					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return([]db.CastEntry{{
 						PersonID:  91,
 						TMDBID:    3001,

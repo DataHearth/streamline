@@ -394,7 +394,7 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 	})
 })
 
-var _ = Describe("Store.TitleCast", Label("integration", "db"), func() {
+var _ = Describe("Store.TitleCredits", Label("integration", "db"), func() {
 	var (
 		ctx    context.Context
 		client *ent.Client
@@ -424,7 +424,7 @@ var _ = Describe("Store.TitleCast", Label("integration", "db"), func() {
 			{TMDBID: 819, Name: "Edward Norton", Character: "The Narrator"},
 		})).To(Succeed())
 
-		cast, err := store.TitleCast(ctx, CastOwnerMovie, id)
+		cast, err := store.TitleCredits(ctx, CastOwnerMovie, id)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cast).To(HaveLen(2))
 		Expect(cast[0].Name).To(Equal("Brad Pitt"))
@@ -449,7 +449,7 @@ var _ = Describe("Store.TitleCast", Label("integration", "db"), func() {
 			{TVDBID: 237586, Name: "Nathan Fillion", Character: "Mal"},
 		})).To(Succeed())
 
-		cast, err := store.TitleCast(ctx, CastOwnerSeries, id)
+		cast, err := store.TitleCredits(ctx, CastOwnerSeries, id)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cast).To(HaveLen(1))
 		Expect(cast[0].TVDBID).To(Equal(uint32(237586)))
@@ -462,13 +462,13 @@ var _ = Describe("Store.TitleCast", Label("integration", "db"), func() {
 			SetTitle("Se7en").SetOriginalTitle("Se7en").
 			SetYear(1995).SetTmdbID(807).SaveX(ctx).ID
 
-		cast, err := store.TitleCast(ctx, CastOwnerMovie, id)
+		cast, err := store.TitleCredits(ctx, CastOwnerMovie, id)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cast).To(BeEmpty())
 	})
 
 	It("rejects an owner kind it has no credit edge for", func() {
-		_, err := store.TitleCast(ctx, CastOwner("album"), 1)
+		_, err := store.TitleCredits(ctx, CastOwner("album"), 1)
 		Expect(err).To(MatchError(errUnknownCastOwner))
 	})
 })

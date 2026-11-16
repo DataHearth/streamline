@@ -364,6 +364,8 @@
 	"calendar_view": "Vue du calendrier",
 	"cast_none": "Aucune information de distribution",
 	"cast_none_help": "La distribution apparaît une fois les crédits TMDB récupérés pour ce titre.",
+	"cast_crew": "Équipe technique",
+	"episode_credits": "Invités et équipe",
 	"cf_add": "Ajouter un format",
 	"cf_add_condition": "Ajouter une condition",
 	"cf_builtin_badge": "intégré",

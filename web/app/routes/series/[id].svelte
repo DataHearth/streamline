@@ -927,6 +927,7 @@
 				     direction, and the table has no room for its columns here. -->
 				<div class="md:hidden">
 					<SeasonAccordion
+						seriesId={show.id}
 						{seasons}
 						selected={selectedSeason ?? seasons[0]?.number ?? 0}
 						onSelect={(n) => (selectedSeason = n)}
@@ -1072,6 +1073,7 @@
 						</div>
 
 						<EpisodeTable
+							seriesId={show.id}
 							episodes={currentEpisodes}
 							seasonNumber={currentSeason.number}
 							seriesType={show.type}
@@ -1089,6 +1091,10 @@
 			<DetailHistory seriesId={show.id} />
 		{:else if tab === "cast"}
 			<DetailCast cast={show.cast ?? []} />
+			{#if show.crew?.length}
+				<h3 class="mb-3 mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle">{i18n.cast_crew()}</h3>
+				<DetailCast cast={show.crew} />
+			{/if}
 		{/if}
 	</div>
 
@@ -1135,6 +1141,7 @@
 		onConfirm={(withFiles) => del.mutate(withFiles)}
 	/>
 	<EpisodeDetailModal
+		seriesId={show.id}
 		episode={focused?.ep ?? null}
 		code={focused?.code ?? ""}
 		onClose={closeFocus}

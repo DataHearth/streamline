@@ -1585,12 +1585,18 @@ type Store interface {
 		ownerID uint32,
 		cast []metadata.CastMember,
 	) error
-	// TitleCast returns a title's acting credits in billing order, each entry
-	// carrying the persons row id the API links by.
-	TitleCast(
+	// TitleCredits returns a title's credits in billing order, cast before
+	// crew, each entry carrying the persons row id the API links by.
+	TitleCredits(
 		ctx context.Context,
 		owner CastOwner,
 		ownerID uint32,
+	) ([]CastEntry, error)
+	// EpisodeCredits returns one episode's guests and crew in billing order;
+	// none when the episode is not the show's.
+	EpisodeCredits(
+		ctx context.Context,
+		showID, episodeID uint32,
 	) ([]CastEntry, error)
 	// PeopleNeedingDetails returns the people credited on a title whose
 	// biographical record has never been fetched — the work list for the

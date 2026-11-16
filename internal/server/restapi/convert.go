@@ -159,6 +159,27 @@ func movieListToAPI(m *ent.Movie, sum db.MovieFileSummary) Movie {
 // person_id is what separates this from castToAPI: it is the only key
 // /people/{id} accepts, and a series actor comes from TVDB with no tmdb id at
 // all, so nothing else on the entry can address them.
+// splitCredits renders a title's credits as its cast and its crew, either nil
+// when empty.
+func splitCredits(credits []db.CastEntry) (*[]CastMember, *[]CastMember) {
+	var cast, crew []db.CastEntry
+	for _, c := range credits {
+		if c.Job == "" {
+			cast = append(cast, c)
+		} else {
+			crew = append(crew, c)
+		}
+	}
+	return nonEmpty(libraryCastToAPI(cast)), nonEmpty(libraryCastToAPI(crew))
+}
+
+func nonEmpty(members []CastMember) *[]CastMember {
+	if len(members) == 0 {
+		return nil
+	}
+	return &members
+}
+
 func libraryCastToAPI(cast []db.CastEntry) []CastMember {
 	out := make([]CastMember, 0, len(cast))
 	for _, c := range cast {
@@ -166,9 +187,9 @@ func libraryCastToAPI(cast []db.CastEntry) []CastMember {
 		if c.TMDBID != 0 {
 			m.TmdbId = &c.TMDBID
 		}
-		if c.Character != "" {
-			m.Character = &c.Character
-		}
+		m.Character = optString(c.Character)
+		m.Job = optString(c.Job)
+		m.Department = optString(c.Department)
 		if c.ProfileURL != "" {
 			m.ProfileUrl = &c.ProfileURL
 		}

@@ -348,20 +348,35 @@ func (s *Server) GetSeries(
 			NotFoundJSONResponse: errNotFound(err.Error()),
 		}, nil
 	}
-	credits, err := s.store.TitleCast(ctx, db.CastOwnerSeries, show.ID)
+	credits, err := s.store.TitleCredits(ctx, db.CastOwnerSeries, show.ID)
 	if err != nil {
 		return GetSeries500JSONResponse{
 			InternalErrorJSONResponse: errInternal(ctx, err),
 		}, nil
 	}
 	result := tvShowToAPI(show)
-	if len(credits) > 0 {
-		apiCast := libraryCastToAPI(credits)
-		result.Cast = &apiCast
-	}
+	result.Cast, result.Crew = splitCredits(credits)
 	return GetSeries200JSONResponse{
 		SeriesDetailJSONResponse: SeriesDetailJSONResponse(result),
 	}, nil
+}
+
+func (s *Server) GetEpisodeCredits(
+	ctx context.Context,
+	request GetEpisodeCreditsRequestObject,
+) (GetEpisodeCreditsResponseObject, error) {
+	if _, err := s.tvshows.Get(ctx, request.Id); err != nil {
+		return GetEpisodeCredits404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	}
+	credits, err := s.store.EpisodeCredits(ctx, request.Id, request.EpisodeId)
+	if err != nil {
+		return GetEpisodeCredits500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
+	return GetEpisodeCredits200JSONResponse(libraryCastToAPI(credits)), nil
 }
 
 func (s *Server) PatchSeries(

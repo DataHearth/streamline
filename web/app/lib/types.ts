@@ -124,6 +124,7 @@ export type TVShow = {
 	// Only populated by GET /series/{id}; absent in list responses.
 	seasons?: Season[];
 	cast?: CastMember[];
+	crew?: CastMember[];
 	added_at?: string;
 	// The most recent import into this show. `added_at` is when the show record
 	// was created, which says nothing about when files arrived: a show followed
@@ -225,6 +226,7 @@ export type LookupDetail = {
 	status?: string;
 };
 
+// character is set on an acting credit, job ("Director") on a crew one.
 export type CastMember = {
 	// The persons row id — what a cast tile links to. TVDB-sourced cast (all
 	// series cast) has tmdb_id 0, so tmdb_id cannot key the person; person_id
@@ -233,6 +235,8 @@ export type CastMember = {
 	tmdb_id?: number;
 	name: string;
 	character?: string;
+	job?: string;
+	department?: string;
 	profile_url?: string;
 	// Link to the person's page on the source provider (TMDB or TVDB).
 	person_url?: string;
@@ -313,6 +317,7 @@ export type Movie = {
 	media_files?: MediaFile[];
 	file_summary?: MovieFileSummary;
 	cast?: CastMember[];
+	crew?: CastMember[];
 	genres?: string[];
 	rating?: number;
 	added_at?: string;

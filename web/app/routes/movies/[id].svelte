@@ -252,6 +252,10 @@
 			<DetailHistory movieId={movie.id} />
 		{:else if tab === "cast"}
 			<DetailCast cast={movie.cast ?? []} />
+			{#if movie.crew?.length}
+				<h3 class="mb-3 mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle">{i18n.cast_crew()}</h3>
+				<DetailCast cast={movie.crew} />
+			{/if}
 		{/if}
 	</div>
 
