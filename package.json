@@ -5,7 +5,7 @@
     "node": ">=24.22.3"
   },
   "devDependencies": {
-    "@inlang/paraglide-js": "^2.23.1",
+    "@inlang/paraglide-js": "^3.0.0",
     "@inlang/plugin-message-format": "^4.4.1",
     "@lucide/svelte": "^1.14.0",
     "@roxi/routify": "^3.6.4",
