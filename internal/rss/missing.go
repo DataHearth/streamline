@@ -492,6 +492,11 @@ func namesOtherYear(release string, m *ent.Movie) bool {
 // library.Parse reads a year from.
 var releaseYearRe = regexp.MustCompile(`\b(?:19|20)\d{2}\b`)
 
+// statedYearSuffix matches a release prefix that ends on a parenthesised
+// year: the film's year is already stated there, and a year-like token after
+// it is an edition's.
+var statedYearSuffix = regexp.MustCompile(`\((?:19|20)\d{2}\)\s*$`)
+
 func withinYearDrift(year int, m *ent.Movie) bool {
 	drift := year - int(m.Year)
 	return drift >= -releaseYearDrift && drift <= releaseYearDrift
@@ -510,10 +515,18 @@ func withinYearDrift(year int, m *ent.Movie) bool {
 // token can qualify when one title of the movie extends another with a number
 // ("Wonder Woman" and "Wonder Woman 1984"); the caller keeps the release when
 // any of them is the movie's.
+//
+// A token behind a parenthesised year is skipped (statedYearSuffix): the
+// title comparison strips a trailing "(1989)" as a provider's disambiguator,
+// so the 2024 of "Road House (1989) 2024 Remaster" would otherwise follow the
+// title as well and keep the 1989 film for a wanted Road House of 2024.
 func yearsAfterTitle(release string, titles []string) []int {
 	var years []int
 	for _, loc := range releaseYearRe.FindAllStringIndex(release, -1) {
 		before := release[:loc[0]]
+		if statedYearSuffix.MatchString(before) {
+			continue
+		}
 		if !slices.ContainsFunc(titles, func(t string) bool {
 			return library.TitleMatchesStrict(before, t)
 		}) {
