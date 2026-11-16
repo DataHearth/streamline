@@ -25,7 +25,7 @@
 		>
 			<header class="mb-6 flex flex-col items-center gap-3 text-center">
 				<img
-					src="/static/images/favicon-512.png"
+					src="/static/images/icon-maskable-512.png"
 					alt=""
 					aria-hidden="true"
 					class="h-12 w-12 rounded-xl shadow-2 ring-1 ring-border-strong"
