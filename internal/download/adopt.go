@@ -419,7 +419,8 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 			// Transmission and Deluge list the whole client. A torrent
 			// without streamline's label is the operator's own: it is never
 			// proposed, imported or removed, and leaving it out of the live
-			// set drops a proposal an earlier release filed for it.
+			// set prunes any pending proposal filed for it, such as one
+			// whose torrent has since lost the label.
 			if t.Foreign {
 				continue
 			}

@@ -548,8 +548,9 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 				store.EXPECT().AllDownloadRecordHashes(mock.Anything).
 					Return(map[string]struct{}{}, nil).Once()
-				// The foreign hash is not live either: a proposal an earlier
-				// release filed for it is pruned.
+				// The foreign hash is not live either: a pending proposal
+				// filed for it, such as one whose torrent has since lost the
+				// label, is pruned.
 				store.EXPECT().
 					DeleteStalePendingAdoptions(mock.Anything, "tr", []string{adoptHash}).
 					Return(0, nil).Once()
@@ -626,8 +627,9 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 				store.EXPECT().AllDownloadRecordHashes(mock.Anything).
 					Return(map[string]struct{}{}, nil).Once()
-				// Nothing is live, so a proposal an earlier release filed
-				// for this torrent is pruned.
+				// Nothing is live, so a pending proposal filed for this
+				// torrent, such as one from before it lost the label, is
+				// pruned.
 				store.EXPECT().
 					DeleteStalePendingAdoptions(mock.Anything, "dg", []string{}).
 					Return(0, nil).Once()
