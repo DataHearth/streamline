@@ -93,9 +93,11 @@
 
 	let tab = $state<Tab>("overview");
 	let tabTrack = $state<HTMLElement | null>(null);
-	// A search hit for one episode lands here as ?season=N&episode=ID: the
-	// season is selected and the episode's sheet opens. Both stay in the URL
-	// while the sheet is open, so a reload reopens it, and go with it.
+	// The episodes tab keeps a season other than the default in ?season=N, so
+	// Back from another page reopens the season that was open. A search hit
+	// for one episode lands here as ?season=N&episode=ID: the season is
+	// selected and the episode's sheet opens; `episode` stays in the URL while
+	// the sheet is open, so a reload reopens it, and goes with it.
 	// Routify reuses this component instance across /series/[id] param changes,
 	// so per-series UI state is cleared by hand when the path moves, before the
 	// new show's query is read. The first path only records it.
@@ -106,20 +108,26 @@
 			if (shownPath !== null && path !== shownPath) resetSeriesState();
 			shownPath = path;
 			tab = oneOf(param(p, "tab"), TAB_KEYS, "overview");
+			const season = param(p, "season");
+			const n = season === null ? Number.NaN : Number(season);
+			// Unset, the show's default is picked once its seasons load.
+			selectedSeason = Number.isInteger(n) && n >= 0 ? n : null;
 			const ep = Number(param(p, "episode"));
 			if (!ep) return;
 			tab = "episodes";
-			const n = Number(param(p, "season"));
-			if (Number.isInteger(n)) selectedSeason = n;
 			focusEpisodeId = ep;
 		},
 		() => {
 			const p = new URLSearchParams();
 			setParam(p, "tab", tab, "overview");
-			if (focusEpisodeId !== null) {
-				if (selectedSeason !== null) p.set("season", String(selectedSeason));
-				p.set("episode", String(focusEpisodeId));
+			if (
+				selectedSeason !== null &&
+				(focusEpisodeId !== null ||
+					(tab === "episodes" && selectedSeason !== defaultSeason))
+			) {
+				p.set("season", String(selectedSeason));
 			}
+			if (focusEpisodeId !== null) p.set("episode", String(focusEpisodeId));
 			return p;
 		},
 	);
@@ -138,17 +146,19 @@
 	let regularSeasons = $derived(seasons.filter((s) => s.number > 0));
 
 	let selectedSeason = $state<number | null>(null);
+	// The latest non-special season, falling back to whatever the last entry
+	// is (e.g. a specials-only show).
+	let defaultSeason = $derived.by(() => {
+		const pool = regularSeasons.length > 0 ? regularSeasons : seasons;
+		return pool[pool.length - 1]?.number ?? null;
+	});
 	$effect(() => {
 		if (seasons.length === 0) return;
 		// Re-pick whenever the selection is not a season this show actually has
 		// — covers both the initial default and a carry-over from the previously
 		// viewed series, which would otherwise render an empty season strip.
 		if (seasons.some((s) => s.number === selectedSeason)) return;
-		// Default to the latest non-special season, falling back to whatever
-		// the last entry is (e.g. a specials-only show).
-		const pool = regularSeasons.length > 0 ? regularSeasons : seasons;
-		const last = pool[pool.length - 1];
-		if (last) selectedSeason = last.number;
+		if (defaultSeason !== null) selectedSeason = defaultSeason;
 	});
 	let currentSeason = $derived(
 		seasons.find((s) => s.number === selectedSeason) ?? null,
