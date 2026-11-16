@@ -5,15 +5,26 @@
 		title?: string;
 		subtitle?: string;
 		eyebrow?: string;
+		// Set on a page the app shell renders: the card then fills what is left
+		// below the top bar (and above the bottom nav under md) rather than the
+		// whole viewport, which there overflows #main by the bar's height and
+		// scrolls a page with nothing to scroll to.
+		inShell?: boolean;
 		children: Snippet;
 		footer?: Snippet;
 	};
 
-	let { title, subtitle, eyebrow, children, footer }: Props = $props();
+	let { title, subtitle, eyebrow, inShell = false, children, footer }: Props =
+		$props();
 </script>
 
 <div
-	class="relative isolate grid grid-cols-1 min-h-dvh place-items-center overflow-hidden bg-bg-deep px-4 py-10"
+	class={[
+		"relative isolate grid grid-cols-1 place-items-center overflow-hidden bg-bg-deep px-4 py-10",
+		inShell
+			? "min-h-[calc(100dvh-var(--top-bar-height)-5rem-env(safe-area-inset-bottom))] md:min-h-[calc(100dvh-var(--top-bar-height))]"
+			: "min-h-dvh",
+	]}
 >
 	<div
 		aria-hidden="true"
