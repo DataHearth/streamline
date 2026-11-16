@@ -7,7 +7,6 @@
 		"* 0-6 * * 1"
 	],
 	"prConcurrentLimit": 8,
-	"minimumReleaseAge": "3 days",
 	"labels": ["dependencies"],
 	"reviewers": ["DataHearth"],
 	"postUpdateOptions": ["gomodTidy"],
@@ -94,12 +93,6 @@
 			"matchManagers": ["custom.regex", "dockerfile"],
 			"matchDepNames": ["node"],
 			"groupName": "node"
-		},
-		{
-			"description": "Docker Hub dates a tag by its last push and official images are rebuilt often, so the 3-day age would hold the image behind the version it follows, splitting the toolchain PR. The release list's own age gate already covers the version.",
-			"matchManagers": ["dockerfile"],
-			"matchDepNames": ["node", "golang"],
-			"minimumReleaseAge": "0 days"
 		},
 		{
 			"description": "The PR that moves the locked nixpkgs. It touches no toolchain version: nix/{go,node,pnpm}.nix override nixpkgs' package onto the declared patch while the two differ, and .github/workflows/renovate-pins.yaml drops the override's hashes from nix/toolchains.json once the lock catches up. After the major gate on purpose — the later rule wins, so this overrides the major-update dashboard gate above, which a nixpkgs revision would otherwise sit behind forever.",
