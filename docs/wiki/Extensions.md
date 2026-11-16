@@ -2,7 +2,13 @@
 
 An extension is a small WebAssembly program that adds a feature to Streamline without being part of it. It can answer requests under a URL prefix of its own, read the parts of your library and the folders you allow, and keep its own database. Without the one exception below it cannot touch anything else: no file outside the folders you allowed, no password outside what its permissions name, no network. The exception is the **ffmpeg** permission, which is full trust, see [Approving permissions](#approving-permissions).
 
-The first one is **OPDS**, the e-book catalogue e-reader apps read, published from [its own repository](https://github.com/Streamline-HQ/streamline-opds).
+The official ones are each published from a repository of their own:
+
+| Extension | What it serves |
+| --- | --- |
+| [player](https://github.com/Streamline-HQ/streamline-player-ext) | The API behind the [Streamline Player](https://github.com/Streamline-HQ/streamline-player) apps, at `/extensions/player` |
+| [subsonic](https://github.com/Streamline-HQ/streamline-subsonic-ext) | The Subsonic and OpenSubsonic API for music apps, at `/extensions/subsonic` |
+| [opds](https://github.com/Streamline-HQ/streamline-opds-ext) | The OPDS 1.2 e-book catalogue e-reader apps read, at `/extensions/opds` |
 
 ## Adding an extension
 
@@ -11,7 +17,7 @@ An extension is an entry under `extensions` in the config file:
 ```yaml
 extensions:
   - name: opds
-    source: https://github.com/Streamline-HQ/streamline-opds/releases/download/vX.Y.Z/opds.wasm
+    source: https://github.com/Streamline-HQ/streamline-opds-ext/releases/download/vX.Y.Z/opds.wasm
     sha256: <the module's checksum>
     enabled: true
 ```
@@ -24,7 +30,7 @@ extensions:
 | `enabled` | `false` keeps the entry and stops the extension |
 | `grants` | What you have allowed it, see [Approving permissions](#approving-permissions) |
 
-An official extension's URL is a file on a release of its own repository (`opds.wasm`), and its checksum is in that release's `checksums.txt`. A URL is downloaded once and kept in `<data_dir>/extensions/_sources`, so later boots do not need the network.
+An official extension's URL is a file on a release of its own repository (`opds.wasm`), and its checksum is in that release's `opds.wasm.sha256`. A URL is downloaded once and kept in `<data_dir>/extensions/_sources`, so later boots do not need the network.
 
 An admin can also add one from **Settings → Extensions** in the web UI, which shows what the module asks for before anything is saved, or from the API (neither on a `read_only` instance, where the file is the only way in and the page gives you the entry to paste): `POST /api/v1/extensions` with `name`, `source`, `sha256`; `POST /api/v1/extensions/inspect` with the same body shows what a module asks for without saving anything. See [REST API](REST-API#extensions).
 

@@ -22,7 +22,7 @@ https://github.com/user-attachments/assets/f08f3d32-3172-4de7-afeb-163a484403ce
 ## Features
 
 - One library for movies, TV, music and books — see the [roadmap](docs/wiki/Roadmap.md) for what is shipped and what is next
-- **Music**: MusicBrainz metadata, album and discography-pack grabs, and tags and artwork written into your files
+- **Music**: MusicBrainz metadata, album and discography-pack grabs, tags and artwork written into your files, and a Subsonic server for music apps (as an [extension](docs/wiki/Extensions.md))
 - **Books**: Hardcover metadata, books and series with an ebook and an audiobook slot each, an OPDS catalog for e-reader apps (as an [extension](docs/wiki/Extensions.md)), and send-to-Kindle by email
 - Adopt an existing library: scan untracked files and import them under review — and torrents you added by hand
 - Upload albums, discographies and books from the browser, imported like a finished download — no access to the server's disk needed
@@ -36,6 +36,7 @@ https://github.com/user-attachments/assets/f08f3d32-3172-4de7-afeb-163a484403ce
 - Optional transcoding to a quality profile's rules, verified before it replaces a file, with VAAPI hardware encoding
 - Database backups before every upgrade, daily and from the CLI, with `streamline restore`
 - Installable web app (PWA), in English and French
+- Sandboxed WebAssembly [extensions](docs/wiki/Extensions.md): the [player](https://github.com/Streamline-HQ/streamline-player-ext) behind the [Streamline Player](https://github.com/Streamline-HQ/streamline-player) apps, [Subsonic](https://github.com/Streamline-HQ/streamline-subsonic-ext) and [OPDS](https://github.com/Streamline-HQ/streamline-opds-ext), or your own
 - REST API (OpenAPI 3.0 spec)
 - OpenTelemetry traces, metrics, logs
 - GitOps-friendly: `read_only` config mode rejects runtime config writes
@@ -451,7 +452,7 @@ Direct-to-binary installs need no change.
 | Download clients | qBittorrent, Transmission, Deluge, built-in BitTorrent engine             |
 | Media servers    | Plex, Jellyfin, Emby (books: Jellyfin and Emby — Plex has no book library) |
 | Metadata         | TMDB (movies, TV), TVDB (TV), MusicBrainz (music), Hardcover (books) — TMDB, TVDB and Hardcover take an API key of your own; Deezer, Cover Art Archive and Wikipedia for artwork and artist overviews, keyless |
-| Clients          | OPDS 1.2 readers (`/extensions/opds`, with the OPDS extension), e-readers by email (EPUB, PDF) |
+| Clients          | Streamline Player apps (with the player extension), Subsonic and OpenSubsonic apps (`/extensions/subsonic`, with the Subsonic extension), OPDS 1.2 readers (`/extensions/opds`, with the OPDS extension), e-readers by email (EPUB, PDF) |
 
 ## Verifying images
 
@@ -472,6 +473,10 @@ cosign download attestation ghcr.io/datahearth/streamline:latest \
 
 Every image is scanned by [grype](https://github.com/anchore/grype) before it is tagged: a fixable vulnerability of severity high or above leaves the image untagged and fails the run. The report is attached to the Image workflow run and shown in its summary.
 
+## Documentation
+
+The [wiki](https://github.com/DataHearth/streamline/wiki) covers installation, configuration, every feature and the REST API; its source is [docs/wiki](docs/wiki).
+
 ## Contributing
 
 Bug reports and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for setup,
@@ -479,6 +484,16 @@ the build/test loop, conventions and the policy on AI-assisted PRs. Participatio
 is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 Found a vulnerability? Don't open an issue — see [SECURITY.md](SECURITY.md).
+
+## Streamline repositories
+
+| Repository | What it is |
+| --- | --- |
+| [streamline](https://github.com/DataHearth/streamline) | The server: media manager, web UI and extension host |
+| [streamline-player](https://github.com/Streamline-HQ/streamline-player) | The player apps (Android TV, desktop, web) and the HLS streaming engine |
+| [streamline-player-ext](https://github.com/Streamline-HQ/streamline-player-ext) | The `player` extension: the API the player apps talk to |
+| [streamline-opds-ext](https://github.com/Streamline-HQ/streamline-opds-ext) | OPDS 1.2 catalog for e-reader apps |
+| [streamline-subsonic-ext](https://github.com/Streamline-HQ/streamline-subsonic-ext) | Subsonic / OpenSubsonic server for music apps |
 
 ## License
 

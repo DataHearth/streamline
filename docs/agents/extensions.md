@@ -127,4 +127,4 @@ An `account_cards` entry with `kind: settings` carries `fields`, each `{id, kind
 
 ## OPDS and Subsonic are projects of their own
 
-Both are extensions in repositories of their own (`Streamline-HQ/streamline-opds`, `Streamline-HQ/streamline-subsonic`); nothing in this repository builds them, and core holds no column, table or view for either: tokens, passwords and everything else an extension keeps are in its own database. Subsonic's host needs are the folders, the cache, `send_file`, the ffmpeg and library scan services, the settings card, and the `/rest` and `/share` mounts below `/extensions/subsonic`.
+Both are extensions in repositories of their own (`Streamline-HQ/streamline-opds-ext`, `Streamline-HQ/streamline-subsonic-ext`); nothing in this repository builds them, and core holds no column, table or view for either: tokens, passwords and everything else an extension keeps are in its own database. Subsonic's host needs are the folders, the cache, `send_file`, the ffmpeg and library scan services, the settings card, and the `/rest` and `/share` mounts below `/extensions/subsonic`.

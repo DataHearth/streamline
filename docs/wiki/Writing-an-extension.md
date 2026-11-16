@@ -1,6 +1,6 @@
 # Writing an extension
 
-For what an extension is and how to add one, see [Extensions](Extensions). This page is the contract: version **2** of the guest API. The reference implementation is the [OPDS extension](https://github.com/Streamline-HQ/streamline-opds); the SDK it imports is `extensions/sdk` in the Streamline repository.
+For what an extension is and how to add one, see [Extensions](Extensions). This page is the contract: version **2** of the guest API. The reference implementation is the [OPDS extension](https://github.com/Streamline-HQ/streamline-opds-ext); the SDK it imports is `extensions/sdk` in the Streamline repository.
 
 ## Building
 
