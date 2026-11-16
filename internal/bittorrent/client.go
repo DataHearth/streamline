@@ -350,6 +350,7 @@ func (e *Engine) forget(hash string) {
 	e.mu.Lock()
 	delete(e.state, hash)
 	delete(e.sample, hash)
+	delete(e.peerReads, hash)
 	e.mu.Unlock()
 	var ih metainfo.Hash
 	if err := ih.FromHexString(hash); err == nil {

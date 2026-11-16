@@ -288,7 +288,7 @@ var _ = Describe("payloadCounters", Label("unit", "bittorrent"), func() {
 		stats.BytesWritten.Add(800)
 		stats.BytesWrittenData.Add(600)
 
-		down, up := payloadCounters(stats)
+		down, up := payloadCounters(&stats.ConnStats)
 		Expect(down).To(Equal(int64(5000)))
 		Expect(up).To(Equal(int64(600)))
 	})
