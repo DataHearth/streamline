@@ -235,6 +235,7 @@
 		const p: string[] = [];
 		// The date carries its own year, so the two never both appear.
 		p.push(airedText || String(show.year));
+		if (show.certification) p.push(show.certification);
 		const n = regularSeasons.length;
 		if (n > 0) p.push(`${n} season${n === 1 ? "" : "s"}`);
 		if (show.total_episodes) p.push(`${show.total_episodes} episodes`);

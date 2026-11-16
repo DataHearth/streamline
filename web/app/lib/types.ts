@@ -96,6 +96,7 @@ export type TVShow = {
 	// is why `year` stays and stays required.
 	first_aired?: string | null;
 	network?: string;
+	certification?: string;
 	creator?: string;
 	runtime?: number;
 	rating?: number | null;
@@ -250,14 +251,17 @@ export type Person = {
 	credits: number;
 };
 
+// job is the crew role held there ("Director"), absent for an acting credit.
 export type PersonMovieCredit = {
 	movie: Movie;
 	character: string;
+	job?: string;
 };
 
 export type PersonSeriesCredit = {
 	series: TVShow;
 	character: string;
+	job?: string;
 };
 
 // GET /people/{id}, keyed by the persons row id. Credits are the library's,
@@ -296,6 +300,8 @@ export type Movie = {
 	// Earliest digital release in the configured TMDB region, ISO yyyy-mm-dd.
 	// Absent until TMDB publishes one (or with no region configured).
 	digital_release_date?: string | null;
+	// The rating board's mark in the configured region ("PG-13", "16").
+	certification?: string;
 	status: MovieStatus;
 	tmdb_id: number;
 	overview?: string;

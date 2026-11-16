@@ -30,6 +30,10 @@ export function bookPosterUrl(id: number): string {
 	return `/posters/books/${id}/poster.jpg`;
 }
 
+export function personPhotoUrl(id: number): string {
+	return `/posters/people/${id}/poster.jpg`;
+}
+
 // Session-scoped negative cache. Poster URLs are constructed client-side, so
 // nothing tells the SPA which media has no artwork — without this, every card
 // remount replays the full retry ladder against a poster that will keep

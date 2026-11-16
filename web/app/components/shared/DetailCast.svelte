@@ -4,6 +4,7 @@
 	import type { CastMember } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import Img from "@components/shared/Img.svelte";
+	import { personPhotoUrl } from "@lib/posters";
 
 	let {
 		cast,
@@ -17,6 +18,13 @@
 		// the click to a person page, which would tear down the add flow.
 		external?: boolean;
 	} = $props();
+
+	// A library person's photo is served from the local copy; a lookup panel's
+	// cast has no persons row yet, so it keeps the provider's.
+	function photo(m: CastMember): string | undefined {
+		if (!m.profile_url) return undefined;
+		return !external && m.person_id ? personPhotoUrl(m.person_id) : m.profile_url;
+	}
 
 	function memberHref(m: CastMember): string | undefined {
 		if (external) return m.person_url;
@@ -33,6 +41,7 @@
 	>
 		{#each cast as member, i (i)}
 			{@const href = memberHref(member)}
+			{@const src = photo(member)}
 			<svelte:element
 				this={href ? "a" : "div"}
 				{href}
@@ -49,9 +58,9 @@
 						href && "transition group-hover:ring-2 group-hover:ring-accent-ring",
 					)}
 				>
-					{#if member.profile_url}
+					{#if src}
 						<Img
-							src={member.profile_url}
+							{src}
 							alt={member.name}
 							loading="lazy"
 							class="h-full w-full object-cover"

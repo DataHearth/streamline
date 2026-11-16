@@ -2,7 +2,7 @@
 	import { BookOpen, ChevronRight, Film, Music, Tv } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { initials } from "@lib/people";
-	import { posterUrl, tvPosterUrl } from "@lib/posters";
+	import { personPhotoUrl, posterUrl, tvPosterUrl } from "@lib/posters";
 	import Poster from "@components/shared/Poster.svelte";
 	import {
 		isTitleItem,
@@ -82,7 +82,7 @@
 		>
 			{#if item.profile_url}
 				<Img
-					src={item.profile_url}
+					src={personPhotoUrl(item.id)}
 					alt={item.label}
 					loading="lazy"
 					class="h-full w-full object-cover"

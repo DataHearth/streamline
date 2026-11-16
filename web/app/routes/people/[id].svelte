@@ -8,7 +8,7 @@
 	import { formatDate } from "@lib/dates";
 	import { formatBytes } from "@lib/format";
 	import { initials } from "@lib/people";
-	import { tvPosterUrl } from "@lib/posters";
+	import { personPhotoUrl, tvPosterUrl } from "@lib/posters";
 	import { movieStatus, seriesStatus } from "@lib/status";
 	import PosterCard from "@components/shared/PosterCard.svelte";
 	import type { Movie, PersonDetail, TVShow } from "@lib/types";
@@ -37,6 +37,8 @@
 	// same show has two credit rows, which as two cards reads as a duplicate
 	// poster — and as an {#each} keyed on the title id is a duplicate key that
 	// takes the whole page down. Tom Kenny in Adventure Time is both.
+	let photo = $derived(person?.profile_url ? personPhotoUrl(person.id) : undefined);
+
 	function roles(characters: string[]): string | undefined {
 		return characters.filter(Boolean).join(", ") || undefined;
 	}
@@ -45,7 +47,7 @@
 		const seen = new Map<number, { movie: Movie; characters: string[] }>();
 		for (const c of person?.movies ?? []) {
 			const entry = seen.get(c.movie.id) ?? { movie: c.movie, characters: [] };
-			entry.characters.push(c.character);
+			entry.characters.push(c.character || (c.job ?? ""));
 			seen.set(c.movie.id, entry);
 		}
 		return [...seen.values()].map((e) => ({
@@ -58,7 +60,7 @@
 		const seen = new Map<number, { series: TVShow; characters: string[] }>();
 		for (const c of person?.series ?? []) {
 			const entry = seen.get(c.series.id) ?? { series: c.series, characters: [] };
-			entry.characters.push(c.character);
+			entry.characters.push(c.character || (c.job ?? ""));
 			seen.set(c.series.id, entry);
 		}
 		return [...seen.values()].map((e) => ({
@@ -267,7 +269,7 @@
 {:else if person}
 	<section class="relative" aria-labelledby="person-name">
 		<!-- Fixed height: the biography expands in place. -->
-		<HeroBackdrop src={person.profile_url} class="h-[520px]" />
+		<HeroBackdrop src={photo} class="h-[520px]" />
 
 		<div
 			class="relative grid w-full items-start gap-5 px-4 pb-7 pt-8 md:grid-cols-[200px_1fr] md:gap-8 md:px-8 md:pb-12 md:pt-10 lg:grid-cols-[260px_1fr] lg:gap-10"
@@ -275,9 +277,9 @@
 			<div
 				class="relative mx-auto aspect-square w-44 overflow-hidden rounded-lg bg-bg-card shadow-[0_24px_48px_rgb(0_0_0_/0.5)] md:mx-0 md:w-auto"
 			>
-				{#if person.profile_url}
+				{#if photo}
 					<Img
-						src={person.profile_url}
+						src={photo}
 						alt={person.name}
 						class="h-full w-full object-cover"
 					/>
