@@ -2,7 +2,7 @@
 	import ClampedText from "@components/shared/ClampedText.svelte";
 	import type { Snippet } from "svelte";
 	import { Film, ArrowLeft } from "@lucide/svelte";
-	import { posterUrl } from "@lib/posters";
+	import { movieLogoUrl, posterUrl } from "@lib/posters";
 	import { listHref, MOVIES_SEARCH } from "@lib/prefs";
 	import { movieStatus } from "@lib/status";
 	import { formatDate } from "@lib/dates";
@@ -31,6 +31,12 @@
 	let primary = $derived(pickPrimary(movie.media_files));
 	let backdropSrc = $derived(posterUrl(movie));
 	provideHeroHold();
+
+	// A logo that fails to load falls back to the text title; a new movie on
+	// the same component gets its own try.
+	let logoFailedFor = $state<number | null>(null);
+	let showLogo = $derived(!!movie.has_logo && logoFailedFor !== movie.id);
+
 
 	// Single dotted meta line: release · runtime · rating · genres, then any
 	// file-derived facts. Mirrors the prototype's left-aligned header.
@@ -101,7 +107,17 @@
 				class="text-[26px] font-bold leading-[1.05] tracking-tight text-fg md:text-4xl lg:text-5xl"
 				title={movie.title}
 			>
-				{movie.title}
+				{#if showLogo}
+					<img
+						src={movieLogoUrl(movie)}
+						alt={movie.title}
+						decoding="async"
+						class="block h-auto max-h-28 w-auto max-w-full object-contain object-left drop-shadow-[0_2px_12px_rgb(0_0_0_/0.55)] md:max-h-40 md:max-w-[36rem] lg:max-h-48"
+						onerror={() => (logoFailedFor = movie.id)}
+					/>
+				{:else}
+					{movie.title}
+				{/if}
 			</h1>
 
 			{#if movie.original_title.trim() && movie.original_title.trim() !== movie.title.trim()}

@@ -543,7 +543,10 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 						Expect(r.URL.Query().Get("language")).To(Equal("fr"))
 						Expect(
 							r.URL.Query().Get("append_to_response"),
-						).To(Equal("translations,alternative_titles,credits"))
+						).To(Equal("translations,alternative_titles,credits,images"))
+						Expect(
+							r.URL.Query().Get("include_image_language"),
+						).To(Equal("fr,en,null"))
 
 						w.Header().Set("Content-Type", "application/json")
 						_, _ = w.Write(jsonBytes(map[string]any{
@@ -1137,6 +1140,53 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			Expect(CoverArtURL("abc-123")).To(Equal(
 				"https://coverartarchive.org/release-group/abc-123/front-500",
 			))
+		})
+	})
+
+	Describe("pickLogo", func() {
+		logos := []tmdbImage{
+			{FilePath: "/de.png", ISO639_1: "de", VoteAverage: 9},
+			{FilePath: "/none.png", VoteAverage: 8},
+			{FilePath: "/en-low.png", ISO639_1: "en", VoteAverage: 5.1},
+			{FilePath: "/en-high.svg", ISO639_1: "en", VoteAverage: 5.6},
+			{FilePath: "/fr.png", ISO639_1: "fr", VoteAverage: 1},
+		}
+
+		It("prefers the metadata language's primary subtag", func() {
+			Expect(pickLogo(logos, "fr-FR")).To(Equal("/fr.png"))
+		})
+
+		It("falls back to the best voted English logo", func() {
+			Expect(pickLogo(logos, "es")).To(Equal("/en-high.svg"))
+		})
+
+		It("takes a textless logo when there is no English one", func() {
+			Expect(pickLogo(logos[:2], "es")).To(Equal("/none.png"))
+		})
+
+		It("never picks another language's logo", func() {
+			Expect(pickLogo(logos[:1], "en")).To(BeEmpty())
+			Expect(pickLogo(nil, "en")).To(BeEmpty())
+		})
+	})
+
+	Describe("imageLanguages", func() {
+		It("asks for the language, English and textless art", func() {
+			Expect(imageLanguages("fr-FR")).To(Equal("fr,en,null"))
+			Expect(imageLanguages("en")).To(Equal("en,null"))
+			Expect(imageLanguages("")).To(Equal("en,null"))
+		})
+	})
+
+	Describe("LogoURL", func() {
+		It("asks TMDB for the PNG rendition", func() {
+			Expect(LogoURL("/abc.svg", "w500")).To(
+				Equal("https://image.tmdb.org/t/p/w500/abc.png"),
+			)
+			Expect(LogoURL("/abc.png", "w500")).To(
+				Equal("https://image.tmdb.org/t/p/w500/abc.png"),
+			)
+			Expect(LogoURL("", "w500")).To(BeEmpty())
 		})
 	})
 })

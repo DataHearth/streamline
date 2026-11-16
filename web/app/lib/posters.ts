@@ -4,6 +4,11 @@ export function posterUrl(movie: PosterRef): string {
 	return `/posters/movies/${movie.id}/poster.jpg`;
 }
 
+// A 404 means no logo is cached; has_logo on the movie says so up front.
+export function movieLogoUrl(movie: PosterRef): string {
+	return `/posters/movies/${movie.id}/logo.png`;
+}
+
 export function tvPosterUrl(id: number): string {
 	return `/posters/tvshows/${id}/poster.jpg`;
 }

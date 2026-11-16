@@ -186,7 +186,8 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 	}()
 
 	params := url.Values{
-		"append_to_response": {"translations,alternative_titles,credits"},
+		"append_to_response":     {"translations,alternative_titles,credits,images"},
+		"include_image_language": {imageLanguages(t.language)},
 	}
 	params = t.withLang(params, t.language)
 
@@ -284,6 +285,7 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 		Year:             extractYear(resp.ReleaseDate),
 		Overview:         overview,
 		PosterPath:       resp.PosterPath,
+		LogoPath:         pickLogo(resp.Images.Logos, t.language),
 		Genres:           genres,
 		Runtime:          numeric.SaturateU16(resp.Runtime),
 		Rating:           resp.VoteAverage,
@@ -488,6 +490,55 @@ const (
 	tmdbDigital    = 4
 )
 
+// imageLanguages is the include_image_language filter for a metadata
+// language: its primary subtag, English, and "null" for textless art. TMDB
+// otherwise filters images by the request's language alone, and most logos
+// are tagged "en".
+func imageLanguages(lang string) string {
+	primary, _, _ := strings.Cut(strings.ToLower(lang), "-")
+	if primary == "" || primary == "en" {
+		return "en,null"
+	}
+	return primary + ",en,null"
+}
+
+// pickLogo chooses the logo the movie hero shows: the metadata language's
+// first, then English, then one tagged with no language; within a language
+// the best voted, ties kept in TMDB's order. Empty when TMDB has none.
+func pickLogo(logos []tmdbImage, lang string) string {
+	primary, _, _ := strings.Cut(strings.ToLower(lang), "-")
+	rank := func(iso string) int {
+		switch {
+		case iso != "" && iso == primary:
+			return 0
+		case iso == "en":
+			return 1
+		case iso == "":
+			return 2
+		}
+		return 3
+	}
+	best := -1
+	for i, l := range logos {
+		if l.FilePath == "" || rank(l.ISO639_1) == 3 {
+			continue
+		}
+		if best < 0 {
+			best = i
+			continue
+		}
+		b := logos[best]
+		if r, rb := rank(l.ISO639_1), rank(b.ISO639_1); r < rb ||
+			(r == rb && l.VoteAverage > b.VoteAverage) {
+			best = i
+		}
+	}
+	if best < 0 {
+		return ""
+	}
+	return logos[best].FilePath
+}
+
 func findTranslation(ts []tmdbTranslation, lang string) (tmdbTranslation, bool) {
 	for _, t := range ts {
 		if t.ISO639_1 == lang {
@@ -609,6 +660,18 @@ type tmdbMovieResponse struct {
 	Translations     tmdbTranslationBag `json:"translations"`
 	AltTitles        tmdbAltTitleBag    `json:"alternative_titles"`
 	Credits          tmdbCredits        `json:"credits"`
+	Images           tmdbImages         `json:"images"`
+}
+
+// tmdbImages is append_to_response=images, narrowed by include_image_language.
+type tmdbImages struct {
+	Logos []tmdbImage `json:"logos"`
+}
+
+type tmdbImage struct {
+	FilePath    string  `json:"file_path"`
+	ISO639_1    string  `json:"iso_639_1"`
+	VoteAverage float32 `json:"vote_average"`
 }
 
 // tmdbAltTitleBag is append_to_response=alternative_titles. These are the

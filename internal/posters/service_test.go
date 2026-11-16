@@ -207,6 +207,76 @@ var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
 		})
 	})
 
+	Describe("logo", func() {
+		const png = "\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
+		var body string
+
+		BeforeEach(func() {
+			body = png
+			logo := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					_, _ = io.WriteString(w, body)
+				}),
+			)
+			DeferCleanup(logo.Close)
+			src = logo
+		})
+
+		It("caches logo.png beside the poster and serves it as PNG", func() {
+			ctx := context.Background()
+			Expect(svc.FetchLogo(ctx, "movies", 5, src.URL)).To(Succeed())
+			Expect(svc.LogoPath("movies", 5)).To(Equal(
+				filepath.Join(filepath.Dir(svc.Path("movies", 5)), "logo.png"),
+			))
+			Expect(svc.Path("movies", 5)).NotTo(BeAnExistingFile())
+
+			rec := httptest.NewRecorder()
+			svc.ServeLogo(
+				rec,
+				httptest.NewRequest(
+					http.MethodGet,
+					"/posters/movies/5/logo.png",
+					nil,
+				),
+				"movies",
+				5,
+			)
+			Expect(rec.Code).To(Equal(http.StatusOK))
+			Expect(rec.Header().Get("Content-Type")).To(Equal("image/png"))
+			Expect(rec.Body.String()).To(Equal(png))
+		})
+
+		It("refuses a body that is not an image and leaves no file", func() {
+			body = `<svg xmlns="http://www.w3.org/2000/svg"></svg>`
+			err := svc.FetchLogo(context.Background(), "movies", 6, src.URL)
+			Expect(err).To(MatchError(errNotImage))
+			Expect(svc.LogoPath("movies", 6)).NotTo(BeAnExistingFile())
+		})
+
+		It("answers 404 when no logo is cached", func() {
+			rec := httptest.NewRecorder()
+			svc.ServeLogo(
+				rec,
+				httptest.NewRequest(
+					http.MethodGet,
+					"/posters/movies/7/logo.png",
+					nil,
+				),
+				"movies",
+				7,
+			)
+			Expect(rec.Code).To(Equal(http.StatusNotFound))
+		})
+
+		It("goes with Remove", func() {
+			Expect(
+				svc.FetchLogo(context.Background(), "movies", 8, src.URL),
+			).To(Succeed())
+			Expect(svc.Remove("movies", 8)).To(Succeed())
+			Expect(svc.LogoPath("movies", 8)).NotTo(BeAnExistingFile())
+		})
+	})
+
 	Describe("Serve", func() {
 		It("serves the file with image/jpeg and cache headers", func() {
 			Expect(

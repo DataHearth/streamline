@@ -49,7 +49,10 @@ func init() {
 // metadata provider must not be able to fill the data volume.
 const maxPosterSize = 20 * 1024 * 1024
 
-var errTooLarge = fmt.Errorf("poster exceeds %d byte cap", maxPosterSize)
+var (
+	errTooLarge = fmt.Errorf("poster exceeds %d byte cap", maxPosterSize)
+	errNotImage = errors.New("poster source did not answer an image")
+)
 
 // validKinds doubles as a path-traversal guard: any kind outside this set
 // is rejected before touching the filesystem or the HTTP response.
@@ -71,8 +74,19 @@ type Manager interface {
 	Put(ctx context.Context, kind string, id uint32, r io.Reader) error
 	Serve(w http.ResponseWriter, r *http.Request, kind string, id uint32)
 	Path(kind string, id uint32) string
+	// FetchLogo, ServeLogo and LogoPath do for a title's transparent logo
+	// what their poster twins do, on logo.png beside poster.jpg.
+	FetchLogo(ctx context.Context, kind string, id uint32, src string) error
+	ServeLogo(w http.ResponseWriter, r *http.Request, kind string, id uint32)
+	LogoPath(kind string, id uint32) string
+	// Remove drops every image cached for the row, logo included.
 	Remove(kind string, id uint32) error
 }
+
+const (
+	posterFile = "poster.jpg"
+	logoFile   = "logo.png"
+)
 
 type posters struct {
 	dataDir string
@@ -87,12 +101,20 @@ func New(dataDir string) (Manager, error) {
 }
 
 func (p *posters) Path(kind string, id uint32) string {
+	return p.file(kind, id, posterFile)
+}
+
+func (p *posters) LogoPath(kind string, id uint32) string {
+	return p.file(kind, id, logoFile)
+}
+
+func (p *posters) file(kind string, id uint32, name string) string {
 	return filepath.Join(
 		p.dataDir,
 		"posters",
 		kind,
 		strconv.FormatUint(uint64(id), 10),
-		"poster.jpg",
+		name,
 	)
 }
 
@@ -118,6 +140,27 @@ func (p *posters) Fetch(
 	id uint32,
 	src string,
 ) error {
+	return p.fetch(ctx, kind, id, posterFile, src)
+}
+
+// FetchLogo is Fetch for the logo, and keeps only what sniffs as an image: a
+// logo source can answer SVG, which Serve would hand out as image/jpeg.
+func (p *posters) FetchLogo(
+	ctx context.Context,
+	kind string,
+	id uint32,
+	src string,
+) error {
+	return p.fetch(ctx, kind, id, logoFile, src)
+}
+
+func (p *posters) fetch(
+	ctx context.Context,
+	kind string,
+	id uint32,
+	name string,
+	src string,
+) error {
 	if _, ok := validKinds[kind]; !ok {
 		return fmt.Errorf("posters: invalid kind %q", kind)
 	}
@@ -127,6 +170,7 @@ func (p *posters) Fetch(
 		attribute.String("poster.kind", kind),
 		attribute.Int64("poster.id", int64(id)),
 		attribute.String("poster.src", src),
+		attribute.String("poster.asset", name),
 	)
 
 	// Serve counts cache hits and misses, and the outbound fetch behind a miss
@@ -136,11 +180,12 @@ func (p *posters) Fetch(
 	defer func() {
 		posterFetch.Add(ctx, 1, metric.WithAttributes(
 			attribute.String("poster.kind", kind),
+			attribute.String("poster.asset", name),
 			attribute.String("outcome", outcome),
 		))
 	}()
 
-	dst := p.Path(kind, id)
+	dst := p.file(kind, id, name)
 	if st, err := os.Stat(dst); err == nil && st.Size() > 0 {
 		outcome = "cached"
 		return nil
@@ -177,6 +222,11 @@ func (p *posters) Fetch(
 			outcome = "too_large"
 		}
 		return otelx.RecordSpanError(span, err)
+	}
+	if name == logoFile && !isImage(dst) {
+		outcome = "not_image"
+		_ = os.Remove(dst)
+		return otelx.RecordSpanError(span, errNotImage)
 	}
 	slog.InfoContext(
 		ctx,
@@ -255,20 +305,36 @@ func store(dst string, r io.Reader, replace bool) error {
 }
 
 // sniffImageType reports the cached file's real image type: sources hand back
-// PNG, WebP or GIF as readily as JPEG, and the file is always named poster.jpg.
+// PNG, WebP or GIF as readily as JPEG, whatever the cached file is named.
 // Anything that does not sniff as an image keeps image/jpeg, so a hostile body
 // is never served as a type a browser would render as a page.
 func sniffImageType(f *os.File) string {
-	head := make([]byte, 512)
-	n, err := f.ReadAt(head, 0)
-	if err != nil && !errors.Is(err, io.EOF) {
-		return "image/jpeg"
-	}
-	t := http.DetectContentType(head[:n])
-	if !strings.HasPrefix(t, "image/") {
+	t, ok := sniff(f)
+	if !ok {
 		return "image/jpeg"
 	}
 	return t
+}
+
+func isImage(path string) bool {
+	//nolint:gosec // a cache path built from a valid kind and an id
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	_, ok := sniff(f)
+	return ok
+}
+
+func sniff(f *os.File) (string, bool) {
+	head := make([]byte, 512)
+	n, err := f.ReadAt(head, 0)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", false
+	}
+	t := http.DetectContentType(head[:n])
+	return t, strings.HasPrefix(t, "image/")
 }
 
 func (p *posters) Serve(
@@ -277,10 +343,30 @@ func (p *posters) Serve(
 	kind string,
 	id uint32,
 ) {
+	p.serve(w, r, kind, id, posterFile)
+}
+
+func (p *posters) ServeLogo(
+	w http.ResponseWriter,
+	r *http.Request,
+	kind string,
+	id uint32,
+) {
+	p.serve(w, r, kind, id, logoFile)
+}
+
+func (p *posters) serve(
+	w http.ResponseWriter,
+	r *http.Request,
+	kind string,
+	id uint32,
+	name string,
+) {
 	ctx := r.Context()
 	record := func(outcome string) {
 		posterCache.Add(ctx, 1, metric.WithAttributes(
 			attribute.String("kind", kind),
+			attribute.String("asset", name),
 			attribute.String("outcome", outcome),
 		))
 	}
@@ -289,7 +375,7 @@ func (p *posters) Serve(
 		http.NotFound(w, r)
 		return
 	}
-	f, err := os.Open(p.Path(kind, id))
+	f, err := os.Open(p.file(kind, id, name))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			record("miss")
@@ -310,5 +396,5 @@ func (p *posters) Serve(
 	record("hit")
 	w.Header().Set("Content-Type", sniffImageType(f))
 	w.Header().Set("Cache-Control", "public, max-age=86400")
-	http.ServeContent(w, r, "poster.jpg", st.ModTime(), f)
+	http.ServeContent(w, r, name, st.ModTime(), f)
 }

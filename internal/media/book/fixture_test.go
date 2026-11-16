@@ -63,6 +63,22 @@ func (p *fakePosters) Path(
 	return "/posters/" + kind
 }
 
+func (p *fakePosters) FetchLogo(context.Context, string, uint32, string) error {
+	return nil
+}
+
+func (p *fakePosters) ServeLogo(
+	http.ResponseWriter,
+	*http.Request,
+	string,
+	uint32,
+) {
+}
+
+func (p *fakePosters) LogoPath(kind string, _ uint32) string {
+	return "/posters/" + kind
+}
+
 func (p *fakePosters) Remove(kind string, id uint32) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
