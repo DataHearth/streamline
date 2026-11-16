@@ -250,8 +250,9 @@
 	let libraryByLookupId = $derived.by(() => {
 		const map = new Map<number, Movie | TVShow>();
 		for (const item of libraryQuery.data?.items ?? []) {
-			// tvdb_id is the discriminant: a series carries a tmdb id too.
-			const key = "tvdb_id" in item ? item.tvdb_id : item.tmdb_id;
+			// `in` rather than `isMovie`: the flag is a prop, so it narrows nothing
+			// for the compiler, and the required id field is the real discriminant.
+			const key = "tmdb_id" in item ? item.tmdb_id : item.tvdb_id;
 			if (key) map.set(key, item);
 		}
 		return map;
@@ -268,7 +269,7 @@
 	// The library row narrowed to one kind, so the movie-only and series-only
 	// fields below are reachable without asserting.
 	let selectedMovie = $derived(
-		selectedLocal && !("tvdb_id" in selectedLocal) ? selectedLocal : undefined,
+		selectedLocal && "tmdb_id" in selectedLocal ? selectedLocal : undefined,
 	);
 	let selectedShow = $derived(
 		selectedLocal && "tvdb_id" in selectedLocal ? selectedLocal : undefined,
