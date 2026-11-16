@@ -97,7 +97,7 @@ func handle() int32 {
 		case "/request":
 			b, _ := json.Marshal(map[string]string{
 				"mount": r.Mount, "base_path": r.BasePath, "origin": r.Origin,
-				"path": r.Path,
+				"path": r.Path, "client_ip": r.ClientIP,
 			})
 			return sdk.Response{Status: 200, Body: b}
 		case "/headers", "/api/headers":

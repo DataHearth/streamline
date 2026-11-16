@@ -457,12 +457,13 @@ func buildRequest(r *http.Request, t target) (Request, error) {
 	headers := r.Header.Clone()
 	headers.Del("Cookie")
 	req := Request{
-		Method:  r.Method,
-		Path:    t.rel,
-		Query:   r.URL.RawQuery,
-		Headers: headers,
-		Body:    body,
-		Origin:  httputil.RequestOrigin(r),
+		Method:   r.Method,
+		Path:     t.rel,
+		Query:    r.URL.RawQuery,
+		Headers:  headers,
+		Body:     body,
+		Origin:   httputil.RequestOrigin(r),
+		ClientIP: httputil.ClientIPString(r),
 	}
 	req.Mount, req.BasePath = t.mount, t.base
 	if t.auth == authSelf {

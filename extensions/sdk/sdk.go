@@ -81,9 +81,12 @@ type Request struct {
 	// /cards subtrees. Origin is the scheme and host the client used, as
 	// Streamline works it out behind its trusted proxies: an absolute link
 	// back to the extension is Origin+BasePath+Mount+...
-	Mount    string   `json:"mount,omitempty"`
-	BasePath string   `json:"base_path,omitempty"`
-	Origin   string   `json:"origin,omitempty"`
+	Mount    string `json:"mount,omitempty"`
+	BasePath string `json:"base_path,omitempty"`
+	Origin   string `json:"origin,omitempty"`
+	// ClientIP is the client's address as Streamline resolves it behind its
+	// trusted proxies; X-Forwarded-For in Headers is whatever the client sent.
+	ClientIP string   `json:"client_ip,omitempty"`
 	Caller   *Caller  `json:"caller,omitempty"`
 	Folders  []Folder `json:"folders,omitempty"`
 	// TargetUser is the account a settings card is read or written for: an

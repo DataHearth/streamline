@@ -200,12 +200,17 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 	})
 
 	It(
-		"tells a guest its mount, its path and the origin the request came to",
+		"tells a guest its mount, its path, the origin and the client's address",
 		func() {
-			rr := do(http.MethodGet, "http://media.example/extensions/echo/request")
+			// An untrusted peer's X-Forwarded-For is the client's own word.
+			rr := do(
+				http.MethodGet,
+				"http://media.example/extensions/echo/request",
+				func(r *http.Request) { r.Header.Set("X-Forwarded-For", "203.0.113.9") },
+			)
 			Expect(rr.Body.String()).To(MatchJSON(`{
 			"mount": "/", "base_path": "/extensions/echo", "path": "/request",
-			"origin": "http://media.example"
+			"origin": "http://media.example", "client_ip": "192.0.2.1"
 		}`))
 		},
 	)
@@ -217,7 +222,7 @@ var _ = Describe("Manager.Middleware", Label("integration"), func() {
 		)
 		Expect(rr.Body.String()).To(MatchJSON(`{
 			"mount": "/inner", "base_path": "/extensions/echo", "path": "/request",
-			"origin": "http://media.example"
+			"origin": "http://media.example", "client_ip": "192.0.2.1"
 		}`))
 		Expect(do(http.MethodGet, "/extensions/echo/innermost").Body.String()).
 			To(Equal("/innermost"))
