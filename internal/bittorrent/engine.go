@@ -110,6 +110,9 @@ type Engine struct {
 	state map[string]*torrentState
 	// sample holds each torrent's rate history, written by sampleRates.
 	sample map[string]*rateMonitor
+	// peerReads holds the last read of each viewed torrent's connections,
+	// written by Details (peerRates).
+	peerReads map[string]*peerSnapshot
 	// refusals maps the hash of a torrent the path guard refused to the reason,
 	// kept after the torrent is dropped so GetTorrent can still tell the
 	// download manager why it is gone.
