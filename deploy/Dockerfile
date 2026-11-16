@@ -8,12 +8,6 @@
 # keeps building the old image. Renovate's dockerfile manager moves both, which
 # it can only do for a literal `image:tag@digest`, never one assembled from ARGs.
 
-# static-ffmpeg publishes hardened static PIE builds with no external deps,
-# which is what lets a bare COPY of the binaries into distroless (no package
-# manager, no libc to link against) work at all.
-ARG FFMPEG_VERSION=9.0
-ARG FFMPEG_DIGEST=sha256:b90574a4e2ae62b763c39c384526689e7eb435da6398f4fb3f6c3f1c6a14ce33
-
 # --- Frontend assets (esbuild + TailwindCSS) ---
 FROM node:26.13.1-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS frontend
 WORKDIR /app
@@ -77,10 +71,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 # --- ffprobe (media probe) ---
 # The runtime stage below is distroless static: no shell, no package manager,
-# so there's nothing to `apk add`/`apt install` ffmpeg into — see FFMPEG_DIGEST
-# above. Pinned by digest like every other base image; bump the tag AND digest
-# together.
-FROM docker.io/mwader/static-ffmpeg:${FFMPEG_VERSION}@${FFMPEG_DIGEST} AS ffmpeg
+# so there's nothing to `apk add`/`apt install` ffmpeg into. static-ffmpeg
+# publishes hardened static PIE builds with no external deps, which is what lets
+# a bare COPY of the binaries into distroless (no libc to link against) work at
+# all.
+FROM docker.io/mwader/static-ffmpeg:9.0@sha256:b90574a4e2ae62b763c39c384526689e7eb435da6398f4fb3f6c3f1c6a14ce33 AS ffmpeg
 
 # --- Go binary ---
 FROM golang:1.27.4-alpine@sha256:70bd7ddea8b6cbe5d6943cde279d6b67feb10cc924fb9100d1d8757c1575b280 AS builder
