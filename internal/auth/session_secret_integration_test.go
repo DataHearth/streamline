@@ -116,10 +116,10 @@ var _ = Describe("empty session secret", Label("integration", "auth"), func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	// A sanity spec, not the regression for the empty-file boot: it runs on
-	// the suite's own non-empty secret and passes without the fix. The specs
-	// that pin the fix are New refusing above and the stored-empty-key one
-	// below.
+	// Runs on the suite's own non-empty secret, so it only shows that a token
+	// signed with the empty key fails verification against a real one. New
+	// refusing an empty secret (above) and the stored-empty-key spec (below)
+	// are what keep an empty key out.
 	It("a healthy service rejects a token signed with the empty key", func() {
 		m, err := New(store)
 		Expect(err).NotTo(HaveOccurred())
