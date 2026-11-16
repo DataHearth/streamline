@@ -6,9 +6,9 @@
     "24.22.3": "sha256-SMo6qKmwITM1aSLvT8gCAOAFmMgKTvRG98OaRZIiWT0="
   },
   "pnpm": {
-    "12.18.0": {
-      "x86_64-linux": "sha512-OJ+X2wcraldCwj75pCIerWARQSRpdfj0eBTs/2ODyhfeW46ylOnjTIE/GKra6Mn6E72/gBmXS8igrUioa+F9fQ==",
-      "aarch64-linux": "sha512-2dpyVBCHT+FfpuQh9i+7MXAqNWYLCvD5vYr5p6Eimxoga8USLnjbUgyj72AOrO0hjc5ri3TEFP3jiyBHjkSZpQ=="
+    "12.20.0": {
+      "x86_64-linux": "sha512-FQlCX0bSn8CBQQodfWYIv9Nq98/Zpxaoj5onCzHuSdfaO7bGXUDZAtscaaEuJnxkIQOle7mVOLssoEy4Gp9shA==",
+      "aarch64-linux": "sha512-g8rFjUHaNKEkuQSqMCu+sA5PldhfMdQDc088H1H/SEV01vlCsJXXoGK4vLKSefEmgzVmgsG+9ozqeMmDDBE3Xw=="
     }
   }
 }
