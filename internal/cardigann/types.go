@@ -7,13 +7,13 @@ import (
 	jsonv2 "encoding/json/v2"
 	"fmt"
 
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 // Str is a scalar read as its literal text. Upstream writes the same key as a
 // string in one definition and an int or bool in the next (a select's default
 // of 1, a category id of "1"), and every consumer treats it as text anyway.
-// yaml.v3 already decodes any scalar into a string as its literal text (and
+// yaml already decodes any scalar into a string as its literal text (and
 // refuses a list or a mapping), so the type only names the intent.
 type Str string
 
