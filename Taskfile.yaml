@@ -87,6 +87,20 @@ tasks:
       - ent/**/*.go
       - exclude: ent/schema/*.go
 
+  generate:icons:
+    desc: Render every app icon in web/static/images from web/icons/logo.svg
+    cmd: go run ./web/icons
+    sources:
+      - web/icons/*.go
+      - web/icons/logo.svg
+    generates:
+      - web/static/images/favicon.svg
+      - web/static/images/favicon-48.png
+      - web/static/images/favicon-512.png
+      - web/static/images/icon-maskable-512.png
+      - web/static/images/icon-monochrome-512.png
+      - web/static/images/apple-touch-icon.png
+
   clean:
     desc: Remove build artifacts
     cmds:
