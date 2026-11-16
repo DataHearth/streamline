@@ -900,11 +900,12 @@ func newUnboundEngineNoPortForwarding(
 		listener:    listener,
 		packetConn:  packetConn,
 		state:       map[string]*torrentState{},
-		sample:      map[string]speedSample{},
+		sample:      map[string]*rateMonitor{},
 		stop:        make(chan struct{}),
 	}
 	Expect(e.restore(ctx)).To(Succeed())
 	e.wg.Go(e.enforceSeedLimits)
+	e.wg.Go(e.sampleRates)
 
 	closed := false
 	stop := func() {
