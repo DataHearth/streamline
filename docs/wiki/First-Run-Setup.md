@@ -133,7 +133,7 @@ Streamline only manages the torrents it added itself and the ones you mark as it
 | Client | What Streamline adds | How to hand it a torrent you added yourself |
 |---|---|---|
 | qBittorrent | Goes in the **`streamline`** category | Put the torrent in the `streamline` category |
-| Transmission | Gets the **`streamline`** label | Add the `streamline` label to the torrent (needs Transmission 3.00 or newer; older versions have no labels, so nothing can be handed over) |
+| Transmission | Gets the **`streamline`** label on Transmission 4.0.0 or newer. Before 4.0.0 a torrent cannot be labelled as it is added, so Streamline recognises its own downloads by their hash | Add the `streamline` label to the torrent (needs Transmission 3.00 or newer; older versions have no labels, so nothing can be handed over) |
 | Deluge | Not marked: Deluge has nothing built in for it, and Streamline recognises its own downloads by their hash | Enable Deluge's **Label** plugin and give the torrent the `streamline` label. Without the plugin nothing can be handed over |
 
 When you mark a torrent this way, Streamline notices and offers to import it — see [Activity and Calendar](Activity-and-Calendar#adopted-torrents).

@@ -156,10 +156,15 @@ func (t *Transmission) AddTorrent(
 // trFields are the torrent-get fields streamline reads. Names are camelCase
 // per the Transmission RPC spec (unlike the hyphenated method names).
 //
-// labels (RPC 16, Transmission 3.00) is how a torrent is known to be
-// streamline's: AddTorrent sets managedCategory, and an operator opts a
-// torrent of their own in by adding the same label. An older daemon returns
-// no labels at all, which reads as "none of these are ours".
+// labels (torrent-get and torrent-set from RPC 16, Transmission 3.00) is how
+// a torrent is known to be streamline's: an operator opts a torrent of their
+// own in by adding the managedCategory label. A daemon older than 3.00
+// returns no labels at all, which reads as "none of these are ours".
+//
+// AddTorrent sends the same label, but torrent-add takes labels only from
+// RPC 17 (Transmission 4.0.0): a 3.x daemon ignores the argument, so
+// streamline's own torrents come back Foreign there and are known by the
+// hash of their download record alone.
 var trFields = []string{
 	"hashString", "name", "percentDone", "totalSize",
 	"downloadDir", "rateDownload", "eta", "status", "errorString", "labels",
