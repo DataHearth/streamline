@@ -15,17 +15,17 @@
 	"customManagers": [
 		{
 			"customType": "regex",
-			"description": "Go's version, from go.dev's release list: go.mod's `go` directive and the Dockerfile's GO_VERSION, moved in one PR. nix/go.nix overrides nixpkgs' go_1_NN onto it; renovate-pins.yaml re-pins GO_DIGEST and derives the source hash.",
-			"managerFilePatterns": ["/(^|/)go\\.mod$/", "/^deploy/Dockerfile$/"],
-			"matchStrings": ["(?m)^go (?<currentValue>\\d+\\.\\d+\\.\\d+)$", "(?m)^ARG GO_VERSION=(?<currentValue>\\d+\\.\\d+\\.\\d+)$"],
+			"description": "Go's version, from go.dev's release list: go.mod's `go` directive. The go rule groups it with the Dockerfile's golang images, whose tag and digest the dockerfile manager moves. nix/go.nix overrides nixpkgs' go_1_NN onto it; renovate-pins.yaml derives the source hash.",
+			"managerFilePatterns": ["/(^|/)go\\.mod$/"],
+			"matchStrings": ["(?m)^go (?<currentValue>\\d+\\.\\d+\\.\\d+)$"],
 			"depNameTemplate": "go",
 			"datasourceTemplate": "golang-version"
 		},
 		{
 			"customType": "regex",
-			"description": "Node's version, from nodejs.org's release list: engines.node (a `>=` floor), the Dockerfile's node tag and every setup-node node-version, moved in one PR. nix/node.nix overrides nixpkgs' nodejs_NN onto it; renovate-pins.yaml re-pins the image digest and derives the source hash.",
-			"managerFilePatterns": ["/^package\\.json$/", "/^deploy/Dockerfile$/", "/^\\.github/workflows/[^/]+\\.yaml$/"],
-			"matchStrings": ["\"node\": \">=(?<currentValue>\\d+\\.\\d+\\.\\d+)\"", "FROM node:(?<currentValue>\\d+\\.\\d+\\.\\d+)-alpine", "(?m)^\\s*node-version: (?<currentValue>\\d+\\.\\d+\\.\\d+)$"],
+			"description": "Node's version, from nodejs.org's release list: engines.node (a `>=` floor) and every setup-node node-version. The node rule groups it with the Dockerfile's node image, whose tag and digest the dockerfile manager moves. nix/node.nix overrides nixpkgs' nodejs_NN onto it; renovate-pins.yaml derives the source hash.",
+			"managerFilePatterns": ["/^package\\.json$/", "/^\\.github/workflows/[^/]+\\.yaml$/"],
+			"matchStrings": ["\"node\": \">=(?<currentValue>\\d+\\.\\d+\\.\\d+)\"", "(?m)^\\s*node-version: (?<currentValue>\\d+\\.\\d+\\.\\d+)$"],
 			"depNameTemplate": "node",
 			"datasourceTemplate": "node-version",
 			"versioningTemplate": "node"
@@ -74,15 +74,32 @@
 			"dependencyDashboardApproval": true
 		},
 		{
-			"description": "go.mod's own `go` directive is bumped by the regex manager below, which moves the Dockerfile's GO_VERSION in the same PR; left on, gomod would bump the directive alone and leave the copy behind. Same for the node and golang images and the setup actions' node-version, which the node and go regex managers own.",
+			"description": "go.mod's own `go` directive is bumped by the go regex manager, grouped with the golang images; left on, gomod would bump the directive alone in a PR of its own. Same for engines.node and the setup actions' node-version, which the node regex manager owns.",
 			"matchManagers": ["gomod"],
 			"matchDepTypes": ["golang", "toolchain"],
 			"enabled": false
 		},
 		{
-			"matchManagers": ["npm", "dockerfile", "github-actions"],
+			"matchManagers": ["npm", "github-actions"],
 			"matchDepNames": ["node", "golang"],
 			"enabled": false
+		},
+		{
+			"description": "One PR per toolchain: the version from its upstream release list and the Dockerfile's image, tag and digest together. After the docker images group on purpose — the later rule wins.",
+			"matchManagers": ["custom.regex", "dockerfile"],
+			"matchDepNames": ["go", "golang"],
+			"groupName": "go"
+		},
+		{
+			"matchManagers": ["custom.regex", "dockerfile"],
+			"matchDepNames": ["node"],
+			"groupName": "node"
+		},
+		{
+			"description": "Docker Hub dates a tag by its last push and official images are rebuilt often, so the 3-day age would hold the image behind the version it follows, splitting the toolchain PR. The release list's own age gate already covers the version.",
+			"matchManagers": ["dockerfile"],
+			"matchDepNames": ["node", "golang"],
+			"minimumReleaseAge": "0 days"
 		},
 		{
 			"description": "The PR that moves the locked nixpkgs. It touches no toolchain version: nix/{go,node,pnpm}.nix override nixpkgs' package onto the declared patch while the two differ, and .github/workflows/renovate-pins.yaml drops the override's hashes from nix/toolchains.json once the lock catches up. After the major gate on purpose — the later rule wins, so this overrides the major-update dashboard gate above, which a nixpkgs revision would otherwise sit behind forever.",
@@ -99,8 +116,8 @@
 		},
 		{
 			"description": "A new Go minor is a new nixpkgs line (go_1_NN), so it waits on the dashboard until nixpkgs packages it; nix/go.nix throws on a line it does not have. Patches open straight away — that is the point of sourcing them from go.dev rather than from the lock.",
-			"matchManagers": ["custom.regex"],
-			"matchDepNames": ["go"],
+			"matchManagers": ["custom.regex", "dockerfile"],
+			"matchDepNames": ["go", "golang"],
 			"matchUpdateTypes": ["minor", "major"],
 			"dependencyDashboardApproval": true
 		},

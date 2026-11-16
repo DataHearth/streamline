@@ -4,14 +4,9 @@
 # tag-only pin means the bytes that ship can change without a commit. Refresh one
 # with `docker buildx imagetools inspect <image>:<tag> --format '{{.Manifest.Digest}}'`.
 #
-# TRAP: where a digest sits next to a version ARG, the digest is what resolves —
-# bumping the version alone silently keeps building the old image. Bump both.
-
-# Pinned, not floating `1.26-alpine`: a moving tag makes grype's stdlib findings
-# drift between builds independently of our code. The cost is that stdlib CVE
-# fixes require bumping this by hand — grype failing on `stdlib` is the signal.
-ARG GO_VERSION=1.27.4
-ARG GO_DIGEST=sha256:70bd7ddea8b6cbe5d6943cde279d6b67feb10cc924fb9100d1d8757c1575b280
+# TRAP: the digest is what resolves — a tag moved without its digest silently
+# keeps building the old image. Renovate's dockerfile manager moves both, which
+# it can only do for a literal `image:tag@digest`, never one assembled from ARGs.
 
 # static-ffmpeg publishes hardened static PIE builds with no external deps,
 # which is what lets a bare COPY of the binaries into distroless (no package
@@ -60,7 +55,10 @@ RUN pnpm exec tailwindcss \
     --minify
 
 # --- Go codegen (oapi-codegen + ent via `go tool`) ---
-FROM golang:${GO_VERSION}-alpine@${GO_DIGEST} AS codegen
+# Pinned, not floating `1.27-alpine`: a moving tag makes grype's stdlib findings
+# drift between builds independently of our code. The same tag and digest as the
+# builder stage; renovate moves the two together.
+FROM golang:1.27.4-alpine@sha256:70bd7ddea8b6cbe5d6943cde279d6b67feb10cc924fb9100d1d8757c1575b280 AS codegen
 WORKDIR /app
 
 COPY go.mod go.sum ./
@@ -85,7 +83,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM docker.io/mwader/static-ffmpeg:${FFMPEG_VERSION}@${FFMPEG_DIGEST} AS ffmpeg
 
 # --- Go binary ---
-FROM golang:${GO_VERSION}-alpine@${GO_DIGEST} AS builder
+FROM golang:1.27.4-alpine@sha256:70bd7ddea8b6cbe5d6943cde279d6b67feb10cc924fb9100d1d8757c1575b280 AS builder
 WORKDIR /app
 
 COPY --from=codegen /app /app
