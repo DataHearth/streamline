@@ -556,10 +556,14 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 				Expect(store.DeleteTorrentSessionByHash(ctx, hash)).To(Succeed())
 			})
 			connectToSeeder(checkEngine, hash, checkPort)
+			// Progress counts chunks written but not yet hashed, and a close
+			// drops those; only a piece already verified is on disk for the
+			// restart to find. On a loaded runner the hasher trails the
+			// transfer by more than the margin the assertion below leaves.
 			Eventually(func() float64 {
-				t, terr := checkEngine.GetTorrent(ctx, hash)
+				t, terr := checkEngine.torrent(hash)
 				Expect(terr).NotTo(HaveOccurred())
-				return t.Progress
+				return verifiedShare(t)
 			}).WithTimeout(60 * time.Second).WithPolling(time.Millisecond).
 				Should(BeNumerically(">", 0.5))
 			closeCheck()
@@ -1199,3 +1203,19 @@ var _ = Describe(
 		})
 	},
 )
+
+// verifiedShare is the fraction of the torrent's pieces whose hash has
+// passed.
+func verifiedShare(t *antorrent.Torrent) float64 {
+	var done, total int
+	for _, run := range t.PieceStateRuns() {
+		total += run.Length
+		if run.Complete {
+			done += run.Length
+		}
+	}
+	if total == 0 {
+		return 0
+	}
+	return float64(done) / float64(total)
+}
