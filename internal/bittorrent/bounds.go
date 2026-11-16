@@ -44,11 +44,12 @@ const (
 	// maxPeerRequestDataPerConn bounds the piece data one connection buffers
 	// for its peer's requests before sending it (default 1 MiB). A peer
 	// pipelines many requests at once, and an upload rate limit or a slow
-	// peer holds them back, so on a seeding connection this fills: at the default it was the
-	// largest per-connection cost, unbounded by anything above — 150 seeding
-	// connections could hold 150 MB. anacrolix refuses a request longer than
-	// this outright, so it must stay well above the 16 KiB block size peers
-	// request; 256 KiB leaves room for clients that ask for larger blocks.
+	// peer holds them back, so on a seeding connection this fills. At the
+	// default it is the largest per-connection cost and nothing above bounds
+	// it: 150 seeding connections can hold 150 MB. anacrolix refuses a request
+	// longer than this outright, so it must stay well above the 16 KiB block
+	// size peers request; 256 KiB leaves room for clients that ask for larger
+	// blocks.
 	maxPeerRequestDataPerConn = 256 << 10
 	// maxTorrents caps how many torrents the engine holds at once. Every grab
 	// is open to members and adds one, and nothing else ever counts them:
