@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 // Decode parses one upstream YAML definition, rejecting any key the model
@@ -19,7 +19,7 @@ import (
 // The strictness is the point. The upstream schema forbids extra keys, so an
 // unknown one means the schema grew and this package did not — and a field
 // dropped on the floor here is a tracker that silently half-works later.
-// yaml.v3's KnownFields does not survive a custom unmarshaler (Node.Decode
+// yaml's KnownFields does not survive a custom unmarshaler (Node.Decode
 // starts a fresh, lenient decoder), which every OrderedMap is, so the check
 // walks the node tree against the Go types itself.
 //
@@ -29,10 +29,6 @@ import (
 // mean different things on each side — Prowlarr keeps every duplicate field
 // in order and reads other duplicates last-wins, OrderedMap.Get first-wins.
 func Decode(src []byte) (*Definition, error) {
-	src, err := protectSlashes(src)
-	if err != nil {
-		return nil, err
-	}
 	// yaml.Unmarshal reads the first document and ignores the rest, so a
 	// second one — parseable or not — would ride along unseen.
 	var root yaml.Node
@@ -61,44 +57,8 @@ func Decode(src []byte) (*Definition, error) {
 	return &d, nil
 }
 
-// slashSentinel stands in for \/ while the YAML is parsed. YAML 1.2 (and the
-// .NET parser upstream is written against) reads "\/" in a double-quoted
-// scalar as "/", for JSON compatibility; yaml.v3 implements 1.1 and rejects it
-// as an unknown escape. Everywhere else — plain, single-quoted and block
-// scalars — the backslash is literal text and must survive, since \/ in a CSS
-// identifier or a replace filter's argument is not /. So each unescaped \/
-// becomes an escape yaml.v3 does know for "/", and sanitize puts \/ back in
-// every scalar that is not double-quoted, where the escape was never read.
-const slashSentinel = `\U0000002F`
-
-func protectSlashes(src []byte) ([]byte, error) {
-	if !bytes.Contains(src, []byte(`\/`)) {
-		return src, nil
-	}
-	if bytes.Contains(src, []byte(slashSentinel)) {
-		return nil, fmt.Errorf("source spells both \\/ and %s", slashSentinel)
-	}
-	out := make([]byte, 0, len(src)+64)
-	run := 0 // consecutive backslashes just copied
-	for _, c := range src {
-		if c == '/' && run%2 == 1 {
-			out = append(out[:len(out)-1], slashSentinel...)
-			run = 0
-			continue
-		}
-		if c == '\\' {
-			run++
-		} else {
-			run = 0
-		}
-		out = append(out, c)
-	}
-	return out, nil
-}
-
-// sanitize refuses anchors, aliases, explicit tags and duplicate keys, and
-// restores \/ in the scalars protectSlashes reached but the YAML parser did
-// not unescape. Upstream writes no tags, and each one changes decoding behind
+// sanitize refuses anchors, aliases, explicit tags and duplicate keys.
+// Upstream writes no tags, and each one changes decoding behind
 // the strict check's back: !!null on a mapping still fills the struct while
 // skipping the unknown-key walk, !!binary base64-decodes a string.
 func sanitize(n *yaml.Node) error {
@@ -114,9 +74,6 @@ func sanitize(n *yaml.Node) error {
 			n.Line,
 			n.Tag,
 		)
-	}
-	if n.Kind == yaml.ScalarNode && n.Style&yaml.DoubleQuotedStyle == 0 {
-		n.Value = strings.ReplaceAll(n.Value, slashSentinel, `\/`)
 	}
 	if n.Kind == yaml.MappingNode {
 		seen := make(map[string]bool, len(n.Content)/2)
