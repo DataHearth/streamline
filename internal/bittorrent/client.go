@@ -759,8 +759,7 @@ func narrowPort(p int) (uint16, bool) {
 }
 
 // liveStats is one consistent snapshot of a torrent's transfer state,
-// shared by the download.Client view and the /torrents management views so
-// the rate sampler is hit exactly once per observation.
+// shared by the download.Client view and the /torrents management views.
 type liveStats struct {
 	hash           string
 	name           string
@@ -790,20 +789,10 @@ func (e *Engine) live(t *antorrent.Torrent) liveStats {
 		progress = float64(completed) / float64(size)
 	}
 	stats := t.Stats()
-	// This process's counter only — rates works on deltas, and folding a
-	// constant base into it would change nothing but the first sample.
 	sessionUp := stats.BytesWrittenData.Int64()
-	down, up := e.rates(hash, completed, sessionUp)
 	status := e.status(t, hash)
-	// Every piece that passes the check adds to completed, which rates reads
-	// as bytes arriving.
-	if status == download.StatusChecking {
-		down = 0
-	}
-	var eta int64
-	if down > 0 && size > completed {
-		eta = (size - completed) / down
-	}
+	down, up, eta := e.rates(hash, size-completed)
+	down, up, eta = shownRates(status, down, up, eta)
 	st := e.getState(hash)
 	return liveStats{
 		hash:           hash,
@@ -888,27 +877,4 @@ func (e *Engine) status(
 		return download.StatusStalled
 	}
 	return download.StatusDownloading
-}
-
-// rates derives download/upload bytes/sec from the deltas since the
-// previous observation of this torrent. First observation (or byte
-// regression after a failed piece check) reports 0.
-func (e *Engine) rates(hash string, completed, uploaded int64) (int64, int64) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	prev, ok := e.sample[hash]
-	now := time.Now()
-	e.sample[hash] = speedSample{down: completed, up: uploaded, at: now}
-	elapsed := now.Sub(prev.at).Seconds()
-	if !ok || elapsed <= 0 {
-		return 0, 0
-	}
-	var down, up int64
-	if completed >= prev.down {
-		down = int64(float64(completed-prev.down) / elapsed)
-	}
-	if uploaded >= prev.up {
-		up = int64(float64(uploaded-prev.up) / elapsed)
-	}
-	return down, up
 }
