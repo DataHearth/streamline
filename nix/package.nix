@@ -91,7 +91,7 @@ let
       inherit (finalAttrs) version src;
       inherit pnpm;
       fetcherVersion = 4;
-      hash = "sha256-7dCdo4BChW2T8KsBZnKmILTvtooc/LY1jCWphDJGfOo=";
+      hash = "sha256-X6Lsg3hl4Zsw4RtokGRy+HK3onw4yKNu2FMitBbBXBY=";
     };
 
     # nixpkgs' pnpmConfigHook rebuilds the store's index.db from a `.dump`,
