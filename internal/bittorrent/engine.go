@@ -81,12 +81,6 @@ type torrentState struct {
 	prioritized bool
 }
 
-type speedSample struct {
-	down int64
-	up   int64
-	at   time.Time
-}
-
 // Engine wraps one anacrolix torrent client. It implements download.Client
 // (the "builtin" client_type) and Manager (the /api/v1/torrents surface).
 type Engine struct {
@@ -112,9 +106,10 @@ type Engine struct {
 	bindIP  net.IP
 	probing sync.Mutex
 
-	mu     sync.Mutex
-	state  map[string]*torrentState
-	sample map[string]speedSample
+	mu    sync.Mutex
+	state map[string]*torrentState
+	// sample holds each torrent's rate history, written by sampleRates.
+	sample map[string]*rateMonitor
 	// refusals maps the hash of a torrent the path guard refused to the reason,
 	// kept after the torrent is dropped so GetTorrent can still tell the
 	// download manager why it is gone.
@@ -180,7 +175,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		entry:       entry,
 		bindIP:      bindIP,
 		state:       map[string]*torrentState{},
-		sample:      map[string]speedSample{},
+		sample:      map[string]*rateMonitor{},
 		refusals:    map[string]string{},
 		stop:        make(chan struct{}),
 	}
@@ -203,6 +198,7 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	e.registerEngineGauges(ctx)
 	e.wg.Go(e.enforceSeedLimits)
 	e.wg.Go(e.dropRedundantSeeders)
+	e.wg.Go(e.sampleRates)
 	return e, nil
 }
 
