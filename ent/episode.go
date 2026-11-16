@@ -40,6 +40,10 @@ type Episode struct {
 	GrabFailures uint8 `json:"grab_failures,omitempty"`
 	// LastSearchAt holds the value of the "last_search_at" field.
 	LastSearchAt *time.Time `json:"last_search_at,omitempty"`
+	// TvdbID holds the value of the "tvdb_id" field.
+	TvdbID uint32 `json:"tvdb_id,omitempty"`
+	// CreditsFetchedAt holds the value of the "credits_fetched_at" field.
+	CreditsFetchedAt *time.Time `json:"credits_fetched_at,omitempty"`
 	// Status holds the value of the "status" field.
 	Status episode.Status `json:"status,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -61,9 +65,11 @@ type EpisodeEdges struct {
 	MediaFiles []*MediaFile `json:"media_files,omitempty"`
 	// Events holds the value of the events edge.
 	Events []*MediaEvent `json:"events,omitempty"`
+	// Credits holds the value of the credits edge.
+	Credits []*Credit `json:"credits,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [6]bool
 }
 
 // SeasonOrErr returns the Season value or an error if the edge
@@ -113,6 +119,15 @@ func (e EpisodeEdges) EventsOrErr() ([]*MediaEvent, error) {
 	return nil, &NotLoadedError{edge: "events"}
 }
 
+// CreditsOrErr returns the Credits value or an error if the edge
+// was not loaded in eager-loading.
+func (e EpisodeEdges) CreditsOrErr() ([]*Credit, error) {
+	if e.loadedTypes[5] {
+		return e.Credits, nil
+	}
+	return nil, &NotLoadedError{edge: "credits"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Episode) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -120,11 +135,11 @@ func (*Episode) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case episode.FieldMonitored, episode.FieldMonitorPinned:
 			values[i] = new(sql.NullBool)
-		case episode.FieldID, episode.FieldNumber, episode.FieldAbsoluteNumber, episode.FieldGrabFailures:
+		case episode.FieldID, episode.FieldNumber, episode.FieldAbsoluteNumber, episode.FieldGrabFailures, episode.FieldTvdbID:
 			values[i] = new(sql.NullInt64)
 		case episode.FieldTitle, episode.FieldOverview, episode.FieldStatus:
 			values[i] = new(sql.NullString)
-		case episode.FieldCreateTime, episode.FieldUpdateTime, episode.FieldAirDate, episode.FieldLastSearchAt:
+		case episode.FieldCreateTime, episode.FieldUpdateTime, episode.FieldAirDate, episode.FieldLastSearchAt, episode.FieldCreditsFetchedAt:
 			values[i] = new(sql.NullTime)
 		case episode.ForeignKeys[0]: // season_episodes
 			values[i] = new(sql.NullInt64)
@@ -216,6 +231,19 @@ func (_m *Episode) assignValues(columns []string, values []any) error {
 				_m.LastSearchAt = new(time.Time)
 				*_m.LastSearchAt = value.Time
 			}
+		case episode.FieldTvdbID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field tvdb_id", values[i])
+			} else if value.Valid {
+				_m.TvdbID = uint32(value.Int64)
+			}
+		case episode.FieldCreditsFetchedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field credits_fetched_at", values[i])
+			} else if value.Valid {
+				_m.CreditsFetchedAt = new(time.Time)
+				*_m.CreditsFetchedAt = value.Time
+			}
 		case episode.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
@@ -265,6 +293,11 @@ func (_m *Episode) QueryMediaFiles() *MediaFileQuery {
 // QueryEvents queries the "events" edge of the Episode entity.
 func (_m *Episode) QueryEvents() *MediaEventQuery {
 	return NewEpisodeClient(_m.config).QueryEvents(_m)
+}
+
+// QueryCredits queries the "credits" edge of the Episode entity.
+func (_m *Episode) QueryCredits() *CreditQuery {
+	return NewEpisodeClient(_m.config).QueryCredits(_m)
 }
 
 // Update returns a builder for updating this Episode.
@@ -322,6 +355,14 @@ func (_m *Episode) String() string {
 	builder.WriteString(", ")
 	if v := _m.LastSearchAt; v != nil {
 		builder.WriteString("last_search_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("tvdb_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TvdbID))
+	builder.WriteString(", ")
+	if v := _m.CreditsFetchedAt; v != nil {
+		builder.WriteString("credits_fetched_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")

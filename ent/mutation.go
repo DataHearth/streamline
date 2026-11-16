@@ -14709,6 +14709,8 @@ type CreditMutation struct {
 	character      *string
 	_order         *uint8
 	add_order      *int8
+	job            *string
+	department     *string
 	clearedFields  map[string]struct{}
 	person         *uint32
 	clearedperson  bool
@@ -14716,6 +14718,8 @@ type CreditMutation struct {
 	clearedmovie   bool
 	tv_show        *uint32
 	clearedtv_show bool
+	episode        *uint32
+	clearedepisode bool
 	done           bool
 	oldValue       func(context.Context) (*Credit, error)
 	predicates     []predicate.Credit
@@ -15016,6 +15020,104 @@ func (m *CreditMutation) ResetOrder() {
 	delete(m.clearedFields, credit.FieldOrder)
 }
 
+// SetJob sets the "job" field.
+func (m *CreditMutation) SetJob(s string) {
+	m.job = &s
+}
+
+// Job returns the value of the "job" field in the mutation.
+func (m *CreditMutation) Job() (r string, exists bool) {
+	v := m.job
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldJob returns the old "job" field's value of the Credit entity.
+// If the Credit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditMutation) OldJob(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldJob is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldJob requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldJob: %w", err)
+	}
+	return oldValue.Job, nil
+}
+
+// ClearJob clears the value of the "job" field.
+func (m *CreditMutation) ClearJob() {
+	m.job = nil
+	m.clearedFields[credit.FieldJob] = struct{}{}
+}
+
+// JobCleared returns if the "job" field was cleared in this mutation.
+func (m *CreditMutation) JobCleared() bool {
+	_, ok := m.clearedFields[credit.FieldJob]
+	return ok
+}
+
+// ResetJob resets all changes to the "job" field.
+func (m *CreditMutation) ResetJob() {
+	m.job = nil
+	delete(m.clearedFields, credit.FieldJob)
+}
+
+// SetDepartment sets the "department" field.
+func (m *CreditMutation) SetDepartment(s string) {
+	m.department = &s
+}
+
+// Department returns the value of the "department" field in the mutation.
+func (m *CreditMutation) Department() (r string, exists bool) {
+	v := m.department
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDepartment returns the old "department" field's value of the Credit entity.
+// If the Credit object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CreditMutation) OldDepartment(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDepartment is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDepartment requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDepartment: %w", err)
+	}
+	return oldValue.Department, nil
+}
+
+// ClearDepartment clears the value of the "department" field.
+func (m *CreditMutation) ClearDepartment() {
+	m.department = nil
+	m.clearedFields[credit.FieldDepartment] = struct{}{}
+}
+
+// DepartmentCleared returns if the "department" field was cleared in this mutation.
+func (m *CreditMutation) DepartmentCleared() bool {
+	_, ok := m.clearedFields[credit.FieldDepartment]
+	return ok
+}
+
+// ResetDepartment resets all changes to the "department" field.
+func (m *CreditMutation) ResetDepartment() {
+	m.department = nil
+	delete(m.clearedFields, credit.FieldDepartment)
+}
+
 // SetPersonID sets the "person" edge to the Person entity by id.
 func (m *CreditMutation) SetPersonID(id uint32) {
 	m.person = &id
@@ -15133,6 +15235,45 @@ func (m *CreditMutation) ResetTvShow() {
 	m.clearedtv_show = false
 }
 
+// SetEpisodeID sets the "episode" edge to the Episode entity by id.
+func (m *CreditMutation) SetEpisodeID(id uint32) {
+	m.episode = &id
+}
+
+// ClearEpisode clears the "episode" edge to the Episode entity.
+func (m *CreditMutation) ClearEpisode() {
+	m.clearedepisode = true
+}
+
+// EpisodeCleared reports if the "episode" edge to the Episode entity was cleared.
+func (m *CreditMutation) EpisodeCleared() bool {
+	return m.clearedepisode
+}
+
+// EpisodeID returns the "episode" edge ID in the mutation.
+func (m *CreditMutation) EpisodeID() (id uint32, exists bool) {
+	if m.episode != nil {
+		return *m.episode, true
+	}
+	return
+}
+
+// EpisodeIDs returns the "episode" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// EpisodeID instead. It exists only for internal usage by the builders.
+func (m *CreditMutation) EpisodeIDs() (ids []uint32) {
+	if id := m.episode; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetEpisode resets all changes to the "episode" edge.
+func (m *CreditMutation) ResetEpisode() {
+	m.episode = nil
+	m.clearedepisode = false
+}
+
 // Where appends a list predicates to the CreditMutation builder.
 func (m *CreditMutation) Where(ps ...predicate.Credit) {
 	m.predicates = append(m.predicates, ps...)
@@ -15167,7 +15308,7 @@ func (m *CreditMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CreditMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 6)
 	if m.create_time != nil {
 		fields = append(fields, credit.FieldCreateTime)
 	}
@@ -15179,6 +15320,12 @@ func (m *CreditMutation) Fields() []string {
 	}
 	if m._order != nil {
 		fields = append(fields, credit.FieldOrder)
+	}
+	if m.job != nil {
+		fields = append(fields, credit.FieldJob)
+	}
+	if m.department != nil {
+		fields = append(fields, credit.FieldDepartment)
 	}
 	return fields
 }
@@ -15196,6 +15343,10 @@ func (m *CreditMutation) Field(name string) (ent.Value, bool) {
 		return m.Character()
 	case credit.FieldOrder:
 		return m.Order()
+	case credit.FieldJob:
+		return m.Job()
+	case credit.FieldDepartment:
+		return m.Department()
 	}
 	return nil, false
 }
@@ -15213,6 +15364,10 @@ func (m *CreditMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldCharacter(ctx)
 	case credit.FieldOrder:
 		return m.OldOrder(ctx)
+	case credit.FieldJob:
+		return m.OldJob(ctx)
+	case credit.FieldDepartment:
+		return m.OldDepartment(ctx)
 	}
 	return nil, fmt.Errorf("unknown Credit field %s", name)
 }
@@ -15249,6 +15404,20 @@ func (m *CreditMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetOrder(v)
+		return nil
+	case credit.FieldJob:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetJob(v)
+		return nil
+	case credit.FieldDepartment:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDepartment(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Credit field %s", name)
@@ -15301,6 +15470,12 @@ func (m *CreditMutation) ClearedFields() []string {
 	if m.FieldCleared(credit.FieldOrder) {
 		fields = append(fields, credit.FieldOrder)
 	}
+	if m.FieldCleared(credit.FieldJob) {
+		fields = append(fields, credit.FieldJob)
+	}
+	if m.FieldCleared(credit.FieldDepartment) {
+		fields = append(fields, credit.FieldDepartment)
+	}
 	return fields
 }
 
@@ -15320,6 +15495,12 @@ func (m *CreditMutation) ClearField(name string) error {
 		return nil
 	case credit.FieldOrder:
 		m.ClearOrder()
+		return nil
+	case credit.FieldJob:
+		m.ClearJob()
+		return nil
+	case credit.FieldDepartment:
+		m.ClearDepartment()
 		return nil
 	}
 	return fmt.Errorf("unknown Credit nullable field %s", name)
@@ -15341,13 +15522,19 @@ func (m *CreditMutation) ResetField(name string) error {
 	case credit.FieldOrder:
 		m.ResetOrder()
 		return nil
+	case credit.FieldJob:
+		m.ResetJob()
+		return nil
+	case credit.FieldDepartment:
+		m.ResetDepartment()
+		return nil
 	}
 	return fmt.Errorf("unknown Credit field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *CreditMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.person != nil {
 		edges = append(edges, credit.EdgePerson)
 	}
@@ -15356,6 +15543,9 @@ func (m *CreditMutation) AddedEdges() []string {
 	}
 	if m.tv_show != nil {
 		edges = append(edges, credit.EdgeTvShow)
+	}
+	if m.episode != nil {
+		edges = append(edges, credit.EdgeEpisode)
 	}
 	return edges
 }
@@ -15376,13 +15566,17 @@ func (m *CreditMutation) AddedIDs(name string) []ent.Value {
 		if id := m.tv_show; id != nil {
 			return []ent.Value{*id}
 		}
+	case credit.EdgeEpisode:
+		if id := m.episode; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *CreditMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	return edges
 }
 
@@ -15394,7 +15588,7 @@ func (m *CreditMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *CreditMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.clearedperson {
 		edges = append(edges, credit.EdgePerson)
 	}
@@ -15403,6 +15597,9 @@ func (m *CreditMutation) ClearedEdges() []string {
 	}
 	if m.clearedtv_show {
 		edges = append(edges, credit.EdgeTvShow)
+	}
+	if m.clearedepisode {
+		edges = append(edges, credit.EdgeEpisode)
 	}
 	return edges
 }
@@ -15417,6 +15614,8 @@ func (m *CreditMutation) EdgeCleared(name string) bool {
 		return m.clearedmovie
 	case credit.EdgeTvShow:
 		return m.clearedtv_show
+	case credit.EdgeEpisode:
+		return m.clearedepisode
 	}
 	return false
 }
@@ -15434,6 +15633,9 @@ func (m *CreditMutation) ClearEdge(name string) error {
 	case credit.EdgeTvShow:
 		m.ClearTvShow()
 		return nil
+	case credit.EdgeEpisode:
+		m.ClearEpisode()
+		return nil
 	}
 	return fmt.Errorf("unknown Credit unique edge %s", name)
 }
@@ -15450,6 +15652,9 @@ func (m *CreditMutation) ResetEdge(name string) error {
 		return nil
 	case credit.EdgeTvShow:
 		m.ResetTvShow()
+		return nil
+	case credit.EdgeEpisode:
+		m.ResetEpisode()
 		return nil
 	}
 	return fmt.Errorf("unknown Credit edge %s", name)
@@ -18059,6 +18264,9 @@ type EpisodeMutation struct {
 	grab_failures                    *uint8
 	addgrab_failures                 *int8
 	last_search_at                   *time.Time
+	tvdb_id                          *uint32
+	addtvdb_id                       *int32
+	credits_fetched_at               *time.Time
 	status                           *episode.Status
 	clearedFields                    map[string]struct{}
 	season                           *uint32
@@ -18075,6 +18283,9 @@ type EpisodeMutation struct {
 	events                           map[uint32]struct{}
 	removedevents                    map[uint32]struct{}
 	clearedevents                    bool
+	credits                          map[uint32]struct{}
+	removedcredits                   map[uint32]struct{}
+	clearedcredits                   bool
 	done                             bool
 	oldValue                         func(context.Context) (*Episode, error)
 	predicates                       []predicate.Episode
@@ -18706,6 +18917,125 @@ func (m *EpisodeMutation) ResetLastSearchAt() {
 	delete(m.clearedFields, episode.FieldLastSearchAt)
 }
 
+// SetTvdbID sets the "tvdb_id" field.
+func (m *EpisodeMutation) SetTvdbID(u uint32) {
+	m.tvdb_id = &u
+	m.addtvdb_id = nil
+}
+
+// TvdbID returns the value of the "tvdb_id" field in the mutation.
+func (m *EpisodeMutation) TvdbID() (r uint32, exists bool) {
+	v := m.tvdb_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTvdbID returns the old "tvdb_id" field's value of the Episode entity.
+// If the Episode object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EpisodeMutation) OldTvdbID(ctx context.Context) (v uint32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTvdbID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTvdbID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTvdbID: %w", err)
+	}
+	return oldValue.TvdbID, nil
+}
+
+// AddTvdbID adds u to the "tvdb_id" field.
+func (m *EpisodeMutation) AddTvdbID(u int32) {
+	if m.addtvdb_id != nil {
+		*m.addtvdb_id += u
+	} else {
+		m.addtvdb_id = &u
+	}
+}
+
+// AddedTvdbID returns the value that was added to the "tvdb_id" field in this mutation.
+func (m *EpisodeMutation) AddedTvdbID() (r int32, exists bool) {
+	v := m.addtvdb_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearTvdbID clears the value of the "tvdb_id" field.
+func (m *EpisodeMutation) ClearTvdbID() {
+	m.tvdb_id = nil
+	m.addtvdb_id = nil
+	m.clearedFields[episode.FieldTvdbID] = struct{}{}
+}
+
+// TvdbIDCleared returns if the "tvdb_id" field was cleared in this mutation.
+func (m *EpisodeMutation) TvdbIDCleared() bool {
+	_, ok := m.clearedFields[episode.FieldTvdbID]
+	return ok
+}
+
+// ResetTvdbID resets all changes to the "tvdb_id" field.
+func (m *EpisodeMutation) ResetTvdbID() {
+	m.tvdb_id = nil
+	m.addtvdb_id = nil
+	delete(m.clearedFields, episode.FieldTvdbID)
+}
+
+// SetCreditsFetchedAt sets the "credits_fetched_at" field.
+func (m *EpisodeMutation) SetCreditsFetchedAt(t time.Time) {
+	m.credits_fetched_at = &t
+}
+
+// CreditsFetchedAt returns the value of the "credits_fetched_at" field in the mutation.
+func (m *EpisodeMutation) CreditsFetchedAt() (r time.Time, exists bool) {
+	v := m.credits_fetched_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreditsFetchedAt returns the old "credits_fetched_at" field's value of the Episode entity.
+// If the Episode object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EpisodeMutation) OldCreditsFetchedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreditsFetchedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreditsFetchedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreditsFetchedAt: %w", err)
+	}
+	return oldValue.CreditsFetchedAt, nil
+}
+
+// ClearCreditsFetchedAt clears the value of the "credits_fetched_at" field.
+func (m *EpisodeMutation) ClearCreditsFetchedAt() {
+	m.credits_fetched_at = nil
+	m.clearedFields[episode.FieldCreditsFetchedAt] = struct{}{}
+}
+
+// CreditsFetchedAtCleared returns if the "credits_fetched_at" field was cleared in this mutation.
+func (m *EpisodeMutation) CreditsFetchedAtCleared() bool {
+	_, ok := m.clearedFields[episode.FieldCreditsFetchedAt]
+	return ok
+}
+
+// ResetCreditsFetchedAt resets all changes to the "credits_fetched_at" field.
+func (m *EpisodeMutation) ResetCreditsFetchedAt() {
+	m.credits_fetched_at = nil
+	delete(m.clearedFields, episode.FieldCreditsFetchedAt)
+}
+
 // SetStatus sets the "status" field.
 func (m *EpisodeMutation) SetStatus(e episode.Status) {
 	m.status = &e
@@ -18997,6 +19327,60 @@ func (m *EpisodeMutation) ResetEvents() {
 	m.removedevents = nil
 }
 
+// AddCreditIDs adds the "credits" edge to the Credit entity by ids.
+func (m *EpisodeMutation) AddCreditIDs(ids ...uint32) {
+	if m.credits == nil {
+		m.credits = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.credits[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCredits clears the "credits" edge to the Credit entity.
+func (m *EpisodeMutation) ClearCredits() {
+	m.clearedcredits = true
+}
+
+// CreditsCleared reports if the "credits" edge to the Credit entity was cleared.
+func (m *EpisodeMutation) CreditsCleared() bool {
+	return m.clearedcredits
+}
+
+// RemoveCreditIDs removes the "credits" edge to the Credit entity by IDs.
+func (m *EpisodeMutation) RemoveCreditIDs(ids ...uint32) {
+	if m.removedcredits == nil {
+		m.removedcredits = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.credits, ids[i])
+		m.removedcredits[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCredits returns the removed IDs of the "credits" edge to the Credit entity.
+func (m *EpisodeMutation) RemovedCreditsIDs() (ids []uint32) {
+	for id := range m.removedcredits {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CreditsIDs returns the "credits" edge IDs in the mutation.
+func (m *EpisodeMutation) CreditsIDs() (ids []uint32) {
+	for id := range m.credits {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCredits resets all changes to the "credits" edge.
+func (m *EpisodeMutation) ResetCredits() {
+	m.credits = nil
+	m.clearedcredits = false
+	m.removedcredits = nil
+}
+
 // Where appends a list predicates to the EpisodeMutation builder.
 func (m *EpisodeMutation) Where(ps ...predicate.Episode) {
 	m.predicates = append(m.predicates, ps...)
@@ -19031,7 +19415,7 @@ func (m *EpisodeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *EpisodeMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 14)
 	if m.create_time != nil {
 		fields = append(fields, episode.FieldCreateTime)
 	}
@@ -19064,6 +19448,12 @@ func (m *EpisodeMutation) Fields() []string {
 	}
 	if m.last_search_at != nil {
 		fields = append(fields, episode.FieldLastSearchAt)
+	}
+	if m.tvdb_id != nil {
+		fields = append(fields, episode.FieldTvdbID)
+	}
+	if m.credits_fetched_at != nil {
+		fields = append(fields, episode.FieldCreditsFetchedAt)
 	}
 	if m.status != nil {
 		fields = append(fields, episode.FieldStatus)
@@ -19098,6 +19488,10 @@ func (m *EpisodeMutation) Field(name string) (ent.Value, bool) {
 		return m.GrabFailures()
 	case episode.FieldLastSearchAt:
 		return m.LastSearchAt()
+	case episode.FieldTvdbID:
+		return m.TvdbID()
+	case episode.FieldCreditsFetchedAt:
+		return m.CreditsFetchedAt()
 	case episode.FieldStatus:
 		return m.Status()
 	}
@@ -19131,6 +19525,10 @@ func (m *EpisodeMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldGrabFailures(ctx)
 	case episode.FieldLastSearchAt:
 		return m.OldLastSearchAt(ctx)
+	case episode.FieldTvdbID:
+		return m.OldTvdbID(ctx)
+	case episode.FieldCreditsFetchedAt:
+		return m.OldCreditsFetchedAt(ctx)
 	case episode.FieldStatus:
 		return m.OldStatus(ctx)
 	}
@@ -19219,6 +19617,20 @@ func (m *EpisodeMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetLastSearchAt(v)
 		return nil
+	case episode.FieldTvdbID:
+		v, ok := value.(uint32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTvdbID(v)
+		return nil
+	case episode.FieldCreditsFetchedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreditsFetchedAt(v)
+		return nil
 	case episode.FieldStatus:
 		v, ok := value.(episode.Status)
 		if !ok {
@@ -19243,6 +19655,9 @@ func (m *EpisodeMutation) AddedFields() []string {
 	if m.addgrab_failures != nil {
 		fields = append(fields, episode.FieldGrabFailures)
 	}
+	if m.addtvdb_id != nil {
+		fields = append(fields, episode.FieldTvdbID)
+	}
 	return fields
 }
 
@@ -19257,6 +19672,8 @@ func (m *EpisodeMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedAbsoluteNumber()
 	case episode.FieldGrabFailures:
 		return m.AddedGrabFailures()
+	case episode.FieldTvdbID:
+		return m.AddedTvdbID()
 	}
 	return nil, false
 }
@@ -19287,6 +19704,13 @@ func (m *EpisodeMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddGrabFailures(v)
 		return nil
+	case episode.FieldTvdbID:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTvdbID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Episode numeric field %s", name)
 }
@@ -19309,6 +19733,12 @@ func (m *EpisodeMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(episode.FieldLastSearchAt) {
 		fields = append(fields, episode.FieldLastSearchAt)
+	}
+	if m.FieldCleared(episode.FieldTvdbID) {
+		fields = append(fields, episode.FieldTvdbID)
+	}
+	if m.FieldCleared(episode.FieldCreditsFetchedAt) {
+		fields = append(fields, episode.FieldCreditsFetchedAt)
 	}
 	return fields
 }
@@ -19338,6 +19768,12 @@ func (m *EpisodeMutation) ClearField(name string) error {
 		return nil
 	case episode.FieldLastSearchAt:
 		m.ClearLastSearchAt()
+		return nil
+	case episode.FieldTvdbID:
+		m.ClearTvdbID()
+		return nil
+	case episode.FieldCreditsFetchedAt:
+		m.ClearCreditsFetchedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Episode nullable field %s", name)
@@ -19380,6 +19816,12 @@ func (m *EpisodeMutation) ResetField(name string) error {
 	case episode.FieldLastSearchAt:
 		m.ResetLastSearchAt()
 		return nil
+	case episode.FieldTvdbID:
+		m.ResetTvdbID()
+		return nil
+	case episode.FieldCreditsFetchedAt:
+		m.ResetCreditsFetchedAt()
+		return nil
 	case episode.FieldStatus:
 		m.ResetStatus()
 		return nil
@@ -19389,7 +19831,7 @@ func (m *EpisodeMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EpisodeMutation) AddedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.season != nil {
 		edges = append(edges, episode.EdgeSeason)
 	}
@@ -19404,6 +19846,9 @@ func (m *EpisodeMutation) AddedEdges() []string {
 	}
 	if m.events != nil {
 		edges = append(edges, episode.EdgeEvents)
+	}
+	if m.credits != nil {
+		edges = append(edges, episode.EdgeCredits)
 	}
 	return edges
 }
@@ -19440,13 +19885,19 @@ func (m *EpisodeMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case episode.EdgeCredits:
+		ids := make([]ent.Value, 0, len(m.credits))
+		for id := range m.credits {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EpisodeMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.removeddownload_records != nil {
 		edges = append(edges, episode.EdgeDownloadRecords)
 	}
@@ -19458,6 +19909,9 @@ func (m *EpisodeMutation) RemovedEdges() []string {
 	}
 	if m.removedevents != nil {
 		edges = append(edges, episode.EdgeEvents)
+	}
+	if m.removedcredits != nil {
+		edges = append(edges, episode.EdgeCredits)
 	}
 	return edges
 }
@@ -19490,13 +19944,19 @@ func (m *EpisodeMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case episode.EdgeCredits:
+		ids := make([]ent.Value, 0, len(m.removedcredits))
+		for id := range m.removedcredits {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EpisodeMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.clearedseason {
 		edges = append(edges, episode.EdgeSeason)
 	}
@@ -19511,6 +19971,9 @@ func (m *EpisodeMutation) ClearedEdges() []string {
 	}
 	if m.clearedevents {
 		edges = append(edges, episode.EdgeEvents)
+	}
+	if m.clearedcredits {
+		edges = append(edges, episode.EdgeCredits)
 	}
 	return edges
 }
@@ -19529,6 +19992,8 @@ func (m *EpisodeMutation) EdgeCleared(name string) bool {
 		return m.clearedmedia_files
 	case episode.EdgeEvents:
 		return m.clearedevents
+	case episode.EdgeCredits:
+		return m.clearedcredits
 	}
 	return false
 }
@@ -19562,6 +20027,9 @@ func (m *EpisodeMutation) ResetEdge(name string) error {
 		return nil
 	case episode.EdgeEvents:
 		m.ResetEvents()
+		return nil
+	case episode.EdgeCredits:
+		m.ResetCredits()
 		return nil
 	}
 	return fmt.Errorf("unknown Episode edge %s", name)
@@ -34572,6 +35040,7 @@ type MovieMutation struct {
 	tmdb_id                 *uint32
 	addtmdb_id              *int32
 	imdb_id                 *string
+	certification           *string
 	last_search_at          *time.Time
 	release_date            *time.Time
 	digital_release_date    *time.Time
@@ -35202,6 +35671,55 @@ func (m *MovieMutation) ImdbIDCleared() bool {
 func (m *MovieMutation) ResetImdbID() {
 	m.imdb_id = nil
 	delete(m.clearedFields, movie.FieldImdbID)
+}
+
+// SetCertification sets the "certification" field.
+func (m *MovieMutation) SetCertification(s string) {
+	m.certification = &s
+}
+
+// Certification returns the value of the "certification" field in the mutation.
+func (m *MovieMutation) Certification() (r string, exists bool) {
+	v := m.certification
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertification returns the old "certification" field's value of the Movie entity.
+// If the Movie object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MovieMutation) OldCertification(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertification is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertification requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertification: %w", err)
+	}
+	return oldValue.Certification, nil
+}
+
+// ClearCertification clears the value of the "certification" field.
+func (m *MovieMutation) ClearCertification() {
+	m.certification = nil
+	m.clearedFields[movie.FieldCertification] = struct{}{}
+}
+
+// CertificationCleared returns if the "certification" field was cleared in this mutation.
+func (m *MovieMutation) CertificationCleared() bool {
+	_, ok := m.clearedFields[movie.FieldCertification]
+	return ok
+}
+
+// ResetCertification resets all changes to the "certification" field.
+func (m *MovieMutation) ResetCertification() {
+	m.certification = nil
+	delete(m.clearedFields, movie.FieldCertification)
 }
 
 // SetLastSearchAt sets the "last_search_at" field.
@@ -36004,7 +36522,7 @@ func (m *MovieMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MovieMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 22)
 	if m.create_time != nil {
 		fields = append(fields, movie.FieldCreateTime)
 	}
@@ -36037,6 +36555,9 @@ func (m *MovieMutation) Fields() []string {
 	}
 	if m.imdb_id != nil {
 		fields = append(fields, movie.FieldImdbID)
+	}
+	if m.certification != nil {
+		fields = append(fields, movie.FieldCertification)
 	}
 	if m.last_search_at != nil {
 		fields = append(fields, movie.FieldLastSearchAt)
@@ -36098,6 +36619,8 @@ func (m *MovieMutation) Field(name string) (ent.Value, bool) {
 		return m.TmdbID()
 	case movie.FieldImdbID:
 		return m.ImdbID()
+	case movie.FieldCertification:
+		return m.Certification()
 	case movie.FieldLastSearchAt:
 		return m.LastSearchAt()
 	case movie.FieldReleaseDate:
@@ -36149,6 +36672,8 @@ func (m *MovieMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldTmdbID(ctx)
 	case movie.FieldImdbID:
 		return m.OldImdbID(ctx)
+	case movie.FieldCertification:
+		return m.OldCertification(ctx)
 	case movie.FieldLastSearchAt:
 		return m.OldLastSearchAt(ctx)
 	case movie.FieldReleaseDate:
@@ -36254,6 +36779,13 @@ func (m *MovieMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetImdbID(v)
+		return nil
+	case movie.FieldCertification:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertification(v)
 		return nil
 	case movie.FieldLastSearchAt:
 		v, ok := value.(time.Time)
@@ -36427,6 +36959,9 @@ func (m *MovieMutation) ClearedFields() []string {
 	if m.FieldCleared(movie.FieldImdbID) {
 		fields = append(fields, movie.FieldImdbID)
 	}
+	if m.FieldCleared(movie.FieldCertification) {
+		fields = append(fields, movie.FieldCertification)
+	}
 	if m.FieldCleared(movie.FieldLastSearchAt) {
 		fields = append(fields, movie.FieldLastSearchAt)
 	}
@@ -36476,6 +37011,9 @@ func (m *MovieMutation) ClearField(name string) error {
 		return nil
 	case movie.FieldImdbID:
 		m.ClearImdbID()
+		return nil
+	case movie.FieldCertification:
+		m.ClearCertification()
 		return nil
 	case movie.FieldLastSearchAt:
 		m.ClearLastSearchAt()
@@ -36544,6 +37082,9 @@ func (m *MovieMutation) ResetField(name string) error {
 		return nil
 	case movie.FieldImdbID:
 		m.ResetImdbID()
+		return nil
+	case movie.FieldCertification:
+		m.ResetCertification()
 		return nil
 	case movie.FieldLastSearchAt:
 		m.ResetLastSearchAt()
@@ -43441,6 +43982,7 @@ type TVShowMutation struct {
 	imdb_id           *string
 	poster_path       *string
 	network           *string
+	certification     *string
 	creator           *string
 	runtime           *uint16
 	addruntime        *int16
@@ -44193,6 +44735,55 @@ func (m *TVShowMutation) ResetNetwork() {
 	delete(m.clearedFields, tvshow.FieldNetwork)
 }
 
+// SetCertification sets the "certification" field.
+func (m *TVShowMutation) SetCertification(s string) {
+	m.certification = &s
+}
+
+// Certification returns the value of the "certification" field in the mutation.
+func (m *TVShowMutation) Certification() (r string, exists bool) {
+	v := m.certification
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCertification returns the old "certification" field's value of the TVShow entity.
+// If the TVShow object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TVShowMutation) OldCertification(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCertification is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCertification requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCertification: %w", err)
+	}
+	return oldValue.Certification, nil
+}
+
+// ClearCertification clears the value of the "certification" field.
+func (m *TVShowMutation) ClearCertification() {
+	m.certification = nil
+	m.clearedFields[tvshow.FieldCertification] = struct{}{}
+}
+
+// CertificationCleared returns if the "certification" field was cleared in this mutation.
+func (m *TVShowMutation) CertificationCleared() bool {
+	_, ok := m.clearedFields[tvshow.FieldCertification]
+	return ok
+}
+
+// ResetCertification resets all changes to the "certification" field.
+func (m *TVShowMutation) ResetCertification() {
+	m.certification = nil
+	delete(m.clearedFields, tvshow.FieldCertification)
+}
+
 // SetCreator sets the "creator" field.
 func (m *TVShowMutation) SetCreator(s string) {
 	m.creator = &s
@@ -44806,7 +45397,7 @@ func (m *TVShowMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TVShowMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 22)
 	if m.create_time != nil {
 		fields = append(fields, tvshow.FieldCreateTime)
 	}
@@ -44848,6 +45439,9 @@ func (m *TVShowMutation) Fields() []string {
 	}
 	if m.network != nil {
 		fields = append(fields, tvshow.FieldNetwork)
+	}
+	if m.certification != nil {
+		fields = append(fields, tvshow.FieldCertification)
 	}
 	if m.creator != nil {
 		fields = append(fields, tvshow.FieldCreator)
@@ -44906,6 +45500,8 @@ func (m *TVShowMutation) Field(name string) (ent.Value, bool) {
 		return m.PosterPath()
 	case tvshow.FieldNetwork:
 		return m.Network()
+	case tvshow.FieldCertification:
+		return m.Certification()
 	case tvshow.FieldCreator:
 		return m.Creator()
 	case tvshow.FieldRuntime:
@@ -44957,6 +45553,8 @@ func (m *TVShowMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldPosterPath(ctx)
 	case tvshow.FieldNetwork:
 		return m.OldNetwork(ctx)
+	case tvshow.FieldCertification:
+		return m.OldCertification(ctx)
 	case tvshow.FieldCreator:
 		return m.OldCreator(ctx)
 	case tvshow.FieldRuntime:
@@ -45077,6 +45675,13 @@ func (m *TVShowMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetNetwork(v)
+		return nil
+	case tvshow.FieldCertification:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCertification(v)
 		return nil
 	case tvshow.FieldCreator:
 		v, ok := value.(string)
@@ -45226,6 +45831,9 @@ func (m *TVShowMutation) ClearedFields() []string {
 	if m.FieldCleared(tvshow.FieldNetwork) {
 		fields = append(fields, tvshow.FieldNetwork)
 	}
+	if m.FieldCleared(tvshow.FieldCertification) {
+		fields = append(fields, tvshow.FieldCertification)
+	}
 	if m.FieldCleared(tvshow.FieldCreator) {
 		fields = append(fields, tvshow.FieldCreator)
 	}
@@ -45278,6 +45886,9 @@ func (m *TVShowMutation) ClearField(name string) error {
 		return nil
 	case tvshow.FieldNetwork:
 		m.ClearNetwork()
+		return nil
+	case tvshow.FieldCertification:
+		m.ClearCertification()
 		return nil
 	case tvshow.FieldCreator:
 		m.ClearCreator()
@@ -45349,6 +45960,9 @@ func (m *TVShowMutation) ResetField(name string) error {
 		return nil
 	case tvshow.FieldNetwork:
 		m.ResetNetwork()
+		return nil
+	case tvshow.FieldCertification:
+		m.ResetCertification()
 		return nil
 	case tvshow.FieldCreator:
 		m.ResetCreator()

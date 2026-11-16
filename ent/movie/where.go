@@ -105,6 +105,11 @@ func ImdbID(v string) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldImdbID, v))
 }
 
+// Certification applies equality check predicate on the "certification" field. It's identical to CertificationEQ.
+func Certification(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldEQ(FieldCertification, v))
+}
+
 // LastSearchAt applies equality check predicate on the "last_search_at" field. It's identical to LastSearchAtEQ.
 func LastSearchAt(v time.Time) predicate.Movie {
 	return predicate.Movie(sql.FieldEQ(FieldLastSearchAt, v))
@@ -663,6 +668,81 @@ func ImdbIDEqualFold(v string) predicate.Movie {
 // ImdbIDContainsFold applies the ContainsFold predicate on the "imdb_id" field.
 func ImdbIDContainsFold(v string) predicate.Movie {
 	return predicate.Movie(sql.FieldContainsFold(FieldImdbID, v))
+}
+
+// CertificationEQ applies the EQ predicate on the "certification" field.
+func CertificationEQ(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldEQ(FieldCertification, v))
+}
+
+// CertificationNEQ applies the NEQ predicate on the "certification" field.
+func CertificationNEQ(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldNEQ(FieldCertification, v))
+}
+
+// CertificationIn applies the In predicate on the "certification" field.
+func CertificationIn(vs ...string) predicate.Movie {
+	return predicate.Movie(sql.FieldIn(FieldCertification, vs...))
+}
+
+// CertificationNotIn applies the NotIn predicate on the "certification" field.
+func CertificationNotIn(vs ...string) predicate.Movie {
+	return predicate.Movie(sql.FieldNotIn(FieldCertification, vs...))
+}
+
+// CertificationGT applies the GT predicate on the "certification" field.
+func CertificationGT(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldGT(FieldCertification, v))
+}
+
+// CertificationGTE applies the GTE predicate on the "certification" field.
+func CertificationGTE(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldGTE(FieldCertification, v))
+}
+
+// CertificationLT applies the LT predicate on the "certification" field.
+func CertificationLT(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldLT(FieldCertification, v))
+}
+
+// CertificationLTE applies the LTE predicate on the "certification" field.
+func CertificationLTE(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldLTE(FieldCertification, v))
+}
+
+// CertificationContains applies the Contains predicate on the "certification" field.
+func CertificationContains(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldContains(FieldCertification, v))
+}
+
+// CertificationHasPrefix applies the HasPrefix predicate on the "certification" field.
+func CertificationHasPrefix(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldHasPrefix(FieldCertification, v))
+}
+
+// CertificationHasSuffix applies the HasSuffix predicate on the "certification" field.
+func CertificationHasSuffix(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldHasSuffix(FieldCertification, v))
+}
+
+// CertificationIsNil applies the IsNil predicate on the "certification" field.
+func CertificationIsNil() predicate.Movie {
+	return predicate.Movie(sql.FieldIsNull(FieldCertification))
+}
+
+// CertificationNotNil applies the NotNil predicate on the "certification" field.
+func CertificationNotNil() predicate.Movie {
+	return predicate.Movie(sql.FieldNotNull(FieldCertification))
+}
+
+// CertificationEqualFold applies the EqualFold predicate on the "certification" field.
+func CertificationEqualFold(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldEqualFold(FieldCertification, v))
+}
+
+// CertificationContainsFold applies the ContainsFold predicate on the "certification" field.
+func CertificationContainsFold(v string) predicate.Movie {
+	return predicate.Movie(sql.FieldContainsFold(FieldCertification, v))
 }
 
 // LastSearchAtEQ applies the EQ predicate on the "last_search_at" field.

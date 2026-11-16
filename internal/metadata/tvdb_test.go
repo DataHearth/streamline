@@ -148,11 +148,109 @@ var _ = Describe("TVDB series cast", Label("unit", "metadata"), func() {
 		client.BaseURL = srv.URL
 		client.token = "test-token" // skip /login round trip
 
-		cast, err := client.GetSeriesCast(context.Background(), 123)
+		cast, err := client.GetSeriesCredits(context.Background(), 123)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cast).To(HaveLen(1))
 		Expect(cast[0].TVDBID).To(Equal(uint32(456)))
 		Expect(cast[0].TMDBID).To(BeZero())
+	})
+})
+
+var _ = Describe("TVDB credits", Label("unit", "metadata"), func() {
+	serve := func(path, body string) *TVDB {
+		srv := httptest.NewServer(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				Expect(r.URL.Path).To(Equal(path))
+				_, _ = w.Write([]byte(body))
+			}),
+		)
+		DeferCleanup(srv.Close)
+		client := NewTVDB()
+		client.BaseURL = srv.URL
+		client.token = "test-token"
+		return client
+	}
+	characters := `{"data":{"characters":[` +
+		`{"name":"","personName":"Dee Rector","peopleType":"Director","peopleId":1,"sort":3},` +
+		`{"name":"Hero","personName":"Lead","peopleType":"Actor","peopleId":2,"sort":1},` +
+		`{"name":"Cop","personName":"Visitor","peopleType":"Guest Star","peopleId":3,"sort":2},` +
+		`{"name":"","personName":"Penn","peopleType":"Writer","peopleId":4,"sort":4}]}}`
+
+	It(
+		"lists a series' actors as cast, then its crew, leaving out guest stars",
+		func() {
+			client := serve("/series/123/extended", characters)
+
+			credits, err := client.GetSeriesCredits(context.Background(), 123)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(credits).To(HaveExactElements(
+				HaveField("Name", "Lead"),
+				And(
+					HaveField("Name", "Dee Rector"),
+					HaveField(
+						"Job",
+						"Director",
+					),
+					HaveField("Department", "Directing"),
+				),
+				And(HaveField("Name", "Penn"),
+					HaveField("Job", "Writer"), HaveField("Department", "Writing")),
+			))
+			Expect(credits[0].Character).To(Equal("Hero"))
+			Expect(credits[0].Job).To(BeEmpty())
+		},
+	)
+
+	It(
+		"lists an episode's guest stars as cast, then its crew, leaving out the regulars",
+		func() {
+			client := serve("/episodes/77/extended", characters)
+
+			credits, err := client.GetEpisodeCredits(context.Background(), 77)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(credits).To(HaveExactElements(
+				And(HaveField("Name", "Visitor"), HaveField("Character", "Cop"),
+					HaveField("Job", "")),
+				HaveField("Job", "Director"),
+				HaveField("Job", "Writer"),
+			))
+		},
+	)
+
+	It("reads the content rating of the configured region", func() {
+		configtest.Setup(map[string]any{
+			"metadata": map[string]any{"tmdb_region": "FR", "language": ""},
+		})
+		client := NewTVDB()
+		mux := http.NewServeMux()
+		mux.HandleFunc(
+			"/series/9/extended",
+			func(w http.ResponseWriter, _ *http.Request) {
+				_, _ = w.Write(
+					[]byte(`{"data":{"id":9,"name":"Show","year":"2020",` +
+						`"contentRatings":[{"name":"TV-MA","country":"usa"},{"name":"16","country":"fra"}]}}`),
+				)
+			},
+		)
+		mux.HandleFunc(
+			"/series/9/episodes/default",
+			func(w http.ResponseWriter, _ *http.Request) {
+				_, _ = w.Write(
+					[]byte(
+						`{"data":{"episodes":[{"id":901,"seasonNumber":1,"number":1}]},"links":{"next":null}}`,
+					),
+				)
+			},
+		)
+		srv := httptest.NewServer(mux)
+		DeferCleanup(srv.Close)
+		client.BaseURL = srv.URL
+		client.token = "test-token"
+
+		d, err := client.GetSeries(context.Background(), 9)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(d.Certification).To(Equal("16"))
+		Expect(d.Episodes).To(ConsistOf(HaveField("TVDBID", uint32(901))))
 	})
 })
 

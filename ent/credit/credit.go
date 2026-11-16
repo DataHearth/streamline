@@ -22,12 +22,18 @@ const (
 	FieldCharacter = "character"
 	// FieldOrder holds the string denoting the order field in the database.
 	FieldOrder = "order"
+	// FieldJob holds the string denoting the job field in the database.
+	FieldJob = "job"
+	// FieldDepartment holds the string denoting the department field in the database.
+	FieldDepartment = "department"
 	// EdgePerson holds the string denoting the person edge name in mutations.
 	EdgePerson = "person"
 	// EdgeMovie holds the string denoting the movie edge name in mutations.
 	EdgeMovie = "movie"
 	// EdgeTvShow holds the string denoting the tv_show edge name in mutations.
 	EdgeTvShow = "tv_show"
+	// EdgeEpisode holds the string denoting the episode edge name in mutations.
+	EdgeEpisode = "episode"
 	// Table holds the table name of the credit in the database.
 	Table = "credits"
 	// PersonTable is the table that holds the person relation/edge.
@@ -51,6 +57,13 @@ const (
 	TvShowInverseTable = "tv_shows"
 	// TvShowColumn is the table column denoting the tv_show relation/edge.
 	TvShowColumn = "tv_show_credits"
+	// EpisodeTable is the table that holds the episode relation/edge.
+	EpisodeTable = "credits"
+	// EpisodeInverseTable is the table name for the Episode entity.
+	// It exists in this package in order to avoid circular dependency with the "episode" package.
+	EpisodeInverseTable = "episodes"
+	// EpisodeColumn is the table column denoting the episode relation/edge.
+	EpisodeColumn = "episode_credits"
 )
 
 // Columns holds all SQL columns for credit fields.
@@ -60,11 +73,14 @@ var Columns = []string{
 	FieldUpdateTime,
 	FieldCharacter,
 	FieldOrder,
+	FieldJob,
+	FieldDepartment,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "credits"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
+	"episode_credits",
 	"movie_credits",
 	"person_credits",
 	"tv_show_credits",
@@ -124,6 +140,16 @@ func ByOrder(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldOrder, opts...).ToFunc()
 }
 
+// ByJob orders the results by the job field.
+func ByJob(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldJob, opts...).ToFunc()
+}
+
+// ByDepartment orders the results by the department field.
+func ByDepartment(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDepartment, opts...).ToFunc()
+}
+
 // ByPersonField orders the results by person field.
 func ByPersonField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -142,6 +168,13 @@ func ByMovieField(field string, opts ...sql.OrderTermOption) OrderOption {
 func ByTvShowField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newTvShowStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByEpisodeField orders the results by episode field.
+func ByEpisodeField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newEpisodeStep(), sql.OrderByField(field, opts...))
 	}
 }
 func newPersonStep() *sqlgraph.Step {
@@ -163,5 +196,12 @@ func newTvShowStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TvShowInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, TvShowTable, TvShowColumn),
+	)
+}
+func newEpisodeStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(EpisodeInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, EpisodeTable, EpisodeColumn),
 	)
 }

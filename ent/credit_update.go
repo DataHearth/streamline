@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/credit"
+	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/person"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -85,6 +86,46 @@ func (_u *CreditUpdate) ClearOrder() *CreditUpdate {
 	return _u
 }
 
+// SetJob sets the "job" field.
+func (_u *CreditUpdate) SetJob(v string) *CreditUpdate {
+	_u.mutation.SetJob(v)
+	return _u
+}
+
+// SetNillableJob sets the "job" field if the given value is not nil.
+func (_u *CreditUpdate) SetNillableJob(v *string) *CreditUpdate {
+	if v != nil {
+		_u.SetJob(*v)
+	}
+	return _u
+}
+
+// ClearJob clears the value of the "job" field.
+func (_u *CreditUpdate) ClearJob() *CreditUpdate {
+	_u.mutation.ClearJob()
+	return _u
+}
+
+// SetDepartment sets the "department" field.
+func (_u *CreditUpdate) SetDepartment(v string) *CreditUpdate {
+	_u.mutation.SetDepartment(v)
+	return _u
+}
+
+// SetNillableDepartment sets the "department" field if the given value is not nil.
+func (_u *CreditUpdate) SetNillableDepartment(v *string) *CreditUpdate {
+	if v != nil {
+		_u.SetDepartment(*v)
+	}
+	return _u
+}
+
+// ClearDepartment clears the value of the "department" field.
+func (_u *CreditUpdate) ClearDepartment() *CreditUpdate {
+	_u.mutation.ClearDepartment()
+	return _u
+}
+
 // SetPersonID sets the "person" edge to the Person entity by ID.
 func (_u *CreditUpdate) SetPersonID(id uint32) *CreditUpdate {
 	_u.mutation.SetPersonID(id)
@@ -134,6 +175,25 @@ func (_u *CreditUpdate) SetTvShow(v *TVShow) *CreditUpdate {
 	return _u.SetTvShowID(v.ID)
 }
 
+// SetEpisodeID sets the "episode" edge to the Episode entity by ID.
+func (_u *CreditUpdate) SetEpisodeID(id uint32) *CreditUpdate {
+	_u.mutation.SetEpisodeID(id)
+	return _u
+}
+
+// SetNillableEpisodeID sets the "episode" edge to the Episode entity by ID if the given value is not nil.
+func (_u *CreditUpdate) SetNillableEpisodeID(id *uint32) *CreditUpdate {
+	if id != nil {
+		_u = _u.SetEpisodeID(*id)
+	}
+	return _u
+}
+
+// SetEpisode sets the "episode" edge to the Episode entity.
+func (_u *CreditUpdate) SetEpisode(v *Episode) *CreditUpdate {
+	return _u.SetEpisodeID(v.ID)
+}
+
 // Mutation returns the CreditMutation object of the builder.
 func (_u *CreditUpdate) Mutation() *CreditMutation {
 	return _u.mutation
@@ -154,6 +214,12 @@ func (_u *CreditUpdate) ClearMovie() *CreditUpdate {
 // ClearTvShow clears the "tv_show" edge to the TVShow entity.
 func (_u *CreditUpdate) ClearTvShow() *CreditUpdate {
 	_u.mutation.ClearTvShow()
+	return _u
+}
+
+// ClearEpisode clears the "episode" edge to the Episode entity.
+func (_u *CreditUpdate) ClearEpisode() *CreditUpdate {
+	_u.mutation.ClearEpisode()
 	return _u
 }
 
@@ -236,6 +302,18 @@ func (_u *CreditUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.OrderCleared() {
 		_spec.ClearField(credit.FieldOrder, field.TypeUint8)
+	}
+	if value, ok := _u.mutation.Job(); ok {
+		_spec.SetField(credit.FieldJob, field.TypeString, value)
+	}
+	if _u.mutation.JobCleared() {
+		_spec.ClearField(credit.FieldJob, field.TypeString)
+	}
+	if value, ok := _u.mutation.Department(); ok {
+		_spec.SetField(credit.FieldDepartment, field.TypeString, value)
+	}
+	if _u.mutation.DepartmentCleared() {
+		_spec.ClearField(credit.FieldDepartment, field.TypeString)
 	}
 	if _u.mutation.PersonCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -324,6 +402,35 @@ func (_u *CreditUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.EpisodeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   credit.EpisodeTable,
+			Columns: []string{credit.EpisodeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EpisodeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   credit.EpisodeTable,
+			Columns: []string{credit.EpisodeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -399,6 +506,46 @@ func (_u *CreditUpdateOne) ClearOrder() *CreditUpdateOne {
 	return _u
 }
 
+// SetJob sets the "job" field.
+func (_u *CreditUpdateOne) SetJob(v string) *CreditUpdateOne {
+	_u.mutation.SetJob(v)
+	return _u
+}
+
+// SetNillableJob sets the "job" field if the given value is not nil.
+func (_u *CreditUpdateOne) SetNillableJob(v *string) *CreditUpdateOne {
+	if v != nil {
+		_u.SetJob(*v)
+	}
+	return _u
+}
+
+// ClearJob clears the value of the "job" field.
+func (_u *CreditUpdateOne) ClearJob() *CreditUpdateOne {
+	_u.mutation.ClearJob()
+	return _u
+}
+
+// SetDepartment sets the "department" field.
+func (_u *CreditUpdateOne) SetDepartment(v string) *CreditUpdateOne {
+	_u.mutation.SetDepartment(v)
+	return _u
+}
+
+// SetNillableDepartment sets the "department" field if the given value is not nil.
+func (_u *CreditUpdateOne) SetNillableDepartment(v *string) *CreditUpdateOne {
+	if v != nil {
+		_u.SetDepartment(*v)
+	}
+	return _u
+}
+
+// ClearDepartment clears the value of the "department" field.
+func (_u *CreditUpdateOne) ClearDepartment() *CreditUpdateOne {
+	_u.mutation.ClearDepartment()
+	return _u
+}
+
 // SetPersonID sets the "person" edge to the Person entity by ID.
 func (_u *CreditUpdateOne) SetPersonID(id uint32) *CreditUpdateOne {
 	_u.mutation.SetPersonID(id)
@@ -448,6 +595,25 @@ func (_u *CreditUpdateOne) SetTvShow(v *TVShow) *CreditUpdateOne {
 	return _u.SetTvShowID(v.ID)
 }
 
+// SetEpisodeID sets the "episode" edge to the Episode entity by ID.
+func (_u *CreditUpdateOne) SetEpisodeID(id uint32) *CreditUpdateOne {
+	_u.mutation.SetEpisodeID(id)
+	return _u
+}
+
+// SetNillableEpisodeID sets the "episode" edge to the Episode entity by ID if the given value is not nil.
+func (_u *CreditUpdateOne) SetNillableEpisodeID(id *uint32) *CreditUpdateOne {
+	if id != nil {
+		_u = _u.SetEpisodeID(*id)
+	}
+	return _u
+}
+
+// SetEpisode sets the "episode" edge to the Episode entity.
+func (_u *CreditUpdateOne) SetEpisode(v *Episode) *CreditUpdateOne {
+	return _u.SetEpisodeID(v.ID)
+}
+
 // Mutation returns the CreditMutation object of the builder.
 func (_u *CreditUpdateOne) Mutation() *CreditMutation {
 	return _u.mutation
@@ -468,6 +634,12 @@ func (_u *CreditUpdateOne) ClearMovie() *CreditUpdateOne {
 // ClearTvShow clears the "tv_show" edge to the TVShow entity.
 func (_u *CreditUpdateOne) ClearTvShow() *CreditUpdateOne {
 	_u.mutation.ClearTvShow()
+	return _u
+}
+
+// ClearEpisode clears the "episode" edge to the Episode entity.
+func (_u *CreditUpdateOne) ClearEpisode() *CreditUpdateOne {
+	_u.mutation.ClearEpisode()
 	return _u
 }
 
@@ -581,6 +753,18 @@ func (_u *CreditUpdateOne) sqlSave(ctx context.Context) (_node *Credit, err erro
 	if _u.mutation.OrderCleared() {
 		_spec.ClearField(credit.FieldOrder, field.TypeUint8)
 	}
+	if value, ok := _u.mutation.Job(); ok {
+		_spec.SetField(credit.FieldJob, field.TypeString, value)
+	}
+	if _u.mutation.JobCleared() {
+		_spec.ClearField(credit.FieldJob, field.TypeString)
+	}
+	if value, ok := _u.mutation.Department(); ok {
+		_spec.SetField(credit.FieldDepartment, field.TypeString, value)
+	}
+	if _u.mutation.DepartmentCleared() {
+		_spec.ClearField(credit.FieldDepartment, field.TypeString)
+	}
 	if _u.mutation.PersonCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -661,6 +845,35 @@ func (_u *CreditUpdateOne) sqlSave(ctx context.Context) (_node *Credit, err erro
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(tvshow.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.EpisodeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   credit.EpisodeTable,
+			Columns: []string{credit.EpisodeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.EpisodeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   credit.EpisodeTable,
+			Columns: []string{credit.EpisodeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

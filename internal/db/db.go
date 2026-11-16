@@ -648,10 +648,10 @@ type Store interface {
 	// and history in place. The caller refreshes metadata afterwards.
 	SetMovieTMDBID(ctx context.Context, id, tmdbID uint32) error
 	SetMovieLastSearchAt(ctx context.Context, id uint32, when time.Time) error
-	SetMovieDigitalReleaseDate(
+	SetMovieReleaseInfo(
 		ctx context.Context,
 		id uint32,
-		date *time.Time,
+		info metadata.ReleaseInfo,
 	) error
 	IncrementMovieGrabFailures(ctx context.Context, id uint32) error
 	ResetMovieGrabFailures(ctx context.Context, id uint32) error
@@ -1547,13 +1547,35 @@ type Store interface {
 	) (map[uint32]map[uint16]int, error)
 
 	// people (cast)
-	// ListPeople pages the cast members credited anywhere in the library,
-	// most-credited first, with the credit count rolled up in SQL.
+	// ListPeople pages the people credited on a movie or series in the
+	// library, most-credited first, with the credit count rolled up in SQL.
+	// A person credited only on episodes is left out.
 	ListPeople(ctx context.Context, p ListPeopleParams) ([]Person, error)
 	// PersonCredits returns every movie and series crediting the person, each
-	// with the character they play there. ErrPersonNotFound when no such
+	// with the character they play or the job they hold there, an episode
+	// credit counting as one on its series. ErrPersonNotFound when no such
 	// persons row exists.
 	PersonCredits(ctx context.Context, id uint32) (*PersonCredits, error)
+	// PeopleWithPhotos returns everyone with a provider photo whom any
+	// title of the given owner kinds credits. Credits is not populated.
+	PeopleWithPhotos(ctx context.Context, owners ...CastOwner) ([]Person, error)
+	// PersonPhotoURL returns the provider photo of one person, empty when
+	// there is none. ErrPersonNotFound when no such persons row exists.
+	PersonPhotoURL(ctx context.Context, id uint32) (string, error)
+	// ReplaceEpisodeCredits replaces an episode's credits and stamps
+	// credits_fetched_at. An empty list clears them: an episode TVDB
+	// answered for with no guests has none.
+	ReplaceEpisodeCredits(
+		ctx context.Context,
+		episodeID uint32,
+		credits []metadata.CastMember,
+	) error
+	// EpisodesNeedingCredits returns the aired episodes whose credits have
+	// never been read, or were last read within a month of airing.
+	EpisodesNeedingCredits(
+		ctx context.Context,
+		now time.Time,
+	) ([]EpisodeCreditsRef, error)
 	// ReplaceCast persists a title's cast into persons/credits, replacing that
 	// owner's credits wholesale. An empty list leaves the stored credits
 	// alone — a provider that returned no cast is not a title with no cast.
@@ -1563,8 +1585,8 @@ type Store interface {
 		ownerID uint32,
 		cast []metadata.CastMember,
 	) error
-	// TitleCast returns a title's cast in billing order, each entry carrying
-	// the persons row id the API links by.
+	// TitleCast returns a title's acting credits in billing order, each entry
+	// carrying the persons row id the API links by.
 	TitleCast(
 		ctx context.Context,
 		owner CastOwner,

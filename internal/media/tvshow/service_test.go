@@ -85,7 +85,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				{SeasonNumber: 1, Number: 1, Title: "Pilot", AirDate: &air},
 			},
 		}, nil).Once()
-		metaMk.GetSeriesCast(mock.Anything, uint32(123)).
+		metaMk.GetSeriesCredits(mock.Anything, uint32(123)).
 			Return([]metadata.CastMember{{Name: "Ana Vidal", Character: "Iris"}}, nil).
 			Once()
 
@@ -115,7 +115,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Status: "continuing",
 			Type:   metadata.SeriesStandard,
 		}, nil).Once()
-		metaMk.GetSeriesCast(mock.Anything, uint32(123)).
+		metaMk.GetSeriesCredits(mock.Anything, uint32(123)).
 			Return(nil, errors.New("tvdb down")).
 			Once()
 		storeMk.CreateTVShow(mock.Anything, mock.MatchedBy(
@@ -141,6 +141,54 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				return nil, nil
 			}).
 			Once()
+		storeMk.EpisodesNeedingCredits(mock.Anything, mock.Anything).
+			Return(nil, nil).
+			Once()
+		storeMk.PeopleWithPhotos(mock.Anything, db.CastOwnerSeries, db.CastOwnerEpisode).
+			Return(nil, nil).
+			Once()
+
+		Expect(svc.RefreshStale(ctx)).To(Succeed())
+	})
+
+	It("RefreshStale reads each episode's credits and caches people photos", func() {
+		storeMk.ListTVShowsStaleSince(mock.Anything, mock.Anything).
+			Return(nil, nil).
+			Once()
+		storeMk.EpisodesNeedingCredits(mock.Anything, mock.Anything).
+			Return([]db.EpisodeCreditsRef{{ID: 5, TVDBID: 50}}, nil).
+			Once()
+		guests := []metadata.CastMember{{TVDBID: 9, Name: "Guest", Character: "Cop"}}
+		metaMk.GetEpisodeCredits(mock.Anything, uint32(50)).
+			Return(guests, nil).
+			Once()
+		storeMk.ReplaceEpisodeCredits(mock.Anything, uint32(5), guests).
+			Return(nil).
+			Once()
+		storeMk.PeopleWithPhotos(mock.Anything, db.CastOwnerSeries, db.CastOwnerEpisode).
+			Return([]db.Person{{ID: 3, ProfileURL: "https://artworks.thetvdb.com/p.jpg"}}, nil).
+			Once()
+		postMk.Fetch(mock.Anything, "people", uint32(3), "https://artworks.thetvdb.com/p.jpg").
+			Return(nil).
+			Once()
+
+		Expect(svc.RefreshStale(ctx)).To(Succeed())
+	})
+
+	It("RefreshStale leaves a failed episode's credits for the next tick", func() {
+		storeMk.ListTVShowsStaleSince(mock.Anything, mock.Anything).
+			Return(nil, nil).
+			Once()
+		storeMk.EpisodesNeedingCredits(mock.Anything, mock.Anything).
+			Return([]db.EpisodeCreditsRef{{ID: 5, TVDBID: 50}}, nil).
+			Once()
+		metaMk.GetEpisodeCredits(mock.Anything, uint32(50)).
+			Return(nil, errors.New("tvdb down")).
+			Once()
+		storeMk.PeopleWithPhotos(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil, nil).
+			Once()
+		// No ReplaceEpisodeCredits: the episode stays unstamped.
 
 		Expect(svc.RefreshStale(ctx)).To(Succeed())
 	})
@@ -156,6 +204,12 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Return(nil, &metadata.RateLimitedError{RetryAfter: time.Minute}).
 			Once()
 		// The mocks fail the spec on any call for show 2.
+		storeMk.EpisodesNeedingCredits(mock.Anything, mock.Anything).
+			Return(nil, nil).
+			Once()
+		storeMk.PeopleWithPhotos(mock.Anything, db.CastOwnerSeries, db.CastOwnerEpisode).
+			Return(nil, nil).
+			Once()
 
 		Expect(svc.RefreshStale(ctx)).To(Succeed())
 	})
@@ -376,7 +430,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		metaMk.GetSeries(mock.Anything, uint32(123)).
 			Return(&metadata.TVDetails{TVDBID: 123, Title: "X"}, nil).
 			Once()
-		metaMk.GetSeriesCast(mock.Anything, uint32(123)).Return(nil, nil).Once()
+		metaMk.GetSeriesCredits(mock.Anything, uint32(123)).Return(nil, nil).Once()
 		storeMk.UpdateTVShowMetadata(mock.Anything, uint32(7), mock.Anything).
 			Return(nil).
 			Once()
@@ -398,7 +452,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		metaMk.GetSeries(mock.Anything, uint32(123)).
 			Return(&metadata.TVDetails{TVDBID: 123, Title: "X"}, nil).
 			Once()
-		metaMk.GetSeriesCast(mock.Anything, uint32(123)).Return(nil, nil).Once()
+		metaMk.GetSeriesCredits(mock.Anything, uint32(123)).Return(nil, nil).Once()
 		storeMk.UpdateTVShowMetadata(mock.Anything, uint32(7), mock.Anything).
 			Return(nil).
 			Once()
@@ -1004,7 +1058,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 					Return(detached, nil).Once()
 				storeMk.SetTVShowTVDBID(mock.Anything, uint32(5), uint32(999)).
 					Return(nil).Once()
-				metaMk.GetSeriesCast(mock.Anything, uint32(999)).
+				metaMk.GetSeriesCredits(mock.Anything, uint32(999)).
 					Return(nil, nil).
 					Once()
 				storeMk.UpdateTVShowMetadata(

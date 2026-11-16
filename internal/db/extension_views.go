@@ -223,11 +223,12 @@ GROUP BY g.value`,
 		Description: videoDescription,
 		Columns: []string{
 			"id", "tmdb_id", "imdb_id", "title", "original_title", "year",
-			"overview", "runtime", "release_date", "rating", "genres", "added_at",
-			"updated_at",
+			"overview", "runtime", "release_date", "rating", "genres",
+			"monitored", "certification", "added_at", "updated_at",
 		},
 		SQL: `SELECT id, tmdb_id, imdb_id, title, original_title, year, overview,
-	runtime, release_date, rating, genres,
+	runtime, release_date, rating, genres, monitored,
+	COALESCE(certification, '') AS certification,
 	create_time AS added_at, update_time AS updated_at
 FROM core.movies`,
 		Tables: []string{"movies"},
@@ -239,10 +240,12 @@ FROM core.movies`,
 		Columns: []string{
 			"id", "tvdb_id", "imdb_id", "title", "original_title", "year",
 			"first_aired", "overview", "status", "type", "network", "runtime",
-			"rating", "genres", "added_at", "updated_at",
+			"rating", "genres", "monitored", "certification", "added_at",
+			"updated_at",
 		},
 		SQL: `SELECT id, tvdb_id, imdb_id, title, original_title, year, first_aired,
 	overview, series_status AS status, type, network, runtime, rating, genres,
+	monitored, COALESCE(certification, '') AS certification,
 	create_time AS added_at, update_time AS updated_at
 FROM core.tv_shows`,
 		Tables: []string{"tv_shows"},
@@ -289,6 +292,36 @@ FROM core.episodes`,
 FROM core.media_files
 WHERE movie_media_files IS NOT NULL OR episode_media_files IS NOT NULL`,
 		Tables: []string{"media_files"},
+	},
+	{
+		Name:        "people",
+		Bundle:      "video",
+		Description: videoDescription,
+		Columns: []string{
+			"id", "tmdb_id", "tvdb_id", "imdb_id", "name", "biography",
+			"known_for", "birthday", "deathday", "place_of_birth",
+		},
+		SQL: `SELECT id, tmdb_id, tvdb_id, COALESCE(imdb_id, '') AS imdb_id, name,
+	COALESCE(biography, '') AS biography, COALESCE(known_for, '') AS known_for,
+	COALESCE(birthday, '') AS birthday, COALESCE(deathday, '') AS deathday,
+	COALESCE(place_of_birth, '') AS place_of_birth
+FROM core.persons`,
+		Tables: []string{"persons"},
+	},
+	{
+		Name:        "credits",
+		Bundle:      "video",
+		Description: videoDescription,
+		Columns: []string{
+			"id", "person_id", "movie_id", "series_id", "episode_id",
+			"character", "job", "department", "order",
+		},
+		SQL: `SELECT id, person_credits AS person_id, movie_credits AS movie_id,
+	tv_show_credits AS series_id, episode_credits AS episode_id,
+	COALESCE(character, '') AS character, COALESCE(job, '') AS job,
+	COALESCE(department, '') AS department, "order"
+FROM core.credits`,
+		Tables: []string{"credits"},
 	},
 }
 

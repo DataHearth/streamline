@@ -195,6 +195,20 @@ func (_c *TVShowCreate) SetNillableNetwork(v *string) *TVShowCreate {
 	return _c
 }
 
+// SetCertification sets the "certification" field.
+func (_c *TVShowCreate) SetCertification(v string) *TVShowCreate {
+	_c.mutation.SetCertification(v)
+	return _c
+}
+
+// SetNillableCertification sets the "certification" field if the given value is not nil.
+func (_c *TVShowCreate) SetNillableCertification(v *string) *TVShowCreate {
+	if v != nil {
+		_c.SetCertification(*v)
+	}
+	return _c
+}
+
 // SetCreator sets the "creator" field.
 func (_c *TVShowCreate) SetCreator(v string) *TVShowCreate {
 	_c.mutation.SetCreator(v)
@@ -521,6 +535,10 @@ func (_c *TVShowCreate) createSpec() (*TVShow, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Network(); ok {
 		_spec.SetField(tvshow.FieldNetwork, field.TypeString, value)
 		_node.Network = value
+	}
+	if value, ok := _c.mutation.Certification(); ok {
+		_spec.SetField(tvshow.FieldCertification, field.TypeString, value)
+		_node.Certification = value
 	}
 	if value, ok := _c.mutation.Creator(); ok {
 		_spec.SetField(tvshow.FieldCreator, field.TypeString, value)

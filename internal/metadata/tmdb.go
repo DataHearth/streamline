@@ -29,6 +29,26 @@ const tmdbBaseURL = "https://api.themoviedb.org"
 // maxCastMembers caps how many top-billed cast entries we surface per movie.
 const maxCastMembers = 15
 
+// maxCrewMembers caps the crew kept per title. A film's crew list runs to
+// hundreds of entries, and every one kept is a person row, a biography call
+// and a photo download.
+const maxCrewMembers = 20
+
+// tmdbCrewJobs are the crew jobs a title page names; the rest of the list
+// (grips, assistants, caterers) is dropped before the cap.
+var tmdbCrewJobs = map[string]struct{}{
+	"Director":                {},
+	"Screenplay":              {},
+	"Writer":                  {},
+	"Story":                   {},
+	"Novel":                   {},
+	"Producer":                {},
+	"Executive Producer":      {},
+	"Original Music Composer": {},
+	"Director of Photography": {},
+	"Editor":                  {},
+}
+
 // profileSize is the TMDB image size for person portraits. TMDB offers only
 // w45, w185, h632 and original for profiles; the cast rail and the person page
 // both render the portrait at roughly 260px wide, so w185 is upscaled and
@@ -214,7 +234,7 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 	if len(entries) > maxCastMembers {
 		entries = entries[:maxCastMembers]
 	}
-	cast := make([]CastMember, 0, len(entries))
+	cast := make([]CastMember, 0, len(entries)+maxCrewMembers)
 	for _, c := range entries {
 		cast = append(cast, CastMember{
 			TMDBID:     c.ID,
@@ -222,6 +242,22 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 			Character:  c.Character,
 			ProfileURL: PosterURL(c.ProfilePath, profileSize),
 		})
+	}
+	var crew int
+	for _, c := range resp.Credits.Crew {
+		if _, ok := tmdbCrewJobs[c.Job]; !ok {
+			continue
+		}
+		cast = append(cast, CastMember{
+			TMDBID:     c.ID,
+			Name:       c.Name,
+			Job:        c.Job,
+			Department: c.Department,
+			ProfileURL: PosterURL(c.ProfilePath, profileSize),
+		})
+		if crew++; crew == maxCrewMembers {
+			break
+		}
 	}
 
 	originalTitle := resp.OriginalTitle
@@ -381,13 +417,11 @@ func (t *TMDB) Recommendations(
 	return results, nil
 }
 
-// FetchDigitalRelease returns the earliest digital-type (TMDB type 4)
-// release date for the given region, or (nil, nil) when none is published.
-func (t *TMDB) FetchDigitalRelease(
+func (t *TMDB) FetchReleaseInfo(
 	ctx context.Context,
 	tmdbID uint32,
 	region string,
-) (*time.Time, error) {
+) (ReleaseInfo, error) {
 	ctx, span := tracer.Start(ctx, "metadata.tmdb.fetch_digital_release",
 		trace.WithAttributes(
 			attribute.Int64("tmdb.id", int64(tmdbID)),
@@ -416,7 +450,7 @@ func (t *TMDB) FetchDigitalRelease(
 		&resp,
 	); err != nil {
 		outcome = "error"
-		return nil, otelx.RecordSpanError(
+		return ReleaseInfo{}, otelx.RecordSpanError(
 			span,
 			fmt.Errorf("tmdb release_dates: %w", err),
 		)
@@ -427,24 +461,32 @@ func (t *TMDB) FetchDigitalRelease(
 		if strings.ToUpper(r.ISO31661) != region {
 			continue
 		}
-		var earliest *time.Time
+		var info ReleaseInfo
 		for _, d := range r.ReleaseDates {
-			if d.Type != 4 || d.ReleaseDate == "" {
+			if d.Certification != "" &&
+				(info.Certification == "" || d.Type == tmdbTheatrical) {
+				info.Certification = d.Certification
+			}
+			if d.Type != tmdbDigital || d.ReleaseDate == "" {
 				continue
 			}
 			parsed, err := time.Parse(time.RFC3339, d.ReleaseDate)
 			if err != nil {
 				continue
 			}
-			if earliest == nil || parsed.Before(*earliest) {
-				p := parsed
-				earliest = &p
+			if info.Digital == nil || parsed.Before(*info.Digital) {
+				info.Digital = &parsed
 			}
 		}
-		return earliest, nil
+		return info, nil
 	}
-	return nil, nil
+	return ReleaseInfo{}, nil
 }
+
+const (
+	tmdbTheatrical = 3
+	tmdbDigital    = 4
+)
 
 func findTranslation(ts []tmdbTranslation, lang string) (tmdbTranslation, bool) {
 	for _, t := range ts {
@@ -604,6 +646,15 @@ type tmdbPersonExternals struct {
 
 type tmdbCredits struct {
 	Cast []tmdbCastEntry `json:"cast"`
+	Crew []tmdbCrewEntry `json:"crew"`
+}
+
+type tmdbCrewEntry struct {
+	ID          uint32 `json:"id"`
+	Name        string `json:"name"`
+	Job         string `json:"job"`
+	Department  string `json:"department"`
+	ProfilePath string `json:"profile_path"`
 }
 
 type tmdbCastEntry struct {
@@ -643,6 +694,7 @@ type tmdbRegionReleaseDates struct {
 }
 
 type tmdbReleaseDateEntry struct {
-	Type        int    `json:"type"`
-	ReleaseDate string `json:"release_date"`
+	Type          int    `json:"type"`
+	ReleaseDate   string `json:"release_date"`
+	Certification string `json:"certification"`
 }

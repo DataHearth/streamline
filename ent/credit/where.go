@@ -75,6 +75,16 @@ func Order(v uint8) predicate.Credit {
 	return predicate.Credit(sql.FieldEQ(FieldOrder, v))
 }
 
+// Job applies equality check predicate on the "job" field. It's identical to JobEQ.
+func Job(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldEQ(FieldJob, v))
+}
+
+// Department applies equality check predicate on the "department" field. It's identical to DepartmentEQ.
+func Department(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldEQ(FieldDepartment, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.Credit {
 	return predicate.Credit(sql.FieldEQ(FieldCreateTime, v))
@@ -280,6 +290,156 @@ func OrderNotNil() predicate.Credit {
 	return predicate.Credit(sql.FieldNotNull(FieldOrder))
 }
 
+// JobEQ applies the EQ predicate on the "job" field.
+func JobEQ(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldEQ(FieldJob, v))
+}
+
+// JobNEQ applies the NEQ predicate on the "job" field.
+func JobNEQ(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldNEQ(FieldJob, v))
+}
+
+// JobIn applies the In predicate on the "job" field.
+func JobIn(vs ...string) predicate.Credit {
+	return predicate.Credit(sql.FieldIn(FieldJob, vs...))
+}
+
+// JobNotIn applies the NotIn predicate on the "job" field.
+func JobNotIn(vs ...string) predicate.Credit {
+	return predicate.Credit(sql.FieldNotIn(FieldJob, vs...))
+}
+
+// JobGT applies the GT predicate on the "job" field.
+func JobGT(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldGT(FieldJob, v))
+}
+
+// JobGTE applies the GTE predicate on the "job" field.
+func JobGTE(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldGTE(FieldJob, v))
+}
+
+// JobLT applies the LT predicate on the "job" field.
+func JobLT(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldLT(FieldJob, v))
+}
+
+// JobLTE applies the LTE predicate on the "job" field.
+func JobLTE(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldLTE(FieldJob, v))
+}
+
+// JobContains applies the Contains predicate on the "job" field.
+func JobContains(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldContains(FieldJob, v))
+}
+
+// JobHasPrefix applies the HasPrefix predicate on the "job" field.
+func JobHasPrefix(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldHasPrefix(FieldJob, v))
+}
+
+// JobHasSuffix applies the HasSuffix predicate on the "job" field.
+func JobHasSuffix(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldHasSuffix(FieldJob, v))
+}
+
+// JobIsNil applies the IsNil predicate on the "job" field.
+func JobIsNil() predicate.Credit {
+	return predicate.Credit(sql.FieldIsNull(FieldJob))
+}
+
+// JobNotNil applies the NotNil predicate on the "job" field.
+func JobNotNil() predicate.Credit {
+	return predicate.Credit(sql.FieldNotNull(FieldJob))
+}
+
+// JobEqualFold applies the EqualFold predicate on the "job" field.
+func JobEqualFold(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldEqualFold(FieldJob, v))
+}
+
+// JobContainsFold applies the ContainsFold predicate on the "job" field.
+func JobContainsFold(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldContainsFold(FieldJob, v))
+}
+
+// DepartmentEQ applies the EQ predicate on the "department" field.
+func DepartmentEQ(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldEQ(FieldDepartment, v))
+}
+
+// DepartmentNEQ applies the NEQ predicate on the "department" field.
+func DepartmentNEQ(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldNEQ(FieldDepartment, v))
+}
+
+// DepartmentIn applies the In predicate on the "department" field.
+func DepartmentIn(vs ...string) predicate.Credit {
+	return predicate.Credit(sql.FieldIn(FieldDepartment, vs...))
+}
+
+// DepartmentNotIn applies the NotIn predicate on the "department" field.
+func DepartmentNotIn(vs ...string) predicate.Credit {
+	return predicate.Credit(sql.FieldNotIn(FieldDepartment, vs...))
+}
+
+// DepartmentGT applies the GT predicate on the "department" field.
+func DepartmentGT(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldGT(FieldDepartment, v))
+}
+
+// DepartmentGTE applies the GTE predicate on the "department" field.
+func DepartmentGTE(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldGTE(FieldDepartment, v))
+}
+
+// DepartmentLT applies the LT predicate on the "department" field.
+func DepartmentLT(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldLT(FieldDepartment, v))
+}
+
+// DepartmentLTE applies the LTE predicate on the "department" field.
+func DepartmentLTE(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldLTE(FieldDepartment, v))
+}
+
+// DepartmentContains applies the Contains predicate on the "department" field.
+func DepartmentContains(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldContains(FieldDepartment, v))
+}
+
+// DepartmentHasPrefix applies the HasPrefix predicate on the "department" field.
+func DepartmentHasPrefix(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldHasPrefix(FieldDepartment, v))
+}
+
+// DepartmentHasSuffix applies the HasSuffix predicate on the "department" field.
+func DepartmentHasSuffix(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldHasSuffix(FieldDepartment, v))
+}
+
+// DepartmentIsNil applies the IsNil predicate on the "department" field.
+func DepartmentIsNil() predicate.Credit {
+	return predicate.Credit(sql.FieldIsNull(FieldDepartment))
+}
+
+// DepartmentNotNil applies the NotNil predicate on the "department" field.
+func DepartmentNotNil() predicate.Credit {
+	return predicate.Credit(sql.FieldNotNull(FieldDepartment))
+}
+
+// DepartmentEqualFold applies the EqualFold predicate on the "department" field.
+func DepartmentEqualFold(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldEqualFold(FieldDepartment, v))
+}
+
+// DepartmentContainsFold applies the ContainsFold predicate on the "department" field.
+func DepartmentContainsFold(v string) predicate.Credit {
+	return predicate.Credit(sql.FieldContainsFold(FieldDepartment, v))
+}
+
 // HasPerson applies the HasEdge predicate on the "person" edge.
 func HasPerson() predicate.Credit {
 	return predicate.Credit(func(s *sql.Selector) {
@@ -341,6 +501,29 @@ func HasTvShow() predicate.Credit {
 func HasTvShowWith(preds ...predicate.TVShow) predicate.Credit {
 	return predicate.Credit(func(s *sql.Selector) {
 		step := newTvShowStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasEpisode applies the HasEdge predicate on the "episode" edge.
+func HasEpisode() predicate.Credit {
+	return predicate.Credit(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EpisodeTable, EpisodeColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasEpisodeWith applies the HasEdge predicate on the "episode" edge with a given conditions (other predicates).
+func HasEpisodeWith(preds ...predicate.Episode) predicate.Credit {
+	return predicate.Credit(func(s *sql.Selector) {
+		step := newEpisodeStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

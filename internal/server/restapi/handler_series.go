@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -327,11 +328,13 @@ func (s *Server) seriesWithCast(
 	if err != nil {
 		return nil, err
 	}
-	cast, err := s.metadataTV.GetSeriesCast(ctx, tvdbID)
+	credits, err := s.metadataTV.GetSeriesCredits(ctx, tvdbID)
 	if err != nil {
 		return nil, err
 	}
-	d.Cast = cast
+	d.Cast = slices.DeleteFunc(credits, func(c metadata.CastMember) bool {
+		return c.Job != ""
+	})
 	return d, nil
 }
 

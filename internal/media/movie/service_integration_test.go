@@ -109,8 +109,8 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 					Year:          2026,
 				}, nil).Once()
 			meta.EXPECT().
-				FetchDigitalRelease(mock.Anything, uint32(1165369), "FR").
-				Return(&drd, nil).Once()
+				FetchReleaseInfo(mock.Anything, uint32(1165369), "FR").
+				Return(metadata.ReleaseInfo{Digital: &drd}, nil).Once()
 
 			m, _, err := svc.Add(ctx, 1165369, "")
 			Expect(err).NotTo(HaveOccurred())
@@ -324,8 +324,8 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 					Year:          2020,
 				}, nil).Once()
 			meta.EXPECT().
-				FetchDigitalRelease(mock.Anything, uint32(555), "US").
-				Return(&drd, nil).Once()
+				FetchReleaseInfo(mock.Anything, uint32(555), "US").
+				Return(metadata.ReleaseInfo{Digital: &drd}, nil).Once()
 
 			Expect(svc.RefreshStale(ctx)).To(Succeed())
 
@@ -358,8 +358,8 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 						Year:          2021,
 					}, nil).Once()
 				meta.EXPECT().
-					FetchDigitalRelease(mock.Anything, uint32(777), "US").
-					Return(nil, errors.New("boom")).Once()
+					FetchReleaseInfo(mock.Anything, uint32(777), "US").
+					Return(metadata.ReleaseInfo{}, errors.New("boom")).Once()
 
 				Expect(svc.RefreshStale(ctx)).To(Succeed())
 

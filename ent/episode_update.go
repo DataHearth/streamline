@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediaevent"
@@ -216,6 +217,53 @@ func (_u *EpisodeUpdate) ClearLastSearchAt() *EpisodeUpdate {
 	return _u
 }
 
+// SetTvdbID sets the "tvdb_id" field.
+func (_u *EpisodeUpdate) SetTvdbID(v uint32) *EpisodeUpdate {
+	_u.mutation.ResetTvdbID()
+	_u.mutation.SetTvdbID(v)
+	return _u
+}
+
+// SetNillableTvdbID sets the "tvdb_id" field if the given value is not nil.
+func (_u *EpisodeUpdate) SetNillableTvdbID(v *uint32) *EpisodeUpdate {
+	if v != nil {
+		_u.SetTvdbID(*v)
+	}
+	return _u
+}
+
+// AddTvdbID adds value to the "tvdb_id" field.
+func (_u *EpisodeUpdate) AddTvdbID(v int32) *EpisodeUpdate {
+	_u.mutation.AddTvdbID(v)
+	return _u
+}
+
+// ClearTvdbID clears the value of the "tvdb_id" field.
+func (_u *EpisodeUpdate) ClearTvdbID() *EpisodeUpdate {
+	_u.mutation.ClearTvdbID()
+	return _u
+}
+
+// SetCreditsFetchedAt sets the "credits_fetched_at" field.
+func (_u *EpisodeUpdate) SetCreditsFetchedAt(v time.Time) *EpisodeUpdate {
+	_u.mutation.SetCreditsFetchedAt(v)
+	return _u
+}
+
+// SetNillableCreditsFetchedAt sets the "credits_fetched_at" field if the given value is not nil.
+func (_u *EpisodeUpdate) SetNillableCreditsFetchedAt(v *time.Time) *EpisodeUpdate {
+	if v != nil {
+		_u.SetCreditsFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearCreditsFetchedAt clears the value of the "credits_fetched_at" field.
+func (_u *EpisodeUpdate) ClearCreditsFetchedAt() *EpisodeUpdate {
+	_u.mutation.ClearCreditsFetchedAt()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *EpisodeUpdate) SetStatus(v episode.Status) *EpisodeUpdate {
 	_u.mutation.SetStatus(v)
@@ -299,6 +347,21 @@ func (_u *EpisodeUpdate) AddEvents(v ...*MediaEvent) *EpisodeUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.AddEventIDs(ids...)
+}
+
+// AddCreditIDs adds the "credits" edge to the Credit entity by IDs.
+func (_u *EpisodeUpdate) AddCreditIDs(ids ...uint32) *EpisodeUpdate {
+	_u.mutation.AddCreditIDs(ids...)
+	return _u
+}
+
+// AddCredits adds the "credits" edges to the Credit entity.
+func (_u *EpisodeUpdate) AddCredits(v ...*Credit) *EpisodeUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreditIDs(ids...)
 }
 
 // Mutation returns the EpisodeMutation object of the builder.
@@ -394,6 +457,27 @@ func (_u *EpisodeUpdate) RemoveEvents(v ...*MediaEvent) *EpisodeUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearCredits clears all "credits" edges to the Credit entity.
+func (_u *EpisodeUpdate) ClearCredits() *EpisodeUpdate {
+	_u.mutation.ClearCredits()
+	return _u
+}
+
+// RemoveCreditIDs removes the "credits" edge to Credit entities by IDs.
+func (_u *EpisodeUpdate) RemoveCreditIDs(ids ...uint32) *EpisodeUpdate {
+	_u.mutation.RemoveCreditIDs(ids...)
+	return _u
+}
+
+// RemoveCredits removes "credits" edges to Credit entities.
+func (_u *EpisodeUpdate) RemoveCredits(v ...*Credit) *EpisodeUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreditIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -516,6 +600,21 @@ func (_u *EpisodeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.LastSearchAtCleared() {
 		_spec.ClearField(episode.FieldLastSearchAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.TvdbID(); ok {
+		_spec.SetField(episode.FieldTvdbID, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedTvdbID(); ok {
+		_spec.AddField(episode.FieldTvdbID, field.TypeUint32, value)
+	}
+	if _u.mutation.TvdbIDCleared() {
+		_spec.ClearField(episode.FieldTvdbID, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.CreditsFetchedAt(); ok {
+		_spec.SetField(episode.FieldCreditsFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CreditsFetchedAtCleared() {
+		_spec.ClearField(episode.FieldCreditsFetchedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(episode.FieldStatus, field.TypeEnum, value)
@@ -722,6 +821,51 @@ func (_u *EpisodeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.CreditsTable,
+			Columns: []string{episode.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreditsIDs(); len(nodes) > 0 && !_u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.CreditsTable,
+			Columns: []string{episode.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.CreditsTable,
+			Columns: []string{episode.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -934,6 +1078,53 @@ func (_u *EpisodeUpdateOne) ClearLastSearchAt() *EpisodeUpdateOne {
 	return _u
 }
 
+// SetTvdbID sets the "tvdb_id" field.
+func (_u *EpisodeUpdateOne) SetTvdbID(v uint32) *EpisodeUpdateOne {
+	_u.mutation.ResetTvdbID()
+	_u.mutation.SetTvdbID(v)
+	return _u
+}
+
+// SetNillableTvdbID sets the "tvdb_id" field if the given value is not nil.
+func (_u *EpisodeUpdateOne) SetNillableTvdbID(v *uint32) *EpisodeUpdateOne {
+	if v != nil {
+		_u.SetTvdbID(*v)
+	}
+	return _u
+}
+
+// AddTvdbID adds value to the "tvdb_id" field.
+func (_u *EpisodeUpdateOne) AddTvdbID(v int32) *EpisodeUpdateOne {
+	_u.mutation.AddTvdbID(v)
+	return _u
+}
+
+// ClearTvdbID clears the value of the "tvdb_id" field.
+func (_u *EpisodeUpdateOne) ClearTvdbID() *EpisodeUpdateOne {
+	_u.mutation.ClearTvdbID()
+	return _u
+}
+
+// SetCreditsFetchedAt sets the "credits_fetched_at" field.
+func (_u *EpisodeUpdateOne) SetCreditsFetchedAt(v time.Time) *EpisodeUpdateOne {
+	_u.mutation.SetCreditsFetchedAt(v)
+	return _u
+}
+
+// SetNillableCreditsFetchedAt sets the "credits_fetched_at" field if the given value is not nil.
+func (_u *EpisodeUpdateOne) SetNillableCreditsFetchedAt(v *time.Time) *EpisodeUpdateOne {
+	if v != nil {
+		_u.SetCreditsFetchedAt(*v)
+	}
+	return _u
+}
+
+// ClearCreditsFetchedAt clears the value of the "credits_fetched_at" field.
+func (_u *EpisodeUpdateOne) ClearCreditsFetchedAt() *EpisodeUpdateOne {
+	_u.mutation.ClearCreditsFetchedAt()
+	return _u
+}
+
 // SetStatus sets the "status" field.
 func (_u *EpisodeUpdateOne) SetStatus(v episode.Status) *EpisodeUpdateOne {
 	_u.mutation.SetStatus(v)
@@ -1017,6 +1208,21 @@ func (_u *EpisodeUpdateOne) AddEvents(v ...*MediaEvent) *EpisodeUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.AddEventIDs(ids...)
+}
+
+// AddCreditIDs adds the "credits" edge to the Credit entity by IDs.
+func (_u *EpisodeUpdateOne) AddCreditIDs(ids ...uint32) *EpisodeUpdateOne {
+	_u.mutation.AddCreditIDs(ids...)
+	return _u
+}
+
+// AddCredits adds the "credits" edges to the Credit entity.
+func (_u *EpisodeUpdateOne) AddCredits(v ...*Credit) *EpisodeUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCreditIDs(ids...)
 }
 
 // Mutation returns the EpisodeMutation object of the builder.
@@ -1112,6 +1318,27 @@ func (_u *EpisodeUpdateOne) RemoveEvents(v ...*MediaEvent) *EpisodeUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearCredits clears all "credits" edges to the Credit entity.
+func (_u *EpisodeUpdateOne) ClearCredits() *EpisodeUpdateOne {
+	_u.mutation.ClearCredits()
+	return _u
+}
+
+// RemoveCreditIDs removes the "credits" edge to Credit entities by IDs.
+func (_u *EpisodeUpdateOne) RemoveCreditIDs(ids ...uint32) *EpisodeUpdateOne {
+	_u.mutation.RemoveCreditIDs(ids...)
+	return _u
+}
+
+// RemoveCredits removes "credits" edges to Credit entities.
+func (_u *EpisodeUpdateOne) RemoveCredits(v ...*Credit) *EpisodeUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCreditIDs(ids...)
 }
 
 // Where appends a list predicates to the EpisodeUpdate builder.
@@ -1264,6 +1491,21 @@ func (_u *EpisodeUpdateOne) sqlSave(ctx context.Context) (_node *Episode, err er
 	}
 	if _u.mutation.LastSearchAtCleared() {
 		_spec.ClearField(episode.FieldLastSearchAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.TvdbID(); ok {
+		_spec.SetField(episode.FieldTvdbID, field.TypeUint32, value)
+	}
+	if value, ok := _u.mutation.AddedTvdbID(); ok {
+		_spec.AddField(episode.FieldTvdbID, field.TypeUint32, value)
+	}
+	if _u.mutation.TvdbIDCleared() {
+		_spec.ClearField(episode.FieldTvdbID, field.TypeUint32)
+	}
+	if value, ok := _u.mutation.CreditsFetchedAt(); ok {
+		_spec.SetField(episode.FieldCreditsFetchedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CreditsFetchedAtCleared() {
+		_spec.ClearField(episode.FieldCreditsFetchedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(episode.FieldStatus, field.TypeEnum, value)
@@ -1470,6 +1712,51 @@ func (_u *EpisodeUpdateOne) sqlSave(ctx context.Context) (_node *Episode, err er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.CreditsTable,
+			Columns: []string{episode.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCreditsIDs(); len(nodes) > 0 && !_u.mutation.CreditsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.CreditsTable,
+			Columns: []string{episode.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.CreditsTable,
+			Columns: []string{episode.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

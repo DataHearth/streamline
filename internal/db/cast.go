@@ -9,6 +9,7 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/credit"
+	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/person"
 	"github.com/datahearth/streamline/ent/predicate"
@@ -16,15 +17,16 @@ import (
 	"github.com/datahearth/streamline/internal/metadata"
 )
 
-// CastOwner names which title kind a set of credits hangs off. Credit carries
-// one optional edge per kind and exactly one of them is ever set — the
+// CastOwner names what a set of credits hangs off. Credit carries one
+// optional edge per owner and exactly one of them is ever set — the
 // MediaEvent pattern — so the owner has to be named explicitly rather than
 // inferred from an id.
 type CastOwner string
 
 const (
-	CastOwnerMovie  CastOwner = "movie"
-	CastOwnerSeries CastOwner = "series"
+	CastOwnerMovie   CastOwner = "movie"
+	CastOwnerSeries  CastOwner = "series"
+	CastOwnerEpisode CastOwner = "episode"
 )
 
 var errUnknownCastOwner = errors.New("unknown cast owner")
@@ -100,12 +102,16 @@ func replaceCast(
 		b := cl.Credit.Create().
 			SetPersonID(personID).
 			SetCharacter(c.Character).
+			SetJob(c.Job).
+			SetDepartment(c.Department).
 			SetOrder(order)
 		switch owner {
 		case CastOwnerMovie:
 			b = b.SetMovieID(ownerID)
 		case CastOwnerSeries:
 			b = b.SetTvShowID(ownerID)
+		case CastOwnerEpisode:
+			b = b.SetEpisodeID(ownerID)
 		}
 		creates = append(creates, b)
 		if order < ^uint8(0) {
@@ -134,8 +140,8 @@ type CastEntry struct {
 	ProfileURL string
 }
 
-// TitleCast returns a title's cast in billing order — the order the provider
-// listed them in, stamped onto the credit at write time.
+// TitleCast returns a title's acting credits in billing order — the order the
+// provider listed them in, stamped onto the credit at write time.
 func (db *DB) TitleCast(
 	ctx context.Context,
 	owner CastOwner,
@@ -146,7 +152,7 @@ func (db *DB) TitleCast(
 		return nil, err
 	}
 	rows, err := db.client.Credit.Query().
-		Where(ownedBy).
+		Where(ownedBy, credit.Or(credit.JobIsNil(), credit.JobEQ(""))).
 		WithPerson().
 		// order is a uint8 the whole cast can share once a provider lists more
 		// entries than it can hold, so id breaks the tie and keeps the tail in
@@ -181,6 +187,8 @@ func creditsOf(owner CastOwner, ownerID uint32) (predicate.Credit, error) {
 		return credit.HasMovieWith(movie.IDEQ(ownerID)), nil
 	case CastOwnerSeries:
 		return credit.HasTvShowWith(tvshow.IDEQ(ownerID)), nil
+	case CastOwnerEpisode:
+		return credit.HasEpisodeWith(episode.IDEQ(ownerID)), nil
 	default:
 		return nil, fmt.Errorf("%w: %q", errUnknownCastOwner, owner)
 	}

@@ -43,6 +43,8 @@ const (
 	FieldPosterPath = "poster_path"
 	// FieldNetwork holds the string denoting the network field in the database.
 	FieldNetwork = "network"
+	// FieldCertification holds the string denoting the certification field in the database.
+	FieldCertification = "certification"
 	// FieldCreator holds the string denoting the creator field in the database.
 	FieldCreator = "creator"
 	// FieldRuntime holds the string denoting the runtime field in the database.
@@ -105,6 +107,7 @@ var Columns = []string{
 	FieldImdbID,
 	FieldPosterPath,
 	FieldNetwork,
+	FieldCertification,
 	FieldCreator,
 	FieldRuntime,
 	FieldRating,
@@ -270,6 +273,11 @@ func ByPosterPath(opts ...sql.OrderTermOption) OrderOption {
 // ByNetwork orders the results by the network field.
 func ByNetwork(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldNetwork, opts...).ToFunc()
+}
+
+// ByCertification orders the results by the certification field.
+func ByCertification(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCertification, opts...).ToFunc()
 }
 
 // ByCreator orders the results by the creator field.

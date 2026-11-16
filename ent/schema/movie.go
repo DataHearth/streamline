@@ -34,6 +34,8 @@ func (Movie) Fields() []ent.Field {
 		// "tt" + digits, as TMDB reports it. A tracker that cannot search by
 		// TMDB id often can by IMDb id, which is what this is queried for.
 		field.String("imdb_id").Optional(),
+		// The rating board's mark in metadata.tmdb_region ("PG-13", "16").
+		field.String("certification").Optional(),
 		field.Time("last_search_at").Optional().Nillable(),
 		// Primary (theatrical) release, as TMDB reports it. Distinct from
 		// digital_release_date, which is what the release-radar search waits on;

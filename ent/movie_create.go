@@ -146,6 +146,20 @@ func (_c *MovieCreate) SetNillableImdbID(v *string) *MovieCreate {
 	return _c
 }
 
+// SetCertification sets the "certification" field.
+func (_c *MovieCreate) SetCertification(v string) *MovieCreate {
+	_c.mutation.SetCertification(v)
+	return _c
+}
+
+// SetNillableCertification sets the "certification" field if the given value is not nil.
+func (_c *MovieCreate) SetNillableCertification(v *string) *MovieCreate {
+	if v != nil {
+		_c.SetCertification(*v)
+	}
+	return _c
+}
+
 // SetLastSearchAt sets the "last_search_at" field.
 func (_c *MovieCreate) SetLastSearchAt(v time.Time) *MovieCreate {
 	_c.mutation.SetLastSearchAt(v)
@@ -520,6 +534,10 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ImdbID(); ok {
 		_spec.SetField(movie.FieldImdbID, field.TypeString, value)
 		_node.ImdbID = value
+	}
+	if value, ok := _c.mutation.Certification(); ok {
+		_spec.SetField(movie.FieldCertification, field.TypeString, value)
+		_node.Certification = value
 	}
 	if value, ok := _c.mutation.LastSearchAt(); ok {
 		_spec.SetField(movie.FieldLastSearchAt, field.TypeTime, value)

@@ -529,17 +529,16 @@ func (db *DB) SetMovieTMDBID(ctx context.Context, id, tmdbID uint32) error {
 	return db.client.Movie.UpdateOneID(id).SetTmdbID(tmdbID).Exec(ctx)
 }
 
-// SetMovieDigitalReleaseDate sets or clears digital_release_date based on
-// whether `date` is non-nil. Used by metadata-refresh after the TMDB
-// release_dates lookup.
-func (db *DB) SetMovieDigitalReleaseDate(
+// SetMovieReleaseInfo writes what the TMDB release_dates lookup found for the
+// configured region, clearing what it no longer lists.
+func (db *DB) SetMovieReleaseInfo(
 	ctx context.Context,
 	id uint32,
-	date *time.Time,
+	info metadata.ReleaseInfo,
 ) error {
-	upd := db.client.Movie.UpdateOneID(id)
-	if date != nil {
-		upd.SetDigitalReleaseDate(*date)
+	upd := db.client.Movie.UpdateOneID(id).SetCertification(info.Certification)
+	if info.Digital != nil {
+		upd.SetDigitalReleaseDate(*info.Digital)
 	} else {
 		upd.ClearDigitalReleaseDate()
 	}

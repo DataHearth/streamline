@@ -115,6 +115,11 @@ func Network(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldEQ(FieldNetwork, v))
 }
 
+// Certification applies equality check predicate on the "certification" field. It's identical to CertificationEQ.
+func Certification(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldEQ(FieldCertification, v))
+}
+
 // Creator applies equality check predicate on the "creator" field. It's identical to CreatorEQ.
 func Creator(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldEQ(FieldCreator, v))
@@ -838,6 +843,81 @@ func NetworkEqualFold(v string) predicate.TVShow {
 // NetworkContainsFold applies the ContainsFold predicate on the "network" field.
 func NetworkContainsFold(v string) predicate.TVShow {
 	return predicate.TVShow(sql.FieldContainsFold(FieldNetwork, v))
+}
+
+// CertificationEQ applies the EQ predicate on the "certification" field.
+func CertificationEQ(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldEQ(FieldCertification, v))
+}
+
+// CertificationNEQ applies the NEQ predicate on the "certification" field.
+func CertificationNEQ(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldNEQ(FieldCertification, v))
+}
+
+// CertificationIn applies the In predicate on the "certification" field.
+func CertificationIn(vs ...string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldIn(FieldCertification, vs...))
+}
+
+// CertificationNotIn applies the NotIn predicate on the "certification" field.
+func CertificationNotIn(vs ...string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldNotIn(FieldCertification, vs...))
+}
+
+// CertificationGT applies the GT predicate on the "certification" field.
+func CertificationGT(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldGT(FieldCertification, v))
+}
+
+// CertificationGTE applies the GTE predicate on the "certification" field.
+func CertificationGTE(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldGTE(FieldCertification, v))
+}
+
+// CertificationLT applies the LT predicate on the "certification" field.
+func CertificationLT(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldLT(FieldCertification, v))
+}
+
+// CertificationLTE applies the LTE predicate on the "certification" field.
+func CertificationLTE(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldLTE(FieldCertification, v))
+}
+
+// CertificationContains applies the Contains predicate on the "certification" field.
+func CertificationContains(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldContains(FieldCertification, v))
+}
+
+// CertificationHasPrefix applies the HasPrefix predicate on the "certification" field.
+func CertificationHasPrefix(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldHasPrefix(FieldCertification, v))
+}
+
+// CertificationHasSuffix applies the HasSuffix predicate on the "certification" field.
+func CertificationHasSuffix(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldHasSuffix(FieldCertification, v))
+}
+
+// CertificationIsNil applies the IsNil predicate on the "certification" field.
+func CertificationIsNil() predicate.TVShow {
+	return predicate.TVShow(sql.FieldIsNull(FieldCertification))
+}
+
+// CertificationNotNil applies the NotNil predicate on the "certification" field.
+func CertificationNotNil() predicate.TVShow {
+	return predicate.TVShow(sql.FieldNotNull(FieldCertification))
+}
+
+// CertificationEqualFold applies the EqualFold predicate on the "certification" field.
+func CertificationEqualFold(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldEqualFold(FieldCertification, v))
+}
+
+// CertificationContainsFold applies the ContainsFold predicate on the "certification" field.
+func CertificationContainsFold(v string) predicate.TVShow {
+	return predicate.TVShow(sql.FieldContainsFold(FieldCertification, v))
 }
 
 // CreatorEQ applies the EQ predicate on the "creator" field.

@@ -110,6 +110,16 @@ func LastSearchAt(v time.Time) predicate.Episode {
 	return predicate.Episode(sql.FieldEQ(FieldLastSearchAt, v))
 }
 
+// TvdbID applies equality check predicate on the "tvdb_id" field. It's identical to TvdbIDEQ.
+func TvdbID(v uint32) predicate.Episode {
+	return predicate.Episode(sql.FieldEQ(FieldTvdbID, v))
+}
+
+// CreditsFetchedAt applies equality check predicate on the "credits_fetched_at" field. It's identical to CreditsFetchedAtEQ.
+func CreditsFetchedAt(v time.Time) predicate.Episode {
+	return predicate.Episode(sql.FieldEQ(FieldCreditsFetchedAt, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.Episode {
 	return predicate.Episode(sql.FieldEQ(FieldCreateTime, v))
@@ -590,6 +600,106 @@ func LastSearchAtNotNil() predicate.Episode {
 	return predicate.Episode(sql.FieldNotNull(FieldLastSearchAt))
 }
 
+// TvdbIDEQ applies the EQ predicate on the "tvdb_id" field.
+func TvdbIDEQ(v uint32) predicate.Episode {
+	return predicate.Episode(sql.FieldEQ(FieldTvdbID, v))
+}
+
+// TvdbIDNEQ applies the NEQ predicate on the "tvdb_id" field.
+func TvdbIDNEQ(v uint32) predicate.Episode {
+	return predicate.Episode(sql.FieldNEQ(FieldTvdbID, v))
+}
+
+// TvdbIDIn applies the In predicate on the "tvdb_id" field.
+func TvdbIDIn(vs ...uint32) predicate.Episode {
+	return predicate.Episode(sql.FieldIn(FieldTvdbID, vs...))
+}
+
+// TvdbIDNotIn applies the NotIn predicate on the "tvdb_id" field.
+func TvdbIDNotIn(vs ...uint32) predicate.Episode {
+	return predicate.Episode(sql.FieldNotIn(FieldTvdbID, vs...))
+}
+
+// TvdbIDGT applies the GT predicate on the "tvdb_id" field.
+func TvdbIDGT(v uint32) predicate.Episode {
+	return predicate.Episode(sql.FieldGT(FieldTvdbID, v))
+}
+
+// TvdbIDGTE applies the GTE predicate on the "tvdb_id" field.
+func TvdbIDGTE(v uint32) predicate.Episode {
+	return predicate.Episode(sql.FieldGTE(FieldTvdbID, v))
+}
+
+// TvdbIDLT applies the LT predicate on the "tvdb_id" field.
+func TvdbIDLT(v uint32) predicate.Episode {
+	return predicate.Episode(sql.FieldLT(FieldTvdbID, v))
+}
+
+// TvdbIDLTE applies the LTE predicate on the "tvdb_id" field.
+func TvdbIDLTE(v uint32) predicate.Episode {
+	return predicate.Episode(sql.FieldLTE(FieldTvdbID, v))
+}
+
+// TvdbIDIsNil applies the IsNil predicate on the "tvdb_id" field.
+func TvdbIDIsNil() predicate.Episode {
+	return predicate.Episode(sql.FieldIsNull(FieldTvdbID))
+}
+
+// TvdbIDNotNil applies the NotNil predicate on the "tvdb_id" field.
+func TvdbIDNotNil() predicate.Episode {
+	return predicate.Episode(sql.FieldNotNull(FieldTvdbID))
+}
+
+// CreditsFetchedAtEQ applies the EQ predicate on the "credits_fetched_at" field.
+func CreditsFetchedAtEQ(v time.Time) predicate.Episode {
+	return predicate.Episode(sql.FieldEQ(FieldCreditsFetchedAt, v))
+}
+
+// CreditsFetchedAtNEQ applies the NEQ predicate on the "credits_fetched_at" field.
+func CreditsFetchedAtNEQ(v time.Time) predicate.Episode {
+	return predicate.Episode(sql.FieldNEQ(FieldCreditsFetchedAt, v))
+}
+
+// CreditsFetchedAtIn applies the In predicate on the "credits_fetched_at" field.
+func CreditsFetchedAtIn(vs ...time.Time) predicate.Episode {
+	return predicate.Episode(sql.FieldIn(FieldCreditsFetchedAt, vs...))
+}
+
+// CreditsFetchedAtNotIn applies the NotIn predicate on the "credits_fetched_at" field.
+func CreditsFetchedAtNotIn(vs ...time.Time) predicate.Episode {
+	return predicate.Episode(sql.FieldNotIn(FieldCreditsFetchedAt, vs...))
+}
+
+// CreditsFetchedAtGT applies the GT predicate on the "credits_fetched_at" field.
+func CreditsFetchedAtGT(v time.Time) predicate.Episode {
+	return predicate.Episode(sql.FieldGT(FieldCreditsFetchedAt, v))
+}
+
+// CreditsFetchedAtGTE applies the GTE predicate on the "credits_fetched_at" field.
+func CreditsFetchedAtGTE(v time.Time) predicate.Episode {
+	return predicate.Episode(sql.FieldGTE(FieldCreditsFetchedAt, v))
+}
+
+// CreditsFetchedAtLT applies the LT predicate on the "credits_fetched_at" field.
+func CreditsFetchedAtLT(v time.Time) predicate.Episode {
+	return predicate.Episode(sql.FieldLT(FieldCreditsFetchedAt, v))
+}
+
+// CreditsFetchedAtLTE applies the LTE predicate on the "credits_fetched_at" field.
+func CreditsFetchedAtLTE(v time.Time) predicate.Episode {
+	return predicate.Episode(sql.FieldLTE(FieldCreditsFetchedAt, v))
+}
+
+// CreditsFetchedAtIsNil applies the IsNil predicate on the "credits_fetched_at" field.
+func CreditsFetchedAtIsNil() predicate.Episode {
+	return predicate.Episode(sql.FieldIsNull(FieldCreditsFetchedAt))
+}
+
+// CreditsFetchedAtNotNil applies the NotNil predicate on the "credits_fetched_at" field.
+func CreditsFetchedAtNotNil() predicate.Episode {
+	return predicate.Episode(sql.FieldNotNull(FieldCreditsFetchedAt))
+}
+
 // StatusEQ applies the EQ predicate on the "status" field.
 func StatusEQ(v Status) predicate.Episode {
 	return predicate.Episode(sql.FieldEQ(FieldStatus, v))
@@ -717,6 +827,29 @@ func HasEvents() predicate.Episode {
 func HasEventsWith(preds ...predicate.MediaEvent) predicate.Episode {
 	return predicate.Episode(func(s *sql.Selector) {
 		step := newEventsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCredits applies the HasEdge predicate on the "credits" edge.
+func HasCredits() predicate.Episode {
+	return predicate.Episode(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CreditsTable, CreditsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCreditsWith applies the HasEdge predicate on the "credits" edge with a given conditions (other predicates).
+func HasCreditsWith(preds ...predicate.Credit) predicate.Episode {
+	return predicate.Episode(func(s *sql.Selector) {
+		step := newCreditsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

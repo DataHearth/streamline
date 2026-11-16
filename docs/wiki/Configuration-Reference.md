@@ -356,7 +356,7 @@ All values are Go duration strings, runtime-editable, pausable and runnable on d
 | `metadata.tvdb_api_key` | string | `""` | **Required for TV.** |
 | `metadata.hardcover_api_key` | string | `""` | **Required for books.** Settable in Settings → Metadata (write-only, restart required) |
 | `metadata.language` | BCP-47 | `en` | Empty lets the provider pick its own default |
-| `metadata.tmdb_region` | ISO 3166-1 α-2 | `FR` | Uppercase. Drives which country's digital release dates feed the calendar — set it to yours |
+| `metadata.tmdb_region` | ISO 3166-1 α-2 | `FR` | Uppercase. Drives which country's digital release dates feed the calendar and whose age rating a movie or series shows — set it to yours |
 | `metadata.musicbrainz_url` | URL | `https://musicbrainz.org` | The MusicBrainz server root, without `/ws/2`. Point it at a [self-hosted mirror](https://musicbrainz.org/doc/MusicBrainz_Server/Setup) (e.g. `http://musicbrainz:5000`) to stop sharing musicbrainz.org's load shedding. Settable in Settings → Metadata, restart required |
 | `metadata.musicbrainz_interval` | duration | `1s` | Least time between two MusicBrainz calls; background work (filling in tracks and credits) keeps twice that. `1s` is what musicbrainz.org allows; lower it, or set `0s` for no limit, **only** against your own mirror. Settable in Settings → Metadata, restart required |
 

@@ -257,6 +257,26 @@ func (_u *TVShowUpdate) ClearNetwork() *TVShowUpdate {
 	return _u
 }
 
+// SetCertification sets the "certification" field.
+func (_u *TVShowUpdate) SetCertification(v string) *TVShowUpdate {
+	_u.mutation.SetCertification(v)
+	return _u
+}
+
+// SetNillableCertification sets the "certification" field if the given value is not nil.
+func (_u *TVShowUpdate) SetNillableCertification(v *string) *TVShowUpdate {
+	if v != nil {
+		_u.SetCertification(*v)
+	}
+	return _u
+}
+
+// ClearCertification clears the value of the "certification" field.
+func (_u *TVShowUpdate) ClearCertification() *TVShowUpdate {
+	_u.mutation.ClearCertification()
+	return _u
+}
+
 // SetCreator sets the "creator" field.
 func (_u *TVShowUpdate) SetCreator(v string) *TVShowUpdate {
 	_u.mutation.SetCreator(v)
@@ -656,6 +676,12 @@ func (_u *TVShowUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.NetworkCleared() {
 		_spec.ClearField(tvshow.FieldNetwork, field.TypeString)
+	}
+	if value, ok := _u.mutation.Certification(); ok {
+		_spec.SetField(tvshow.FieldCertification, field.TypeString, value)
+	}
+	if _u.mutation.CertificationCleared() {
+		_spec.ClearField(tvshow.FieldCertification, field.TypeString)
 	}
 	if value, ok := _u.mutation.Creator(); ok {
 		_spec.SetField(tvshow.FieldCreator, field.TypeString, value)
@@ -1096,6 +1122,26 @@ func (_u *TVShowUpdateOne) ClearNetwork() *TVShowUpdateOne {
 	return _u
 }
 
+// SetCertification sets the "certification" field.
+func (_u *TVShowUpdateOne) SetCertification(v string) *TVShowUpdateOne {
+	_u.mutation.SetCertification(v)
+	return _u
+}
+
+// SetNillableCertification sets the "certification" field if the given value is not nil.
+func (_u *TVShowUpdateOne) SetNillableCertification(v *string) *TVShowUpdateOne {
+	if v != nil {
+		_u.SetCertification(*v)
+	}
+	return _u
+}
+
+// ClearCertification clears the value of the "certification" field.
+func (_u *TVShowUpdateOne) ClearCertification() *TVShowUpdateOne {
+	_u.mutation.ClearCertification()
+	return _u
+}
+
 // SetCreator sets the "creator" field.
 func (_u *TVShowUpdateOne) SetCreator(v string) *TVShowUpdateOne {
 	_u.mutation.SetCreator(v)
@@ -1525,6 +1571,12 @@ func (_u *TVShowUpdateOne) sqlSave(ctx context.Context) (_node *TVShow, err erro
 	}
 	if _u.mutation.NetworkCleared() {
 		_spec.ClearField(tvshow.FieldNetwork, field.TypeString)
+	}
+	if value, ok := _u.mutation.Certification(); ok {
+		_spec.SetField(tvshow.FieldCertification, field.TypeString, value)
+	}
+	if _u.mutation.CertificationCleared() {
+		_spec.ClearField(tvshow.FieldCertification, field.TypeString)
 	}
 	if value, ok := _u.mutation.Creator(); ok {
 		_spec.SetField(tvshow.FieldCreator, field.TypeString, value)

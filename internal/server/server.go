@@ -224,8 +224,11 @@ func New(cfg Config) *Server {
 				return
 			}
 			id := uint32(idU)
-			if kind == "artists" {
+			switch kind {
+			case "artists":
 				kind, id = s.artistPosterSource(r.Context(), id)
+			case "people":
+				s.fetchPersonPhoto(r.Context(), id)
 			}
 			s.posters.Serve(w, r, kind, id)
 		},
@@ -280,6 +283,28 @@ func (s *Server) artistPosterSource(
 		}
 	}
 	return "artists", id
+}
+
+// fetchPersonPhoto caches a person's photo on its first view. The metadata
+// refresh jobs fetch every credited person's, but only on their next tick, and
+// a cast rail shown before that would otherwise be all monograms.
+func (s *Server) fetchPersonPhoto(ctx context.Context, id uint32) {
+	if _, err := os.Stat(
+		s.posters.Path("people", id),
+	); !errors.Is(
+		err,
+		os.ErrNotExist,
+	) {
+		return
+	}
+	src, err := s.db.PersonPhotoURL(ctx, id)
+	if err != nil || src == "" {
+		return
+	}
+	if err := s.posters.Fetch(ctx, "people", id, src); err != nil {
+		slog.WarnContext(ctx, "person photo fetch failed",
+			"person.id", id, "error", err)
+	}
 }
 
 // Router returns the fully-wrapped HTTP handler. otelhttp is applied

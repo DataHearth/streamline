@@ -103,6 +103,7 @@ func movieToAPI(m *ent.Movie) Movie {
 	if m.Overview != "" {
 		mov.Overview = &m.Overview
 	}
+	mov.Certification = optString(m.Certification)
 	if m.QualityProfile != "" {
 		mov.QualityProfile = &m.QualityProfile
 	}
@@ -1238,6 +1239,7 @@ func tvShowBaseToAPI(s *ent.TVShow) TVShow {
 	if s.Network != "" {
 		out.Network = &s.Network
 	}
+	out.Certification = optString(s.Certification)
 	if s.Creator != "" {
 		out.Creator = &s.Creator
 	}

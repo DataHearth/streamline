@@ -170,7 +170,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
-		// The strict TVDB mock carries no GetSeriesCast expectation in either
+		// The strict TVDB mock carries no GetSeriesCredits expectation in either
 		// spec: the detail view must serve cast from the stored credits.
 		It("attaches the cast credited on the show", func() {
 			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).

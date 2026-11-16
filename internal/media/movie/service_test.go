@@ -570,12 +570,15 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		BeforeEach(func() {
 			// Region empty → refreshOne skips the digital-release lookup,
 			// so existing GetMovie+UpdateMovieMetadata-only assertions stay
-			// valid without needing additional FetchDigitalRelease mocks.
+			// valid without needing additional FetchReleaseInfo mocks.
 			configtest.Setup(map[string]any{
 				"metadata": map[string]any{"tmdb_region": ""},
 			})
 		})
 		It("noops when no stale movies exist", func() {
+			storeMock.PeopleWithPhotos(mock.Anything, db.CastOwnerMovie).
+				Return(nil, nil).
+				Once()
 			storeMock.ListMoviesStaleSince(mock.Anything, mock.AnythingOfType("time.Time")).
 				Return(nil, nil).
 				Once()
@@ -583,6 +586,9 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		})
 
 		It("updates title/year/overview via UpdateMovieMetadata", func() {
+			storeMock.PeopleWithPhotos(mock.Anything, db.CastOwnerMovie).
+				Return(nil, nil).
+				Once()
 			old := &ent.Movie{ID: 1, TmdbID: 42, Title: "Old", Year: 2023}
 			storeMock.ListMoviesStaleSince(mock.Anything, mock.AnythingOfType("time.Time")).
 				Return([]*ent.Movie{old}, nil).
@@ -608,6 +614,9 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		})
 
 		It("skips a movie on provider error and continues with the rest", func() {
+			storeMock.PeopleWithPhotos(mock.Anything, db.CastOwnerMovie).
+				Return(nil, nil).
+				Once()
 			m1 := &ent.Movie{ID: 1, TmdbID: 1, Title: "A"}
 			m2 := &ent.Movie{ID: 2, TmdbID: 2, Title: "B"}
 			storeMock.ListMoviesStaleSince(mock.Anything, mock.AnythingOfType("time.Time")).

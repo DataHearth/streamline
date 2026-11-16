@@ -37,6 +37,8 @@ const (
 	FieldTmdbID = "tmdb_id"
 	// FieldImdbID holds the string denoting the imdb_id field in the database.
 	FieldImdbID = "imdb_id"
+	// FieldCertification holds the string denoting the certification field in the database.
+	FieldCertification = "certification"
 	// FieldLastSearchAt holds the string denoting the last_search_at field in the database.
 	FieldLastSearchAt = "last_search_at"
 	// FieldReleaseDate holds the string denoting the release_date field in the database.
@@ -111,6 +113,7 @@ var Columns = []string{
 	FieldMonitored,
 	FieldTmdbID,
 	FieldImdbID,
+	FieldCertification,
 	FieldLastSearchAt,
 	FieldReleaseDate,
 	FieldDigitalReleaseDate,
@@ -244,6 +247,11 @@ func ByTmdbID(opts ...sql.OrderTermOption) OrderOption {
 // ByImdbID orders the results by the imdb_id field.
 func ByImdbID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldImdbID, opts...).ToFunc()
+}
+
+// ByCertification orders the results by the certification field.
+func ByCertification(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCertification, opts...).ToFunc()
 }
 
 // ByLastSearchAt orders the results by the last_search_at field.

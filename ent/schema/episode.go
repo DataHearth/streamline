@@ -32,6 +32,11 @@ func (Episode) Fields() []ent.Field {
 		field.Uint16("absolute_number").Optional().Default(0),
 		field.Uint8("grab_failures").Default(0),
 		field.Time("last_search_at").Optional().Nillable(),
+		field.Uint32("tvdb_id").Optional().Default(0),
+		// credits_fetched_at is when TVDB's episode credits were last read; one
+		// read within a month of airing is read again, since guest and crew
+		// listings keep filling in after an episode airs.
+		field.Time("credits_fetched_at").Optional().Nillable(),
 		field.Enum("status").
 			Values(
 				"wanted",
@@ -64,6 +69,8 @@ func (Episode) Edges() []ent.Edge {
 		edge.To("media_files", MediaFile.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("events", MediaEvent.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("credits", Credit.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

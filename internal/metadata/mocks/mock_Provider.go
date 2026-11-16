@@ -6,7 +6,6 @@ package mocks
 
 import (
 	"context"
-	"time"
 
 	"github.com/datahearth/streamline/internal/metadata"
 	mock "github.com/stretchr/testify/mock"
@@ -48,25 +47,23 @@ func (_m *MockProvider) EXPECT() *MockProvider_Expecter {
 	return &MockProvider_Expecter{mock: &_m.Mock}
 }
 
-// FetchDigitalRelease provides a mock function for the type MockProvider
-func (_mock *MockProvider) FetchDigitalRelease(ctx context.Context, tmdbID uint32, region string) (*time.Time, error) {
+// FetchReleaseInfo provides a mock function for the type MockProvider
+func (_mock *MockProvider) FetchReleaseInfo(ctx context.Context, tmdbID uint32, region string) (metadata.ReleaseInfo, error) {
 	ret := _mock.Called(ctx, tmdbID, region)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FetchDigitalRelease")
+		panic("no return value specified for FetchReleaseInfo")
 	}
 
-	var r0 *time.Time
+	var r0 metadata.ReleaseInfo
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (*time.Time, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (metadata.ReleaseInfo, error)); ok {
 		return returnFunc(ctx, tmdbID, region)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) *time.Time); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) metadata.ReleaseInfo); ok {
 		r0 = returnFunc(ctx, tmdbID, region)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*time.Time)
-		}
+		r0 = ret.Get(0).(metadata.ReleaseInfo)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) error); ok {
 		r1 = returnFunc(ctx, tmdbID, region)
@@ -76,20 +73,20 @@ func (_mock *MockProvider) FetchDigitalRelease(ctx context.Context, tmdbID uint3
 	return r0, r1
 }
 
-// MockProvider_FetchDigitalRelease_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchDigitalRelease'
-type MockProvider_FetchDigitalRelease_Call struct {
+// MockProvider_FetchReleaseInfo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchReleaseInfo'
+type MockProvider_FetchReleaseInfo_Call struct {
 	*mock.Call
 }
 
-// FetchDigitalRelease is a helper method to define mock.On call
+// FetchReleaseInfo is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tmdbID uint32
 //   - region string
-func (_e *MockProvider_Expecter) FetchDigitalRelease(ctx any, tmdbID any, region any) *MockProvider_FetchDigitalRelease_Call {
-	return &MockProvider_FetchDigitalRelease_Call{Call: _e.mock.On("FetchDigitalRelease", ctx, tmdbID, region)}
+func (_e *MockProvider_Expecter) FetchReleaseInfo(ctx any, tmdbID any, region any) *MockProvider_FetchReleaseInfo_Call {
+	return &MockProvider_FetchReleaseInfo_Call{Call: _e.mock.On("FetchReleaseInfo", ctx, tmdbID, region)}
 }
 
-func (_c *MockProvider_FetchDigitalRelease_Call) Run(run func(ctx context.Context, tmdbID uint32, region string)) *MockProvider_FetchDigitalRelease_Call {
+func (_c *MockProvider_FetchReleaseInfo_Call) Run(run func(ctx context.Context, tmdbID uint32, region string)) *MockProvider_FetchReleaseInfo_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -112,12 +109,12 @@ func (_c *MockProvider_FetchDigitalRelease_Call) Run(run func(ctx context.Contex
 	return _c
 }
 
-func (_c *MockProvider_FetchDigitalRelease_Call) Return(time1 *time.Time, err error) *MockProvider_FetchDigitalRelease_Call {
-	_c.Call.Return(time1, err)
+func (_c *MockProvider_FetchReleaseInfo_Call) Return(releaseInfo metadata.ReleaseInfo, err error) *MockProvider_FetchReleaseInfo_Call {
+	_c.Call.Return(releaseInfo, err)
 	return _c
 }
 
-func (_c *MockProvider_FetchDigitalRelease_Call) RunAndReturn(run func(ctx context.Context, tmdbID uint32, region string) (*time.Time, error)) *MockProvider_FetchDigitalRelease_Call {
+func (_c *MockProvider_FetchReleaseInfo_Call) RunAndReturn(run func(ctx context.Context, tmdbID uint32, region string) (metadata.ReleaseInfo, error)) *MockProvider_FetchReleaseInfo_Call {
 	_c.Call.Return(run)
 	return _c
 }

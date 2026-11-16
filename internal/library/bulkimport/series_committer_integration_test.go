@@ -125,7 +125,7 @@ var _ = Describe(
 						},
 					}, nil).
 					Once()
-				tvmeta.EXPECT().GetSeriesCast(mock.Anything, tvdbID).
+				tvmeta.EXPECT().GetSeriesCredits(mock.Anything, tvdbID).
 					Return(nil, nil).Once()
 
 				placeEpisode("Breaking Bad", "Breaking Bad S01E01.mkv")
@@ -338,7 +338,7 @@ var _ = Describe(
 							{SeasonNumber: 1, Number: 1, Title: "Pilot"},
 						},
 					}, nil).Once()
-				tvmeta.EXPECT().GetSeriesCast(mock.Anything, tvdbID).
+				tvmeta.EXPECT().GetSeriesCredits(mock.Anything, tvdbID).
 					Return(nil, nil).Once()
 
 				scan, err := store.CreateImportScan(ctx, db.CreateImportScanParams{
@@ -447,7 +447,7 @@ var _ = Describe(
 						},
 					}, nil).
 					Once()
-				tvmeta.EXPECT().GetSeriesCast(mock.Anything, tvdbID).
+				tvmeta.EXPECT().GetSeriesCredits(mock.Anything, tvdbID).
 					Return(nil, nil).Once()
 
 				dir := filepath.Join(tmpDir, "Better Call Saul", "Season 01")
@@ -576,7 +576,7 @@ var _ = Describe(
 						{SeasonNumber: 1, Number: 2, Title: "Cat's in the Bag..."},
 					},
 				}, nil).Once()
-			tvmeta.EXPECT().GetSeriesCast(mock.Anything, tvdbID).
+			tvmeta.EXPECT().GetSeriesCredits(mock.Anything, tvdbID).
 				Return(nil, nil).Once()
 		})
 

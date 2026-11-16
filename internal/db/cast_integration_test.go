@@ -309,7 +309,7 @@ var _ = Describe("Store.ReplaceCast", Label("integration", "db"), func() {
 
 		It("rejects an unknown owner kind", func() {
 			film := newMovie("Fight Club", 550)
-			err := store.ReplaceCast(ctx, CastOwner("episode"), film, cast)
+			err := store.ReplaceCast(ctx, CastOwner("album"), film, cast)
 			Expect(err).To(MatchError(errUnknownCastOwner))
 		})
 	})

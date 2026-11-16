@@ -47,6 +47,74 @@ func (_m *MockTVProvider) EXPECT() *MockTVProvider_Expecter {
 	return &MockTVProvider_Expecter{mock: &_m.Mock}
 }
 
+// GetEpisodeCredits provides a mock function for the type MockTVProvider
+func (_mock *MockTVProvider) GetEpisodeCredits(ctx context.Context, episodeTVDBID uint32) ([]metadata.CastMember, error) {
+	ret := _mock.Called(ctx, episodeTVDBID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetEpisodeCredits")
+	}
+
+	var r0 []metadata.CastMember
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) ([]metadata.CastMember, error)); ok {
+		return returnFunc(ctx, episodeTVDBID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) []metadata.CastMember); ok {
+		r0 = returnFunc(ctx, episodeTVDBID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]metadata.CastMember)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, episodeTVDBID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTVProvider_GetEpisodeCredits_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetEpisodeCredits'
+type MockTVProvider_GetEpisodeCredits_Call struct {
+	*mock.Call
+}
+
+// GetEpisodeCredits is a helper method to define mock.On call
+//   - ctx context.Context
+//   - episodeTVDBID uint32
+func (_e *MockTVProvider_Expecter) GetEpisodeCredits(ctx any, episodeTVDBID any) *MockTVProvider_GetEpisodeCredits_Call {
+	return &MockTVProvider_GetEpisodeCredits_Call{Call: _e.mock.On("GetEpisodeCredits", ctx, episodeTVDBID)}
+}
+
+func (_c *MockTVProvider_GetEpisodeCredits_Call) Run(run func(ctx context.Context, episodeTVDBID uint32)) *MockTVProvider_GetEpisodeCredits_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTVProvider_GetEpisodeCredits_Call) Return(castMembers []metadata.CastMember, err error) *MockTVProvider_GetEpisodeCredits_Call {
+	_c.Call.Return(castMembers, err)
+	return _c
+}
+
+func (_c *MockTVProvider_GetEpisodeCredits_Call) RunAndReturn(run func(ctx context.Context, episodeTVDBID uint32) ([]metadata.CastMember, error)) *MockTVProvider_GetEpisodeCredits_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetPerson provides a mock function for the type MockTVProvider
 func (_mock *MockTVProvider) GetPerson(ctx context.Context, tvdbID uint32) (*metadata.PersonDetails, error) {
 	ret := _mock.Called(ctx, tvdbID)
@@ -183,12 +251,12 @@ func (_c *MockTVProvider_GetSeries_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
-// GetSeriesCast provides a mock function for the type MockTVProvider
-func (_mock *MockTVProvider) GetSeriesCast(ctx context.Context, tvdbID uint32) ([]metadata.CastMember, error) {
+// GetSeriesCredits provides a mock function for the type MockTVProvider
+func (_mock *MockTVProvider) GetSeriesCredits(ctx context.Context, tvdbID uint32) ([]metadata.CastMember, error) {
 	ret := _mock.Called(ctx, tvdbID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetSeriesCast")
+		panic("no return value specified for GetSeriesCredits")
 	}
 
 	var r0 []metadata.CastMember
@@ -211,19 +279,19 @@ func (_mock *MockTVProvider) GetSeriesCast(ctx context.Context, tvdbID uint32) (
 	return r0, r1
 }
 
-// MockTVProvider_GetSeriesCast_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSeriesCast'
-type MockTVProvider_GetSeriesCast_Call struct {
+// MockTVProvider_GetSeriesCredits_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSeriesCredits'
+type MockTVProvider_GetSeriesCredits_Call struct {
 	*mock.Call
 }
 
-// GetSeriesCast is a helper method to define mock.On call
+// GetSeriesCredits is a helper method to define mock.On call
 //   - ctx context.Context
 //   - tvdbID uint32
-func (_e *MockTVProvider_Expecter) GetSeriesCast(ctx any, tvdbID any) *MockTVProvider_GetSeriesCast_Call {
-	return &MockTVProvider_GetSeriesCast_Call{Call: _e.mock.On("GetSeriesCast", ctx, tvdbID)}
+func (_e *MockTVProvider_Expecter) GetSeriesCredits(ctx any, tvdbID any) *MockTVProvider_GetSeriesCredits_Call {
+	return &MockTVProvider_GetSeriesCredits_Call{Call: _e.mock.On("GetSeriesCredits", ctx, tvdbID)}
 }
 
-func (_c *MockTVProvider_GetSeriesCast_Call) Run(run func(ctx context.Context, tvdbID uint32)) *MockTVProvider_GetSeriesCast_Call {
+func (_c *MockTVProvider_GetSeriesCredits_Call) Run(run func(ctx context.Context, tvdbID uint32)) *MockTVProvider_GetSeriesCredits_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -241,12 +309,12 @@ func (_c *MockTVProvider_GetSeriesCast_Call) Run(run func(ctx context.Context, t
 	return _c
 }
 
-func (_c *MockTVProvider_GetSeriesCast_Call) Return(castMembers []metadata.CastMember, err error) *MockTVProvider_GetSeriesCast_Call {
+func (_c *MockTVProvider_GetSeriesCredits_Call) Return(castMembers []metadata.CastMember, err error) *MockTVProvider_GetSeriesCredits_Call {
 	_c.Call.Return(castMembers, err)
 	return _c
 }
 
-func (_c *MockTVProvider_GetSeriesCast_Call) RunAndReturn(run func(ctx context.Context, tvdbID uint32) ([]metadata.CastMember, error)) *MockTVProvider_GetSeriesCast_Call {
+func (_c *MockTVProvider_GetSeriesCredits_Call) RunAndReturn(run func(ctx context.Context, tvdbID uint32) ([]metadata.CastMember, error)) *MockTVProvider_GetSeriesCredits_Call {
 	_c.Call.Return(run)
 	return _c
 }

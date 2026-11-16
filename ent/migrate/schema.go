@@ -435,6 +435,9 @@ var (
 		{Name: "update_time", Type: field.TypeTime},
 		{Name: "character", Type: field.TypeString, Nullable: true},
 		{Name: "order", Type: field.TypeUint8, Nullable: true, Default: 0},
+		{Name: "job", Type: field.TypeString, Nullable: true},
+		{Name: "department", Type: field.TypeString, Nullable: true},
+		{Name: "episode_credits", Type: field.TypeUint32, Nullable: true},
 		{Name: "movie_credits", Type: field.TypeUint32, Nullable: true},
 		{Name: "person_credits", Type: field.TypeUint32},
 		{Name: "tv_show_credits", Type: field.TypeUint32, Nullable: true},
@@ -446,20 +449,26 @@ var (
 		PrimaryKey: []*schema.Column{CreditsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
+				Symbol:     "credits_episodes_credits",
+				Columns:    []*schema.Column{CreditsColumns[7]},
+				RefColumns: []*schema.Column{EpisodesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
 				Symbol:     "credits_movies_credits",
-				Columns:    []*schema.Column{CreditsColumns[5]},
+				Columns:    []*schema.Column{CreditsColumns[8]},
 				RefColumns: []*schema.Column{MoviesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "credits_persons_credits",
-				Columns:    []*schema.Column{CreditsColumns[6]},
+				Columns:    []*schema.Column{CreditsColumns[9]},
 				RefColumns: []*schema.Column{PersonsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "credits_tv_shows_credits",
-				Columns:    []*schema.Column{CreditsColumns[7]},
+				Columns:    []*schema.Column{CreditsColumns[10]},
 				RefColumns: []*schema.Column{TvShowsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -468,15 +477,20 @@ var (
 			{
 				Name:    "credit_person_credits",
 				Unique:  false,
-				Columns: []*schema.Column{CreditsColumns[6]},
+				Columns: []*schema.Column{CreditsColumns[9]},
 			},
 			{
 				Name:    "credit_movie_credits",
 				Unique:  false,
-				Columns: []*schema.Column{CreditsColumns[5]},
+				Columns: []*schema.Column{CreditsColumns[8]},
 			},
 			{
 				Name:    "credit_tv_show_credits",
+				Unique:  false,
+				Columns: []*schema.Column{CreditsColumns[10]},
+			},
+			{
+				Name:    "credit_episode_credits",
 				Unique:  false,
 				Columns: []*schema.Column{CreditsColumns[7]},
 			},
@@ -627,6 +641,8 @@ var (
 		{Name: "absolute_number", Type: field.TypeUint16, Nullable: true, Default: 0},
 		{Name: "grab_failures", Type: field.TypeUint8, Default: 0},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
+		{Name: "tvdb_id", Type: field.TypeUint32, Nullable: true, Default: 0},
+		{Name: "credits_fetched_at", Type: field.TypeTime, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"wanted", "downloading", "importing", "paused", "available", "skipped"}, Default: "wanted"},
 		{Name: "season_episodes", Type: field.TypeUint32},
 	}
@@ -638,7 +654,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "episodes_seasons_episodes",
-				Columns:    []*schema.Column{EpisodesColumns[13]},
+				Columns:    []*schema.Column{EpisodesColumns[15]},
 				RefColumns: []*schema.Column{SeasonsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -647,12 +663,12 @@ var (
 			{
 				Name:    "episode_season_episodes",
 				Unique:  false,
-				Columns: []*schema.Column{EpisodesColumns[13]},
+				Columns: []*schema.Column{EpisodesColumns[15]},
 			},
 			{
 				Name:    "episode_status",
 				Unique:  false,
-				Columns: []*schema.Column{EpisodesColumns[12]},
+				Columns: []*schema.Column{EpisodesColumns[14]},
 			},
 		},
 	}
@@ -1268,6 +1284,7 @@ var (
 		{Name: "monitored", Type: field.TypeBool, Default: true},
 		{Name: "tmdb_id", Type: field.TypeUint32, Unique: true},
 		{Name: "imdb_id", Type: field.TypeString, Nullable: true},
+		{Name: "certification", Type: field.TypeString, Nullable: true},
 		{Name: "last_search_at", Type: field.TypeTime, Nullable: true},
 		{Name: "release_date", Type: field.TypeTime, Nullable: true},
 		{Name: "digital_release_date", Type: field.TypeTime, Nullable: true},
@@ -1288,7 +1305,7 @@ var (
 			{
 				Name:    "movie_digital_release_date",
 				Unique:  false,
-				Columns: []*schema.Column{MoviesColumns[14]},
+				Columns: []*schema.Column{MoviesColumns[15]},
 			},
 			{
 				Name:    "movie_status",
@@ -1592,6 +1609,7 @@ var (
 		{Name: "imdb_id", Type: field.TypeString, Nullable: true},
 		{Name: "poster_path", Type: field.TypeString, Nullable: true},
 		{Name: "network", Type: field.TypeString, Nullable: true},
+		{Name: "certification", Type: field.TypeString, Nullable: true},
 		{Name: "creator", Type: field.TypeString, Nullable: true},
 		{Name: "runtime", Type: field.TypeUint16, Nullable: true, Default: 0},
 		{Name: "rating", Type: field.TypeFloat64, Nullable: true, Default: 0},
@@ -1886,9 +1904,10 @@ func init() {
 	BookContributionsTable.ForeignKeys[1].RefTable = BooksTable
 	BookContributionsTable.ForeignKeys[2].RefTable = BookSeriesTable
 	BookEditionsTable.ForeignKeys[0].RefTable = BooksTable
-	CreditsTable.ForeignKeys[0].RefTable = MoviesTable
-	CreditsTable.ForeignKeys[1].RefTable = PersonsTable
-	CreditsTable.ForeignKeys[2].RefTable = TvShowsTable
+	CreditsTable.ForeignKeys[0].RefTable = EpisodesTable
+	CreditsTable.ForeignKeys[1].RefTable = MoviesTable
+	CreditsTable.ForeignKeys[2].RefTable = PersonsTable
+	CreditsTable.ForeignKeys[3].RefTable = TvShowsTable
 	DownloadRecordsTable.ForeignKeys[0].RefTable = AlbumsTable
 	DownloadRecordsTable.ForeignKeys[1].RefTable = ArtistsTable
 	DownloadRecordsTable.ForeignKeys[2].RefTable = BooksTable

@@ -9351,6 +9351,12 @@ components:
             ISO yyyy-mm-dd. Fetched on add and on every metadata refresh;
             absent when no region is configured or TMDB has published no
             digital date for it yet.
+        certification:
+          type: string
+          description: |
+            The rating board's mark in `metadata.tmdb_region` ("PG-13",
+            "16"), the theatrical release's when it has one. Absent when no
+            region is configured or TMDB lists none for it.
         overview:
           type: string
         runtime:
@@ -9857,6 +9863,11 @@ components:
           description: |
             Character played in this movie. Empty when the provider gave none
             — the character belongs to the pairing, not to the person.
+        job:
+          type: string
+          description: |
+            The crew role held on this movie ("Director", "Screenplay").
+            Absent for an acting credit.
 
     PersonSeriesCredit:
       type: object
@@ -9866,7 +9877,14 @@ components:
           $ref: "#/components/schemas/TVShow"
         character:
           type: string
-          description: Character played in this series.
+          description: |
+            Character played in this series, on the series or on any of its
+            episodes.
+        job:
+          type: string
+          description: |
+            The crew role held on this series or its episodes ("Director",
+            "Writer"). Absent for an acting credit.
 
     PersonCredits:
       allOf:
@@ -10039,6 +10057,12 @@ components:
           x-go-type: uint32
         network:
           type: string
+        certification:
+          type: string
+          description: |
+            TVDB's content rating for `metadata.tmdb_region` ("TV-MA",
+            "16"). Absent when no region is configured or TVDB lists none
+            for it.
         creator:
           type: string
         runtime:

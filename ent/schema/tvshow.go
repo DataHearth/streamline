@@ -41,6 +41,8 @@ func (TVShow) Fields() []ent.Field {
 		field.String("imdb_id").Optional(),
 		field.String("poster_path").Optional(),
 		field.String("network").Optional(),
+		// The rating board's mark in metadata.tmdb_region ("TV-MA", "16").
+		field.String("certification").Optional(),
 		field.String("creator").Optional(),
 		field.Uint16("runtime").Optional().Default(0),
 		field.Float("rating").Optional().Default(0),

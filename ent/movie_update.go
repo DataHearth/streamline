@@ -205,6 +205,26 @@ func (_u *MovieUpdate) ClearImdbID() *MovieUpdate {
 	return _u
 }
 
+// SetCertification sets the "certification" field.
+func (_u *MovieUpdate) SetCertification(v string) *MovieUpdate {
+	_u.mutation.SetCertification(v)
+	return _u
+}
+
+// SetNillableCertification sets the "certification" field if the given value is not nil.
+func (_u *MovieUpdate) SetNillableCertification(v *string) *MovieUpdate {
+	if v != nil {
+		_u.SetCertification(*v)
+	}
+	return _u
+}
+
+// ClearCertification clears the value of the "certification" field.
+func (_u *MovieUpdate) ClearCertification() *MovieUpdate {
+	_u.mutation.ClearCertification()
+	return _u
+}
+
 // SetLastSearchAt sets the "last_search_at" field.
 func (_u *MovieUpdate) SetLastSearchAt(v time.Time) *MovieUpdate {
 	_u.mutation.SetLastSearchAt(v)
@@ -680,6 +700,12 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.ImdbIDCleared() {
 		_spec.ClearField(movie.FieldImdbID, field.TypeString)
 	}
+	if value, ok := _u.mutation.Certification(); ok {
+		_spec.SetField(movie.FieldCertification, field.TypeString, value)
+	}
+	if _u.mutation.CertificationCleared() {
+		_spec.ClearField(movie.FieldCertification, field.TypeString)
+	}
 	if value, ok := _u.mutation.LastSearchAt(); ok {
 		_spec.SetField(movie.FieldLastSearchAt, field.TypeTime, value)
 	}
@@ -1123,6 +1149,26 @@ func (_u *MovieUpdateOne) SetNillableImdbID(v *string) *MovieUpdateOne {
 // ClearImdbID clears the value of the "imdb_id" field.
 func (_u *MovieUpdateOne) ClearImdbID() *MovieUpdateOne {
 	_u.mutation.ClearImdbID()
+	return _u
+}
+
+// SetCertification sets the "certification" field.
+func (_u *MovieUpdateOne) SetCertification(v string) *MovieUpdateOne {
+	_u.mutation.SetCertification(v)
+	return _u
+}
+
+// SetNillableCertification sets the "certification" field if the given value is not nil.
+func (_u *MovieUpdateOne) SetNillableCertification(v *string) *MovieUpdateOne {
+	if v != nil {
+		_u.SetCertification(*v)
+	}
+	return _u
+}
+
+// ClearCertification clears the value of the "certification" field.
+func (_u *MovieUpdateOne) ClearCertification() *MovieUpdateOne {
+	_u.mutation.ClearCertification()
 	return _u
 }
 
@@ -1630,6 +1676,12 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 	}
 	if _u.mutation.ImdbIDCleared() {
 		_spec.ClearField(movie.FieldImdbID, field.TypeString)
+	}
+	if value, ok := _u.mutation.Certification(); ok {
+		_spec.SetField(movie.FieldCertification, field.TypeString, value)
+	}
+	if _u.mutation.CertificationCleared() {
+		_spec.ClearField(movie.FieldCertification, field.TypeString)
 	}
 	if value, ok := _u.mutation.LastSearchAt(); ok {
 		_spec.SetField(movie.FieldLastSearchAt, field.TypeTime, value)

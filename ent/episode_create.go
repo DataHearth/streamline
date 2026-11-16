@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediaevent"
@@ -170,6 +171,34 @@ func (_c *EpisodeCreate) SetNillableLastSearchAt(v *time.Time) *EpisodeCreate {
 	return _c
 }
 
+// SetTvdbID sets the "tvdb_id" field.
+func (_c *EpisodeCreate) SetTvdbID(v uint32) *EpisodeCreate {
+	_c.mutation.SetTvdbID(v)
+	return _c
+}
+
+// SetNillableTvdbID sets the "tvdb_id" field if the given value is not nil.
+func (_c *EpisodeCreate) SetNillableTvdbID(v *uint32) *EpisodeCreate {
+	if v != nil {
+		_c.SetTvdbID(*v)
+	}
+	return _c
+}
+
+// SetCreditsFetchedAt sets the "credits_fetched_at" field.
+func (_c *EpisodeCreate) SetCreditsFetchedAt(v time.Time) *EpisodeCreate {
+	_c.mutation.SetCreditsFetchedAt(v)
+	return _c
+}
+
+// SetNillableCreditsFetchedAt sets the "credits_fetched_at" field if the given value is not nil.
+func (_c *EpisodeCreate) SetNillableCreditsFetchedAt(v *time.Time) *EpisodeCreate {
+	if v != nil {
+		_c.SetCreditsFetchedAt(*v)
+	}
+	return _c
+}
+
 // SetStatus sets the "status" field.
 func (_c *EpisodeCreate) SetStatus(v episode.Status) *EpisodeCreate {
 	_c.mutation.SetStatus(v)
@@ -261,6 +290,21 @@ func (_c *EpisodeCreate) AddEvents(v ...*MediaEvent) *EpisodeCreate {
 	return _c.AddEventIDs(ids...)
 }
 
+// AddCreditIDs adds the "credits" edge to the Credit entity by IDs.
+func (_c *EpisodeCreate) AddCreditIDs(ids ...uint32) *EpisodeCreate {
+	_c.mutation.AddCreditIDs(ids...)
+	return _c
+}
+
+// AddCredits adds the "credits" edges to the Credit entity.
+func (_c *EpisodeCreate) AddCredits(v ...*Credit) *EpisodeCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCreditIDs(ids...)
+}
+
 // Mutation returns the EpisodeMutation object of the builder.
 func (_c *EpisodeCreate) Mutation() *EpisodeMutation {
 	return _c.mutation
@@ -319,6 +363,10 @@ func (_c *EpisodeCreate) defaults() {
 	if _, ok := _c.mutation.GrabFailures(); !ok {
 		v := episode.DefaultGrabFailures
 		_c.mutation.SetGrabFailures(v)
+	}
+	if _, ok := _c.mutation.TvdbID(); !ok {
+		v := episode.DefaultTvdbID
+		_c.mutation.SetTvdbID(v)
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		v := episode.DefaultStatus
@@ -433,6 +481,14 @@ func (_c *EpisodeCreate) createSpec() (*Episode, *sqlgraph.CreateSpec) {
 		_spec.SetField(episode.FieldLastSearchAt, field.TypeTime, value)
 		_node.LastSearchAt = &value
 	}
+	if value, ok := _c.mutation.TvdbID(); ok {
+		_spec.SetField(episode.FieldTvdbID, field.TypeUint32, value)
+		_node.TvdbID = value
+	}
+	if value, ok := _c.mutation.CreditsFetchedAt(); ok {
+		_spec.SetField(episode.FieldCreditsFetchedAt, field.TypeTime, value)
+		_node.CreditsFetchedAt = &value
+	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(episode.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
@@ -511,6 +567,22 @@ func (_c *EpisodeCreate) createSpec() (*Episode, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CreditsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   episode.CreditsTable,
+			Columns: []string{episode.CreditsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credit.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

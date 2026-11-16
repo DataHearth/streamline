@@ -2322,6 +2322,22 @@ func (c *CreditClient) QueryTvShow(_m *Credit) *TVShowQuery {
 	return query
 }
 
+// QueryEpisode queries the episode edge of a Credit.
+func (c *CreditClient) QueryEpisode(_m *Credit) *EpisodeQuery {
+	query := (&EpisodeClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(credit.Table, credit.FieldID, id),
+			sqlgraph.To(episode.Table, episode.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, credit.EpisodeTable, credit.EpisodeColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *CreditClient) Hooks() []Hook {
 	return c.hooks.Credit
@@ -2789,6 +2805,22 @@ func (c *EpisodeClient) QueryEvents(_m *Episode) *MediaEventQuery {
 			sqlgraph.From(episode.Table, episode.FieldID, id),
 			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, episode.EventsTable, episode.EventsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCredits queries the credits edge of a Episode.
+func (c *EpisodeClient) QueryCredits(_m *Episode) *CreditQuery {
+	query := (&CreditClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(episode.Table, episode.FieldID, id),
+			sqlgraph.To(credit.Table, credit.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, episode.CreditsTable, episode.CreditsColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil

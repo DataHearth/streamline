@@ -101,6 +101,7 @@ func seedSeasons(d *metadata.TVDetails) []db.SeasonSeed {
 	bySeason := map[uint16][]db.EpisodeSeed{}
 	for _, e := range d.Episodes {
 		bySeason[e.SeasonNumber] = append(bySeason[e.SeasonNumber], db.EpisodeSeed{
+			TVDBID:         e.TVDBID,
 			Number:         e.Number,
 			AbsoluteNumber: e.AbsoluteNumber,
 			Title:          e.Title,
@@ -166,6 +167,7 @@ func (s *Service) Add(
 		Rating:         float64(d.Rating),
 		Genres:         d.Genres,
 		Aliases:        d.Aliases,
+		Certification:  d.Certification,
 		Cast:           cast,
 		PosterPath:     d.PosterPath,
 		QualityProfile: qualityProfile,
@@ -951,15 +953,15 @@ func (s *Service) grabPackAndMark(
 	return nil
 }
 
-// seriesCast fetches top-billed actors, degrading to nil when TVDB's extended
-// record is unavailable. Cast is a display-only section, so a flaky call must
-// not fail the add/refresh around it — and nil leaves any stored cast intact
-// rather than wiping it.
+// seriesCast fetches top-billed actors and principal crew, degrading to nil
+// when TVDB's extended record is unavailable. Credits are a display-only
+// section, so a flaky call must not fail the add/refresh around it — and nil
+// leaves any stored credits intact rather than wiping them.
 func (s *Service) seriesCast(
 	ctx context.Context,
 	tvdbID uint32,
 ) []metadata.CastMember {
-	cast, err := s.metadata.GetSeriesCast(ctx, tvdbID)
+	cast, err := s.metadata.GetSeriesCredits(ctx, tvdbID)
 	if err != nil {
 		slog.WarnContext(ctx, "tvdb cast fetch failed",
 			"tvshow.tvdb_id", tvdbID, "error", err)
@@ -999,6 +1001,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 		Rating:        float64(d.Rating),
 		Genres:        d.Genres,
 		Aliases:       d.Aliases,
+		Certification: d.Certification,
 		Cast:          cast,
 		FirstAired:    metadata.ParseISODate(d.FirstAired),
 	}); err != nil {
@@ -1136,6 +1139,7 @@ func (s *Service) Reidentify(
 		Rating:        float64(d.Rating),
 		Genres:        d.Genres,
 		Aliases:       d.Aliases,
+		Certification: d.Certification,
 		Cast:          cast,
 		FirstAired:    metadata.ParseISODate(d.FirstAired),
 	}); err != nil {
@@ -1296,6 +1300,8 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 		attribute.Int("refresh.refreshed_count", refreshed),
 		attribute.Int("refresh.skipped_count", skipped),
 	)
+	s.fetchEpisodeCredits(ctx)
+	s.fetchPeoplePhotos(ctx)
 	slog.InfoContext(ctx, "tv metadata refresh complete",
 		"refreshed", refreshed, "skipped", skipped)
 	return nil

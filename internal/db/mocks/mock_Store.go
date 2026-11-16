@@ -6792,6 +6792,74 @@ func (_c *MockStore_DownloadRecordsByHash_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// EpisodesNeedingCredits provides a mock function for the type MockStore
+func (_mock *MockStore) EpisodesNeedingCredits(ctx context.Context, now time.Time) ([]db.EpisodeCreditsRef, error) {
+	ret := _mock.Called(ctx, now)
+
+	if len(ret) == 0 {
+		panic("no return value specified for EpisodesNeedingCredits")
+	}
+
+	var r0 []db.EpisodeCreditsRef
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) ([]db.EpisodeCreditsRef, error)); ok {
+		return returnFunc(ctx, now)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, time.Time) []db.EpisodeCreditsRef); ok {
+		r0 = returnFunc(ctx, now)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.EpisodeCreditsRef)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, time.Time) error); ok {
+		r1 = returnFunc(ctx, now)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_EpisodesNeedingCredits_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EpisodesNeedingCredits'
+type MockStore_EpisodesNeedingCredits_Call struct {
+	*mock.Call
+}
+
+// EpisodesNeedingCredits is a helper method to define mock.On call
+//   - ctx context.Context
+//   - now time.Time
+func (_e *MockStore_Expecter) EpisodesNeedingCredits(ctx any, now any) *MockStore_EpisodesNeedingCredits_Call {
+	return &MockStore_EpisodesNeedingCredits_Call{Call: _e.mock.On("EpisodesNeedingCredits", ctx, now)}
+}
+
+func (_c *MockStore_EpisodesNeedingCredits_Call) Run(run func(ctx context.Context, now time.Time)) *MockStore_EpisodesNeedingCredits_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 time.Time
+		if args[1] != nil {
+			arg1 = args[1].(time.Time)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_EpisodesNeedingCredits_Call) Return(episodeCreditsRefs []db.EpisodeCreditsRef, err error) *MockStore_EpisodesNeedingCredits_Call {
+	_c.Call.Return(episodeCreditsRefs, err)
+	return _c
+}
+
+func (_c *MockStore_EpisodesNeedingCredits_Call) RunAndReturn(run func(ctx context.Context, now time.Time) ([]db.EpisodeCreditsRef, error)) *MockStore_EpisodesNeedingCredits_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FailDownloadRecord provides a mock function for the type MockStore
 func (_mock *MockStore) FailDownloadRecord(ctx context.Context, id uint32, reason string) error {
 	ret := _mock.Called(ctx, id, reason)
@@ -18977,6 +19045,87 @@ func (_c *MockStore_PeopleNeedingDetails_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// PeopleWithPhotos provides a mock function for the type MockStore
+func (_mock *MockStore) PeopleWithPhotos(ctx context.Context, owners ...db.CastOwner) ([]db.Person, error) {
+	// db.CastOwner
+	_va := make([]any, len(owners))
+	for _i := range owners {
+		_va[_i] = owners[_i]
+	}
+	var _ca []any
+	_ca = append(_ca, ctx)
+	_ca = append(_ca, _va...)
+	ret := _mock.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PeopleWithPhotos")
+	}
+
+	var r0 []db.Person
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, ...db.CastOwner) ([]db.Person, error)); ok {
+		return returnFunc(ctx, owners...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, ...db.CastOwner) []db.Person); ok {
+		r0 = returnFunc(ctx, owners...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.Person)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, ...db.CastOwner) error); ok {
+		r1 = returnFunc(ctx, owners...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_PeopleWithPhotos_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PeopleWithPhotos'
+type MockStore_PeopleWithPhotos_Call struct {
+	*mock.Call
+}
+
+// PeopleWithPhotos is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owners ...db.CastOwner
+func (_e *MockStore_Expecter) PeopleWithPhotos(ctx any, owners ...any) *MockStore_PeopleWithPhotos_Call {
+	return &MockStore_PeopleWithPhotos_Call{Call: _e.mock.On("PeopleWithPhotos",
+		append([]any{ctx}, owners...)...)}
+}
+
+func (_c *MockStore_PeopleWithPhotos_Call) Run(run func(ctx context.Context, owners ...db.CastOwner)) *MockStore_PeopleWithPhotos_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []db.CastOwner
+		variadicArgs := make([]db.CastOwner, len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(db.CastOwner)
+			}
+		}
+		arg1 = variadicArgs
+		run(
+			arg0,
+			arg1...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_PeopleWithPhotos_Call) Return(persons []db.Person, err error) *MockStore_PeopleWithPhotos_Call {
+	_c.Call.Return(persons, err)
+	return _c
+}
+
+func (_c *MockStore_PeopleWithPhotos_Call) RunAndReturn(run func(ctx context.Context, owners ...db.CastOwner) ([]db.Person, error)) *MockStore_PeopleWithPhotos_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PersonCredits provides a mock function for the type MockStore
 func (_mock *MockStore) PersonCredits(ctx context.Context, id uint32) (*db.PersonCredits, error) {
 	ret := _mock.Called(ctx, id)
@@ -19041,6 +19190,72 @@ func (_c *MockStore_PersonCredits_Call) Return(personCredits *db.PersonCredits, 
 }
 
 func (_c *MockStore_PersonCredits_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*db.PersonCredits, error)) *MockStore_PersonCredits_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// PersonPhotoURL provides a mock function for the type MockStore
+func (_mock *MockStore) PersonPhotoURL(ctx context.Context, id uint32) (string, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PersonPhotoURL")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (string, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) string); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_PersonPhotoURL_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PersonPhotoURL'
+type MockStore_PersonPhotoURL_Call struct {
+	*mock.Call
+}
+
+// PersonPhotoURL is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) PersonPhotoURL(ctx any, id any) *MockStore_PersonPhotoURL_Call {
+	return &MockStore_PersonPhotoURL_Call{Call: _e.mock.On("PersonPhotoURL", ctx, id)}
+}
+
+func (_c *MockStore_PersonPhotoURL_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_PersonPhotoURL_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_PersonPhotoURL_Call) Return(s string, err error) *MockStore_PersonPhotoURL_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *MockStore_PersonPhotoURL_Call) RunAndReturn(run func(ctx context.Context, id uint32) (string, error)) *MockStore_PersonPhotoURL_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -20556,6 +20771,69 @@ func (_c *MockStore_ReplaceCast_Call) Return(err error) *MockStore_ReplaceCast_C
 }
 
 func (_c *MockStore_ReplaceCast_Call) RunAndReturn(run func(ctx context.Context, owner db.CastOwner, ownerID uint32, cast []metadata.CastMember) error) *MockStore_ReplaceCast_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReplaceEpisodeCredits provides a mock function for the type MockStore
+func (_mock *MockStore) ReplaceEpisodeCredits(ctx context.Context, episodeID uint32, credits []metadata.CastMember) error {
+	ret := _mock.Called(ctx, episodeID, credits)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReplaceEpisodeCredits")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []metadata.CastMember) error); ok {
+		r0 = returnFunc(ctx, episodeID, credits)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_ReplaceEpisodeCredits_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReplaceEpisodeCredits'
+type MockStore_ReplaceEpisodeCredits_Call struct {
+	*mock.Call
+}
+
+// ReplaceEpisodeCredits is a helper method to define mock.On call
+//   - ctx context.Context
+//   - episodeID uint32
+//   - credits []metadata.CastMember
+func (_e *MockStore_Expecter) ReplaceEpisodeCredits(ctx any, episodeID any, credits any) *MockStore_ReplaceEpisodeCredits_Call {
+	return &MockStore_ReplaceEpisodeCredits_Call{Call: _e.mock.On("ReplaceEpisodeCredits", ctx, episodeID, credits)}
+}
+
+func (_c *MockStore_ReplaceEpisodeCredits_Call) Run(run func(ctx context.Context, episodeID uint32, credits []metadata.CastMember)) *MockStore_ReplaceEpisodeCredits_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 []metadata.CastMember
+		if args[2] != nil {
+			arg2 = args[2].([]metadata.CastMember)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ReplaceEpisodeCredits_Call) Return(err error) *MockStore_ReplaceEpisodeCredits_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_ReplaceEpisodeCredits_Call) RunAndReturn(run func(ctx context.Context, episodeID uint32, credits []metadata.CastMember) error) *MockStore_ReplaceEpisodeCredits_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -24362,69 +24640,6 @@ func (_c *MockStore_SetMediaFileTagsWritten_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
-// SetMovieDigitalReleaseDate provides a mock function for the type MockStore
-func (_mock *MockStore) SetMovieDigitalReleaseDate(ctx context.Context, id uint32, date *time.Time) error {
-	ret := _mock.Called(ctx, id, date)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SetMovieDigitalReleaseDate")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, *time.Time) error); ok {
-		r0 = returnFunc(ctx, id, date)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockStore_SetMovieDigitalReleaseDate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetMovieDigitalReleaseDate'
-type MockStore_SetMovieDigitalReleaseDate_Call struct {
-	*mock.Call
-}
-
-// SetMovieDigitalReleaseDate is a helper method to define mock.On call
-//   - ctx context.Context
-//   - id uint32
-//   - date *time.Time
-func (_e *MockStore_Expecter) SetMovieDigitalReleaseDate(ctx any, id any, date any) *MockStore_SetMovieDigitalReleaseDate_Call {
-	return &MockStore_SetMovieDigitalReleaseDate_Call{Call: _e.mock.On("SetMovieDigitalReleaseDate", ctx, id, date)}
-}
-
-func (_c *MockStore_SetMovieDigitalReleaseDate_Call) Run(run func(ctx context.Context, id uint32, date *time.Time)) *MockStore_SetMovieDigitalReleaseDate_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 uint32
-		if args[1] != nil {
-			arg1 = args[1].(uint32)
-		}
-		var arg2 *time.Time
-		if args[2] != nil {
-			arg2 = args[2].(*time.Time)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStore_SetMovieDigitalReleaseDate_Call) Return(err error) *MockStore_SetMovieDigitalReleaseDate_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *MockStore_SetMovieDigitalReleaseDate_Call) RunAndReturn(run func(ctx context.Context, id uint32, date *time.Time) error) *MockStore_SetMovieDigitalReleaseDate_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // SetMovieLastSearchAt provides a mock function for the type MockStore
 func (_mock *MockStore) SetMovieLastSearchAt(ctx context.Context, id uint32, when time.Time) error {
 	ret := _mock.Called(ctx, id, when)
@@ -24484,6 +24699,69 @@ func (_c *MockStore_SetMovieLastSearchAt_Call) Return(err error) *MockStore_SetM
 }
 
 func (_c *MockStore_SetMovieLastSearchAt_Call) RunAndReturn(run func(ctx context.Context, id uint32, when time.Time) error) *MockStore_SetMovieLastSearchAt_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetMovieReleaseInfo provides a mock function for the type MockStore
+func (_mock *MockStore) SetMovieReleaseInfo(ctx context.Context, id uint32, info metadata.ReleaseInfo) error {
+	ret := _mock.Called(ctx, id, info)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetMovieReleaseInfo")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, metadata.ReleaseInfo) error); ok {
+		r0 = returnFunc(ctx, id, info)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_SetMovieReleaseInfo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetMovieReleaseInfo'
+type MockStore_SetMovieReleaseInfo_Call struct {
+	*mock.Call
+}
+
+// SetMovieReleaseInfo is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - info metadata.ReleaseInfo
+func (_e *MockStore_Expecter) SetMovieReleaseInfo(ctx any, id any, info any) *MockStore_SetMovieReleaseInfo_Call {
+	return &MockStore_SetMovieReleaseInfo_Call{Call: _e.mock.On("SetMovieReleaseInfo", ctx, id, info)}
+}
+
+func (_c *MockStore_SetMovieReleaseInfo_Call) Run(run func(ctx context.Context, id uint32, info metadata.ReleaseInfo)) *MockStore_SetMovieReleaseInfo_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 metadata.ReleaseInfo
+		if args[2] != nil {
+			arg2 = args[2].(metadata.ReleaseInfo)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_SetMovieReleaseInfo_Call) Return(err error) *MockStore_SetMovieReleaseInfo_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_SetMovieReleaseInfo_Call) RunAndReturn(run func(ctx context.Context, id uint32, info metadata.ReleaseInfo) error) *MockStore_SetMovieReleaseInfo_Call {
 	_c.Call.Return(run)
 	return _c
 }

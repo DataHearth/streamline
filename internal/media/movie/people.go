@@ -90,3 +90,27 @@ func (s *Service) enrichPerson(ctx context.Context, p db.Person) {
 			"person.id", p.ID, "error", err)
 	}
 }
+
+// fetchPeoplePhotos keeps a local copy of the photo of everyone a movie
+// credits, which is what extensions read; Fetch skips one already cached.
+// A failed download is retried by the next pass.
+func (s *Service) fetchPeoplePhotos(ctx context.Context) {
+	if s.posters == nil {
+		return
+	}
+	ctx, span := tracer.Start(ctx, "movie.fetch_people_photos")
+	defer span.End()
+	people, err := s.db.PeopleWithPhotos(ctx, db.CastOwnerMovie)
+	if err != nil {
+		otelx.RecordSpanError(span, err)
+		slog.WarnContext(ctx, "people photo work list failed", "error", err)
+		return
+	}
+	span.SetAttributes(attribute.Int("people.count", len(people)))
+	for _, p := range people {
+		if err := s.posters.Fetch(ctx, "people", p.ID, p.ProfileURL); err != nil {
+			slog.WarnContext(ctx, "person photo fetch failed",
+				"person.id", p.ID, "error", err)
+		}
+	}
+}

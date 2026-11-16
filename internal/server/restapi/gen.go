@@ -5888,7 +5888,7 @@ type Extension struct {
 	Granted ExtensionPermissions `json:"granted"`
 	Name    string               `json:"name"`
 
-	// Path The path the extension is served under (`/opds`), its mounts below it: the entry's own, else `/<name>`.
+	// Path The path the extension is served under, `/extensions/<name>`; its mounts sit below it.
 	Path string `json:"path"`
 
 	// Reason Why the extension is not running, when it is not.
@@ -5967,10 +5967,7 @@ type ExtensionCreate struct {
 	Enabled *bool            `json:"enabled,omitempty"`
 	Grants  *ExtensionGrants `json:"grants,omitempty"`
 	Name    string           `json:"name"`
-
-	// Path One path segment to serve the extension under (`/subsonic`). Surrounding whitespace and slashes are trimmed; absent or empty serves it under `/<name>`.
-	Path   *string `json:"path,omitempty"`
-	Sha256 *string `json:"sha256,omitempty"`
+	Sha256  *string          `json:"sha256,omitempty"`
 
 	// Source An https URL (which needs `sha256`) or an absolute path.
 	Source string `json:"source"`
@@ -6026,9 +6023,6 @@ type ExtensionPermissions struct {
 type ExtensionUpdate struct {
 	Enabled *bool            `json:"enabled,omitempty"`
 	Grants  *ExtensionGrants `json:"grants,omitempty"`
-
-	// Path One path segment to serve the extension under, trimmed like on create; an empty string returns it to `/<name>`.
-	Path *string `json:"path,omitempty"`
 
 	// Sha256 An empty string clears the checksum.
 	Sha256 *string `json:"sha256,omitempty"`
@@ -7273,6 +7267,11 @@ type Movie struct {
 	// Cast Top-billed cast from TMDB. Only populated by GET /movies/{id};
 	// absent in list responses.
 	Cast *[]CastMember `json:"cast,omitempty"`
+
+	// Certification The rating board's mark in `metadata.tmdb_region` ("PG-13",
+	// "16"), the theatrical release's when it has one. Absent when no
+	// region is configured or TMDB lists none for it.
+	Certification *string `json:"certification,omitempty"`
 
 	// DigitalReleaseDate Earliest digital (TMDB type 4) release in `metadata.tmdb_region`,
 	// ISO yyyy-mm-dd. Fetched on add and on every metadata refresh;
@@ -8645,14 +8644,23 @@ type PersonMovieCredit struct {
 	// Character Character played in this movie. Empty when the provider gave none
 	// — the character belongs to the pairing, not to the person.
 	Character string `json:"character"`
-	Movie     Movie  `json:"movie"`
+
+	// Job The crew role held on this movie ("Director", "Screenplay").
+	// Absent for an acting credit.
+	Job   *string `json:"job,omitempty"`
+	Movie Movie   `json:"movie"`
 }
 
 // PersonSeriesCredit defines model for PersonSeriesCredit.
 type PersonSeriesCredit struct {
-	// Character Character played in this series.
+	// Character Character played in this series, on the series or on any of its
+	// episodes.
 	Character string `json:"character"`
-	Series    TVShow `json:"series"`
+
+	// Job The crew role held on this series or its episodes ("Director",
+	// "Writer"). Absent for an acting credit.
+	Job    *string `json:"job,omitempty"`
+	Series TVShow  `json:"series"`
 }
 
 // PlayOnLink defines model for PlayOnLink.
@@ -9679,8 +9687,13 @@ type TVShow struct {
 
 	// Cast Top-billed cast from TVDB. Only populated by GET /series/{id};
 	// absent in list responses.
-	Cast    *[]CastMember `json:"cast,omitempty"`
-	Creator *string       `json:"creator,omitempty"`
+	Cast *[]CastMember `json:"cast,omitempty"`
+
+	// Certification TVDB's content rating for `metadata.tmdb_region` ("TV-MA",
+	// "16"). Absent when no region is configured or TVDB lists none
+	// for it.
+	Certification *string `json:"certification,omitempty"`
+	Creator       *string `json:"creator,omitempty"`
 
 	// DownloadProgress Mean progress across the show's in-flight download-client entries,
 	// 0-1. Absent when nothing is downloading, when the live queue could

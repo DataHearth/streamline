@@ -85,16 +85,19 @@ type ListPeopleParams struct {
 }
 
 // MovieCredit is one movie a person is credited on, with the character they
-// play there — the character belongs to the pairing, not to the person.
+// play or the job they hold there — both belong to the pairing, not to the
+// person.
 type MovieCredit struct {
 	Movie     *ent.Movie
 	Character string
+	Job       string
 }
 
 // SeriesCredit is the series counterpart of MovieCredit.
 type SeriesCredit struct {
 	Series    *ent.TVShow
 	Character string
+	Job       string
 }
 
 // PersonCredits is everything the library knows about one person: their
@@ -207,11 +210,15 @@ func (db *DB) ListPeople(
 	return out, nil
 }
 
-// joinCredits inner-joins the credits table, which both drops a person
-// nothing credits and gives the count something to aggregate over.
+// joinCredits inner-joins the title credits, which both drops a person no
+// movie or series credits and gives the count something to aggregate over.
+// Episode credits stay out: a long show's guest list would bury the cast.
 func joinCredits(s *entsql.Selector) *entsql.SelectTable {
 	cr := entsql.Dialect(s.Dialect()).Table(credit.Table).As("person_credit")
-	s.Join(cr).On(s.C(person.FieldID), cr.C(credit.PersonColumn))
+	s.Join(cr).OnP(entsql.And(
+		entsql.ColumnsEQ(s.C(person.FieldID), cr.C(credit.PersonColumn)),
+		entsql.IsNull(cr.C(credit.EpisodeColumn)),
+	))
 	return cr
 }
 
@@ -230,7 +237,9 @@ func (db *DB) PersonCredits(
 	p, err := db.client.Person.Query().
 		Where(person.ID(id)).
 		WithCredits(func(q *ent.CreditQuery) {
-			q.WithMovie().WithTvShow()
+			q.WithMovie().WithTvShow().WithEpisode(func(q *ent.EpisodeQuery) {
+				q.WithSeason(func(q *ent.SeasonQuery) { q.WithTvShow() })
+			})
 		}).
 		Only(ctx)
 	if ent.IsNotFound(err) {
@@ -250,17 +259,34 @@ func (db *DB) PersonCredits(
 		Movies:     make([]MovieCredit, 0, len(p.Edges.Credits)),
 		Series:     make([]SeriesCredit, 0, len(p.Edges.Credits)),
 	}
+	type seriesKey struct {
+		show           uint32
+		character, job string
+	}
+	seen := make(map[seriesKey]struct{}, len(p.Edges.Credits))
 	for _, c := range p.Edges.Credits {
+		show := c.Edges.TvShow
+		if ep := c.Edges.Episode; ep != nil && ep.Edges.Season != nil {
+			show = ep.Edges.Season.Edges.TvShow
+		}
 		switch {
 		case c.Edges.Movie != nil:
 			out.Movies = append(out.Movies, MovieCredit{
 				Movie:     c.Edges.Movie,
 				Character: c.Character,
+				Job:       c.Job,
 			})
-		case c.Edges.TvShow != nil:
+		case show != nil:
+			// A guest on five episodes is one credit on the series.
+			k := seriesKey{show.ID, c.Character, c.Job}
+			if _, dup := seen[k]; dup {
+				continue
+			}
+			seen[k] = struct{}{}
 			out.Series = append(out.Series, SeriesCredit{
-				Series:    c.Edges.TvShow,
+				Series:    show,
 				Character: c.Character,
+				Job:       c.Job,
 			})
 		}
 	}

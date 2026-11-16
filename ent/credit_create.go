@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/credit"
+	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/person"
 	"github.com/datahearth/streamline/ent/tvshow"
@@ -79,6 +80,34 @@ func (_c *CreditCreate) SetNillableOrder(v *uint8) *CreditCreate {
 	return _c
 }
 
+// SetJob sets the "job" field.
+func (_c *CreditCreate) SetJob(v string) *CreditCreate {
+	_c.mutation.SetJob(v)
+	return _c
+}
+
+// SetNillableJob sets the "job" field if the given value is not nil.
+func (_c *CreditCreate) SetNillableJob(v *string) *CreditCreate {
+	if v != nil {
+		_c.SetJob(*v)
+	}
+	return _c
+}
+
+// SetDepartment sets the "department" field.
+func (_c *CreditCreate) SetDepartment(v string) *CreditCreate {
+	_c.mutation.SetDepartment(v)
+	return _c
+}
+
+// SetNillableDepartment sets the "department" field if the given value is not nil.
+func (_c *CreditCreate) SetNillableDepartment(v *string) *CreditCreate {
+	if v != nil {
+		_c.SetDepartment(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *CreditCreate) SetID(v uint32) *CreditCreate {
 	_c.mutation.SetID(v)
@@ -132,6 +161,25 @@ func (_c *CreditCreate) SetNillableTvShowID(id *uint32) *CreditCreate {
 // SetTvShow sets the "tv_show" edge to the TVShow entity.
 func (_c *CreditCreate) SetTvShow(v *TVShow) *CreditCreate {
 	return _c.SetTvShowID(v.ID)
+}
+
+// SetEpisodeID sets the "episode" edge to the Episode entity by ID.
+func (_c *CreditCreate) SetEpisodeID(id uint32) *CreditCreate {
+	_c.mutation.SetEpisodeID(id)
+	return _c
+}
+
+// SetNillableEpisodeID sets the "episode" edge to the Episode entity by ID if the given value is not nil.
+func (_c *CreditCreate) SetNillableEpisodeID(id *uint32) *CreditCreate {
+	if id != nil {
+		_c = _c.SetEpisodeID(*id)
+	}
+	return _c
+}
+
+// SetEpisode sets the "episode" edge to the Episode entity.
+func (_c *CreditCreate) SetEpisode(v *Episode) *CreditCreate {
+	return _c.SetEpisodeID(v.ID)
 }
 
 // Mutation returns the CreditMutation object of the builder.
@@ -242,6 +290,14 @@ func (_c *CreditCreate) createSpec() (*Credit, *sqlgraph.CreateSpec) {
 		_spec.SetField(credit.FieldOrder, field.TypeUint8, value)
 		_node.Order = value
 	}
+	if value, ok := _c.mutation.Job(); ok {
+		_spec.SetField(credit.FieldJob, field.TypeString, value)
+		_node.Job = value
+	}
+	if value, ok := _c.mutation.Department(); ok {
+		_spec.SetField(credit.FieldDepartment, field.TypeString, value)
+		_node.Department = value
+	}
 	if nodes := _c.mutation.PersonIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -291,6 +347,23 @@ func (_c *CreditCreate) createSpec() (*Credit, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.tv_show_credits = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.EpisodeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   credit.EpisodeTable,
+			Columns: []string{credit.EpisodeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(episode.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.episode_credits = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

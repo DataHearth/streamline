@@ -46,6 +46,8 @@ type TVShow struct {
 	PosterPath string `json:"poster_path,omitempty"`
 	// Network holds the value of the "network" field.
 	Network string `json:"network,omitempty"`
+	// Certification holds the value of the "certification" field.
+	Certification string `json:"certification,omitempty"`
 	// Creator holds the value of the "creator" field.
 	Creator string `json:"creator,omitempty"`
 	// Runtime holds the value of the "runtime" field.
@@ -119,7 +121,7 @@ func (*TVShow) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case tvshow.FieldID, tvshow.FieldYear, tvshow.FieldTvdbID, tvshow.FieldRuntime:
 			values[i] = new(sql.NullInt64)
-		case tvshow.FieldTitle, tvshow.FieldOriginalTitle, tvshow.FieldOverview, tvshow.FieldSeriesStatus, tvshow.FieldType, tvshow.FieldImdbID, tvshow.FieldPosterPath, tvshow.FieldNetwork, tvshow.FieldCreator, tvshow.FieldQualityProfile:
+		case tvshow.FieldTitle, tvshow.FieldOriginalTitle, tvshow.FieldOverview, tvshow.FieldSeriesStatus, tvshow.FieldType, tvshow.FieldImdbID, tvshow.FieldPosterPath, tvshow.FieldNetwork, tvshow.FieldCertification, tvshow.FieldCreator, tvshow.FieldQualityProfile:
 			values[i] = new(sql.NullString)
 		case tvshow.FieldCreateTime, tvshow.FieldUpdateTime, tvshow.FieldFirstAired, tvshow.FieldLastRefreshedAt:
 			values[i] = new(sql.NullTime)
@@ -228,6 +230,12 @@ func (_m *TVShow) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field network", values[i])
 			} else if value.Valid {
 				_m.Network = value.String
+			}
+		case tvshow.FieldCertification:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field certification", values[i])
+			} else if value.Valid {
+				_m.Certification = value.String
 			}
 		case tvshow.FieldCreator:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -370,6 +378,9 @@ func (_m *TVShow) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("network=")
 	builder.WriteString(_m.Network)
+	builder.WriteString(", ")
+	builder.WriteString("certification=")
+	builder.WriteString(_m.Certification)
 	builder.WriteString(", ")
 	builder.WriteString("creator=")
 	builder.WriteString(_m.Creator)

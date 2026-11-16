@@ -38,6 +38,9 @@ type TVDB struct {
 	// the BCP47 metadata.language. Empty leaves records in their original
 	// language.
 	language string
+	// country is metadata.tmdb_region as the ISO 3166-1 alpha-3 code TVDB
+	// files content ratings under, lowercased ("fra"). Empty reads none.
+	country string
 
 	// One TVDB instance is shared by the TV service, the hygiene service and
 	// the REST handlers, so every access to the cached token goes through mu.
@@ -64,7 +67,16 @@ func NewTVDB() *TVDB {
 		BaseURL:  baseURL,
 		client:   otelx.HTTPClient,
 		language: iso639_3(m.Language),
+		country:  iso3166alpha3(m.TMDBRegion),
 	}
+}
+
+func iso3166alpha3(alpha2 string) string {
+	region, err := language.ParseRegion(alpha2)
+	if err != nil {
+		return ""
+	}
+	return strings.ToLower(region.ISO3())
 }
 
 // iso639_3 converts a BCP47 tag (metadata.language, e.g. "en") into the ISO
@@ -407,6 +419,10 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 				ID         string `json:"id"`
 				SourceName string `json:"sourceName"`
 			} `json:"remoteIds"`
+			ContentRatings []struct {
+				Name    string `json:"name"`
+				Country string `json:"country"`
+			} `json:"contentRatings"`
 			// Populated only when we request ?meta=translations.
 			Translations struct {
 				NameTranslations []struct {
@@ -458,6 +474,12 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 	for _, r := range ext.Data.RemoteIDs {
 		if strings.EqualFold(r.SourceName, "imdb") {
 			d.IMDbID = r.ID
+			break
+		}
+	}
+	for _, r := range ext.Data.ContentRatings {
+		if t.country != "" && strings.EqualFold(r.Country, t.country) {
+			d.Certification = r.Name
 			break
 		}
 	}
@@ -527,6 +549,7 @@ func (t *TVDB) episodes(
 		var epResp struct {
 			Data struct {
 				Episodes []struct {
+					ID             uint32 `json:"id"`
 					SeasonNumber   uint16 `json:"seasonNumber"`
 					Number         uint16 `json:"number"`
 					AbsoluteNumber uint16 `json:"absoluteNumber"`
@@ -550,6 +573,7 @@ func (t *TVDB) episodes(
 		}
 		for _, e := range epResp.Data.Episodes {
 			out = append(out, EpisodeInfo{
+				TVDBID:         e.ID,
 				SeasonNumber:   e.SeasonNumber,
 				Number:         e.Number,
 				AbsoluteNumber: e.AbsoluteNumber,
@@ -624,28 +648,43 @@ func untitledAired(e EpisodeInfo, now time.Time) bool {
 	return e.Title == "" && e.AirDate != nil && !e.AirDate.After(now)
 }
 
-// GetSeriesCast returns up to maxCastMembers actors for a series, ordered by
-// TVDB's `sort`. Non-actor crew (directors, writers, …) is skipped.
-func (t *TVDB) GetSeriesCast(
+type tvdbCharacter struct {
+	Name       string `json:"name"`       // character name
+	PersonName string `json:"personName"` // the person's real name
+	PersonImg  string `json:"personImgURL"`
+	PeopleType string `json:"peopleType"`
+	PeopleID   uint32 `json:"peopleId"`
+	Sort       int    `json:"sort"`
+}
+
+type tvdbCharacters struct {
+	Data struct {
+		Characters []tvdbCharacter `json:"characters"`
+	} `json:"data"`
+}
+
+// tvdbDepartments groups TVDB's peopleType the way TMDB's department does.
+var tvdbDepartments = map[string]string{
+	"Director":           "Directing",
+	"Writer":             "Writing",
+	"Creator":            "Writing",
+	"Producer":           "Production",
+	"Executive Producer": "Production",
+	"Showrunner":         "Production",
+}
+
+// GetSeriesCredits returns up to maxCastMembers actors for a series, ordered
+// by TVDB's `sort`, then up to maxCrewMembers of its crew. Guest stars belong
+// to episodes, not the series.
+func (t *TVDB) GetSeriesCredits(
 	ctx context.Context,
 	tvdbID uint32,
 ) ([]CastMember, error) {
-	ctx, span := tracer.Start(ctx, "metadata.tvdb.get_series_cast",
+	ctx, span := tracer.Start(ctx, "metadata.tvdb.get_series_credits",
 		trace.WithAttributes(attribute.Int("tvdb.id", int(tvdbID))))
 	defer span.End()
 
-	var ext struct {
-		Data struct {
-			Characters []struct {
-				Name       string `json:"name"`       // character name
-				PersonName string `json:"personName"` // actor's real name
-				PersonImg  string `json:"personImgURL"`
-				PeopleType string `json:"peopleType"`
-				PeopleID   uint32 `json:"peopleId"`
-				Sort       int    `json:"sort"`
-			} `json:"characters"`
-		} `json:"data"`
-	}
+	var ext tvdbCharacters
 	if err := t.get(
 		ctx,
 		fmt.Sprintf("/series/%d/extended", tvdbID),
@@ -653,37 +692,72 @@ func (t *TVDB) GetSeriesCast(
 	); err != nil {
 		return nil, otelx.RecordSpanError(
 			span,
-			fmt.Errorf("tvdb series cast: %w", err),
+			fmt.Errorf("tvdb series credits: %w", err),
 		)
 	}
+	return tvdbCredits(ext.Data.Characters, "Actor", "Guest Star"), nil
+}
 
-	chars := ext.Data.Characters
+// GetEpisodeCredits returns an episode's guest stars, then its crew. Its
+// actors are the series regulars TVDB repeats on every episode, which the
+// series' own credits already hold.
+func (t *TVDB) GetEpisodeCredits(
+	ctx context.Context,
+	episodeTVDBID uint32,
+) ([]CastMember, error) {
+	ctx, span := tracer.Start(ctx, "metadata.tvdb.get_episode_credits",
+		trace.WithAttributes(attribute.Int("tvdb.episode.id", int(episodeTVDBID))))
+	defer span.End()
+
+	var ext tvdbCharacters
+	if err := t.get(
+		ctx,
+		fmt.Sprintf("/episodes/%d/extended", episodeTVDBID),
+		&ext,
+	); err != nil {
+		return nil, otelx.RecordSpanError(
+			span,
+			fmt.Errorf("tvdb episode credits: %w", err),
+		)
+	}
+	return tvdbCredits(ext.Data.Characters, "Guest Star", "Actor"), nil
+}
+
+// tvdbCredits splits TVDB's characters into cast — the castType entries,
+// with their character — and crew, every type but castType and skipType,
+// each capped and in TVDB's `sort` order.
+func tvdbCredits(chars []tvdbCharacter, castType, skipType string) []CastMember {
 	sort.SliceStable(
 		chars,
 		func(i, j int) bool { return chars[i].Sort < chars[j].Sort },
 	)
-
-	cast := make([]CastMember, 0, maxCastMembers)
+	var cast, crew []CastMember
 	for _, c := range chars {
-		if !strings.EqualFold(c.PeopleType, "Actor") || c.PersonName == "" {
+		if c.PersonName == "" || strings.EqualFold(c.PeopleType, skipType) {
 			continue
 		}
 		member := CastMember{
 			TVDBID:     c.PeopleID,
 			Name:       c.PersonName,
-			Character:  c.Name,
 			ProfileURL: TVDBArtworkURL(c.PersonImg),
 		}
 		if c.PeopleID != 0 {
 			member.PersonURL = fmt.Sprintf(
 				"https://www.thetvdb.com/dereferrer/people/%d", c.PeopleID)
 		}
-		cast = append(cast, member)
-		if len(cast) >= maxCastMembers {
-			break
+		switch {
+		case strings.EqualFold(c.PeopleType, castType):
+			if len(cast) < maxCastMembers {
+				member.Character = c.Name
+				cast = append(cast, member)
+			}
+		case len(crew) < maxCrewMembers:
+			member.Job = c.PeopleType
+			member.Department = tvdbDepartments[c.PeopleType]
+			crew = append(crew, member)
 		}
 	}
-	return cast, nil
+	return append(cast, crew...)
 }
 
 // GetPerson returns the biographical record for a TVDB people id.

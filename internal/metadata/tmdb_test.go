@@ -412,6 +412,70 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 				To(Equal("https://image.tmdb.org/t/p/h632/mc.jpg"))
 		})
 
+		It(
+			"keeps the principal crew after the cast, with job and department",
+			func() {
+				ts.Close()
+				ts = httptest.NewServer(
+					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = w.Write(jsonBytes(map[string]any{
+							"id":    157336,
+							"title": "Interstellar",
+							"credits": map[string]any{
+								"cast": []map[string]any{
+									{
+										"id":        1892,
+										"name":      "Matthew McConaughey",
+										"character": "Cooper",
+									},
+								},
+								"crew": []map[string]any{
+									{
+										"id":         525,
+										"name":       "Christopher Nolan",
+										"job":        "Director",
+										"department": "Directing",
+									},
+									{
+										"id":         9,
+										"name":       "Best Boy",
+										"job":        "Best Boy Electric",
+										"department": "Lighting",
+									},
+									{
+										"id":         527,
+										"name":       "Jonathan Nolan",
+										"job":        "Screenplay",
+										"department": "Writing",
+									},
+								},
+							},
+						}))
+					}),
+				)
+				client = newTestTMDB(ts.URL)
+
+				details, err := client.GetMovie(context.Background(), 157336)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(details.Cast).To(HaveExactElements(
+					And(
+						HaveField("Name", "Matthew McConaughey"),
+						HaveField("Job", ""),
+					),
+					And(
+						HaveField("TMDBID", uint32(525)),
+						HaveField(
+							"Job",
+							"Director",
+						),
+						HaveField("Department", "Directing"),
+					),
+					HaveField("Job", "Screenplay"),
+				))
+			},
+		)
+
 		Context("with translated and alternative titles", func() {
 			BeforeEach(func() {
 				ts.Close()
@@ -737,7 +801,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 		})
 	})
 
-	Describe("FetchDigitalRelease", func() {
+	Describe("FetchReleaseInfo", func() {
 		It(
 			"returns the earliest digital-type release date for the requested region",
 			func() {
@@ -763,12 +827,14 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 									"iso_3166_1": "US",
 									"release_dates": []map[string]any{
 										{
-											"type":         3,
-											"release_date": "2024-09-15T00:00:00.000Z",
+											"type":          4,
+											"release_date":  "2024-12-15T00:00:00.000Z",
+											"certification": "R",
 										},
 										{
-											"type":         4,
-											"release_date": "2024-12-15T00:00:00.000Z",
+											"type":          3,
+											"release_date":  "2024-09-15T00:00:00.000Z",
+											"certification": "PG-13",
 										},
 										{
 											"type":         4,
@@ -783,16 +849,49 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 				DeferCleanup(func() { ts.Close() })
 				client = newTestTMDB(ts.URL)
 
-				date, err := client.FetchDigitalRelease(
+				info, err := client.FetchReleaseInfo(
 					context.Background(),
 					550,
 					"US",
 				)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(date).NotTo(BeNil())
+				Expect(info.Digital).NotTo(BeNil())
 				Expect(
-					date.UTC(),
+					info.Digital.UTC(),
 				).To(Equal(time.Date(2024, 12, 1, 0, 0, 0, 0, time.UTC)))
+				Expect(info.Certification).To(Equal("PG-13"))
+			},
+		)
+
+		It(
+			"takes the first certification when the theatrical release has none",
+			func() {
+				ts = httptest.NewServer(
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						_, _ = w.Write(jsonBytes(map[string]any{
+							"results": []map[string]any{
+								{
+									"iso_3166_1": "FR",
+									"release_dates": []map[string]any{
+										{
+											"type":         3,
+											"release_date": "2024-09-01T00:00:00.000Z",
+										},
+										{"type": 5, "certification": "12"},
+										{"type": 6, "certification": "16"},
+									},
+								},
+							},
+						}))
+					}),
+				)
+				DeferCleanup(func() { ts.Close() })
+				client = newTestTMDB(ts.URL)
+
+				info, err := client.FetchReleaseInfo(context.Background(), 1, "FR")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(info.Certification).To(Equal("12"))
 			},
 		)
 
@@ -818,13 +917,13 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			DeferCleanup(func() { ts.Close() })
 			client = newTestTMDB(ts.URL)
 
-			date, err := client.FetchDigitalRelease(
+			info, err := client.FetchReleaseInfo(
 				context.Background(),
 				1,
 				"US",
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(date).To(BeNil())
+			Expect(info.Digital).To(BeNil())
 		})
 
 		It("returns nil when region is not present in the response", func() {
@@ -849,13 +948,13 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			DeferCleanup(func() { ts.Close() })
 			client = newTestTMDB(ts.URL)
 
-			date, err := client.FetchDigitalRelease(
+			info, err := client.FetchReleaseInfo(
 				context.Background(),
 				1,
 				"US",
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(date).To(BeNil())
+			Expect(info.Digital).To(BeNil())
 		})
 
 		It("returns an error on HTTP 5xx", func() {
@@ -867,7 +966,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			DeferCleanup(func() { ts.Close() })
 			client = newTestTMDB(ts.URL)
 
-			_, err := client.FetchDigitalRelease(
+			_, err := client.FetchReleaseInfo(
 				context.Background(),
 				1,
 				"US",
@@ -898,13 +997,13 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			DeferCleanup(func() { ts.Close() })
 			client = newTestTMDB(ts.URL)
 
-			date, err := client.FetchDigitalRelease(
+			info, err := client.FetchReleaseInfo(
 				context.Background(),
 				1,
 				"US",
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(date).NotTo(BeNil())
+			Expect(info.Digital).NotTo(BeNil())
 		})
 	})
 

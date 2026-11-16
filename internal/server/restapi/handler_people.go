@@ -81,6 +81,7 @@ func (s *Server) GetPerson(
 		movies = append(movies, PersonMovieCredit{
 			Movie:     movieToAPI(c.Movie),
 			Character: c.Character,
+			Job:       optString(c.Job),
 		})
 	}
 	// tvShowListToAPI, not tvShowToAPI: the credit query leaves the
@@ -94,6 +95,7 @@ func (s *Server) GetPerson(
 		series = append(series, PersonSeriesCredit{
 			Series:    tvShowListToAPI(c.Series, credits.Counts[c.Series.ID], nil),
 			Character: c.Character,
+			Job:       optString(c.Job),
 		})
 	}
 

@@ -37,6 +37,10 @@ const (
 	FieldGrabFailures = "grab_failures"
 	// FieldLastSearchAt holds the string denoting the last_search_at field in the database.
 	FieldLastSearchAt = "last_search_at"
+	// FieldTvdbID holds the string denoting the tvdb_id field in the database.
+	FieldTvdbID = "tvdb_id"
+	// FieldCreditsFetchedAt holds the string denoting the credits_fetched_at field in the database.
+	FieldCreditsFetchedAt = "credits_fetched_at"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
 	// EdgeSeason holds the string denoting the season edge name in mutations.
@@ -49,6 +53,8 @@ const (
 	EdgeMediaFiles = "media_files"
 	// EdgeEvents holds the string denoting the events edge name in mutations.
 	EdgeEvents = "events"
+	// EdgeCredits holds the string denoting the credits edge name in mutations.
+	EdgeCredits = "credits"
 	// Table holds the table name of the episode in the database.
 	Table = "episodes"
 	// SeasonTable is the table that holds the season relation/edge.
@@ -84,6 +90,13 @@ const (
 	EventsInverseTable = "media_events"
 	// EventsColumn is the table column denoting the events relation/edge.
 	EventsColumn = "episode_events"
+	// CreditsTable is the table that holds the credits relation/edge.
+	CreditsTable = "credits"
+	// CreditsInverseTable is the table name for the Credit entity.
+	// It exists in this package in order to avoid circular dependency with the "credit" package.
+	CreditsInverseTable = "credits"
+	// CreditsColumn is the table column denoting the credits relation/edge.
+	CreditsColumn = "episode_credits"
 )
 
 // Columns holds all SQL columns for episode fields.
@@ -100,6 +113,8 @@ var Columns = []string{
 	FieldAbsoluteNumber,
 	FieldGrabFailures,
 	FieldLastSearchAt,
+	FieldTvdbID,
+	FieldCreditsFetchedAt,
 	FieldStatus,
 }
 
@@ -145,6 +160,8 @@ var (
 	DefaultAbsoluteNumber uint16
 	// DefaultGrabFailures holds the default value on creation for the "grab_failures" field.
 	DefaultGrabFailures uint8
+	// DefaultTvdbID holds the default value on creation for the "tvdb_id" field.
+	DefaultTvdbID uint32
 )
 
 // Status defines the type for the "status" enum field.
@@ -240,6 +257,16 @@ func ByLastSearchAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastSearchAt, opts...).ToFunc()
 }
 
+// ByTvdbID orders the results by the tvdb_id field.
+func ByTvdbID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTvdbID, opts...).ToFunc()
+}
+
+// ByCreditsFetchedAt orders the results by the credits_fetched_at field.
+func ByCreditsFetchedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCreditsFetchedAt, opts...).ToFunc()
+}
+
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
@@ -307,6 +334,20 @@ func ByEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newEventsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByCreditsCount orders the results by credits count.
+func ByCreditsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCreditsStep(), opts...)
+	}
+}
+
+// ByCredits orders the results by credits terms.
+func ByCredits(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCreditsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newSeasonStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -340,5 +381,12 @@ func newEventsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(EventsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
+	)
+}
+func newCreditsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CreditsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CreditsTable, CreditsColumn),
 	)
 }

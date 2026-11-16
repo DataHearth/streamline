@@ -19,6 +19,7 @@ import (
 )
 
 type EpisodeSeed struct {
+	TVDBID         uint32
 	Number         uint16
 	AbsoluteNumber uint16
 	Title          string
@@ -56,6 +57,7 @@ type CreateTVShowParams struct {
 	Rating         float64
 	Genres         []string
 	Aliases        []string
+	Certification  string
 	Cast           []metadata.CastMember
 	PosterPath     string
 	QualityProfile string
@@ -84,6 +86,7 @@ type UpdateTVShowMetadataParams struct {
 	Rating        float64
 	Genres        []string
 	Aliases       []string
+	Certification string
 	Cast          []metadata.CastMember
 	FirstAired    *time.Time
 }
@@ -111,6 +114,7 @@ func (db *DB) UpdateTVShowMetadata(
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
+		SetCertification(p.Certification).
 		SetNillableFirstAired(p.FirstAired)
 	if p.SeriesStatus != "" {
 		u = u.SetSeriesStatus(tvshow.SeriesStatus(p.SeriesStatus))
@@ -202,6 +206,7 @@ func (db *DB) ReconcileEpisodes(
 			er := haveEp[e.Number]
 			if er == nil {
 				b := tx.Episode.Create().
+					SetTvdbID(e.TVDBID).
 					SetNumber(e.Number).
 					SetAbsoluteNumber(e.AbsoluteNumber).
 					SetTitle(e.Title).
@@ -226,6 +231,9 @@ func (db *DB) ReconcileEpisodes(
 			}
 			if e.AirDate != nil && !e.AirDate.Equal(er.AirDate) {
 				u, changed = u.SetAirDate(*e.AirDate), true
+			}
+			if e.TVDBID != er.TvdbID {
+				u, changed = u.SetTvdbID(e.TVDBID), true
 			}
 			if er.Title == "" && er.AirDate.IsZero() &&
 				!e.tba() && sr.Monitored && !er.Monitored && !er.MonitorPinned {
@@ -326,6 +334,7 @@ func (db *DB) CreateTVShow(
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
+		SetCertification(p.Certification).
 		SetPosterPath(p.PosterPath).
 		SetQualityProfile(p.QualityProfile).
 		SetNillableFirstAired(p.FirstAired).
@@ -347,6 +356,7 @@ func (db *DB) CreateTVShow(
 		}
 		for _, e := range s.Episodes {
 			b := tx.Episode.Create().
+				SetTvdbID(e.TVDBID).
 				SetNumber(e.Number).
 				SetAbsoluteNumber(e.AbsoluteNumber).
 				SetTitle(e.Title).

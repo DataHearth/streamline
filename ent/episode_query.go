@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/mediaevent"
@@ -32,6 +33,7 @@ type EpisodeQuery struct {
 	withAnchoredDownloadRecords *DownloadRecordQuery
 	withMediaFiles              *MediaFileQuery
 	withEvents                  *MediaEventQuery
+	withCredits                 *CreditQuery
 	withFKs                     bool
 	modifiers                   []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
@@ -173,6 +175,28 @@ func (_q *EpisodeQuery) QueryEvents() *MediaEventQuery {
 			sqlgraph.From(episode.Table, episode.FieldID, selector),
 			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, episode.EventsTable, episode.EventsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCredits chains the current query on the "credits" edge.
+func (_q *EpisodeQuery) QueryCredits() *CreditQuery {
+	query := (&CreditClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(episode.Table, episode.FieldID, selector),
+			sqlgraph.To(credit.Table, credit.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, episode.CreditsTable, episode.CreditsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -377,6 +401,7 @@ func (_q *EpisodeQuery) Clone() *EpisodeQuery {
 		withAnchoredDownloadRecords: _q.withAnchoredDownloadRecords.Clone(),
 		withMediaFiles:              _q.withMediaFiles.Clone(),
 		withEvents:                  _q.withEvents.Clone(),
+		withCredits:                 _q.withCredits.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -436,6 +461,17 @@ func (_q *EpisodeQuery) WithEvents(opts ...func(*MediaEventQuery)) *EpisodeQuery
 		opt(query)
 	}
 	_q.withEvents = query
+	return _q
+}
+
+// WithCredits tells the query-builder to eager-load the nodes that are connected to
+// the "credits" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *EpisodeQuery) WithCredits(opts ...func(*CreditQuery)) *EpisodeQuery {
+	query := (&CreditClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCredits = query
 	return _q
 }
 
@@ -518,12 +554,13 @@ func (_q *EpisodeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Epis
 		nodes       = []*Episode{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [6]bool{
 			_q.withSeason != nil,
 			_q.withDownloadRecords != nil,
 			_q.withAnchoredDownloadRecords != nil,
 			_q.withMediaFiles != nil,
 			_q.withEvents != nil,
+			_q.withCredits != nil,
 		}
 	)
 	if _q.withSeason != nil {
@@ -586,6 +623,13 @@ func (_q *EpisodeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Epis
 		if err := _q.loadEvents(ctx, query, nodes,
 			func(n *Episode) { n.Edges.Events = []*MediaEvent{} },
 			func(n *Episode, e *MediaEvent) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCredits; query != nil {
+		if err := _q.loadCredits(ctx, query, nodes,
+			func(n *Episode) { n.Edges.Credits = []*Credit{} },
+			func(n *Episode, e *Credit) { n.Edges.Credits = append(n.Edges.Credits, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -773,6 +817,37 @@ func (_q *EpisodeQuery) loadEvents(ctx context.Context, query *MediaEventQuery, 
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "episode_events" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *EpisodeQuery) loadCredits(ctx context.Context, query *CreditQuery, nodes []*Episode, init func(*Episode), assign func(*Episode, *Credit)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*Episode)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Credit(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(episode.CreditsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.episode_credits
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "episode_credits" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "episode_credits" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

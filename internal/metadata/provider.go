@@ -19,10 +19,14 @@ type CastMember struct {
 	// TMDBID and TVDBID are each scoped to their own provider's id space, so
 	// neither is globally unique on its own; exactly one is set depending on
 	// which provider supplied the entry.
-	TMDBID     uint32
-	TVDBID     uint32
-	Name       string
-	Character  string
+	TMDBID    uint32
+	TVDBID    uint32
+	Name      string
+	Character string
+	// Job is empty for an acting credit and names the crew role otherwise;
+	// Department is the provider's grouping of that role, when one is known.
+	Job        string
+	Department string
 	ProfileURL string
 	// PersonURL links to the person's page on the source provider. Empty for
 	// TMDB cast (the URL is derived from TMDBID); set directly for TVDB cast.
@@ -79,13 +83,19 @@ type Provider interface {
 	// Recommendations returns TMDB's "recommended" movies for the given
 	// title, capped and ordered as TMDB returns them.
 	Recommendations(ctx context.Context, tmdbID uint32) ([]MovieResult, error)
-	// FetchDigitalRelease returns the earliest digital-type (TMDB type 4)
-	// release date for the given region, or (nil, nil) when none is published.
-	FetchDigitalRelease(
+	// FetchReleaseInfo reads the given region's release dates: the earliest
+	// digital (TMDB type 4) one and the certification, the theatrical
+	// release's when it carries one. Zero values when the region lists none.
+	FetchReleaseInfo(
 		ctx context.Context,
 		tmdbID uint32,
 		region string,
-	) (*time.Time, error)
+	) (ReleaseInfo, error)
+}
+
+type ReleaseInfo struct {
+	Digital       *time.Time
+	Certification string
 }
 
 func PosterURL(path, size string) string {
@@ -131,6 +141,7 @@ type TVResult struct {
 
 // EpisodeInfo is one episode as TVDB reports it.
 type EpisodeInfo struct {
+	TVDBID         uint32
 	SeasonNumber   uint16
 	Number         uint16
 	AbsoluteNumber uint16
@@ -168,15 +179,25 @@ type TVDetails struct {
 	Episodes   []EpisodeInfo
 	FirstAired string // ISO yyyy-mm-dd, as TVDB returns it
 	IMDbID     string // "tt" + digits; empty when TVDB links none
+	// Certification is the content rating for metadata.tmdb_region, empty
+	// when the region is unset or TVDB lists none for it.
+	Certification string
 }
 
 // TVProvider fetches TV-series metadata. Implemented by *TVDB.
 type TVProvider interface {
 	SearchSeries(ctx context.Context, query string) ([]TVResult, error)
 	GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
-	// GetSeriesCast returns top-billed actors for a series. Cheaper than
-	// GetSeries: one extended-record fetch, no episode pagination.
-	GetSeriesCast(ctx context.Context, tvdbID uint32) ([]CastMember, error)
+	// GetSeriesCredits returns a series' top-billed actors, then its principal
+	// crew. Cheaper than GetSeries: one extended-record fetch, no episode
+	// pagination.
+	GetSeriesCredits(ctx context.Context, tvdbID uint32) ([]CastMember, error)
+	// GetEpisodeCredits returns one episode's guest stars and crew; the
+	// series regulars are left to GetSeriesCredits.
+	GetEpisodeCredits(
+		ctx context.Context,
+		episodeTVDBID uint32,
+	) ([]CastMember, error)
 	// GetPerson returns the biographical record behind a series cast entry's
 	// TVDBID.
 	GetPerson(ctx context.Context, tvdbID uint32) (*PersonDetails, error)

@@ -260,7 +260,7 @@ func (s *Service) Add(
 	}
 	span.SetAttributes(attribute.Int64("movie.id", int64(m.ID)))
 
-	if err := s.fetchDigitalRelease(ctx, m); err != nil {
+	if err := s.fetchReleaseInfo(ctx, m); err != nil {
 		slog.WarnContext(ctx, "digital release date not set on add",
 			"movie.id", m.ID, "movie.tmdb_id", m.TmdbID, "error", err)
 	}
@@ -578,7 +578,7 @@ func (s *Service) Reidentify(
 		return nil, otelx.RecordSpanError(span,
 			fmt.Errorf("refresh after re-identify: %w", err))
 	}
-	if err := s.fetchDigitalRelease(ctx, m); err != nil {
+	if err := s.fetchReleaseInfo(ctx, m); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	// The cached poster is keyed by row id, so it still shows the old title
@@ -638,6 +638,7 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 	)
 	slog.InfoContext(ctx, "metadata refresh complete",
 		"refreshed", refreshed, "skipped", skipped)
+	s.fetchPeoplePhotos(ctx)
 	return nil
 }
 
@@ -658,7 +659,7 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 		return otelx.RecordSpanError(span, err)
 	}
 
-	if err := s.fetchDigitalRelease(ctx, m); err != nil {
+	if err := s.fetchReleaseInfo(ctx, m); err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
 	// Fetch is a no-op when the file is already cached, so this costs nothing
@@ -721,25 +722,27 @@ func (s *Service) updateMetadata(
 	})
 }
 
-// fetchDigitalRelease persists m's configured-region digital (TMDB type-4)
-// release date and mirrors it onto m, which Add hands back as the response.
-// Best-effort: an unset region or a failed TMDB lookup is swallowed (the
-// metadata-refresh tick retries later); only the DB write surfaces an error.
-func (s *Service) fetchDigitalRelease(ctx context.Context, m *ent.Movie) error {
+// fetchReleaseInfo persists m's configured-region digital (TMDB type-4)
+// release date and certification, and mirrors them onto m, which Add hands
+// back as the response. Best-effort: an unset region or a failed TMDB lookup
+// is swallowed (the metadata-refresh tick retries later); only the DB write
+// surfaces an error.
+func (s *Service) fetchReleaseInfo(ctx context.Context, m *ent.Movie) error {
 	region := config.Get().Metadata.TMDBRegion
 	if region == "" {
 		return nil
 	}
-	date, err := s.metadata.FetchDigitalRelease(ctx, m.TmdbID, region)
+	info, err := s.metadata.FetchReleaseInfo(ctx, m.TmdbID, region)
 	if err != nil {
-		slog.WarnContext(ctx, "tmdb digital release fetch failed",
+		slog.WarnContext(ctx, "tmdb release dates fetch failed",
 			"movie.id", m.ID, "movie.tmdb_id", m.TmdbID, "error", err)
 		return nil
 	}
-	if err := s.db.SetMovieDigitalReleaseDate(ctx, m.ID, date); err != nil {
+	if err := s.db.SetMovieReleaseInfo(ctx, m.ID, info); err != nil {
 		return err
 	}
-	m.DigitalReleaseDate = date
+	m.DigitalReleaseDate = info.Digital
+	m.Certification = info.Certification
 	return nil
 }
 

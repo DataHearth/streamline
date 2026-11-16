@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/datahearth/streamline/ent/credit"
+	"github.com/datahearth/streamline/ent/episode"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/person"
 	"github.com/datahearth/streamline/ent/tvshow"
@@ -28,9 +29,14 @@ type Credit struct {
 	Character string `json:"character,omitempty"`
 	// Order holds the value of the "order" field.
 	Order uint8 `json:"order,omitempty"`
+	// Job holds the value of the "job" field.
+	Job string `json:"job,omitempty"`
+	// Department holds the value of the "department" field.
+	Department string `json:"department,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CreditQuery when eager-loading is set.
 	Edges           CreditEdges `json:"edges"`
+	episode_credits *uint32
 	movie_credits   *uint32
 	person_credits  *uint32
 	tv_show_credits *uint32
@@ -45,9 +51,11 @@ type CreditEdges struct {
 	Movie *Movie `json:"movie,omitempty"`
 	// TvShow holds the value of the tv_show edge.
 	TvShow *TVShow `json:"tv_show,omitempty"`
+	// Episode holds the value of the episode edge.
+	Episode *Episode `json:"episode,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // PersonOrErr returns the Person value or an error if the edge
@@ -83,6 +91,17 @@ func (e CreditEdges) TvShowOrErr() (*TVShow, error) {
 	return nil, &NotLoadedError{edge: "tv_show"}
 }
 
+// EpisodeOrErr returns the Episode value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CreditEdges) EpisodeOrErr() (*Episode, error) {
+	if e.Episode != nil {
+		return e.Episode, nil
+	} else if e.loadedTypes[3] {
+		return nil, &NotFoundError{label: episode.Label}
+	}
+	return nil, &NotLoadedError{edge: "episode"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Credit) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -90,15 +109,17 @@ func (*Credit) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case credit.FieldID, credit.FieldOrder:
 			values[i] = new(sql.NullInt64)
-		case credit.FieldCharacter:
+		case credit.FieldCharacter, credit.FieldJob, credit.FieldDepartment:
 			values[i] = new(sql.NullString)
 		case credit.FieldCreateTime, credit.FieldUpdateTime:
 			values[i] = new(sql.NullTime)
-		case credit.ForeignKeys[0]: // movie_credits
+		case credit.ForeignKeys[0]: // episode_credits
 			values[i] = new(sql.NullInt64)
-		case credit.ForeignKeys[1]: // person_credits
+		case credit.ForeignKeys[1]: // movie_credits
 			values[i] = new(sql.NullInt64)
-		case credit.ForeignKeys[2]: // tv_show_credits
+		case credit.ForeignKeys[2]: // person_credits
+			values[i] = new(sql.NullInt64)
+		case credit.ForeignKeys[3]: // tv_show_credits
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -145,21 +166,40 @@ func (_m *Credit) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Order = uint8(value.Int64)
 			}
+		case credit.FieldJob:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field job", values[i])
+			} else if value.Valid {
+				_m.Job = value.String
+			}
+		case credit.FieldDepartment:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field department", values[i])
+			} else if value.Valid {
+				_m.Department = value.String
+			}
 		case credit.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field episode_credits", value)
+			} else if value.Valid {
+				_m.episode_credits = new(uint32)
+				*_m.episode_credits = uint32(value.Int64)
+			}
+		case credit.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field movie_credits", value)
 			} else if value.Valid {
 				_m.movie_credits = new(uint32)
 				*_m.movie_credits = uint32(value.Int64)
 			}
-		case credit.ForeignKeys[1]:
+		case credit.ForeignKeys[2]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field person_credits", value)
 			} else if value.Valid {
 				_m.person_credits = new(uint32)
 				*_m.person_credits = uint32(value.Int64)
 			}
-		case credit.ForeignKeys[2]:
+		case credit.ForeignKeys[3]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field tv_show_credits", value)
 			} else if value.Valid {
@@ -192,6 +232,11 @@ func (_m *Credit) QueryMovie() *MovieQuery {
 // QueryTvShow queries the "tv_show" edge of the Credit entity.
 func (_m *Credit) QueryTvShow() *TVShowQuery {
 	return NewCreditClient(_m.config).QueryTvShow(_m)
+}
+
+// QueryEpisode queries the "episode" edge of the Credit entity.
+func (_m *Credit) QueryEpisode() *EpisodeQuery {
+	return NewCreditClient(_m.config).QueryEpisode(_m)
 }
 
 // Update returns a builder for updating this Credit.
@@ -228,6 +273,12 @@ func (_m *Credit) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("order=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Order))
+	builder.WriteString(", ")
+	builder.WriteString("job=")
+	builder.WriteString(_m.Job)
+	builder.WriteString(", ")
+	builder.WriteString("department=")
+	builder.WriteString(_m.Department)
 	builder.WriteByte(')')
 	return builder.String()
 }
