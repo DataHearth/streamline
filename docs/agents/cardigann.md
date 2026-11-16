@@ -140,7 +140,7 @@ configured `cardigann` entry's pinned version with the catalog's version of its
 
 `cardigann.Decode` rejects any key the model does not know, naming its path. Upstream's
 schema sets `additionalProperties: false`, so an unknown key means the schema grew and the
-model did not — and a field dropped silently is a tracker that half-works later. yaml.v3's
+model did not — and a field dropped silently is a tracker that half-works later. yaml/v4's
 `KnownFields` is not enough on its own: `Node.Decode` (what every custom unmarshaler,
 including every `OrderedMap`, calls) starts a fresh lenient decoder, so `checkKnown` walks
 the node tree against the Go types itself.
@@ -150,7 +150,7 @@ the node tree against the Go types itself.
   `options` (display order). Those are `OrderedMap`, which also encodes as an ordered JSON
   object. Never turn one into a Go map.
 - Scalars upstream writes as string, int or bool interchangeably (`default`, category `id`,
-  filter `args`) decode as `Str`/`StrList` — their literal text, which is what yaml.v3 does
+  filter `args`) decode as `Str`/`StrList` — their literal text, which is what yaml/v4 does
   for any scalar decoded into a string. Filter `args` is always a list after decoding,
   whatever shape it was written in.
 - `OrderedMap` encodes through the json/v2 interfaces (`MarshalJSONTo`/`UnmarshalJSONFrom`),
@@ -158,14 +158,12 @@ the node tree against the Go types itself.
   writes on the caller's encoder, so `EncodeJSON`'s no-HTML-escaping and indent apply
   inside it. A `jsontext.Token` is only valid until the next read — copy a key out of it
   before decoding its value.
-- **`\/` is read as `/` in double-quoted scalars only** (`protectSlashes` + `sanitize`).
-  YAML 1.2 — and the .NET parser upstream is written against — reads `"\/"` as `/` for
-  JSON compatibility; yaml.v3 is 1.1 and rejects it, which skipped four definitions.
-  Everywhere else (plain, single-quoted, block) the backslash is literal text and must
-  survive: `\/` in a CSS identifier or a `replace` argument is not `/`. So each unescaped
-  `\/` is swapped for an escape yaml.v3 knows for `/` before parsing, and put back as `\/`
-  in every scalar that is not double-quoted, where the escape was never read. A source that
-  already contains that escape is refused rather than guessed at.
+- **`\/` is read as `/` in double-quoted scalars only**, which is what yaml/v4 does by itself.
+  YAML 1.2 — and the .NET parser upstream is written against — reads `"\/"` as `/` for JSON
+  compatibility; everywhere else (plain, single-quoted, block) the backslash is literal text
+  and must survive: `\/` in a CSS identifier or a `replace` argument is not `/`. yaml.v3 was
+  1.1 and rejected the escape, which skipped four definitions; `types_test.go` pins both
+  halves so a parser change cannot bring that back.
 - **A second YAML document, and any explicit tag, are refused.** `yaml.Unmarshal` reads the
   first document and ignores the rest; and a tag changes decoding behind the strict check's
   back — `!!null` on a mapping still fills the struct while skipping the unknown-key walk,
@@ -637,7 +635,7 @@ changed.
 
 ## Dependencies
 
-`github.com/dlclark/regexp2/v2` and `go.yaml.in/yaml/v3` were already in the module graph
-(golangci-lint and koanf's YAML parser); this package only promoted them to direct
-requirements. `go.sum` did not change, and `go mod vendor` produces a byte-identical tree,
-so `nix/package.nix`'s `vendorHash` is unaffected.
+`github.com/dlclark/regexp2/v2` was already in the module graph (golangci-lint); this
+package only promoted it to a direct requirement. `go.yaml.in/yaml/v4` is a direct
+requirement of this package alone; `go.yaml.in/yaml/v3` stays in the graph as an indirect
+one (koanf's YAML parser and others).
