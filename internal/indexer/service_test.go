@@ -350,6 +350,30 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			Expect(out).To(BeEmpty())
 			Expect(hidden).To(Equal(3))
 		})
+
+		It("never counts a complete pack as covering a special", func() {
+			// An integral holds the numbered seasons; season 0 is outside it,
+			// as it is outside the show-level counts and the pack sizing. Only
+			// a pack of the specials season itself covers a special.
+			integral := SearchResult{
+				Title: "The.Big.Bang.Theory.2007.INTEGRALE.MULTI.1080p.WEB-GRP",
+			}
+			ranged := SearchResult{
+				Title: "The.Big.Bang.Theory.COMPLETE.S01-S12.1080p.BluRay-GRP",
+			}
+			specials := SearchResult{
+				Title: "The.Big.Bang.Theory.S00.Specials.1080p.WEB-GRP",
+			}
+			out, hidden := filterToEpisode([]SearchResult{integral, ranged}, 0, 1)
+			Expect(out).To(BeEmpty())
+			Expect(hidden).To(BeZero())
+
+			out, hidden = filterToEpisode(
+				[]SearchResult{integral, ranged, specials}, 0, 1,
+			)
+			Expect(out).To(BeEmpty())
+			Expect(hidden).To(Equal(1))
+		})
 	})
 
 	Describe("filterProviderIDs", func() {
