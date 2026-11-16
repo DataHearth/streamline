@@ -636,6 +636,9 @@ var _ = Describe("MissingSearcher.SearchOne", Label("unit", "rss"), func() {
 				Aliases: []string{"Death Race 2000"},
 				Year:    1975,
 			}, false),
+		// The dotted two-year names below pin the function alone: in the
+		// pipeline indexer.SearchMovie's title filter stops them first, since
+		// their parsed title carries the first year.
 		Entry("the film's year, then the year of the cut",
 			"Blade.Runner.1982.The.Final.Cut.2007.1080p.BluRay.x264-GRP",
 			&ent.Movie{Title: "Blade Runner", Year: 1982}, false),

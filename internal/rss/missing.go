@@ -462,12 +462,21 @@ const releaseYearDrift = 1
 // does every release while the movie's own year is unknown.
 //
 // The film's year is the one stated right after its title (yearsAfterTitle),
-// and when the name has one the release is judged on it alone. The parser's
-// year is the fallback for a name whose title is not spelled exactly as the
-// movie's: it is the last year-like token, so a release of "Blade Runner
-// 2049" that states no year parses as "Blade Runner" of 2049. Such a token is
-// the title's own when the parsed title followed by it names the movie under
-// one of its titles, and then it is no evidence of another film.
+// and when the name has one the release is judged on it alone: "Road House
+// (1989) 2024 Remaster" is the 1989 film whatever the parser's last-token
+// rule reports. The parser's year is the fallback for a name whose title is
+// not spelled exactly as the movie's: it is the last year-like token, so a
+// release of "Blade Runner 2049" that states no year parses as "Blade Runner"
+// of 2049. Such a token is the title's own when the parsed title followed by
+// it names the movie under one of its titles, and then it is no evidence of
+// another film.
+//
+// The results come from indexer.SearchMovie, whose preferTitleMatches has
+// already judged each parsed title. A dotted name carrying two years
+// ("Blade.Runner.1982.The.Final.Cut.2007") parses with the first year inside
+// its title, fails that match, and is dropped or flagged TitleMismatch there,
+// so it is not picked automatically whatever this function answers for it.
+// The two-year shape that arrives eligible is the parenthesised one.
 func namesOtherYear(release string, m *ent.Movie) bool {
 	parsed := library.Parse(release)
 	if parsed.Year == 0 || m.Year == 0 {
@@ -505,9 +514,8 @@ func withinYearDrift(year int, m *ent.Movie) bool {
 // yearsAfterTitle returns the year-like tokens of a release that directly
 // follow one of the movie's titles: what precedes the token is that title and
 // nothing else. That is where a release states the film's year, wherever the
-// parser's last-token rule lands: on the edition's year in
-// "Blade.Runner.1982.The.Final.Cut.2007" or "Road House (1989) 1080p BluRay
-// 2024 Remaster", whose film is the 1982 and the 1989 one.
+// parser's last-token rule lands: on the edition's year in "Road House (1989)
+// 1080p BluRay 2024 Remaster", whose film is the 1989 one.
 //
 // A token that is the title, or part of it, never follows the title, so it is
 // never taken for the film's year: "1984.1956.1080p" states 1956 for a movie
