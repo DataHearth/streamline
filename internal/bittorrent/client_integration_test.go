@@ -590,6 +590,52 @@ var _ = Describe("Engine download flow", Label("integration", "bittorrent"), fun
 		},
 	)
 
+	// The detail's per-connection rates are deltas between its own reads, so
+	// a transfer slow enough to outlast several of them must show a measured
+	// rate, bounded by the limit, on the peer it comes from.
+	It("reports a measured rate per connection in the detail", func() {
+		tmp := GinkgoT().TempDir()
+		seedDir := filepath.Join(tmp, "seed")
+		slowDir := filepath.Join(tmp, "dl")
+		Expect(os.MkdirAll(seedDir, 0o755)).To(Succeed())
+		Expect(os.MkdirAll(slowDir, 0o755)).To(Succeed())
+		slowBytes, slowPort := newSeederOfSize(seedDir, 32<<20, 256<<10)
+		const limitKbps = 2048
+		configtest.Setup(map[string]any{
+			"download_clients": []map[string]any{{
+				"name": "embedded", "client_type": "builtin",
+				"download_dir": slowDir, "listen_port": int(reserveListenPort()),
+				"bind_interface": engineBindIP, "disable_dht": true,
+				"max_download_kbps": limitKbps, "enabled": true,
+			}},
+		})
+		slow, err := New(ctx, store)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() { Expect(slow.Close()).To(Succeed()) })
+
+		hash, err := slow.AddTorrent(ctx, download.TorrentSource{Bytes: slowBytes})
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(store.DeleteTorrentSessionByHash(ctx, hash)).To(Succeed())
+		})
+		connectToSeeder(slow, hash, slowPort)
+
+		Eventually(func() float64 {
+			d, derr := slow.Details(ctx, hash)
+			Expect(derr).NotTo(HaveOccurred())
+			var sum float64
+			for _, p := range d.Peers {
+				sum += p.DownloadRate
+			}
+			return sum
+		}).WithTimeout(30 * time.Second).WithPolling(700 * time.Millisecond).
+			Should(And(
+				BeNumerically(">", 0),
+				// The limiter's 1 MiB burst can land in one interval.
+				BeNumerically("<", 3*limitKbps*1024),
+			))
+	})
+
 	It("deletes the incomplete .part file for single-file torrents", func() {
 		hash, err := engine.AddTorrent(ctx, download.TorrentSource{
 			Bytes: torrentBytes,

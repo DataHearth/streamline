@@ -167,13 +167,16 @@ func (e *Engine) sampleTorrents(
 		var down, up int64
 		var at time.Time
 		if !idle {
-			down, up = payloadCounters(t.Stats())
+			stats := t.Stats()
+			down, up = payloadCounters(&stats.ConnStats)
 			at = now()
 		}
 		e.record(hash, gen, idle, at, down, up)
 	}
 	// A torrent forgotten between the listing and its sample would otherwise
-	// leave its monitor behind.
+	// leave its monitor behind, and a detail nobody has read for
+	// peerReadMaxAge its connections' baseline.
+	at := now()
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	for hash, m := range e.sample {
@@ -181,13 +184,19 @@ func (e *Engine) sampleTorrents(
 			delete(e.sample, hash)
 		}
 	}
+	for hash, snap := range e.peerReads {
+		if at.Sub(snap.at) > peerReadMaxAge {
+			delete(e.peerReads, hash)
+		}
+	}
 }
 
-// payloadCounters is what the rates are measured on. Download is payload
-// received from peers that a piece needed, as it arrives: a verified-bytes
+// payloadCounters is what every rate is measured on, a torrent's (its
+// aggregate over all connections) and a connection's alike. Download is
+// payload received that a piece needed, as it arrives: a verified-bytes
 // counter grows a whole piece at a time, and a hash check, which reads from
 // disk, would count as bytes received. Upload is payload sent.
-func payloadCounters(stats antorrent.TorrentStats) (down, up int64) {
+func payloadCounters(stats *antorrent.ConnStats) (down, up int64) {
 	return stats.BytesReadUsefulData.Int64(), stats.BytesWrittenData.Int64()
 }
 

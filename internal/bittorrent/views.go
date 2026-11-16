@@ -226,14 +226,19 @@ func (e *Engine) Details(
 	for _, tier := range mi.UpvertedAnnounceList() {
 		d.Trackers = append(d.Trackers, tier...)
 	}
-	for _, pc := range t.PeerConns() {
+	// Stamped once the counters are read: the client lock can hold the read
+	// back, and a stamp taken before it would divide a longer interval's
+	// bytes by a shorter one.
+	conns, counts := readPeerCounts(t)
+	rates := e.peerRates(t.InfoHash().HexString(), time.Now(), counts)
+	for _, pc := range conns {
 		name, _ := pc.PeerClientName.Load().(string)
-		stats := pc.Stats()
+		r := rates[pc]
 		d.Peers = append(d.Peers, PeerView{
 			Addr:         fmt.Sprint(pc.RemoteAddr),
 			Client:       name,
-			DownloadRate: stats.DownloadRate,
-			UploadRate:   stats.LastWriteUploadRate,
+			DownloadRate: float64(r.down),
+			UploadRate:   float64(r.up),
 		})
 	}
 	return d, nil
