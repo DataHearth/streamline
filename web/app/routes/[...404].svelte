@@ -40,6 +40,7 @@
 		title={i18n.error_404_title()}
 		subtitle={i18n.error_404_body()}
 		eyebrow="404"
+		inShell
 	>
 		<div class="mb-6 flex justify-center">
 			<div
