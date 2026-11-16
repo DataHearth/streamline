@@ -26,7 +26,9 @@
 	let visible = $state(true);
 	let timer: ReturnType<typeof setTimeout> | undefined;
 
-	const url = $derived(attempt === 0 ? src : `${src}?retry=${attempt}`);
+	const url = $derived(
+		attempt === 0 ? src : `${src}${src.includes("?") ? "&" : "?"}retry=${attempt}`,
+	);
 
 	function handleError() {
 		// The lookup proxy resolves on the request itself, so its 404 already

@@ -185,7 +185,7 @@ On a show's page the bookmark switches the whole show on or off, and the small a
 
 Sometimes a title ends up pointing at the wrong entry — an import matched *The Matrix* to *The Matrix Reloaded*, or a series folder landed on the wrong show. **Change match…** in the actions menu repairs it without losing anything. Admin only.
 
-Pick the correct title from the same TMDB/TVDB search the add flow uses, confirm, and the entry is repointed **in place**: it keeps its id, its files, its download history and any requests attached to it. Only the provider identity changes. Metadata is refreshed from the new entry and the files are renamed into the new title's folder. A movie's poster and logo are fetched again from the new entry.
+Pick the correct title from the same TMDB/TVDB search the add flow uses, confirm, and the entry is repointed **in place**: it keeps its id, its files, its download history and any requests attached to it. Only the provider identity changes. Metadata is refreshed from the new entry and the files are renamed into the new title's folder. A movie's poster and logo are fetched again from the new entry. Its page shows them at once; posters elsewhere (the library grid, search, the calendar) can show the old one for up to a day, until the browser's copy expires.
 
 **For a series** the season and episode list is rebuilt from the new show, and each file is re-attached to the episode with the same season and episode number. Files whose numbering has no counterpart in the new show are **left on disk** and listed back to you — a provider numbering seasons differently is not evidence the media is unwanted. Their database rows are dropped, so an orphan scan can re-adopt them once you have decided where they belong.
 

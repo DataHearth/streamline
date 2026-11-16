@@ -33,9 +33,10 @@
 	provideHeroHold();
 
 	// A logo that fails to load falls back to the text title; a new movie on
-	// the same component gets its own try.
-	let logoFailedFor = $state<number | null>(null);
-	let showLogo = $derived(!!movie.has_logo && logoFailedFor !== movie.id);
+	// the same component, or the same one under a new match, gets its own try.
+	let logoSrc = $derived(movieLogoUrl(movie));
+	let logoFailedFor = $state<string | null>(null);
+	let showLogo = $derived(!!movie.has_logo && logoFailedFor !== logoSrc);
 
 
 	// Single dotted meta line: release · runtime · rating · genres, then any
@@ -109,11 +110,11 @@
 			>
 				{#if showLogo}
 					<img
-						src={movieLogoUrl(movie)}
+						src={logoSrc}
 						alt={movie.title}
 						decoding="async"
 						class="block h-auto max-h-28 w-auto max-w-full object-contain object-left drop-shadow-[0_2px_12px_rgb(0_0_0_/0.55)] md:max-h-40 md:max-w-[36rem] lg:max-h-48"
-						onerror={() => (logoFailedFor = movie.id)}
+						onerror={() => (logoFailedFor = logoSrc)}
 					/>
 				{:else}
 					{movie.title}
