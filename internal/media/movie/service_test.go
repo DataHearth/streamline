@@ -745,6 +745,10 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					Return(nil, &ent.NotFoundError{}).Once()
 				storeMock.SetMovieTMDBID(mock.Anything, uint32(7), uint32(604)).
 					Return(nil).Once()
+				// The row is on the new id from here, so the old title's art
+				// must go even though the refresh fails: the next metadata
+				// refresh keeps whatever file is cached.
+				fetchMock.Remove("movies", uint32(7)).Return(nil).Once()
 				metaMock.GetMovie(mock.Anything, uint32(604)).
 					Return(nil, errors.New("tmdb down")).Once()
 

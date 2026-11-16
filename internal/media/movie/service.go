@@ -598,6 +598,16 @@ func (s *Service) Reidentify(
 	if err := s.db.SetMovieTMDBID(ctx, id, tmdbID); err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("set tmdb id: %w", err))
 	}
+	// The cached art is keyed by row id and Fetch keeps a cached file, so the
+	// old title's poster and logo go as soon as the row carries the new id:
+	// whichever step below fails, the next metadata refresh fetches the new
+	// title's art into an empty folder.
+	if s.posters != nil {
+		if err := s.posters.Remove("movies", id); err != nil {
+			slog.WarnContext(ctx, "poster cache eviction failed",
+				"movie.id", id, "error", err)
+		}
+	}
 	// The row now carries the new id with the old title. A failed refresh would
 	// leave it that way, so report it rather than swallowing it.
 	m.TmdbID = tmdbID
@@ -612,14 +622,6 @@ func (s *Service) Reidentify(
 	}
 	if err := s.fetchReleaseInfo(ctx, m); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
-	}
-	// The cached art is keyed by row id and Fetch keeps a cached file, so the
-	// old title's poster and logo are dropped before the new ones are fetched.
-	if s.posters != nil {
-		if err := s.posters.Remove("movies", id); err != nil {
-			slog.WarnContext(ctx, "poster cache eviction failed",
-				"movie.id", id, "error", err)
-		}
 	}
 	s.fetchPoster(ctx, id, details)
 	// Logged like the series twin: otherwise the rarer and more consequential
