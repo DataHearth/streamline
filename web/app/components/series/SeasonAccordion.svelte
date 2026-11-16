@@ -29,6 +29,7 @@
 		seriesId,
 		seasons,
 		selected,
+		closed = $bindable(false),
 		onSelect,
 		seriesType,
 		onMonitorSeason,
@@ -44,6 +45,8 @@
 		seriesId: number;
 		seasons: Season[];
 		selected: number;
+		// Every season collapsed; bound so the route can keep it in the URL.
+		closed?: boolean;
 		onSelect: (n: number) => void;
 		seriesType: SeriesType;
 		onMonitorSeason: (s: Season) => void;
@@ -60,10 +63,9 @@
 		showMonitored?: boolean;
 	} = $props();
 
-	// Collapse is local, expand is shared. Pushing "nothing open" up into the
-	// route's selectedSeason would leave the md+ two-pane with no season to show
-	// on a resize, so only a real selection is reported.
-	let closed = $state(false);
+	// Collapsing is its own flag, not a selection. Pushing "nothing open" into
+	// the route's selectedSeason would leave the md+ two-pane with no season to
+	// show on a resize, so only a real selection is reported through onSelect.
 	let openSeason = $derived(closed ? -1 : selected);
 	function toggle(n: number) {
 		if (openSeason === n) {
