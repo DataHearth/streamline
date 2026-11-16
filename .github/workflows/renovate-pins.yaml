@@ -3,9 +3,9 @@ name: Renovate pins
 # Upstream decides each toolchain's patch and nixpkgs decides which lines exist.
 # Renovate bumps every copy of a version itself — go.mod's `go` directive and the
 # Dockerfile's GO_VERSION; engines.node, the Dockerfile's node tag and the
-# workflows' node-version; packageManager — from go.dev, nodejs.org and the npm
-# registry. What it cannot compute, this job derives on renovate's own branch,
-# before CI reads any of it:
+# workflows' node-version; packageManager and the Dockerfile's PNPM_VERSION —
+# from go.dev, nodejs.org and the npm registry. What it cannot compute, this job
+# derives on renovate's own branch, before CI reads any of it:
 #
 #   1. a check that the locked nixpkgs has each declared line (go_1_NN,
 #      nodejs_NN, pnpm_NN) and that every copy agrees with its source
@@ -114,6 +114,7 @@ jobs:
           }
           check "deploy/Dockerfile GO_VERSION" "$(sed -n 's/^ARG GO_VERSION=//p' deploy/Dockerfile)" "$go"
           check "deploy/Dockerfile node tag" "$(grep -oP 'FROM node:\K[^-@]+' deploy/Dockerfile)" "$node"
+          check "deploy/Dockerfile PNPM_VERSION" "$(sed -n 's/^ARG PNPM_VERSION=//p' deploy/Dockerfile)" "$pnpm"
           while read -r file version; do
             check "${file} node-version" "$version" "$node"
           done < <(grep -oP '^\s*node-version: \K\S+' --with-filename .github/workflows/*.yaml | tr ':' ' ')

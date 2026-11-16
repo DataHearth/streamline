@@ -29,6 +29,14 @@
 			"depNameTemplate": "node",
 			"datasourceTemplate": "node-version",
 			"versioningTemplate": "node"
+		},
+		{
+			"customType": "regex",
+			"description": "pnpm in the image: the Dockerfile's PNPM_VERSION, installed from npm since Node ships no corepack. The pnpm rule groups it with packageManager and pnpm/action-setup; renovate-pins.yaml checks it agrees with packageManager.",
+			"managerFilePatterns": ["/^deploy/Dockerfile$/"],
+			"matchStrings": ["(?m)^ARG PNPM_VERSION=(?<currentValue>\\d+\\.\\d+\\.\\d+)$"],
+			"depNameTemplate": "pnpm",
+			"datasourceTemplate": "npm"
 		}
 	],
 	"packageRules": [
@@ -83,8 +91,8 @@
 			"dependencyDashboardApproval": false
 		},
 		{
-			"description": "pnpm: package.json's packageManager field and the setup action in CI. Split, they would be two PRs for one upgrade.",
-			"matchManagers": ["npm", "github-actions"],
+			"description": "pnpm: package.json's packageManager field, the setup action in CI and the Dockerfile's PNPM_VERSION. Split, they would be three PRs for one upgrade.",
+			"matchManagers": ["npm", "github-actions", "custom.regex"],
 			"matchDepNames": ["pnpm", "pnpm/action-setup"],
 			"groupName": "pnpm",
 			"dependencyDashboardApproval": false
@@ -98,7 +106,7 @@
 		},
 		{
 			"description": "The pnpm rule above lifts the dashboard gate for the whole group; a pnpm major is a new nixpkgs line (pnpm_NN) and has to wait for it like Go's minor. Node needs no rule of its own: its line is the major, which the generic major gate already holds.",
-			"matchManagers": ["npm"],
+			"matchManagers": ["npm", "custom.regex"],
 			"matchDepNames": ["pnpm"],
 			"matchUpdateTypes": ["major"],
 			"dependencyDashboardApproval": true

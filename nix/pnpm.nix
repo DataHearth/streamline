@@ -13,17 +13,18 @@
 # `pnpm_NN`, or this throws. When nixpkgs ships the declared version its
 # package is used as-is, so the devshell, the package build (and with it
 # fetchPnpmDeps, whose store layout follows the pnpm that runs it), CI and
-# corepack in the container run one pnpm.
+# the container's npm-installed pnpm run one pnpm.
 #
 # Unlike Go and Node, a pnpm that differs from nixpkgs' is not rebuilt from
 # source. pnpm 12+ is a Rust build whose recipe moves between patches — 12.10
 # started generating a source file with esbuild before `cargo build`, which the
 # pnpm_12 recipe written for 12.9.0 has no step for — so overriding the version
 # breaks exactly when upstream reshapes its build. pnpm's own `@pnpm/exe`
-# binary is what CI's pnpm/action-setup and corepack download anyway, so the
-# override installs that one and patches it for the store. Its hashes are npm's
-# `integrity` for each platform's tarball, kept in toolchains.json keyed by
-# version; `.github/workflows/renovate-pins.yaml` reads them off the registry.
+# binary is what CI's pnpm/action-setup and the container's npm install fetch
+# anyway, so the override installs that one and patches it for the store. Its
+# hashes are npm's `integrity` for each platform's tarball, kept in
+# toolchains.json keyed by version; `.github/workflows/renovate-pins.yaml` reads
+# them off the registry.
 let
   # corepack accepts `pnpm@X.Y.Z+sha512.…`; the hash suffix is corepack's and
   # says nothing about the version.

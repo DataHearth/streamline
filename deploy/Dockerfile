@@ -23,7 +23,13 @@ ARG FFMPEG_DIGEST=sha256:b90574a4e2ae62b763c39c384526689e7eb435da6398f4fb3f6c3f1
 FROM node:26.13.1-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS frontend
 WORKDIR /app
 
-RUN corepack enable
+# Node ships no corepack from 25 on, so pnpm comes from npm. It is
+# package.json's packageManager version: renovate moves the two in one PR and
+# renovate-pins.yaml fails a branch where they differ. Its install script swaps
+# the Node.js entry points for the native binary, which npm runs only when
+# allowed.
+ARG PNPM_VERSION=12.20.0
+RUN npm install -g --allow-scripts=pnpm pnpm@${PNPM_VERSION}
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
