@@ -2,22 +2,20 @@ name: Renovate pins
 
 # Upstream decides each toolchain's patch and nixpkgs decides which lines exist.
 # Renovate bumps every copy of a version itself — go.mod's `go` directive and the
-# Dockerfile's GO_VERSION; engines.node, the Dockerfile's node tag and the
-# workflows' node-version; packageManager — from go.dev, nodejs.org and the npm
-# registry. What it cannot compute, this job derives on renovate's own branch,
-# before CI reads any of it:
+# Dockerfile's golang images; engines.node, the Dockerfile's node image and the
+# workflows' node-version; packageManager and the Dockerfile's PNPM_VERSION —
+# from go.dev, nodejs.org, Docker Hub and the npm registry, each image's digest
+# with its tag. What it cannot compute, this job derives on renovate's own
+# branch, before CI reads any of it:
 #
 #   1. a check that the locked nixpkgs has each declared line (go_1_NN,
 #      nodejs_NN, pnpm_NN) and that every copy agrees with its source
-#   2. the two base-image digests, which follow the tags renovate wrote
-#      — the digest is what resolves, so a tag moved without it silently keeps
-#        building the old image
-#   3. nix/toolchains.json: the hashes nix/{go,node,pnpm}.nix override
+#   2. nix/toolchains.json: the hashes nix/{go,node,pnpm}.nix override
 #      nixpkgs' package with, for every tool whose declared version differs from
 #      the locked one — rebuilt from scratch each run, so a lock that has caught
 #      up drops its entry
-#   4. vendorHash and pnpmDeps.hash, which follow go.sum and pnpm-lock.yaml (and
-#      the pnpm that lays out the store, so after step 3)
+#   3. vendorHash and pnpmDeps.hash, which follow go.sum and pnpm-lock.yaml (and
+#      the pnpm that lays out the store, so after step 2)
 #
 # Renovate writes the workflow copies rather than this job because a push made
 # with the Actions token may not touch .github/workflows/; renovate's app may.
@@ -112,8 +110,16 @@ jobs:
               fail=1
             fi
           }
-          check "deploy/Dockerfile GO_VERSION" "$(sed -n 's/^ARG GO_VERSION=//p' deploy/Dockerfile)" "$go"
+          while read -r tag; do
+            check "deploy/Dockerfile golang tag" "$tag" "$go"
+          done < <(grep -oP 'FROM golang:\K[^-@]+' deploy/Dockerfile)
           check "deploy/Dockerfile node tag" "$(grep -oP 'FROM node:\K[^-@]+' deploy/Dockerfile)" "$node"
+          check "deploy/Dockerfile PNPM_VERSION" "$(sed -n 's/^ARG PNPM_VERSION=//p' deploy/Dockerfile)" "$pnpm"
+          # The VAAPI variant ships the static image's ffmpeg: `9.0.2-cli-ls89`
+          # and `9.0.2-1` are both ffmpeg 9.0.2.
+          ffmpeg=$(grep -oP 'FROM \S*mwader/static-ffmpeg:\K[^@]+' deploy/Dockerfile)
+          vaapi=$(grep -oP 'FROM \S*linuxserver/ffmpeg:\K[^@]+' deploy/Dockerfile)
+          check "deploy/Dockerfile linuxserver/ffmpeg" "${vaapi%%-*}" "${ffmpeg%%-*}"
           while read -r file version; do
             check "${file} node-version" "$version" "$node"
           done < <(grep -oP '^\s*node-version: \K\S+' --with-filename .github/workflows/*.yaml | tr ':' ' ')
@@ -145,24 +151,6 @@ jobs:
             echo "node=$node"
             echo "pnpm=$pnpm"
           } >> "$GITHUB_OUTPUT"
-
-      - name: Base image digests
-        run: |
-          set -euo pipefail
-
-          redigest() {
-            local image=$1 have=$2 want
-            want=$(docker buildx imagetools inspect "$image" --format '{{.Manifest.Digest}}')
-            [ "$want" = "$have" ] || sed -i "s|$have|$want|" deploy/Dockerfile
-          }
-
-          go_tag=$(sed -n 's/^ARG GO_VERSION=//p' deploy/Dockerfile)-alpine
-          redigest "golang:${go_tag}" "$(sed -n 's/^ARG GO_DIGEST=//p' deploy/Dockerfile)"
-
-          # Read as one string so the digest is always the one written next to
-          # that exact tag, whatever order the two were rewritten in.
-          node_ref=$(grep -oP 'FROM node:\K\S+' deploy/Dockerfile)
-          redigest "node:${node_ref%@*}" "${node_ref#*@}"
 
       # Go and node are upstream's own source tarballs, so their hashes are a
       # download each. pnpm is its prebuilt @pnpm/exe binary (nix/pnpm.nix says

@@ -56,5 +56,9 @@ else
       # which brotli 1.2.0 leaves as a reserved -17. `v24.nix` takes no `brotli`
       # argument to swap, so the shared flags are dropped instead.
       configureFlags = lib.filter (flag: !lib.hasPrefix "--shared-brotli" flag) old.configureFlags;
+      # nixpkgs' v26.nix backports V8's GCC 16 fix (NixOS/nixpkgs#568974) onto
+      # 26.11.1, and 26.13.0 ships it upstream: patch refuses it as already
+      # applied and the build stops. A no-op on any major whose list lacks it.
+      patches = lib.filter (p: !lib.hasSuffix "memcpy-climits.patch" (toString p)) old.patches;
     });
   }

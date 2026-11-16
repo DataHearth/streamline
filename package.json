@@ -2,7 +2,7 @@
   "private": true,
   "packageManager": "pnpm@12.20.0",
   "engines": {
-    "node": ">=24.22.3"
+    "node": ">=26.13.1"
   },
   "devDependencies": {
     "@inlang/paraglide-js": "^3.0.0",
