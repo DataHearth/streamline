@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -137,7 +139,14 @@ var _ = Describe("dropConfig", Label("unit", "demoshots"), func() {
 
 	It("is quiet when boot never wrote one", func(ctx SpecContext) {
 		Expect(os.Remove(file)).To(Succeed())
+
+		var logged bytes.Buffer
+		previous := slog.Default()
+		slog.SetDefault(slog.New(slog.NewTextHandler(&logged, nil)))
+		DeferCleanup(slog.SetDefault, previous)
+
 		d.dropConfig(ctx)
+		Expect(logged.String()).To(BeEmpty())
 		Expect(file).NotTo(BeAnExistingFile())
 	})
 })
