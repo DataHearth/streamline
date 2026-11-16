@@ -124,7 +124,7 @@ RUN mkdir -p /out/data /out/config
 # `group_add`, the chart's hwAccel.supplementalGroups), gid from
 # `stat -c %g /dev/dri/renderD128`. This is why the stage sits ABOVE the
 # distroless one: a plain `docker build` must still produce the hardened image.
-FROM lscr.io/linuxserver/ffmpeg:9.0-cli-ls81@sha256:ec8ac72754e6c115d330ec37aa18b2ae1ba86a25b89ef46a4efd4f3e57d2e6c5 AS vaapi
+FROM ghcr.io/linuxserver/ffmpeg:9.0-cli-ls81@sha256:ec8ac72754e6c115d330ec37aa18b2ae1ba86a25b89ef46a4efd4f3e57d2e6c5 AS vaapi
 
 # linuxserver's own ENTRYPOINT is an s6 wrapper (`/ffmpegwrapper.sh`) built for
 # running ffmpeg as the container's job; streamline is a long-running server,
