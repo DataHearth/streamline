@@ -283,6 +283,26 @@ jobs:
             echo "❌ svelte-check found problems — run \`task lint:ts\`" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+  # Go, the static JS/CSS and Nix through treefmt, each formatter at the version
+  # go.mod or the flake pins. Formatting is cheap, so it runs on every change.
+  format:
+    needs: [changes, vulncheck]
+    if: ${{ !cancelled() && !failure() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Nix
+        uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
+      - name: Binary cache
+        uses: ./.github/actions/nix-builder
+        with:
+          attic-token: ${{ secrets.ATTIC_PULL_TOKEN }}
+      - name: treefmt
+        run: nix fmt -- --ci
+
   lint-helm:
     needs: [changes, vulncheck]
     if: ${{ !cancelled() && !failure() && needs.changes.outputs.helm == 'true' }}
@@ -408,7 +428,7 @@ jobs:
   # (internal/server/web, the one test package importing `web`). Only a Go
   # change needs the whole tree.
   test:
-    needs: [changes, lint-go, lint-frontend, lint-ts, lint-helm, build]
+    needs: [changes, format, lint-go, lint-frontend, lint-ts, lint-helm, build]
     if: ${{ !cancelled() && !failure() && (needs.changes.outputs.go == 'true' || needs.changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-latest
     steps:
@@ -505,7 +525,7 @@ jobs:
           fail_on_failure: false
 
   nix:
-    needs: [changes, lint-go, lint-frontend, lint-ts, lint-helm, build]
+    needs: [changes, format, lint-go, lint-frontend, lint-ts, lint-helm, build]
     if: ${{ !cancelled() && !failure() && needs.changes.outputs.nix == 'true' }}
     runs-on: ubuntu-latest
     steps:
@@ -563,7 +583,7 @@ jobs:
   # and every section either passed or was skipped.
   ci-ok:
     if: always()
-    needs: [changes, lint-go, vulncheck, lint-frontend, lint-ts, test, build, lint-helm, nix]
+    needs: [changes, format, lint-go, vulncheck, lint-frontend, lint-ts, test, build, lint-helm, nix]
     runs-on: ubuntu-latest
     permissions: {}
     steps:
