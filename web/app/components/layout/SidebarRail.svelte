@@ -168,7 +168,7 @@
 	>
 		<span class="sr-only">{i18n.nav_home_dashboard()}</span>
 		<img
-			src="/static/images/favicon-512.png"
+			src="/static/images/icon-maskable-512.png"
 			alt=""
 			class="h-9 w-9 rounded-md object-cover shadow-sm ring-1 ring-border"
 		/>

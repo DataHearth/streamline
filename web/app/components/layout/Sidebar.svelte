@@ -273,7 +273,7 @@
 			class="flex items-center gap-3 rounded-md transition hover:opacity-90"
 		>
 			<img
-				src="/static/images/favicon-512.png"
+				src="/static/images/icon-maskable-512.png"
 				alt=""
 				class="h-9 w-9 rounded-md object-cover shadow-sm ring-1 ring-border"
 			/>

@@ -386,7 +386,7 @@ Square rounded (`--radius-md`) 32/40/48 variants. Initials in sans `font-medium`
 - **No emoji ever.**
 - Every icon-only interactive element gets `aria-label`.
 - Decorative icons get `aria-hidden="true"`.
-- **App icons** (`web/static/images/`): the logo is `--accent` on `--bg-deep`, 10 px right of the canvas centre on 512 (3.5 px on 180): its heavy bar is on the left, and the offset centres it optically. `favicon-512.png` keeps its rounded tile; `icon-maskable-512.png` and `apple-touch-icon.png` are full-bleed and opaque, since the launcher applies its own mask; `icon-monochrome-512.png` is the white logo on transparent, for themed icons.
+- **App icons** (`web/static/images/`): the logo is `--accent` on `--bg-deep`, 10 px right of the canvas centre on 512 (3.5 px on 180): its heavy bar is on the left, and the offset centres it optically. `favicon-512.png` keeps its rounded tile, for places that apply no shape of their own (the manifest's `any` icon, the API docs, the Unraid template); `icon-maskable-512.png` and `apple-touch-icon.png` are full-bleed and opaque, since whatever shows them applies its own shape: the launcher's mask, and in the app the logo in the sidebar, the icon rail and the sign-in card, whose own rounding and ring are its only edge (an inset tile there would put a second, smaller corner inside the ring); `icon-monochrome-512.png` is the white logo on transparent, for themed icons.
 
 ---
 
