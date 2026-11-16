@@ -20,7 +20,7 @@ ARG FFMPEG_VERSION=9.0
 ARG FFMPEG_DIGEST=sha256:b90574a4e2ae62b763c39c384526689e7eb435da6398f4fb3f6c3f1c6a14ce33
 
 # --- Frontend assets (esbuild + TailwindCSS) ---
-FROM node:24.22.3-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS frontend
+FROM node:26.13.1-alpine@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8 AS frontend
 WORKDIR /app
 
 RUN corepack enable
