@@ -6,7 +6,7 @@ body:
     attributes:
       value: >
         Check [the roadmap](https://github.com/datahearth/streamline/wiki/Roadmap)
-        first — the built-in player is already planned, and music and books have shipped.
+        first — the player is in progress in its own repositories, and music and books have shipped.
 
   - type: textarea
     id: problem

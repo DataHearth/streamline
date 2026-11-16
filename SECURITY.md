@@ -41,7 +41,7 @@ In scope — anything that breaks the security model of a correctly configured
 instance:
 
 - Authentication or session bypass (`streamline_session` cookie, JWT, API keys,
-  the OPDS extension's `/opds` credentials)
+  and the credentials an extension checks itself under `/extensions/<name>`)
 - Privilege escalation between users, or past RBAC on `/api/v1/*`
 - OIDC flow flaws — account takeover via identity linking, state/nonce/PKCE
   handling
