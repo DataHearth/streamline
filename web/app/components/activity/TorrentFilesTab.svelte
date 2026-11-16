@@ -8,7 +8,7 @@
 	} from "@lucide/svelte";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
 	import { cn } from "@lib/cn";
-	import { formatBytes } from "@lib/format";
+	import { formatBytes, percentDone } from "@lib/format";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
 		TorrentFile,
@@ -231,7 +231,7 @@
 			<div
 				class={cn(
 					"flex items-center gap-2 border-b border-border/50 px-3",
-					virtual && "absolute inset-x-0",
+					virtual ? "absolute inset-x-0" : "relative",
 				)}
 				style:height="{ROW_H}px"
 				style:top={virtual ? `${(start + i) * ROW_H}px` : undefined}
@@ -266,7 +266,7 @@
 							class="ml-1 shrink-0 whitespace-nowrap font-mono text-[10px] tabular-nums text-fg-subtle"
 						>
 							{row.count} · {formatBytes(row.size)}
-							{#if row.size > 0}· {Math.round((row.done / row.size) * 100)}%{/if}
+							{#if row.size > 0}· {percentDone(row.done / row.size)}%{/if}
 						</span>
 					</button>
 					{#if canControl}
@@ -336,13 +336,26 @@
 								<ProgressBar value={f.progress} {status} height={2} />
 							</div>
 							<span class="font-mono tabular-nums text-[10px] text-fg-subtle">
-								{Math.round(f.progress * 100)}%
+								{percentDone(f.progress)}%
 							</span>
 						{/if}
 					</div>
 					<span class="w-16 shrink-0 text-right font-mono tabular-nums text-[11px] text-fg-subtle">
 						{formatBytes(f.size)}
+						<!-- Below sm the progress column above is hidden to leave the
+						     priority buttons their width; the percentage rides under the
+						     size and the bar along the row's bottom edge instead. -->
+						{#if !skip}
+							<span class="block text-[10px] text-fg-faint sm:hidden">
+								{percentDone(f.progress)}%
+							</span>
+						{/if}
 					</span>
+					{#if !skip}
+						<div class="absolute inset-x-3 bottom-0 sm:hidden">
+							<ProgressBar value={f.progress} {status} height={1.5} />
+						</div>
+					{/if}
 					{#if canControl}
 						<div
 							class={cn(

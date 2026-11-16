@@ -9,6 +9,7 @@
 		formatSpeed,
 		formatEta,
 		formatRatio,
+		percentDone,
 	} from "@lib/format";
 	import { torrentHref, torrentRelease } from "@lib/activity-touch";
 	import { formatDateTime, formatRelative } from "@lib/dates";
@@ -125,7 +126,7 @@
 			</div>
 			<div class="flex flex-col leading-tight">
 				<span class="font-mono tabular-nums text-xs text-fg-muted">
-					{fetching ? "—" : `${Math.round(torrent.progress * 100)}%`}
+					{fetching ? "—" : `${percentDone(torrent.progress)}%`}
 				</span>
 				{#if torrent.status === "downloading" && torrent.eta > 0}
 					<span class="font-mono tabular-nums text-[10px] text-fg-subtle">
