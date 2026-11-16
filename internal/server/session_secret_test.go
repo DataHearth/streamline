@@ -35,10 +35,13 @@ var _ = Describe("ensureSessionSecret", Label("unit", "server", "auth"), func() 
 	It("generates and persists one into a writable config", func() {
 		configtest.SetupFile(nil)
 		Expect(ensureSessionSecret(context.Background())).To(Succeed())
-		Expect(secretOf()).NotTo(BeEmpty())
+		// config.Load replaces the singleton secretOf reads, so the generated
+		// secret is taken before the file is read back.
+		want := secretOf()
+		Expect(want).NotTo(BeEmpty())
 		reloaded, err := config.Load(config.Path())
 		Expect(err).NotTo(HaveOccurred())
-		Expect(reloaded.Auth.SessionSecret).To(Equal(secretOf()))
+		Expect(reloaded.Auth.SessionSecret).To(Equal(want))
 	})
 
 	// The file wins in config.SecretValue, so a secret generated beside an
