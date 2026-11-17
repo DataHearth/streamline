@@ -1,6 +1,8 @@
 package bittorrent
 
 import (
+	"math"
+
 	antorrent "github.com/anacrolix/torrent"
 
 	"github.com/datahearth/streamline/internal/config"
@@ -20,10 +22,10 @@ import (
 // The default* values below are what an unset (or 0) builtin entry key
 // resolves to (resolveBounds), so an install that sets nothing keeps the
 // 256 MB envelope. A host with memory to spare can raise them through
-// max_peers_per_torrent, max_unverified_mb and max_torrents; the config's
-// validate tags cap each, so a typo cannot ask for thousands of connections.
-// Raising the peer count is the one that costs process memory — about
-// 160 KB per established connection, up to ~420 KB while seeding.
+// max_peers_per_torrent, max_unverified_mb and max_torrents, none of which
+// has an upper limit: the admin sizes them for the host. Raising the peer
+// count is the one that costs process memory — about 160 KB per established
+// connection, up to ~420 KB while seeding.
 const (
 	// defaultPeersPerTorrent is the established-connection ceiling per
 	// torrent (anacrolix default 50). A swarm saturates a home connection long
@@ -88,18 +90,32 @@ type peerBounds struct {
 // resolveBounds reads the builtin entry's limits, each falling back to its
 // default when unset or 0. Half-open and known peers are not keys of their
 // own: each only matters relative to the peer count, so both scale with it at
-// the default's ratios (20:15 and 100:15), never below their floors.
+// the default's ratios (20:15 and 100:15), never below their floors. The keys
+// have no upper limit, so everything derived from one saturates rather than
+// wrapping into a negative bound.
 func resolveBounds(entry config.DownloadClientEntry) peerBounds {
 	peers := orDefault(entry.MaxPeersPerTorrent, defaultPeersPerTorrent)
+	unverified := int64(math.MaxInt64)
+	if mb := int64(
+		orDefault(entry.MaxUnverifiedMB, defaultUnverifiedMB),
+	); mb <= math.MaxInt64>>20 {
+		unverified = mb << 20
+	}
 	return peerBounds{
 		peersPerTorrent: peers,
-		halfOpenConns:   max(minHalfOpenConns, peers*4/3),
-		knownPeers:      max(minKnownPeersPerTorrent, peers*20/3),
-		unverifiedBytes: int64(
-			orDefault(entry.MaxUnverifiedMB, defaultUnverifiedMB),
-		) << 20,
-		torrents: orDefault(entry.MaxTorrents, defaultMaxTorrents),
+		halfOpenConns:   max(minHalfOpenConns, scale(peers, 4)),
+		knownPeers:      max(minKnownPeersPerTorrent, scale(peers, 20)),
+		unverifiedBytes: unverified,
+		torrents:        orDefault(entry.MaxTorrents, defaultMaxTorrents),
 	}
+}
+
+// scale returns n*num/3, or the largest int when the product overflows.
+func scale(n, num int) int {
+	if n > math.MaxInt/num {
+		return math.MaxInt
+	}
+	return n * num / 3
 }
 
 func orDefault(v, def int) int {

@@ -2,6 +2,7 @@ package bittorrent
 
 import (
 	"context"
+	"math"
 	"os"
 	"path/filepath"
 
@@ -52,7 +53,12 @@ var _ = Describe("applyMemoryBounds", Label("unit", "bittorrent"), func() {
 		// more while at or under LowWater; inverting them would make the
 		// pruner run against the announcer. Low water is never set, so
 		// anacrolix's default is the one to stay above.
-		for peers := 0; peers <= 200; peers++ {
+		counts := make([]int, 0, 205)
+		for peers := range 201 {
+			counts = append(counts, peers)
+		}
+		counts = append(counts, 1000, 100000, math.MaxInt32, math.MaxInt)
+		for _, peers := range counts {
 			cc := antorrent.NewDefaultClientConfig()
 			applyMemoryBounds(cc, resolveBounds(config.DownloadClientEntry{
 				MaxPeersPerTorrent: peers,
@@ -86,6 +92,20 @@ var _ = Describe("resolveBounds", Label("unit", "bittorrent"), func() {
 		Expect(b.peersPerTorrent).To(Equal(60))
 		Expect(b.unverifiedBytes).To(Equal(int64(128 << 20)))
 		Expect(b.torrents).To(Equal(2000))
+	})
+
+	It("saturates a derived bound that would overflow", func() {
+		b := resolveBounds(config.DownloadClientEntry{
+			MaxPeersPerTorrent: math.MaxInt,
+			MaxUnverifiedMB:    math.MaxInt,
+			MaxTorrents:        math.MaxInt,
+		})
+
+		Expect(b.peersPerTorrent).To(Equal(math.MaxInt))
+		Expect(b.halfOpenConns).To(Equal(math.MaxInt))
+		Expect(b.knownPeers).To(Equal(math.MaxInt))
+		Expect(b.unverifiedBytes).To(Equal(int64(math.MaxInt64)))
+		Expect(b.torrents).To(Equal(math.MaxInt))
 	})
 
 	It("scales half-open and known peers with the peer count", func() {

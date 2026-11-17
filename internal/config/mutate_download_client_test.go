@@ -72,7 +72,7 @@ var _ = Describe("Download client CRUD", Label("unit", "config"), func() {
 		Expect(e.BindInterface).To(Equal("wg0"))
 	})
 
-	It("patches the engine limits, and refuses one past its maximum", func() {
+	It("patches the engine limits, and refuses a negative one", func() {
 		ctx := context.Background()
 		Expect(config.AddDownloadClient(ctx, config.DownloadClientEntry{
 			Name: "embedded", ClientType: "builtin", DownloadDir: "/downloads",
@@ -90,10 +90,10 @@ var _ = Describe("Download client CRUD", Label("unit", "config"), func() {
 		Expect(e.MaxUnverifiedMB).To(Equal(128))
 		Expect(e.MaxTorrents).To(Equal(2000))
 
-		tooMany := 201
+		negative := -1
 		Expect(
 			config.UpdateDownloadClient(ctx, "embedded", config.DownloadClientPatch{
-				MaxPeersPerTorrent: &tooMany,
+				MaxPeersPerTorrent: &negative,
 			}),
 		).To(HaveOccurred())
 		e, _ = config.FindDownloadClient("embedded")
