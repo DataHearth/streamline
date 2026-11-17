@@ -176,6 +176,41 @@ func (d *drainingStorage) mark(
 	return f()
 }
 
+// settledCompletion keeps a piece the store already holds complete from being
+// written to it again.
+//
+// Opening a torrent marks every piece of its finished files complete
+// (anacrolix's setCompletionFromPartFiles), and anacrolix v1.62.0's bolt store
+// buffers each such mark as a change to persist on Close, held or not. With
+// hundreds of seeding torrents that is every piece in the store, rewritten in
+// one bolt transaction at shutdown: longer than the pod's termination grace,
+// so the process was killed before the completions that did change were saved.
+//
+// It wraps the store NewBoltPieceCompletion returns, which is a
+// PieceCompletionCheckpointer and PieceCompletionPersistenter; anacrolix
+// type-asserts both, so they are passed through.
+type settledCompletion struct{ storage.PieceCompletion }
+
+func (c settledCompletion) Set(
+	key metainfo.PieceKey,
+	complete g.Option[bool],
+) error {
+	if complete.Ok && complete.Value {
+		if held, err := c.Get(key); err == nil && held.Ok && held.Complete {
+			return nil
+		}
+	}
+	return c.PieceCompletion.Set(key, complete)
+}
+
+func (c settledCompletion) Checkpoint(keys []metainfo.PieceKey) error {
+	return c.PieceCompletion.(storage.PieceCompletionCheckpointer).Checkpoint(keys)
+}
+
+func (c settledCompletion) Persistent() bool {
+	return c.PieceCompletion.(storage.PieceCompletionPersistenter).Persistent()
+}
+
 type guardedPiece struct {
 	storage.PieceImpl
 	read     uncachedPiece

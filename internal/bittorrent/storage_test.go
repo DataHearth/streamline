@@ -16,6 +16,7 @@ import (
 	"github.com/anacrolix/torrent/storage"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.etcd.io/bbolt"
 
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
@@ -150,5 +151,47 @@ var _ = Describe("Engine storage", Label("integration", "bittorrent"), func() {
 				"%s: %d of %d bytes are zero",
 				episodeName(i), bytes.Count(got, []byte{0}), len(got))
 		}
+	})
+})
+
+var _ = Describe("settledCompletion", Label("unit", "bittorrent"), func() {
+	It("saves new marks and commits nothing for marks the store holds", func() {
+		dlDir := GinkgoT().TempDir()
+		dir := sessionDir(dlDir)
+		held := metainfo.PieceKey{Index: 1}
+		fresh := metainfo.PieceKey{Index: 2}
+		boot := func(marks ...metainfo.PieceKey) {
+			GinkgoHelper()
+			bolt, err := storage.NewBoltPieceCompletion(dir)
+			Expect(err).NotTo(HaveOccurred())
+			pc := settledCompletion{bolt}
+			for _, k := range marks {
+				Expect(pc.Set(k, g.Some(true))).To(Succeed())
+			}
+			Expect(pc.Close()).To(Succeed())
+		}
+		lastTx := func() int {
+			GinkgoHelper()
+			db, err := bbolt.Open(PieceCompletionPath(dlDir), 0o600, nil)
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { Expect(db.Close()).To(Succeed()) }()
+			tx, err := db.Begin(false)
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { Expect(tx.Rollback()).To(Succeed()) }()
+			return tx.ID()
+		}
+
+		boot(held)
+		saved := lastTx()
+		boot(held)
+		Expect(lastTx()).To(Equal(saved))
+
+		boot(held, fresh)
+		bolt, err := storage.NewBoltPieceCompletion(dir)
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(bolt.Close)
+		c, err := bolt.Get(fresh)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.Ok && c.Complete).To(BeTrue())
 	})
 })

@@ -147,10 +147,11 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	if err := os.MkdirAll(stateDir, 0o750); err != nil {
 		return nil, fmt.Errorf("create session dir: %w", err)
 	}
-	pc, err := storage.NewBoltPieceCompletion(stateDir)
+	bolt, err := storage.NewBoltPieceCompletion(stateDir)
 	if err != nil {
 		return nil, fmt.Errorf("open piece completion: %w", err)
 	}
+	pc := settledCompletion{bolt}
 	st, paths := newContentStorage(entry.DownloadDir, pc)
 
 	peers, err := newPeerClient(ctx, entry, bindIP, st, entry.ListenPort)
@@ -506,6 +507,7 @@ func resolveBindIP(iface string) (net.IP, error) {
 // Close stops background loops and shuts the torrent client down. Resume
 // state is already on disk (bolt piece completion + ent rows).
 func (e *Engine) Close() error {
+	start := time.Now()
 	close(e.stop)
 	e.wg.Wait()
 	// Snapshot before closing: client.Close empties the torrent set.
@@ -513,11 +515,21 @@ func (e *Engine) Close() error {
 	e.flushUploaded(context.Background())
 	errs := e.client.Close()
 	waitPieceMarks(torrents)
+	// Closing the completion store writes every mark it buffered, which can
+	// outlast the pod's termination grace; the two lines date each half.
+	slog.InfoContext(
+		context.Background(),
+		"torrent clients closed, saving piece completion",
+		"elapsed",
+		time.Since(start),
+	)
 	// A custom DefaultStorage is not closed by client.Close (only the
 	// fallback file storage is); close it explicitly.
 	if err := e.storageImpl.Close(); err != nil {
 		errs = append(errs, err)
 	}
+	slog.InfoContext(context.Background(), "piece completion saved",
+		"elapsed", time.Since(start))
 	// client.Close only closes sockets it created itself; a listener
 	// registered via AddListener is ours to close (anacrolix's own doc on
 	// AddListener says so).
