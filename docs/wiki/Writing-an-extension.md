@@ -100,7 +100,7 @@ Each granted folder is mounted into your module for the length of one call:
 | `music` | The music library, `library.music_path` | `/folders/music` | read-only |
 | `movies` | The movie library, `library.movie_path` | `/folders/movies` | read-only |
 | `series` | The series library, `library.series_path` | `/folders/series` | read-only |
-| `artwork` | Streamline's poster cache, laid out `<kind>/<id>/poster.jpg` | `/folders/artwork` | read-only |
+| `artwork` | Streamline's poster cache, laid out `<kind>/<id>/poster.jpg` (scaled copies may sit beside it as `poster.w<N>.jpg`) | `/folders/artwork` | read-only |
 | `cache` | Your own folder, `<data_dir>/extensions/<name>/cache` | `/folders/cache` | read and write |
 
 Read them with the standard library (`os.ReadFile`, `os.Open`, `os.WriteFile` into the cache). `r.Folders` lists what this call has, each as `sdk.Folder{Name, HostPath, GuestPath}`: `HostPath` is the directory on the server, `GuestPath` where you see it. A folder whose directory is missing when the request arrives is left out, so check `r.Folder(name)` before using it. The views give paths on the server (`music_files.path`); turn one into a path you can open with `r.GuestPath(hostPath)`, which answers false for a path outside every folder you have.
