@@ -9,6 +9,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -162,7 +164,11 @@ func (e *Engine) solve(ctx context.Context, r request) error {
 		if msg == "" {
 			msg = "no cookies came back"
 		}
-		return fmt.Errorf("%w: solver: %s", ErrChallenge, msg)
+		return fmt.Errorf(
+			"%w: solver: %s",
+			ErrChallenge,
+			scrubSolverMessage(msg, r, s.Proxy),
+		)
 	}
 	target, err := url.Parse(r.url)
 	if err != nil {
@@ -184,4 +190,56 @@ func (e *Engine) solve(ctx context.Context, r request) error {
 		e.ua = sr.Solution.UserAgent
 	}
 	return nil
+}
+
+// urlInText finds anything URL-shaped in free text.
+var urlInText = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^\s"'<>]+`)
+
+// minScrubbedValue is the shortest request value cut out of a solver's
+// message on its own: shorter ones ("1", "on") are not credentials and would
+// take the message's own words with them.
+const minScrubbedValue = 4
+
+// scrubSolverMessage removes from a solver's failure message what the solver
+// was handed and may quote back: the request URL, its form and the proxy's
+// credentials. The message is foreign free text that ends up logged, stored
+// as a login's last error and answered by the API, and a login by get, a
+// passkey link or a posted password is in what the solver was asked to open.
+// Every URL in it loses its query, user and fragment, whatever its encoding;
+// the request's own values go wherever else they stand.
+func scrubSolverMessage(msg string, r request, proxy *url.URL) string {
+	msg = urlInText.ReplaceAllStringFunc(msg, func(raw string) string {
+		u, err := url.Parse(raw)
+		if err != nil || u.Host == "" {
+			return "[url]"
+		}
+		return otelx.RedactURL(u)
+	})
+	secrets := []string{r.form}
+	add := func(vals url.Values) {
+		for _, vs := range vals {
+			for _, v := range vs {
+				secrets = append(secrets, v, url.QueryEscape(v), url.PathEscape(v))
+			}
+		}
+	}
+	if u, err := url.Parse(r.url); err == nil {
+		add(u.Query())
+	}
+	if form, err := url.ParseQuery(r.form); err == nil {
+		add(form)
+	}
+	if proxy != nil && proxy.User != nil {
+		pass, _ := proxy.User.Password()
+		secrets = append(secrets, proxy.User.Username(), pass)
+	}
+	// Longest first, so a value is not left half-standing by a shorter one
+	// it contains.
+	slices.SortFunc(secrets, func(a, b string) int { return len(b) - len(a) })
+	for _, v := range secrets {
+		if len(v) >= minScrubbedValue {
+			msg = strings.ReplaceAll(msg, v, "[redacted]")
+		}
+	}
+	return msg
 }
