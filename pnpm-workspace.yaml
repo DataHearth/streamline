@@ -1,3 +1,6 @@
+# pnpm 12 refuses packages published less than a day ago by default; Renovate
+# opens its PRs as soon as a release is out, so the check is off.
+minimumReleaseAge: 0
 allowBuilds:
   '@parcel/watcher': true
   esbuild: true

@@ -97,13 +97,13 @@
 		{
 			"description": "Both ffmpeg images in one PR, so the static build and the VAAPI variant move to the same ffmpeg together; renovate-pins.yaml fails a branch where the two differ. After the docker images group on purpose — the later rule wins.",
 			"matchManagers": ["dockerfile"],
-			"matchDepNames": ["docker.io/mwader/static-ffmpeg", "lscr.io/linuxserver/ffmpeg"],
+			"matchDepNames": ["docker.io/mwader/static-ffmpeg", "ghcr.io/linuxserver/ffmpeg"],
 			"groupName": "ffmpeg"
 		},
 		{
 			"description": "linuxserver tags its rebuilds `<ffmpeg>-cli-ls<build>`; docker versioning reads `-cli-ls81` as a compatibility suffix, so it never offers ls82.",
 			"matchManagers": ["dockerfile"],
-			"matchDepNames": ["lscr.io/linuxserver/ffmpeg"],
+			"matchDepNames": ["ghcr.io/linuxserver/ffmpeg"],
 			"versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)(?:\\.(?<patch>\\d+))?-cli-ls(?<build>\\d+)$"
 		},
 		{
