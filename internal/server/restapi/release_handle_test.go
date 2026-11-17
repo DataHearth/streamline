@@ -20,7 +20,7 @@ var _ = Describe("release handles", Label("unit", "server"), func() {
 		})
 	}
 
-	BeforeEach(func() { withSecret("first-secret") })
+	BeforeEach(func() { withSecret("first-session-secret") })
 
 	It("hides the link and opens back to it", func() {
 		handle := sealReleaseLink(link)
@@ -52,7 +52,7 @@ var _ = Describe("release handles", Label("unit", "server"), func() {
 
 	It("retires every handle when the session secret rotates", func() {
 		handle := sealReleaseLink(link)
-		withSecret("rotated-secret")
+		withSecret("rotated-session-secret")
 
 		_, err := openReleaseLink(handle)
 

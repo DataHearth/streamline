@@ -44,60 +44,6 @@ var _ = Describe("ensureSessionSecret", Label("unit", "server", "auth"), func() 
 		Expect(reloaded.Auth.SessionSecret).To(Equal(want))
 	})
 
-	// The file wins in config.SecretValue, so a secret generated beside an
-	// empty file would never be the one signing: boot has to stop.
-	DescribeTable(
-		"refuses to boot on a session_secret_file that reads back empty",
-		func(content string, backingFile bool) {
-			path := filepath.Join(GinkgoT().TempDir(), "session_secret")
-			Expect(os.WriteFile(path, []byte(content), 0o600)).To(Succeed())
-			overrides := map[string]any{
-				"auth": map[string]any{"session_secret_file": path},
-			}
-			if backingFile {
-				configtest.SetupFile(overrides)
-			} else {
-				configtest.Setup(overrides)
-			}
-
-			err := ensureSessionSecret(context.Background())
-			Expect(err).To(MatchError(ContainSubstring("auth.session_secret_file")))
-			Expect(err).To(MatchError(ContainSubstring(path)))
-			Expect(config.Get().Auth.SessionSecret).To(BeEmpty())
-
-			_, err = NewFromConfig(context.Background())
-			Expect(err).To(MatchError(ContainSubstring("auth.session_secret_file")))
-		},
-		Entry("empty, no backing config file", "", false),
-		Entry("whitespace only, no backing config file", " \n\t\n", false),
-		Entry("empty, writable config file", "", true),
-		Entry("a UTF-8 byte-order mark and nothing else", "\xef\xbb\xbf", false),
-		Entry(
-			"an empty UTF-16 file as PowerShell 5 writes it",
-			"\xff\xfe\r\x00\n\x00",
-			false,
-		),
-		Entry("a placeholder under the floor", "changeme\n", false),
-	)
-
-	DescribeTable("refuses to boot on an inline session_secret under the floor",
-		func(secret string) {
-			configtest.SetupFile(map[string]any{
-				"auth": map[string]any{"session_secret": secret},
-			})
-
-			err := ensureSessionSecret(context.Background())
-			Expect(err).To(MatchError(ContainSubstring("auth.session_secret:")))
-			// Nothing is generated over what the operator wrote.
-			Expect(config.Get().Auth.SessionSecret).To(Equal(secret))
-
-			_, err = NewFromConfig(context.Background())
-			Expect(err).To(MatchError(ContainSubstring("auth.session_secret:")))
-		},
-		Entry("a lone space", " "),
-		Entry("a short placeholder", "changeme"),
-	)
-
 	It("accepts a session_secret_file that holds a secret", func() {
 		path := filepath.Join(GinkgoT().TempDir(), "session_secret")
 		Expect(

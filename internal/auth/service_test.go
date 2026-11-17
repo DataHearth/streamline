@@ -758,7 +758,7 @@ var _ = Describe("New", Label("unit", "auth"), func() {
 	It("returns an error when auth.session_ttl fails to parse", func() {
 		configtest.Setup(map[string]any{
 			"auth": map[string]any{
-				"session_secret": "test-secret",
+				"session_secret": "test-session-secret",
 				"session_ttl":    "not-a-duration",
 			},
 		})

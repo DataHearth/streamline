@@ -661,30 +661,16 @@ func apiFailureLimiter() auth.Limiter {
 	return auth.NewLimiter(uint8(limit), 15*time.Minute)
 }
 
-// ensureSessionSecret leaves the config singleton holding a usable JWT
-// signing secret, or returns an error.
+// ensureSessionSecret leaves the config singleton holding a JWT signing
+// secret. A configured one is used as it is: config.Load already refused one
+// it could not accept.
 //
 // With nothing configured it generates one and tries to persist it to the
 // backing config file so sessions survive restarts. If persistence fails (no
 // backing file in tests, read-only mount in compose/k8s), it falls back to an
 // in-memory secret and warns — sessions will then reset every restart, which
 // is preferable to refusing to boot.
-//
-// A configured auth.session_secret_file that reads back empty is different: it
-// is a secret that has not materialised yet, not a request to generate one.
-// Boot fails, exactly as it does when the file is missing. Generating
-// would have nowhere to go — session_secret cannot be written into a config
-// that names session_secret_file, and every reader resolves the pair through
-// config.SecretValue, where the file wins — so the instance would run on the
-// empty key, and an empty HMAC key lets any caller sign their own claims.
-//
-// A configured secret under auth.MinSessionSecretLen fails the boot too, file
-// or inline: a file holding only a byte-order mark is not empty, and is no
-// more of a secret.
 func ensureSessionSecret(ctx context.Context) error {
-	if err := auth.CheckConfiguredSessionSecret(); err != nil {
-		return err
-	}
 	cfg := config.Get()
 	if config.SecretValue(
 		cfg.Auth.SessionSecret,

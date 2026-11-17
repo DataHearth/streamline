@@ -1460,6 +1460,9 @@ func finalize(k, fileK *koanf.Koanf) (*Config, *envLayer, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	if err := cfg.checkSessionSecret(m); err != nil {
+		return nil, nil, err
+	}
 	secretFiles.Store(&m)
 
 	structK, err := flatten(&cfg)
@@ -1731,8 +1734,8 @@ func SecretValue(inline, file string) string {
 }
 
 // loadSecretFiles reads every *_file path referenced by c into a path->content
-// map, and returns nothing but the joined error when any of them is
-// unreadable.
+// map. A path it could not read is absent from the map and named in the
+// joined error.
 //
 // It reports every unreadable path rather than the first, so an operator
 // materialising secrets learns about all of them in one boot — and so
@@ -1781,10 +1784,7 @@ func loadSecretFiles(c *Config) (map[string]string, error) {
 	for _, s := range c.MediaServer.Servers {
 		read(s.APIKeyFile)
 	}
-	if len(errs) > 0 {
-		return nil, errors.Join(errs...)
-	}
-	return m, nil
+	return m, errors.Join(errs...)
 }
 
 func Load(cfgFile string) (*Config, error) {

@@ -259,7 +259,7 @@ auth:
 		Context("with environment variables", func() {
 			BeforeEach(func() {
 				os.Setenv("STREAMLINE_SERVER__PORT", "7070")
-				os.Setenv("STREAMLINE_AUTH__SESSION_SECRET", "env-secret")
+				os.Setenv("STREAMLINE_AUTH__SESSION_SECRET", "env-session-secret")
 				DeferCleanup(func() {
 					os.Unsetenv("STREAMLINE_SERVER__PORT")
 					os.Unsetenv("STREAMLINE_AUTH__SESSION_SECRET")
@@ -271,7 +271,7 @@ auth:
 				Expect(err).NotTo(HaveOccurred())
 				// server.port reached via __; session_secret's own _ stays literal.
 				Expect(cfg.Server.Port).To(Equal(uint16(7070)))
-				Expect(cfg.Auth.SessionSecret).To(Equal("env-secret"))
+				Expect(cfg.Auth.SessionSecret).To(Equal("env-session-secret"))
 			})
 		})
 

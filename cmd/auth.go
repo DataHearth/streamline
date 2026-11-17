@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"os"
@@ -48,16 +47,7 @@ func withAuthDeps(
 	}
 	defer dbClient.Close()
 	store := db.New(dbClient)
-	// These commands sign no session, so an instance with no usable secret
-	// (nothing configured, or one the server would refuse to boot on) gets a
-	// throwaway here rather than being refused: `auth unlock` has to work on
-	// exactly the instance that is misconfigured. A usable one is used as-is.
-	a := config.Get().Auth
-	secret := config.SecretValue(a.SessionSecret, a.SessionSecretFile)
-	if auth.CheckSessionSecret(secret) != nil {
-		secret = rand.Text()
-	}
-	svc, err := auth.NewWithSecret(store, secret)
+	svc, err := auth.New(store)
 	if err != nil {
 		return fmt.Errorf("auth: %w", err)
 	}
