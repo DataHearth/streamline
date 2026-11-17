@@ -36,17 +36,12 @@ tasks:
     cmd: go tool govulncheck ./...
 
   fmt:
-    desc: Format all code
-    cmds:
-      - go tool golangci-lint fmt ./...
-      - biome format --write web/static/js web/static/css
-      - nixfmt flake.nix nix/*.nix
+    desc: Format Go, the static JS/CSS and Nix (treefmt, configured in flake.nix)
+    cmd: treefmt
 
   fmt:check:
     desc: Check formatting without writing
-    cmds:
-      - biome format web/static/js web/static/css
-      - nixfmt --check flake.nix nix/*.nix
+    cmd: treefmt --ci
 
   docs:screenshots:
     desc: Boot a throwaway instance, seed the demo library and retake the README screenshots (usage - task docs:screenshots -- [-only movies,books] [-keep])

@@ -13947,9 +13947,18 @@ components:
         download_rate:
           type: number
           format: double
+          description: |
+            Payload bytes/sec received from this connection, measured
+            between this read of the torrent's detail and the previous one
+            (by any caller), at least half a second and at most 10 s apart.
+            Absent on a first read, on one more than 10 s after the last,
+            on a connection opened since, and when nothing was received.
         upload_rate:
           type: number
           format: double
+          description: |
+            Payload bytes/sec sent to this connection, measured the same way
+            as `download_rate`.
 
     TorrentMedia:
       type: object

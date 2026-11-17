@@ -33,12 +33,16 @@ jobs:
     concurrency:
       group: issue-triage-${{ github.event.issue.number || github.run_id }}
       cancel-in-progress: false
-    # Anyone who can open an issue starts this job with the Claude token, so
+    # Anyone who can open an issue starts this job, and it reaches the Claude
+    # API by trading its GitHub OIDC token (workload identity federation), so
     # the job holds nothing else: an issues-only GITHUB_TOKEN that expires
-    # with it, and no repository write.
+    # with it, and no repository write. The federation rule in the Claude
+    # Console should admit only this workflow on main, for the `issues` and
+    # `workflow_dispatch` events.
     permissions:
       contents: read
       issues: write
+      id-token: write
     env:
       GH_REPO: ${{ github.repository }}
     steps:
@@ -100,8 +104,10 @@ jobs:
             echo 'LABELS_EOF'
           } >> "$GITHUB_OUTPUT"
 
+      # claude -p started by this step rather than anthropics/claude-code-action:
+      # the Console's monthly API credits cover the CLI run by hand, while runs
+      # the action starts bill as Claude Code, which they do not cover.
       - name: Triage
-        uses: anthropics/claude-code-action@4d75e5f390ee76b2e09c1980ecc99ff3a2e088c8 # v1.0.275
         env:
           # Read by the wrappers' gh calls. Scoped to the job's permissions above.
           GH_TOKEN: ${{ github.token }}
@@ -109,19 +115,16 @@ jobs:
           # label edit plus two corrections and one comment; a backfill edits
           # one issue per call and comment-issue.sh refuses it outright.
           CLAUDE_CODE_SCRIPT_CAPS: ${{ github.event_name == 'issues' && '{"edit-issue.sh":3,"comment-issue.sh":1}' || '' }}
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ github.token }}
-          # Issue authors rarely have write access. This is the case the input
-          # exists for: a job holding nothing but issues: write.
-          allowed_non_write_users: "*"
-          # The model is pinned: the CLI's default moves with each release, and
-          # labelling would drift with it for no reason anyone could see.
-          claude_args: >-
-            --model claude-haiku-5-5
-            --allowedTools "Bash(./.github/scripts/triage/gh.sh:*),Bash(./.github/scripts/triage/edit-issue.sh:*),Bash(./.github/scripts/triage/comment-issue.sh:*)"
-            --disallowedTools "WebFetch,WebSearch,Write,Edit,MultiEdit,NotebookEdit"
-          prompt: |
+          # The CLI trades the GitHub OIDC token in this file through the
+          # federation rule; no key is stored.
+          ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+          ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+          ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+          ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
+          ANTHROPIC_IDENTITY_TOKEN_FILE: ${{ runner.temp }}/anthropic/identity-token
+          DISABLE_AUTOUPDATER: "1"
+          CLAUDE_CODE_VERSION: 2.1.323
+          PROMPT: |
             You triage GitHub issues for ${{ github.repository }}: Streamline, a self-hosted
             media manager replacing Radarr, Sonarr, Lidarr, Readarr and Seerr — movies, TV,
             music and books, a built-in request system, torrent downloads through external
@@ -144,7 +147,7 @@ jobs:
 
             Every other label on an issue belongs to a maintainer: leave it alone.
 
-            For each issue:
+            For each issue on the Issues line above, and no other:
             1. Read it with `gh.sh issue view N`.
             2. Type: it ends with exactly one of `bug`, `enhancement`, `documentation`. Keep the
                one it has unless it is plainly wrong — a "bug" asking for something that never
@@ -179,6 +182,31 @@ jobs:
 
             Finish with one line per issue you changed: the number, labels added and removed,
             and a short reason.
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash -s "$CLAUDE_CODE_VERSION"
+
+          # The CLI rereads the file each time it renews its Anthropic token,
+          # and GitHub's token lasts about five minutes: a backfill outlives it.
+          identity_token() {
+            curl -fsS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" |
+              jq -er .value >"$ANTHROPIC_IDENTITY_TOKEN_FILE.new"
+            mv "$ANTHROPIC_IDENTITY_TOKEN_FILE.new" "$ANTHROPIC_IDENTITY_TOKEN_FILE"
+          }
+          mkdir -m 700 "$(dirname "$ANTHROPIC_IDENTITY_TOKEN_FILE")"
+          umask 077
+          identity_token
+          while sleep 240; do
+            identity_token || echo "::warning::could not refresh the GitHub OIDC token"
+          done &
+          trap 'kill $!; rm -rf "$(dirname "$ANTHROPIC_IDENTITY_TOKEN_FILE")"' EXIT
+
+          # The model is pinned: the CLI's default moves with each release, and
+          # labelling would drift with it for no reason anyone could see.
+          "$HOME/.local/bin/claude" -p "$PROMPT" \
+            --model claude-haiku-5-5 \
+            --allowedTools "Bash(./.github/scripts/triage/gh.sh:*),Bash(./.github/scripts/triage/edit-issue.sh:*),Bash(./.github/scripts/triage/comment-issue.sh:*)" \
+            --disallowedTools "WebFetch,WebSearch,Write,Edit,NotebookEdit"
 
       - name: Finish
         env:

@@ -3,6 +3,10 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
     devshell.url = "github:numtide/devshell";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Only ever used to evaluate the home-manager module in `checks`; nothing
     # in the package or the NixOS module depends on it.
     home-manager = {
@@ -14,7 +18,10 @@
   outputs =
     inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [ inputs.devshell.flakeModule ];
+      imports = [
+        inputs.devshell.flakeModule
+        inputs.treefmt-nix.flakeModule
+      ];
 
       flake.nixosModules = {
         streamline = ./nix/module.nix;
@@ -35,11 +42,27 @@
         "aarch64-linux"
       ];
       perSystem =
-        { pkgs, self', ... }:
+        {
+          config,
+          pkgs,
+          self',
+          ...
+        }:
         let
           go = pkgs.callPackage ./nix/go.nix { };
           nodejs = pkgs.callPackage ./nix/node.nix { };
           pnpm = pkgs.callPackage ./nix/pnpm.nix { };
+
+          # The golangci-lint go.mod pins, so its gofumpt and golines are the
+          # ones `task lint:go` checks with; nixpkgs' build would be another version.
+          golangciFmt = pkgs.writeShellApplication {
+            name = "golangci-lint-fmt";
+            runtimeInputs = [ go ];
+            text = ''
+              export GOTOOLCHAIN=local CGO_ENABLED=0
+              exec "$(go tool -n golangci-lint)" fmt "$@"
+            '';
+          };
         in
         {
           packages = {
@@ -47,7 +70,34 @@
             default = self'.packages.streamline;
           };
 
-          formatter = pkgs.nixfmt-tree;
+          # `nix fmt`, `treefmt` in the devshell and `task fmt`.
+          treefmt = {
+            projectRootFile = "flake.nix";
+            # The Go formatter builds golangci-lint from the module cache, which
+            # the sandbox of a flake check cannot reach; CI runs `nix fmt -- --ci`.
+            flakeCheck = false;
+            programs.nixfmt.enable = true;
+            settings.formatter.golangci-lint = {
+              command = "${golangciFmt}/bin/golangci-lint-fmt";
+              includes = [ "*.go" ];
+            };
+            # The static JS and CSS only: Biome's formatter changes what Svelte
+            # markup renders, so web/app is linted by Biome and never formatted.
+            # biome.json's files.includes leaves out the generated bundles.
+            settings.formatter.biome = {
+              command = pkgs.lib.getExe pkgs.biome;
+              options = [
+                "format"
+                "--write"
+                "--no-errors-on-unmatched"
+                "--vcs-enabled=false"
+              ];
+              includes = [
+                "web/static/js/*.js"
+                "web/static/css/*.css"
+              ];
+            };
+          };
 
           checks = {
             build = self'.packages.default;
@@ -168,6 +218,7 @@
               syft
               biome
               nixfmt
+              config.treefmt.build.wrapper
               # `task migrate:diff` writes the migration; rehashing atlas.sum
               # afterwards needs the CLI, which the ent library does not ship.
               atlas
