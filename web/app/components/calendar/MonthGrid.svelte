@@ -269,11 +269,12 @@
 {/if}
 
 <style>
-	/* Height-clamped from lg: the weeks share whatever the viewport leaves, so a
-	   five- and a six-week month both fit without the page scrolling. The floor
-	   is what three rows cost — a 16.5px date row and 12px of padding, then three
+	/* From lg the weeks share whatever height the page gives the grid, so a
+	   five- and a six-week month both fill a tall window. The floor is what
+	   three rows cost — a 16.5px date row and 12px of padding, then three
 	   21.75px chips on a 4px gap — so a cell can always show what the three-item
-	   rule asks of it, and only a genuinely short window scrolls. */
+	   rule asks of it; a window too short for the month at that floor makes the
+	   page taller than the viewport, and the page scrolls. */
 	@media (min-width: 1024px) {
 		.weeks {
 			grid-template-rows: repeat(var(--weeks), minmax(108px, 1fr));

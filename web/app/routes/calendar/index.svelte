@@ -161,7 +161,7 @@
 </script>
 
 <div
-	class="flex flex-col px-4 py-5 md:px-6 md:py-6 lg:h-[calc(100dvh-var(--top-bar-height))] lg:min-h-0 lg:overflow-hidden"
+	class="flex flex-col px-4 py-5 md:px-6 md:py-6 lg:min-h-[calc(100dvh-var(--top-bar-height))]"
 	use:monthSwipe={{
 		onPrev: () => shift(-1),
 		onNext: () => shift(1),
@@ -282,15 +282,18 @@
 	</div>
 
 	<!-- Tablet and desktop: one grid. The tablet folds the agenda in below it;
-	     from lg the movies-only panel takes the second column instead — and the
-	     whole page is clamped to the viewport there, so the grid and the panel
-	     divide the leftover height rather than scrolling the page. -->
+	     from lg the movies-only panel takes the second column instead, and the
+	     page is at least as tall as the space under the top bar there, so the
+	     grid fills a tall window and the page scrolls in one too short for the
+	     month's rows. The panel takes the grid's height and scrolls inside it. -->
 	<div
 		class="mt-4 hidden gap-4 md:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[1fr_320px]"
 	>
 		<MonthGrid {year} {month0} events={gridEvents} />
-		<div class="hidden lg:grid lg:min-h-0">
-			<Next30Panel events={upcomingAll} />
+		<div class="relative hidden lg:block">
+			<div class="absolute inset-0 grid min-h-0">
+				<Next30Panel events={upcomingAll} />
+			</div>
 		</div>
 		<section class="mt-2 lg:hidden">
 			<div class="mb-1 flex items-baseline justify-between gap-3 px-1">

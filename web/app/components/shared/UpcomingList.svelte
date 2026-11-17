@@ -24,7 +24,7 @@
 		// this with the Wanted rail and the two should square off.
 		stretch?: boolean;
 		// Take the height the container gives and scroll the list inside it, for a
-		// host that is itself clamped to the viewport (the calendar's side panel).
+		// host whose own height is set from outside (the calendar's side panel).
 		fill?: boolean;
 	} = $props();
 
