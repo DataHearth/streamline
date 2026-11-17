@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { Check, ChevronDown, Minus, Plus, TriangleAlert } from "@lucide/svelte";
+	import { slide } from "svelte/transition";
+	import { cubicOut } from "svelte/easing";
 	import { cn } from "@lib/cn";
 	import {
 		AUTH_LABEL,
@@ -58,6 +60,7 @@
 		return out;
 	});
 	let loose = $derived(permissions.views.filter((v) => !v.bundle));
+	let openBundles = $state<Partial<Record<ExtensionBundle, boolean>>>({});
 </script>
 
 <div class={cn("flex flex-col gap-3.5", cls)}>
@@ -100,16 +103,21 @@
 			<ul class="mt-1.5 flex flex-col gap-1.5">
 				{#each bundles as b (b.bundle)}
 					<li>
-						<details class="group">
-							<summary class="touch-hit flex min-w-0 cursor-pointer list-none items-baseline gap-2 [&::-webkit-details-marker]:hidden">
-								{@render marker()}
-								<span class={cn("min-w-0 flex-1 text-[13px] leading-snug", ink)}>{BUNDLE_LABEL[b.bundle]()}</span>
-								<span class="shrink-0 text-[12.5px] text-fg-subtle">
-									{(b.views.length === 1 ? i18n.extensions_bundle_kinds_one : i18n.extensions_bundle_kinds_other)({ count: b.views.length })}
-								</span>
-								<ChevronDown size={13} class="relative top-[2px] shrink-0 text-fg-faint transition-transform group-open:rotate-180" aria-hidden="true" />
-							</summary>
-							<ul class="mb-1 ml-5 mt-1.5 flex flex-col gap-1">
+						<button
+							type="button"
+							aria-expanded={!!openBundles[b.bundle]}
+							onclick={() => (openBundles[b.bundle] = !openBundles[b.bundle])}
+							class="touch-hit flex w-full min-w-0 items-baseline gap-2 text-left"
+						>
+							{@render marker()}
+							<span class={cn("min-w-0 flex-1 text-[13px] leading-snug", ink)}>{BUNDLE_LABEL[b.bundle]()}</span>
+							<span class="shrink-0 text-[12.5px] text-fg-subtle">
+								{(b.views.length === 1 ? i18n.extensions_bundle_kinds_one : i18n.extensions_bundle_kinds_other)({ count: b.views.length })}
+							</span>
+							<ChevronDown size={13} class={cn("relative top-[2px] shrink-0 text-fg-faint transition-transform", openBundles[b.bundle] && "rotate-180")} aria-hidden="true" />
+						</button>
+						{#if openBundles[b.bundle]}
+							<ul class="mb-1 ml-5 mt-1.5 flex flex-col gap-1" transition:slide={{ duration: 200, easing: cubicOut }}>
 								{#each b.views as v (v.name)}
 									<li class="flex min-w-0 flex-wrap items-baseline gap-x-2">
 										<code class="font-mono text-[11.5px] text-fg-subtle">{v.name}</code>
@@ -117,7 +125,7 @@
 									</li>
 								{/each}
 							</ul>
-						</details>
+						{/if}
 					</li>
 				{/each}
 				{#each loose as v (v.name)}

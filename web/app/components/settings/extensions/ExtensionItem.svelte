@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { ChevronDown, CircleAlert, Pencil, Puzzle, ShieldCheck, Trash2 } from "@lucide/svelte";
+	import { slide } from "svelte/transition";
+	import { cubicOut } from "svelte/easing";
 	import { cn } from "@lib/cn";
 	import { config, READONLY_HINT } from "@lib/config.svelte";
 	import {
@@ -174,7 +176,7 @@
 			<ChevronDown size={14} class={cn("shrink-0 text-fg-faint transition-transform", open && "rotate-180")} aria-hidden="true" />
 		</button>
 		{#if open}
-			<div class="px-4 pb-4 pt-1 md:px-5">
+			<div class="px-4 pb-4 pt-1 md:px-5" transition:slide={{ duration: 200, easing: cubicOut }}>
 				<ExtensionPermissions permissions={perms} base={ext.path} />
 			</div>
 		{/if}
