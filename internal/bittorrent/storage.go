@@ -110,12 +110,13 @@ func (d *drainingStorage) OpenTorrent(
 // finished file back to unknown, so anacrolix hashes it instead of
 // downloading it again.
 //
-// A download into such a piece destroys the finished file. anacrolix v1.62.0
-// writes a piece to its files' ".part" names, creating them if absent, so the
-// finished file gets a new, empty ".part"; when the piece completes,
-// promotePartFile renames that sparse file over the finished one
-// (exclRenameIfExists is a plain os.Rename), leaving it zeros but for the
-// piece. setCompletionFromPartFiles does not prevent this for a piece the
+// A download into such a piece wrecks the finished file. anacrolix writes a
+// piece to its files' ".part" names, creating them if absent, so the finished
+// file gets a new, sparse ".part" holding only that piece, and reads prefer
+// the ".part" name. When the piece completes, v1.62.0 renamed the sparse file
+// over the finished one, leaving it zeros but for the piece; v1.63.0 refuses
+// the rename, but the sparse file stays in front of the real one.
+// setCompletionFromPartFiles does not prevent this for a piece the
 // finished file shares with an unfinished one, and a killed process leaves
 // exactly that piece stored not-complete: the completion store writes a
 // piece's false at once but buffers its true until a checkpoint, and the
@@ -183,7 +184,7 @@ func (d *drainingStorage) mark(
 // written to it again.
 //
 // Opening a torrent marks every piece of its finished files complete
-// (anacrolix's setCompletionFromPartFiles), and anacrolix v1.62.0's bolt store
+// (anacrolix's setCompletionFromPartFiles), and anacrolix v1.63.0's bolt store
 // buffers each such mark as a change to persist on Close, held or not. With
 // hundreds of seeding torrents that is every piece in the store, rewritten in
 // one bolt transaction at shutdown: longer than the pod's termination grace,

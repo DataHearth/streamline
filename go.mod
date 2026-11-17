@@ -10,7 +10,7 @@ require (
 	github.com/XSAM/otelsql v0.44.0
 	github.com/anacrolix/generics v0.2.0
 	github.com/anacrolix/log v0.17.1-0.20260908045853-8c4d2cc1c9e2
-	github.com/anacrolix/torrent v1.62.0
+	github.com/anacrolix/torrent v1.63.0
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/dlclark/regexp2/v2 v2.13.0
 	github.com/extism/go-sdk v1.7.1
@@ -109,7 +109,7 @@ require (
 	github.com/anacrolix/go-utp v0.0.0-20260908033909-9f1664acf866 // indirect
 	github.com/anacrolix/missinggo v1.3.0 // indirect
 	github.com/anacrolix/missinggo/perf v1.0.0 // indirect
-	github.com/anacrolix/missinggo/v2 v2.11.0 // indirect
+	github.com/anacrolix/missinggo/v2 v2.12.0 // indirect
 	github.com/anacrolix/mmsg v1.0.1 // indirect
 	github.com/anacrolix/multiless v0.4.0 // indirect
 	github.com/anacrolix/stm v0.5.0 // indirect
@@ -142,7 +142,6 @@ require (
 	github.com/ccojocar/zxcvbn-go v1.0.4 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
-	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charithe/durationcheck v0.0.11 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
@@ -443,3 +442,10 @@ tool (
 	github.com/vektra/mockery/v3
 	golang.org/x/vuln/cmd/govulncheck
 )
+
+// anacrolix v1.63.0 fsyncs a checkpoint's fallback file through a write handle, which a file
+// promoted off its ".part" name (made read-only) refuses, so every checkpoint after a torrent's
+// first finished file fails and completions persist only on Close. The fork's
+// fsync-read-only-promoted branch opens it read-only; drop this once a release includes
+// https://github.com/anacrolix/torrent/pull/1232.
+replace github.com/anacrolix/torrent => github.com/DataHearth/torrent v0.0.0-20261117220133-f65168d0f014
