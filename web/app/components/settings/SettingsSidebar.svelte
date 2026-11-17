@@ -21,8 +21,11 @@
 	const nav = createSettingsNav();
 </script>
 
+<!-- The 3.5rem is the sticky offset (1.75rem) plus the settings shell's lg:pb-7
+     under the grid. A taller column outgrows its grid at the end of a scroll,
+     and the grid then drags it up with the content. -->
 <aside
-	class="hidden shrink-0 self-start overscroll-contain lg:sticky lg:top-[calc(var(--top-bar-height)+1.75rem)] lg:-ml-2 lg:block lg:max-h-[calc(100dvh-var(--top-bar-height)-2.75rem)] lg:w-58 lg:overflow-y-auto lg:pb-4 lg:pl-2 lg:[scrollbar-width:thin]"
+	class="hidden shrink-0 self-start overscroll-contain lg:sticky lg:top-[calc(var(--top-bar-height)+1.75rem)] lg:-ml-2 lg:block lg:max-h-[calc(100dvh-var(--top-bar-height)-3.5rem)] lg:w-58 lg:overflow-y-auto lg:pb-4 lg:pl-2 lg:[scrollbar-width:thin]"
 	aria-label={i18n.settings_sections()}
 >
 	<div class="mb-3.5 px-2">
