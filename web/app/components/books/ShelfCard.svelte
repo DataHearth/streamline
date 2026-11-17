@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { BookOpen, Headphones } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
-	import { captionTitle, captionSubtitle } from "@lib/poster-caption";
 	import { auth } from "@lib/auth.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import BookCover from "./BookCover.svelte";
@@ -74,8 +73,8 @@
 			<BookCover src={bookPosterUrl(item.cover_id)} alt={i18n.common_poster_alt({ title: item.title })} />
 		{/if}
 		<div class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent px-3 pb-2.5 pt-12">
-			<p class={cn(captionTitle, "text-sm font-semibold text-white drop-shadow-[0_1px_3px_rgb(0_0_0_/0.95)]")}>{item.title}</p>
-			<p class={cn(captionSubtitle, "text-[11px] text-white/70")}>{item.author}</p>
+			<p class="line-clamp-2 break-words group-hover:line-clamp-none group-has-[:focus-visible]:line-clamp-none text-sm font-semibold text-white drop-shadow-[0_1px_3px_rgb(0_0_0_/0.95)]">{item.title}</p>
+			<p class="line-clamp-1 break-words group-hover:line-clamp-none group-has-[:focus-visible]:line-clamp-none text-[11px] text-white/70">{item.author}</p>
 			<p class="mt-0.5 flex items-center gap-1.5 truncate font-mono text-[11px] tracking-tight text-white/80">
 				{#if item.kind !== "novel"}
 					<span>{kindLabel(item.kind)}</span>
