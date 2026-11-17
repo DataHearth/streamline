@@ -65,7 +65,7 @@ func newContentStorage(
 		// SIGBUS instead of failing the write.
 		DisableMmap: true,
 		Logger:      storageSlogger(),
-	}), dir), paths
+	}), pc, dir), paths
 }
 
 // pieceFiles is where the file storage put each of info's files: torrentDir

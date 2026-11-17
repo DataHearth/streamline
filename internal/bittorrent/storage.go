@@ -3,10 +3,13 @@ package bittorrent
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"sync"
 
+	g "github.com/anacrolix/generics"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
 )
@@ -52,8 +55,9 @@ var errStorageClosed = errors.New("piece storage is closed")
 // (storage/file-piece.go:169-196), and a guard on the individual Get/Set would
 // still let the store close in the gap between them.
 type drainingStorage struct {
-	inner storage.ClientImplCloser
-	base  string
+	inner      storage.ClientImplCloser
+	completion storage.PieceCompletion
+	base       string
 
 	mu     sync.RWMutex
 	closed bool
@@ -61,9 +65,10 @@ type drainingStorage struct {
 
 func newDrainingStorage(
 	inner storage.ClientImplCloser,
+	completion storage.PieceCompletion,
 	base string,
 ) *drainingStorage {
-	return &drainingStorage{inner: inner, base: base}
+	return &drainingStorage{inner: inner, completion: completion, base: base}
 }
 
 func (d *drainingStorage) OpenTorrent(
@@ -79,6 +84,9 @@ func (d *drainingStorage) OpenTorrent(
 	// and anacrolix then routes every piece through Piece
 	// (storage/wrappers.go:43-48), so guarding Piece covers all of them.
 	files := pieceFiles(d.base, info)
+	if err := d.recheckFinishedFilePieces(infoHash, info, files); err != nil {
+		return impl, errors.Join(err, impl.Close())
+	}
 	segs := info.FileSegmentsIndex()
 	piece := impl.Piece
 	impl.Piece = func(p metainfo.Piece) storage.PieceImpl {
@@ -93,6 +101,52 @@ func (d *drainingStorage) OpenTorrent(
 		}
 	}
 	return impl, nil
+}
+
+// recheckFinishedFilePieces sets every piece stored not-complete that touches a
+// finished file back to unknown, so anacrolix hashes it instead of
+// downloading it again.
+//
+// A download into such a piece destroys the finished file. anacrolix v1.62.0
+// writes a piece to its files' ".part" names, creating them if absent, so the
+// finished file gets a new, empty ".part"; when the piece completes,
+// promotePartFile renames that sparse file over the finished one
+// (exclRenameIfExists is a plain os.Rename), leaving it zeros but for the
+// piece. setCompletionFromPartFiles does not prevent this for a piece the
+// finished file shares with an unfinished one, and a killed process leaves
+// exactly that piece stored not-complete: the completion store writes a
+// piece's false at once but buffers its true until a checkpoint, and the
+// piece that finishes a file is usually the one it shares with the next.
+//
+// Hashing it passes on the data the two files already hold. If it fails,
+// MarkNotComplete renames the finished file back to ".part" before anything
+// is written to it.
+func (d *drainingStorage) recheckFinishedFilePieces(
+	infoHash metainfo.Hash,
+	info *metainfo.Info,
+	files []string,
+) error {
+	for i, fi := range info.UpvertedFiles() {
+		if fi.Length == 0 {
+			continue
+		}
+		if _, err := os.Stat(files[i]); err != nil {
+			continue
+		}
+		for p := fi.BeginPieceIndex(info.PieceLength); p < fi.EndPieceIndex(info.PieceLength); p++ {
+			key := metainfo.PieceKey{InfoHash: infoHash, Index: p}
+			c, err := d.completion.Get(key)
+			if err != nil {
+				return fmt.Errorf("piece %d completion: %w", p, err)
+			}
+			if c.Ok && !c.Complete {
+				if err := d.completion.Set(key, g.None[bool]()); err != nil {
+					return fmt.Errorf("piece %d completion: %w", p, err)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (d *drainingStorage) Close() error {
