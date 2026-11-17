@@ -6,6 +6,7 @@
 	import Poster from "@components/shared/Poster.svelte";
 	import AddRecommendationModal from "./AddRecommendationModal.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { splitSeriesPrefixes } from "@lib/series-prefix";
 	import type {
 		Movie,
 		MovieRecommendations,
@@ -37,6 +38,20 @@
 	let recs = $derived.by(() => {
 		const items = q.data?.items ?? [];
 		return items.filter((m) => !!m.poster_url).slice(0, 6);
+	});
+
+	// The visible title leads with what tells a card apart from its row:
+	// "La Révolte : Partie 2" under a small "Hunger Games" when other cards
+	// share that prefix. The original title is split the same way against the
+	// other original titles. Screen readers get the titles whole.
+	let cards = $derived.by(() => {
+		const titles = splitSeriesPrefixes(recs.map((r) => r.title));
+		const originals = splitSeriesPrefixes(recs.map((r) => r.original_title));
+		return recs.map((rec, i) => ({
+			rec,
+			title: titles[i] ?? { prefix: null, rest: rec.title },
+			original: originals[i] ?? { prefix: null, rest: rec.original_title },
+		}));
 	});
 
 	let addOpen = $state(false);
@@ -122,8 +137,11 @@
 			onscroll={updateBounds}
 			class="poster-scroll -m-2 p-2"
 		>
-			{#each recs as rec (rec.tmdb_id)}
+			{#each cards as { rec, title: tp, original: op } (rec.tmdb_id)}
 				{@const localId = libraryByTmdb.get(rec.tmdb_id)}
+				{@const showOriginal =
+					!!rec.original_title.trim() &&
+					rec.original_title.trim() !== rec.title.trim()}
 				{#snippet poster()}
 					<div class="relative aspect-[2/3] w-full bg-bg-card">
 						<div
@@ -136,30 +154,43 @@
 							alt={i18n.common_poster_alt({ title: rec.title })}
 							class="relative h-full w-full object-cover transition duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
 						/>
+						<!-- Hover and keyboard focus lift the clamps, so the full
+						     title shows before the click; the block grows upward
+						     from the card's foot, its gradient with it. -->
 						<div
-							class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent px-3 pt-12 pb-2.5"
+							class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent px-3 pt-12 pb-2.5 group-hover:via-black/80 group-focus-visible:via-black/80"
 						>
-							<p
-								class="truncate text-sm font-semibold text-white drop-shadow-[0_1px_3px_rgb(0_0_0_/0.95)]"
-								title={rec.title}
-							>
-								{rec.title}
+							<div aria-hidden="true">
+								{#if tp.prefix}
+									<p
+										class="truncate font-mono text-[10px] uppercase tracking-[0.08em] text-white/65 drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)] group-hover:whitespace-normal group-focus-visible:whitespace-normal"
+									>
+										{tp.prefix}
+									</p>
+								{/if}
+								<p
+									class="line-clamp-2 text-sm leading-snug font-semibold text-white drop-shadow-[0_1px_3px_rgb(0_0_0_/0.95)] group-hover:line-clamp-none group-focus-visible:line-clamp-none"
+								>
+									{tp.rest}
+								</p>
+								{#if showOriginal}
+									<p
+										class="truncate text-[11px] italic text-white/70 drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)] group-hover:whitespace-normal group-focus-visible:whitespace-normal"
+									>
+										{op.rest}
+									</p>
+								{/if}
+								{#if rec.year}
+									<p
+										class="mt-0.5 font-mono text-[11px] tracking-tight text-white/80 drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]"
+									>
+										{rec.year}
+									</p>
+								{/if}
+							</div>
+							<p class="sr-only">
+								{rec.title}{#if showOriginal}, {rec.original_title}{/if}{#if rec.year}, {rec.year}{/if}
 							</p>
-							{#if rec.original_title.trim() && rec.original_title.trim() !== rec.title.trim()}
-								<p
-									class="truncate text-[11px] italic text-white/70 drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]"
-									title={rec.original_title}
-								>
-									{rec.original_title}
-								</p>
-							{/if}
-							{#if rec.year}
-								<p
-									class="mt-0.5 font-mono text-[11px] tracking-tight text-white/80 drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]"
-								>
-									{rec.year}
-								</p>
-							{/if}
 						</div>
 					</div>
 				{/snippet}
