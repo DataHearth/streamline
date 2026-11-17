@@ -108,7 +108,7 @@
 				<span class="font-mono text-fg-muted">{shown.version ? `v${shown.version}` : i18n.extensions_version_unknown()}</span>
 				<LabelPill token={STATE_PILL[shown.state].token} label={STATE_PILL[shown.state].label()} />
 			</p>
-			<SourceFields bind:source bind:sha256 showErrors={tried} idPrefix="ext-edit" />
+			<SourceFields bind:source bind:sha256 showErrors={tried} idPrefix="ext-edit" locked={config.readOnly} />
 
 			{#if problem}
 				<div role="alert" class="mt-4 flex items-start gap-2.5 rounded-md border border-status-failed/30 bg-status-failed/[0.07] p-3">
