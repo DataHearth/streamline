@@ -923,7 +923,7 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 
 		configtest.Setup(map[string]any{
 			"auth": map[string]any{
-				"session_secret":    "test-secret",
+				"session_secret":    "test-session-secret",
 				"session_ttl":       "1h",
 				"registration_mode": "open",
 				"default_role":      "member",
@@ -953,7 +953,7 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 		maps.Copy(provider, extra)
 		configtest.Setup(map[string]any{
 			"auth": map[string]any{
-				"session_secret":    "test-secret",
+				"session_secret":    "test-session-secret",
 				"session_ttl":       "1h",
 				"registration_mode": regMode,
 				"default_role":      "member",
@@ -1735,7 +1735,7 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 		It("rejects with ErrOIDCRegDisabled", func() {
 			configtest.Setup(map[string]any{
 				"auth": map[string]any{
-					"session_secret":    "test-secret",
+					"session_secret":    "test-session-secret",
 					"session_ttl":       "1h",
 					"registration_mode": "disabled",
 					"default_role":      "member",
@@ -1765,7 +1765,7 @@ var _ = Describe("LoginOIDC unit", Label("unit", "auth"), func() {
 		BeforeEach(func() {
 			configtest.Setup(map[string]any{
 				"auth": map[string]any{
-					"session_secret":    "test-secret",
+					"session_secret":    "test-session-secret",
 					"session_ttl":       "1h",
 					"registration_mode": "invite",
 					"default_role":      "member",

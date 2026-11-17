@@ -32,7 +32,7 @@ import (
 //
 //	BeforeEach(func() { configtest.Setup(map[string]any{
 //	    "auth": map[string]any{
-//	        "session_secret": "test-secret",
+//	        "session_secret": "test-session-secret",
 //	        "session_ttl":    "1h",
 //	    },
 //	}) })

@@ -432,8 +432,9 @@ type loadIssue struct {
 // STREAMLINE_* variables are gone. Its argument is a file's own keys — the
 // post-strip write-back, or fileK at load time.
 //
-// It runs the schedules-alias expansion, Validate and loadSecretFiles: what
-// Load runs before it has a config, less ensureDataDir. Creating data_dir is a
+// It runs the schedules-alias expansion, Validate, loadSecretFiles and
+// checkSessionSecret: what Load runs before it has a config, less
+// ensureDataDir. Creating data_dir is a
 // boot step and this only ever asks questions — about a config that may never
 // be written, on a host that may not be the one that starts on it, where a
 // directory this process cannot make may be mounted by the time the restart
@@ -463,9 +464,9 @@ func loadIssues(fileKeys *koanf.Koanf) []loadIssue {
 		return issues
 	}
 	issues = append(issues, splitIssues(c.Validate())...)
-	if _, err := loadSecretFiles(c); err != nil {
-		issues = append(issues, splitIssues(err)...)
-	}
+	files, err := loadSecretFiles(c)
+	issues = append(issues, splitIssues(err)...)
+	issues = append(issues, splitIssues(c.checkSessionSecret(files))...)
 	return issues
 }
 

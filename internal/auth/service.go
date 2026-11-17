@@ -204,8 +204,17 @@ type auth struct {
 	pendingRotations sync.Map
 }
 
+// ErrEmptySessionSecret means the service holds no JWT signing key. An empty
+// HMAC key is not "no authentication", it is a key everyone knows: any caller
+// could sign their own claims, so nothing here signs or verifies with one.
+var ErrEmptySessionSecret = errors.New("session signing secret is empty")
+
 // New constructs a Manager using session credentials from the process-wide
 // config singleton. Returns an error if auth.session_ttl fails to parse.
+//
+// The config may name no secret: the server generates one before it calls
+// this, and the CLI, which signs nothing, does not. A service built without
+// one refuses to sign or verify (signingKey).
 func New(store db.Store) (Manager, error) {
 	cfg := config.Get()
 	ttl, err := time.ParseDuration(cfg.Auth.SessionTTL)
@@ -218,6 +227,16 @@ func New(store db.Store) (Manager, error) {
 	)
 	a.jwtSecret.Store(&secret)
 	return a, nil
+}
+
+// signingKey returns the live HMAC key, refusing an empty one: the config
+// holds a configured secret to a length floor, and this covers a service
+// built with none configured and none generated.
+func (s *auth) signingKey() ([]byte, error) {
+	if k := s.jwtSecret.Load(); k != nil && len(*k) > 0 {
+		return *k, nil
+	}
+	return nil, ErrEmptySessionSecret
 }
 
 // Register creates a new user with a bcrypt-hashed password
@@ -707,8 +726,12 @@ func (s *auth) issueToken(
 		ID:          jti,
 	}
 
+	key, err := s.signingKey()
+	if err != nil {
+		return "", fmt.Errorf("sign token: %w", err)
+	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString(*s.jwtSecret.Load())
+	signed, err := token.SignedString(key)
 	if err != nil {
 		return "", fmt.Errorf("sign token: %w", err)
 	}
@@ -734,7 +757,7 @@ func (s *auth) ValidateToken(tokenString string) (*Claims, error) {
 					token.Header["alg"],
 				)
 			}
-			return *s.jwtSecret.Load(), nil
+			return s.signingKey()
 		},
 	)
 	if err != nil {

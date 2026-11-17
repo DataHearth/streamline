@@ -624,7 +624,9 @@ var _ = Describe(
 		It("refuses to write a file this update is what breaks", func() {
 			dir := GinkgoT().TempDir()
 			secret := filepath.Join(dir, "session.secret")
-			Expect(os.WriteFile(secret, []byte("s3cr3t"), 0o600)).To(Succeed())
+			Expect(
+				os.WriteFile(secret, []byte("a-session-secret"), 0o600),
+			).To(Succeed())
 			path := writeConfigFileIn(dir, map[string]any{
 				"data_dir": dir,
 				"auth":     map[string]any{"session_secret_file": secret},
@@ -770,7 +772,9 @@ var _ = Describe(
 		It("reports a secret file only the environment replaces", func() {
 			dir := GinkgoT().TempDir()
 			live := filepath.Join(dir, "session.secret")
-			Expect(os.WriteFile(live, []byte("s3cr3t"), 0o600)).To(Succeed())
+			Expect(
+				os.WriteFile(live, []byte("a-session-secret"), 0o600),
+			).To(Succeed())
 			GinkgoT().Setenv("STREAMLINE_AUTH__SESSION_SECRET_FILE", live)
 			path := writeConfigFileIn(dir, map[string]any{
 				"data_dir": dir,
@@ -868,7 +872,7 @@ var _ = Describe(
 			func(prepare func() map[string]any, fileAlone types.GomegaMatcher) {
 				dir := GinkgoT().TempDir()
 				secret := filepath.Join(dir, "session.secret")
-				Expect(os.WriteFile(secret, []byte("s3cr3t"), 0o600)).
+				Expect(os.WriteFile(secret, []byte("a-session-secret"), 0o600)).
 					To(Succeed())
 				entries := prepare()
 				entries["data_dir"] = dir
@@ -935,7 +939,9 @@ var _ = Describe(
 		It("refuses a second secret file while the first is already gone", func() {
 			dir := GinkgoT().TempDir()
 			live := filepath.Join(dir, "session.secret")
-			Expect(os.WriteFile(live, []byte("s3cr3t"), 0o600)).To(Succeed())
+			Expect(
+				os.WriteFile(live, []byte("a-session-secret"), 0o600),
+			).To(Succeed())
 			GinkgoT().Setenv("STREAMLINE_AUTH__SESSION_SECRET_FILE", live)
 			path := writeConfigFileIn(dir, map[string]any{
 				"data_dir": dir,
