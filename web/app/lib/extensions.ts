@@ -179,6 +179,24 @@ export const BUNDLE_LABEL: Record<ExtensionBundle, () => string> = {
 	video: i18n.extensions_bundle_video,
 };
 
+// A view's line is core's own words, by view name: the server's description
+// is English only. A view of a bundle with no line of its own reads as its
+// bundle, and a view this build does not know keeps the server's text.
+const VIEW_LABEL: Record<string, () => string> = {
+	users: i18n.extensions_view_users,
+	user_logins: i18n.extensions_view_user_logins,
+	book_series: i18n.extensions_view_book_series,
+	authors: i18n.extensions_view_authors,
+	book_contributions: i18n.extensions_view_book_contributions,
+	book_files: i18n.extensions_view_book_files,
+};
+
+export function viewLabel(v: ExtensionView): string {
+	const own = VIEW_LABEL[v.name];
+	if (own) return own();
+	return v.bundle ? BUNDLE_LABEL[v.bundle]() : v.description;
+}
+
 // ffmpeg runs uncaged with the module's own arguments, so holding it means
 // holding everything Streamline can reach.
 export const hasFullAccess = (p: { services: ExtensionService[] }) => p.services.includes("ffmpeg");

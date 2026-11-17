@@ -4,6 +4,7 @@
 	import {
 		AUTH_LABEL,
 		BUNDLE_LABEL,
+		viewLabel,
 		clientPath,
 		FOLDER_META,
 		SERVICE_META,
@@ -113,7 +114,7 @@
 								{#each b.views as v (v.name)}
 									<li class="flex min-w-0 flex-wrap items-baseline gap-x-2">
 										<code class="font-mono text-[11.5px] text-fg-subtle">{v.name}</code>
-										<span class="min-w-0 text-[12px] text-fg-faint">{v.description}</span>
+										<span class="min-w-0 text-[12px] text-fg-faint">{viewLabel(v)}</span>
 									</li>
 								{/each}
 							</ul>
@@ -123,7 +124,7 @@
 				{#each loose as v (v.name)}
 					<li class="flex min-w-0 items-baseline gap-2">
 						{@render marker()}
-						<span class={cn("min-w-0 flex-1 text-[13px] leading-snug", ink)}>{v.description}</span>
+						<span class={cn("min-w-0 flex-1 text-[13px] leading-snug", ink)}>{viewLabel(v)}</span>
 						<code class="hidden shrink-0 font-mono text-[11px] text-fg-faint sm:inline">{v.name}</code>
 					</li>
 				{/each}
