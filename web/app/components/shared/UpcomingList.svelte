@@ -52,7 +52,9 @@
 			0,
 			Math.round((to.getTime() - from.getTime()) / 86_400_000),
 		);
-		return days === 0 ? i18n.lc_today() : i18n.upcoming_in_days({ days });
+		if (days === 0) return i18n.lc_today();
+		if (days === 1) return i18n.lc_tomorrow();
+		return i18n.upcoming_in_days({ days });
 	}
 </script>
 
