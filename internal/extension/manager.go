@@ -188,6 +188,8 @@ type Manager struct {
 	table     atomic.Pointer[map[string]mountEntry]
 	stopped   atomic.Pointer[map[string]bool]
 	state     sync.RWMutex
+
+	library libraryHooks
 }
 
 func NewManager(
@@ -202,6 +204,7 @@ func NewManager(
 		scanner:    scanner,
 		running:    map[string]*Running{},
 		paths:      map[string]string{},
+		library:    libraryHooks{window: libraryWindow},
 	}
 	empty := map[string]mountEntry{}
 	m.table.Store(&empty)

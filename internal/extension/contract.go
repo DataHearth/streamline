@@ -27,6 +27,10 @@ type Manifest struct {
 	Folders       []string      `json:"folders"`
 	Services      []string      `json:"services"`
 	AccountCards  []AccountCard `json:"account_cards"`
+	// Hooks are the calls the module wants from the host: POST /hooks/<name>
+	// with an empty mount and no caller. A declaration, not a grant: a hook
+	// hands the module nothing it could not already read.
+	Hooks []string `json:"hooks,omitempty"`
 }
 
 // Mount is a prefix the module answers, relative to the path the config

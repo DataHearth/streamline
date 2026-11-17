@@ -51,9 +51,10 @@ A fresh instance of the module handles **every** request, so nothing in memory s
 | `views[]` | Names from [the table below](#views) |
 | `folders[]` | `music`, `movies`, `series`, `artwork`, `cache`, see [Folders](#folders) |
 | `services[]` | `serve_file`, `serve_poster`, `ffmpeg`, `library_scan`, `http` |
+| `hooks[]` | `library`, see [Library changes](#library-changes). Not a grant: nothing to approve |
 | `account_cards[]` | `{id, kind, title, mount, username, fields}`. `kind: credential` is a credential the account page manages (`mount`, `username`). `mount` is the address the account page shows, the one a user pastes into their app, relative to your path like a mount (`/` is `/extensions/<name>` itself): name what the app expects to be given, never a path the app adds by itself. A Subsonic app appends `/rest` to its server address, so the Subsonic card is `/`; `/rest` there would send the app to `/rest/rest`; `kind: settings` is a set of per-user controls an admin edits (`fields`, see [Settings cards](#settings-cards)). Your module answers both at `/api/v1/extensions/<name>/cards/<id>` |
 
-Whatever you list must be granted by the admin, exactly. A settings card that declares no field, two fields with one id, a field of another kind or a number whose `min` is above its `max` makes the manifest unusable, and the extension fails to start.
+Whatever you list must be granted by the admin, exactly, hooks aside. A settings card that declares no field, two fields with one id, a field of another kind or a number whose `min` is above its `max` makes the manifest unusable, and the extension fails to start.
 
 ## Requests and responses
 
@@ -182,6 +183,28 @@ err = sdk.StartScan()       // returns once it is started; one already running i
 ```
 
 `Count` is the number of tracks holding a file on disk. Without the grant both return an error.
+
+## Library changes
+
+List `library` in `hooks` and Streamline calls you when a movie, a series or a video file is added, changed or removed: about five seconds after the change, with everything that changed in that time in one call.
+
+```go
+func route(r sdk.Request) sdk.Response {
+	if r.Mount == "" && r.Path == "/hooks/library" && r.Method == "POST" {
+		var c sdk.LibraryChange // Full, Movies, Series, Episodes
+		_ = json.Unmarshal(r.Body, &c)
+		// look at what the views hold for these ids now
+		return sdk.Response{Status: 202}
+	}
+	// ...
+}
+```
+
+- The call has an empty `Mount` and no `Caller`. No client can send one, so check `r.Mount == ""` and nothing else: under your own mount `/hooks/library` is an ordinary path anyone may ask for.
+- `Movies` and `Series` are titles (added, refreshed, re-identified, deleted); `Episodes` are episodes whose file appeared, moved, went missing or was deleted, and a movie's file reports the movie.
+- An id may be of a row that no longer exists, or of a change that was undone: read your views and drop what you kept for a row that is gone.
+- `Full` names a folder (`movies`, `series`) to look at whole. Streamline sends it in place of more than 500 ids.
+- You have the usual 30 seconds. An answer of 400 or more is logged and the change is not sent again, so keep a way to catch up, such as a scan of your own.
 
 ## Settings cards
 

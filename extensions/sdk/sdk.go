@@ -27,6 +27,24 @@ type Manifest struct {
 	Folders       []string      `json:"folders"`
 	Services      []string      `json:"services"`
 	AccountCards  []AccountCard `json:"account_cards"`
+	// Hooks are the calls the module wants from the host: POST /hooks/<name>
+	// with an empty Mount and no Caller, which no client can produce. "library"
+	// is sent when a movie, a series or an episode changed, with a
+	// LibraryChange as its body.
+	Hooks []string `json:"hooks,omitempty"`
+}
+
+// HookLibrary is the hook name for library changes.
+const HookLibrary = "library"
+
+// LibraryChange is the body of the library hook: the folders to compare
+// whole ("movies", "series"), and the ids of what changed. An id may be of a
+// row that no longer exists.
+type LibraryChange struct {
+	Full     []string `json:"full,omitempty"`
+	Movies   []uint32 `json:"movies,omitempty"`
+	Series   []uint32 `json:"series,omitempty"`
+	Episodes []uint32 `json:"episodes,omitempty"`
 }
 
 // Mount is a prefix the module answers, relative to the path the config

@@ -44,6 +44,7 @@ func manifest() int32 {
 	if extra != "" {
 		mf.Folders = []string{"music", "artwork", "cache"}
 		mf.Services = append(mf.Services, "ffmpeg", "library_scan")
+		mf.Hooks = []string{sdk.HookLibrary}
 	}
 	return sdk.WriteManifest(mf)
 }
@@ -86,6 +87,20 @@ func handle() int32 {
 			}
 		case "/query":
 			return sdk.Response{Status: 200, Body: []byte(r.Query)}
+		case "/hooks/library":
+			if r.Mount != "" {
+				return sdk.Response{Status: 404}
+			}
+			_, _ = sdk.Exec(`CREATE TABLE IF NOT EXISTS hooked(body TEXT)`)
+			_, _ = sdk.Exec(`INSERT INTO hooked(body) VALUES(?)`, string(r.Body))
+			return sdk.Response{Status: 202}
+		case "/hooked":
+			res, err := sdk.Query(`SELECT body FROM hooked ORDER BY rowid`)
+			if err != nil {
+				return sdk.Response{Status: 500, Body: []byte(err.Error())}
+			}
+			b, _ := json.Marshal(res.Rows)
+			return sdk.Response{Status: 200, Body: b}
 		case "/cache":
 			q, _ := url.ParseQuery(r.Query)
 			status, _ := strconv.Atoi(q.Get("status"))

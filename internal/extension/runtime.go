@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"slices"
 
 	extism "github.com/extism/go-sdk"
 	"github.com/tetratelabs/wazero"
@@ -93,6 +94,13 @@ func parseManifest(raw []byte) (Manifest, error) {
 	}
 	if err := checkManifestMounts(mf); err != nil {
 		return Manifest{}, err
+	}
+	for _, h := range mf.Hooks {
+		if !slices.Contains(knownHooks, h) {
+			return Manifest{}, fmt.Errorf(
+				"%w: hook %q does not exist", ErrBadManifest, h,
+			)
+		}
 	}
 	for _, c := range mf.AccountCards {
 		if c.Kind == CardSettings {

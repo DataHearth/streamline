@@ -333,6 +333,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		prober,
 		libraryScanner{client: dbClient, jobs: sched},
 	)
+	registerLibraryHooks(dbClient, extMgr.LibraryChanged)
 	authMW := middleware.NewAuth(
 		authSvc,
 		apiFailureLimiter(),

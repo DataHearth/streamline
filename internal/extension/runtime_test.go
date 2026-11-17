@@ -119,6 +119,13 @@ var _ = Describe("parseManifest", Label("unit"), func() {
 		Expect(err).To(MatchError(ErrBadManifest))
 	})
 
+	It("refuses a hook that does not exist", func() {
+		_, err := parseManifest([]byte(
+			`{"name":"x","version":"1","streamline_api":2,"hooks":["nope"]}`,
+		))
+		Expect(err).To(MatchError(ErrBadManifest))
+	})
+
 	It("accepts a good manifest", func() {
 		mf, err := parseManifest(
 			[]byte(`{"name":"ok-1","version":"1","streamline_api":2}`),
