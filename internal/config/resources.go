@@ -833,6 +833,10 @@ type ExtensionEntry struct {
 	// is: an API that could change them could swap a guest's secret.
 	Settings    map[string]any    `koanf:"settings"`
 	SecretFiles map[string]string `koanf:"secret_files"`
+	// StoreBytes bounds the extension's store folder, the one for files it
+	// keeps and core never sweeps. Zero gives it no store. File-only: it
+	// spends the data volume, which is the operator's to hand out.
+	StoreBytes int64 `koanf:"store_bytes"`
 }
 
 // BasePath is the path the extension is served under; its manifest's mounts

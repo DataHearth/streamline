@@ -3190,6 +3190,8 @@
 	"extensions_folder_music": "Music library",
 	"extensions_folder_read_only": "read only",
 	"extensions_folder_series": "Series library",
+	"extensions_folder_store": "Its own kept files",
+	"extensions_folder_store_access": "read and write, up to the store_bytes set in the config file",
 	"extensions_full_access_body": "Run ffmpeg freely. This extension can read and write any file Streamline can, and use the network.",
 	"extensions_full_access_title": "Full access",
 	"extensions_grant_add_full_access": "Grant full access",

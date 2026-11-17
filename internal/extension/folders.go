@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/datahearth/streamline/internal/config"
+	"github.com/datahearth/streamline/internal/sysinfo"
 	"github.com/tetratelabs/wazero"
 	experimentalsys "github.com/tetratelabs/wazero/experimental/sys"
 	"github.com/tetratelabs/wazero/experimental/sysfs"
@@ -24,6 +25,64 @@ func (m *Manager) cacheDir(name string) string {
 	return filepath.Join(m.dataDir, "extensions", name, "cache")
 }
 
+func (m *Manager) storeDir(name string) string {
+	return filepath.Join(m.dataDir, "extensions", name, "store")
+}
+
+// storeBytes reads the entry's limit on every call, as allowedHosts does.
+func storeBytes(name string) int64 {
+	cfg := config.Get()
+	if cfg == nil {
+		return 0
+	}
+	for _, e := range cfg.Extensions {
+		if e.Name == name {
+			return e.StoreBytes
+		}
+	}
+	return 0
+}
+
+// checkStore refuses a store the data volume could never hold.
+func (m *Manager) checkStore(e config.ExtensionEntry) error {
+	if e.StoreBytes <= 0 || !slices.Contains(e.Grants.Folders, folderStore) {
+		return nil
+	}
+	if du := sysinfo.DiskUsageFor(m.dataDir); du != nil &&
+		e.StoreBytes > du.TotalBytes {
+		return fmt.Errorf(
+			"store_bytes is %d, the data volume holds %d",
+			e.StoreBytes, du.TotalBytes,
+		)
+	}
+	return nil
+}
+
+// storeFull says whether the store holds as much as the entry allows.
+//
+// ponytail: walks the folder on every call of an extension that has a store
+// (about a thousand small files for the player); keep a running total per
+// extension if a store grows to where the walk shows in request spans.
+func storeFull(ctx context.Context, dir string, limit int64) bool {
+	var used int64
+	//nolint:gosec // dir is the extension's own directory under data_dir
+	err := filepath.WalkDir(dir, func(_ string, d fs.DirEntry, err error) error {
+		// A file that went away during the walk is not counted.
+		if err != nil || !d.Type().IsRegular() {
+			return nil
+		}
+		if info, err := d.Info(); err == nil {
+			used += info.Size()
+		}
+		return nil
+	})
+	if err != nil {
+		slog.WarnContext(ctx, "Extension store not measured",
+			"path", dir, "error", err)
+	}
+	return used >= limit
+}
+
 // folders resolves the granted folders for one request, so a changed
 // library.music_path reaches the next request without a restart. A folder
 // whose directory is not there is left out: the extension still answers.
@@ -34,7 +93,11 @@ func (m *Manager) folders(ctx context.Context, run *Running) []Folder {
 			continue
 		}
 		host := m.folderHost(run.name, name)
-		if name == folderCache {
+		limit := storeBytes(run.name)
+		if name == folderStore && limit <= 0 {
+			continue
+		}
+		if name == folderCache || name == folderStore {
 			//nolint:gosec // host is the extension's own directory under data_dir
 			if err := os.MkdirAll(host, 0o750); err != nil {
 				slog.WarnContext(ctx, "Extension folder is unavailable",
@@ -50,6 +113,7 @@ func (m *Manager) folders(ctx context.Context, run *Running) []Folder {
 			Name:      name,
 			HostPath:  host,
 			GuestPath: guestFoldersRoot + name,
+			ReadOnly:  name == folderStore && storeFull(ctx, host, limit),
 		})
 	}
 	return out
@@ -61,6 +125,8 @@ func (m *Manager) folderHost(extension, folder string) string {
 		return filepath.Join(m.dataDir, "posters")
 	case folderCache:
 		return m.cacheDir(extension)
+	case folderStore:
+		return m.storeDir(extension)
 	}
 	cfg := config.Get()
 	if cfg == nil {
@@ -78,7 +144,8 @@ func (m *Manager) folderHost(extension, folder string) string {
 
 // mountConfig mounts each folder into a guest. Read-only folders go through
 // os.Root, which refuses a path that resolves outside the directory, links
-// included; the cache is writable and goes through guardFS.
+// included; the cache and a store with room left are writable and go through
+// guardFS.
 func mountConfig(folders []Folder) (wazero.FSConfig, func(), error) {
 	cfg := wazero.NewFSConfig()
 	var roots []*os.Root
@@ -100,7 +167,7 @@ func mountConfig(folders []Folder) (wazero.FSConfig, func(), error) {
 			return nil, nil, fmt.Errorf("open folder %s: %w", f.Name, err)
 		}
 		roots = append(roots, root)
-		if f.Name == folderCache {
+		if f.Name == folderCache || (f.Name == folderStore && !f.ReadOnly) {
 			cfg = cfg.(sysfs.FSConfig).WithSysFSMount(
 				guardFS{FS: sysfs.DirFS(f.HostPath), root: root},
 				f.GuestPath,
@@ -112,7 +179,7 @@ func mountConfig(folders []Folder) (wazero.FSConfig, func(), error) {
 	return cfg, closeAll, nil
 }
 
-// guardFS is the writable cache mount. A plain directory mount follows a
+// guardFS is a writable mount, the cache or the store. A plain directory mount follows a
 // link the host or a guest left there out of the directory; guardFS refuses
 // any path whose resolution leaves it, and refuses to create links.
 type guardFS struct {
