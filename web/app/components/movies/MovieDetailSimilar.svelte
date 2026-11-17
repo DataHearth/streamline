@@ -140,14 +140,14 @@
 							class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent px-3 pt-12 pb-2.5"
 						>
 							<p
-								class="truncate text-sm font-semibold text-white drop-shadow-[0_1px_3px_rgb(0_0_0_/0.95)]"
+								class="line-clamp-1 break-words group-hover:line-clamp-none group-focus-visible:line-clamp-none text-sm font-semibold text-white drop-shadow-[0_1px_3px_rgb(0_0_0_/0.95)]"
 								title={rec.title}
 							>
 								{rec.title}
 							</p>
 							{#if rec.original_title.trim() && rec.original_title.trim() !== rec.title.trim()}
 								<p
-									class="truncate text-[11px] italic text-white/70 drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]"
+									class="line-clamp-1 break-words group-hover:line-clamp-none group-focus-visible:line-clamp-none text-[11px] italic text-white/70 drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]"
 									title={rec.original_title}
 								>
 									{rec.original_title}
