@@ -46,7 +46,7 @@ task dev                # live reload via air, serves http://localhost:8080
 
 ```bash
 task lint               # golangci-lint + biome + svelte-check
-task fmt                # golangci-lint fmt + biome format --write + nixfmt
+task fmt                # treefmt: golangci-lint fmt, biome over the static JS/CSS, nixfmt
 task test               # all suites
 task test:unit -- ./internal/metadata/...   # one package
 ```
