@@ -158,7 +158,13 @@
 		}
 		return sortJobs(out, sort);
 	});
-	let activeFilters = $derived(statusFilter.length + (search.trim() ? 1 : 0));
+	// A sort other than the default counts as a filter, so the sheet's Reset
+	// restores it too.
+	let activeFilters = $derived(
+		statusFilter.length +
+			(search.trim() ? 1 : 0) +
+			(sort !== "attention" ? 1 : 0),
+	);
 	let running = $derived(allJobs.filter((j) => j.status === "running").length);
 	let queued = $derived(allJobs.filter((j) => j.status === "queued").length);
 	let failed = $derived(
@@ -185,6 +191,7 @@
 	function resetFilters() {
 		statusFilter = [];
 		search = "";
+		sort = "attention";
 	}
 
 	async function refreshAll() {
