@@ -11,7 +11,7 @@
 		formatRatio,
 		percentDone,
 	} from "@lib/format";
-	import { torrentHref, torrentRelease } from "@lib/activity-touch";
+	import { torrentRelease } from "@lib/activity-touch";
 	import { formatDateTime, formatRelative } from "@lib/dates";
 	import type { Torrent } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -36,7 +36,6 @@
 	// max-w-0) then absorbs everything left over instead of overflowing.
 	const pad = "w-px whitespace-nowrap py-3";
 	let fetching = $derived(torrent.status === "fetching");
-	let href = $derived(torrentHref(torrent));
 	let active = $derived(
 		torrent.status === "downloading" ||
 			torrent.status === "seeding" ||
@@ -80,18 +79,7 @@
 			</div>
 		{:else}
 			<div class="flex items-center gap-1.5">
-				{#if href}
-					<!-- The row opens the drawer; the name alone leaves for the title's page. -->
-					<a
-						{href}
-						onclick={(e) => e.stopPropagation()}
-						class="truncate font-medium text-fg hover:text-accent hover:underline focus-visible:underline"
-					>
-						{torrent.name}
-					</a>
-				{:else}
-					<span class="truncate font-medium text-fg">{torrent.name}</span>
-				{/if}
+				<span class="truncate font-medium text-fg">{torrent.name}</span>
 				{#if !torrent.tracked}
 					<span
 						class="shrink-0 rounded-full border border-border px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-fg-subtle"
