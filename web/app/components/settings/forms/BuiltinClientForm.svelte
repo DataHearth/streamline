@@ -233,7 +233,6 @@
 						label={i18n.builtin_max_peers()}
 						type="number"
 						min={0}
-						max={200}
 						help={i18n.builtin_max_peers_help()}
 					/>
 				{/snippet}
@@ -245,7 +244,6 @@
 						label={i18n.builtin_max_unverified()}
 						type="number"
 						min={0}
-						max={1024}
 						help={i18n.builtin_max_unverified_help()}
 					/>
 				{/snippet}
@@ -257,7 +255,6 @@
 						label={i18n.builtin_max_torrents()}
 						type="number"
 						min={0}
-						max={10000}
 						help={i18n.builtin_max_torrents_help()}
 					/>
 				{/snippet}

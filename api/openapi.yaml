@@ -13748,7 +13748,6 @@ components:
         max_peers_per_torrent:
           type: integer
           minimum: 0
-          maximum: 200
           description: >-
             Established peer connections per torrent. 0 or absent = the
             engine's default (15). Each connection costs about 160 KB of
@@ -13756,7 +13755,6 @@ components:
         max_unverified_mb:
           type: integer
           minimum: 0
-          maximum: 1024
           description: >-
             MiB of downloaded piece data not yet hash-checked, per torrent,
             counted in whole pieces. 0 or absent = the engine's default (16).
@@ -13766,7 +13764,6 @@ components:
         max_torrents:
           type: integer
           minimum: 0
-          maximum: 10000
           description: >-
             Torrents the engine holds at once; a grab past it is refused with
             `422` `code: grab_rejected`. 0 or absent = the engine's default
@@ -13835,7 +13832,6 @@ components:
         max_peers_per_torrent:
           type: integer
           minimum: 0
-          maximum: 200
           description: >-
             Established peer connections per torrent. 0 or absent = the
             engine's default (15). Each connection costs about 160 KB of
@@ -13843,7 +13839,6 @@ components:
         max_unverified_mb:
           type: integer
           minimum: 0
-          maximum: 1024
           description: >-
             MiB of downloaded piece data not yet hash-checked, per torrent,
             counted in whole pieces. 0 or absent = the engine's default (16).
@@ -13853,7 +13848,6 @@ components:
         max_torrents:
           type: integer
           minimum: 0
-          maximum: 10000
           description: >-
             Torrents the engine holds at once; a grab past it is refused with
             `422` `code: grab_rejected`. 0 or absent = the engine's default
