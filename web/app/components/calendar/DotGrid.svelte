@@ -70,8 +70,9 @@
 					<span
 						class={cn(
 							"font-mono text-[13px] font-semibold leading-none tabular",
+							// By weight, not opacity: fg-subtle at 60% is 2.7:1.
 							!cell.inMonth
-								? "text-fg-subtle opacity-60"
+								? "font-normal text-fg-subtle"
 								: isSelected || isCurrent
 									? "text-accent-text"
 									: "text-fg-muted",

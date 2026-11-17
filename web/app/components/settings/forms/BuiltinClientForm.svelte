@@ -180,7 +180,7 @@
 				>{i18n.builtin_speed_limits()}</span
 			>
 			<span
-				class="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-fg-subtle"
+				class="rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-fg-muted"
 				>engine-global</span
 			>
 		</div>

@@ -173,10 +173,10 @@
 							<span class={chip}>{c}</span>
 						{/each}
 						{#if hit.book?.type === "series" && hit.book.ongoing}
-							<span class="{chip} border-status-downloading/30 text-status-downloading">{i18n.books_ongoing()}</span>
+							<span class={cn(chip, "border-status-downloading/30 text-status-downloading")}>{i18n.books_ongoing()}</span>
 						{/if}
 						{#if loading}
-							<span class="{chip} text-fg-subtle">{i18n.lc_loading()}</span>
+							<span class={cn(chip, "text-fg-subtle")}>{i18n.lc_loading()}</span>
 						{/if}
 					</div>
 				</div>
