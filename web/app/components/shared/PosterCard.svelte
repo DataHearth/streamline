@@ -3,6 +3,7 @@
 	import { Film, Search } from "@lucide/svelte";
 	import MonitorToggle from "./MonitorToggle.svelte";
 	import { cn } from "@lib/cn";
+	import { captionTitle, captionSubtitle } from "@lib/poster-caption";
 	import { posterUrl } from "@lib/posters";
 	import Poster from "./Poster.svelte";
 	import StatusPill from "./StatusPill.svelte";
@@ -184,14 +185,14 @@
 			class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent px-3 pt-12 pb-2.5"
 		>
 			<p
-				class="truncate text-sm font-semibold text-white drop-shadow-[0_1px_3px_rgb(0_0_0_/0.95)]"
+				class={cn(captionTitle, "text-sm font-semibold text-white drop-shadow-[0_1px_3px_rgb(0_0_0_/0.95)]")}
 				title={movie.title}
 			>
 				{movie.title}
 			</p>
 			{#if movie.original_title?.trim() && movie.original_title.trim() !== movie.title.trim()}
 				<p
-					class="truncate text-[11px] italic text-white/70 drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]"
+					class={cn(captionSubtitle, "text-[11px] italic text-white/70 drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]")}
 					title={movie.original_title}
 				>
 					{movie.original_title}
@@ -199,7 +200,7 @@
 			{/if}
 			{#if detail}
 				<p
-					class="mt-0.5 truncate font-mono text-[11px] tracking-tight text-accent-text drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]"
+					class={cn(captionSubtitle, "mt-0.5 font-mono text-[11px] tracking-tight text-accent-text drop-shadow-[0_1px_2px_rgb(0_0_0_/0.9)]")}
 					title={detail}
 				>
 					{detail}
