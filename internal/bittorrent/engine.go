@@ -147,6 +147,20 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 	if err := os.MkdirAll(stateDir, 0o750); err != nil {
 		return nil, fmt.Errorf("create session dir: %w", err)
 	}
+	sessions, err := store.ListTorrentSessions(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list torrent sessions: %w", err)
+	}
+	live := make(map[string]bool, len(sessions))
+	for _, s := range sessions {
+		live[s.InfoHash] = true
+	}
+	if err := pruneCompletion(
+		PieceCompletionPath(entry.DownloadDir),
+		live,
+	); err != nil {
+		return nil, fmt.Errorf("prune piece completion: %w", err)
+	}
 	bolt, err := storage.NewBoltPieceCompletion(stateDir)
 	if err != nil {
 		return nil, fmt.Errorf("open piece completion: %w", err)

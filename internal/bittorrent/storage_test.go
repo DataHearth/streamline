@@ -195,3 +195,31 @@ var _ = Describe("settledCompletion", Label("unit", "bittorrent"), func() {
 		Expect(c.Ok && c.Complete).To(BeTrue())
 	})
 })
+
+var _ = Describe("pruneCompletion", Label("unit", "bittorrent"), func() {
+	It("forgets the pieces of torrents without a session", func() {
+		dlDir := GinkgoT().TempDir()
+		live := metainfo.PieceKey{InfoHash: metainfo.Hash{1}, Index: 3}
+		gone := metainfo.PieceKey{InfoHash: metainfo.Hash{2}, Index: 3}
+		bolt, err := storage.NewBoltPieceCompletion(sessionDir(dlDir))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(bolt.Set(live, g.Some(true))).To(Succeed())
+		Expect(bolt.Set(gone, g.Some(true))).To(Succeed())
+		Expect(bolt.Close()).To(Succeed())
+
+		Expect(pruneCompletion(
+			PieceCompletionPath(dlDir),
+			map[string]bool{live.InfoHash.HexString(): true},
+		)).To(Succeed())
+
+		bolt, err = storage.NewBoltPieceCompletion(sessionDir(dlDir))
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(bolt.Close)
+		c, err := bolt.Get(live)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.Ok && c.Complete).To(BeTrue())
+		c, err = bolt.Get(gone)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(c.Ok).To(BeFalse())
+	})
+})

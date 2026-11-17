@@ -2,16 +2,19 @@ package bittorrent
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"sync"
+	"time"
 
 	g "github.com/anacrolix/generics"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
+	"go.etcd.io/bbolt"
 )
 
 var (
@@ -209,6 +212,43 @@ func (c settledCompletion) Checkpoint(keys []metainfo.PieceKey) error {
 
 func (c settledCompletion) Persistent() bool {
 	return c.PieceCompletion.(storage.PieceCompletionPersistenter).Persistent()
+}
+
+// pruneCompletion deletes what the bolt completion store at path holds for
+// torrents outside live, a set of hex info hashes. anacrolix never forgets a
+// removed torrent's pieces, so the store only grows: homelab's held 917
+// torrents for 492 sessions. It must run before NewBoltPieceCompletion opens
+// the file, which bolt locks.
+func pruneCompletion(path string, live map[string]bool) error {
+	db, err := bbolt.Open(path, 0o660, &bbolt.Options{Timeout: time.Second})
+	if err != nil {
+		return err
+	}
+	err = db.Update(func(tx *bbolt.Tx) error {
+		// anacrolix's bucket (storage/bolt-piece-completion.go), one nested
+		// bucket per info hash.
+		completion := tx.Bucket([]byte("completion"))
+		if completion == nil {
+			return nil
+		}
+		var stale [][]byte
+		err := completion.ForEach(func(k, v []byte) error {
+			if v == nil && !live[hex.EncodeToString(k)] {
+				stale = append(stale, k)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		for _, k := range stale {
+			if err := completion.DeleteBucket(k); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return errors.Join(err, db.Close())
 }
 
 type guardedPiece struct {
