@@ -250,7 +250,12 @@
 			: (torrentRows.find((t) => t.hash === swipeRemoveHash) ?? null),
 	);
 	let sortChipKey = $derived(torrentSortChipKey(sort, order));
-	let activeFilters = $derived(statusFilter.length + (search.trim() ? 1 : 0));
+	// A sort other than the default counts as a filter: below lg the sheet is
+	// the only place it shows, and its Reset is the only way back.
+	let sortChanged = $derived(sort !== "status" || order !== "asc");
+	let activeFilters = $derived(
+		statusFilter.length + (search.trim() ? 1 : 0) + (sortChanged ? 1 : 0),
+	);
 	let selectedTorrent = $derived(
 		torrentItems.find((t) => t.hash === selectedHash) ?? null,
 	);
@@ -298,6 +303,8 @@
 	function resetFilters() {
 		statusFilter = [];
 		search = "";
+		sort = "status";
+		order = "asc";
 	}
 
 	// ── Selection ────────────────────────────────────────────────────────────
