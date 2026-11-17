@@ -220,6 +220,33 @@ var _ = Describe("Extension view catalogue", Label("integration", "db"), func() 
 		}
 	})
 
+	It("hands genres over as JSON text, not as the bytes core stores", func() {
+		_, err := client.Movie.Create().
+			SetTitle("Film").
+			SetOriginalTitle("Film").
+			SetYear(2020).
+			SetTmdbID(1).
+			SetGenres([]string{"Comédie", "Drame"}).
+			Save(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		_, err = client.TVShow.Create().SetTitle("Show").SetYear(2020).
+			SetTvdbID(1).SetGenres([]string{"Animation"}).Save(ctx)
+		Expect(err).NotTo(HaveOccurred())
+
+		for view, want := range map[string]string{
+			"movies": `["Comédie","Drame"]`, "series": `["Animation"]`,
+		} {
+			v, ok := ExtensionViewByName(view)
+			Expect(ok).To(BeTrue())
+			var kind, genres string
+			Expect(conn.QueryRowContext(ctx,
+				"SELECT typeof(genres), genres FROM ("+v.SQL+")",
+			).Scan(&kind, &genres)).To(Succeed())
+			Expect(kind).To(Equal("text"), view)
+			Expect(genres).To(Equal(want), view)
+		}
+	})
+
 	It("lowercases the email in user_logins", func() {
 		v, _ := ExtensionViewByName("user_logins")
 		_, err := conn.ExecContext(
