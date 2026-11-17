@@ -57,6 +57,7 @@ const (
 	folderSeries       = "series"
 	folderArtwork      = "artwork"
 	folderCache        = "cache"
+	folderStore        = "store"
 	serviceFFmpeg      = "ffmpeg"
 	serviceLibraryScan = "library_scan"
 	serviceHTTP        = "http"
@@ -65,6 +66,7 @@ const (
 var (
 	knownFolders = []string{
 		folderMusic, folderMovies, folderSeries, folderArtwork, folderCache,
+		folderStore,
 	}
 	knownServices = []string{
 		serviceServeFile,
@@ -326,6 +328,9 @@ func (m *Manager) reconcileOne(
 	}
 	g, err := loadGiven(e)
 	if err != nil {
+		return fail("%s", err)
+	}
+	if err := m.checkStore(e); err != nil {
 		return fail("%s", err)
 	}
 	wasm, err := resolveSource(ctx, e, m.sourcesDir())

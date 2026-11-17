@@ -3190,6 +3190,8 @@
 	"extensions_folder_movies": "Bibliothèque de films",
 	"extensions_folder_music": "Bibliothèque musicale",
 	"extensions_folder_read_only": "lecture seule",
+	"extensions_folder_store": "Ses propres fichiers conservés",
+	"extensions_folder_store_access": "lecture et écriture, jusqu'à la valeur store_bytes du fichier de configuration",
 	"extensions_folder_series": "Bibliothèque de séries",
 	"extensions_full_access_body": "Exécuter ffmpeg sans restriction. Cette extension peut lire et écrire tous les fichiers que Streamline peut lire et écrire, et utiliser le réseau.",
 	"extensions_full_access_title": "Accès complet",

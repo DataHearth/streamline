@@ -64,6 +64,11 @@
           "type": "object",
           "description": "The extension's own settings, handed to it on every call. A setting given here wins over what the extension stored, and the extension locks it in its UI. Written in this file only; the API never changes it."
         },
+        "store_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Bytes the extension may keep in its store folder, for files it needs to stay (1073741824 is 1 GiB). Nothing sweeps that folder; once it holds this much it turns read-only. 0, the default, gives the extension no store. Written in this file only."
+        },
         "secret_files": {
           "type": "object",
           "additionalProperties": { "type": "string" },

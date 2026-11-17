@@ -132,6 +132,9 @@ type Folder struct {
 	Name      string `json:"name"`
 	HostPath  string `json:"host_path"`
 	GuestPath string `json:"guest_path"`
+	// ReadOnly is set on the store folder once it holds as much as the
+	// config file allows: writes fail until the extension deletes something.
+	ReadOnly bool `json:"read_only,omitempty"`
 }
 
 // Folder returns the granted folder of that name, when this call has it.

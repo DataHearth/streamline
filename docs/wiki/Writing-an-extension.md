@@ -49,7 +49,7 @@ A fresh instance of the module handles **every** request, so nothing in memory s
 | `streamline_api` | Must be `2` (`sdk.APIVersion`). A module for another version is refused |
 | `mounts[]` | `{prefix, auth}`, each relative to `/extensions/<name>`: `prefix` is `/` (all of it) or one plain path segment (`/rest`: lowercase letters, digits, `.`, `_` and `-`), each declared once; a request goes to the longest that holds it, and one no mount holds is a `404`. `auth` is `session` (Streamline signs the user in first and tells you who) or `self` (you check credentials, e.g. HTTP Basic) |
 | `views[]` | Names from [the table below](#views) |
-| `folders[]` | `music`, `movies`, `series`, `artwork`, `cache`, see [Folders](#folders) |
+| `folders[]` | `music`, `movies`, `series`, `artwork`, `cache`, `store`, see [Folders](#folders) |
 | `services[]` | `serve_file`, `serve_poster`, `ffmpeg`, `library_scan`, `http` |
 | `hooks[]` | `library`, see [Library changes](#library-changes); `settings`, see [Settings and secrets from the config file](#settings-and-secrets-from-the-config-file). Not a grant: nothing to approve |
 | `account_cards[]` | `{id, kind, title, mount, username, fields}`. `kind: credential` is a credential the account page manages (`mount`, `username`). `mount` is the address the account page shows, the one a user pastes into their app, relative to your path like a mount (`/` is `/extensions/<name>` itself): name what the app expects to be given, never a path the app adds by itself. A Subsonic app appends `/rest` to its server address, so the Subsonic card is `/`; `/rest` there would send the app to `/rest/rest`; `kind: settings` is a set of per-user controls an admin edits (`fields`, see [Settings cards](#settings-cards)). Your module answers both at `/api/v1/extensions/<name>/cards/<id>` |
@@ -102,6 +102,7 @@ Each granted folder is mounted into your module for the length of one call:
 | `series` | The series library, `library.series_path` | `/folders/series` | read-only |
 | `artwork` | Streamline's poster cache, laid out `<kind>/<id>/poster.jpg` | `/folders/artwork` | read-only |
 | `cache` | Your own folder, `<data_dir>/extensions/<name>/cache` | `/folders/cache` | read and write |
+| `store` | Your own folder for files you keep, `<data_dir>/extensions/<name>/store` | `/folders/store` | read and write, up to the admin's limit |
 
 Read them with the standard library (`os.ReadFile`, `os.Open`, `os.WriteFile` into the cache). `r.Folders` lists what this call has, each as `sdk.Folder{Name, HostPath, GuestPath}`: `HostPath` is the directory on the server, `GuestPath` where you see it. A folder whose directory is missing when the request arrives is left out, so check `r.Folder(name)` before using it. The views give paths on the server (`music_files.path`); turn one into a path you can open with `r.GuestPath(hostPath)`, which answers false for a path outside every folder you have.
 
@@ -112,6 +113,8 @@ b, err := os.ReadFile(p)
 ```
 
 No path leaves its folder: `..`, and a symbolic link pointing outside, are refused, and you cannot create a link in the cache. Streamline deletes the oldest files of the cache once it holds more than 1 GiB, checked every hour, so treat it as a cache: anything in it can be gone on the next request.
+
+The store is for what must stay: Streamline never deletes from it. The admin sets how much it may hold with `store_bytes` on your entry in the config file, so say in your documentation how much you need; without that value you have no store, and `r.Folder("store")` answers false. Once it holds that much, a call gets it read-only (`Folder.ReadOnly` is true and writes fail) until you have deleted enough, so delete what you no longer need yourself.
 
 ## Sending a file
 

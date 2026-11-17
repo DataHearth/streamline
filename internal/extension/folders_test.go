@@ -216,6 +216,73 @@ var _ = Describe("Folders", Label("integration"), func() {
 		})
 	})
 
+	Context("the store folder", func() {
+		store := func() string {
+			return filepath.Join(dataDir, "extensions", "echo", "store")
+		}
+		write := func(name, body string) Response {
+			GinkgoHelper()
+			return call(
+				http.MethodPost, "/fs/write",
+				url.Values{"path": {"/folders/store/" + name}}, body,
+			)
+		}
+
+		BeforeEach(func() {
+			start("echo-full.wasm", "music", "artwork", "cache", "store")
+		})
+
+		It("is not there without store_bytes", func() {
+			Expect(write("a.bin", "kept").Status).To(Equal(500))
+			Expect(store()).NotTo(BeADirectory())
+		})
+
+		It("keeps what is written through a cache sweep", func() {
+			config.Get().Extensions[0].StoreBytes = 1 << 20
+			Expect(write("a.bin", "kept").Status).To(Equal(204))
+			Expect(mgr.SweepCaches(ctx)).To(Succeed())
+			Expect(string(read("/folders/store/a.bin").Body)).To(Equal("kept"))
+			Expect(filepath.Join(store(), "a.bin")).To(BeARegularFile())
+		})
+
+		It("turns read-only at the limit, and writable again below it", func() {
+			config.Get().Extensions[0].StoreBytes = 8
+			Expect(write("a.bin", "12345678").Status).To(Equal(204))
+			Expect(write("b.bin", "x").Status).To(Equal(500))
+			Expect(filepath.Join(store(), "b.bin")).NotTo(BeAnExistingFile())
+			Expect(string(read("/folders/store/a.bin").Body)).To(Equal("12345678"))
+
+			resp := call(http.MethodGet, "/fs/folders", nil, "")
+			Expect(string(resp.Body)).To(ContainSubstring(
+				`"guest_path":"/folders/store","read_only":true`,
+			))
+
+			Expect(os.Remove(filepath.Join(store(), "a.bin"))).To(Succeed())
+			Expect(write("b.bin", "x").Status).To(Equal(204))
+		})
+
+		It("refuses a link out of the store", func() {
+			config.Get().Extensions[0].StoreBytes = 1 << 20
+			resp := call(
+				http.MethodPost, "/fs/symlink",
+				url.Values{
+					"old": {filepath.Join(outside, "secret.txt")},
+					"new": {"/folders/store/link"},
+				}, "",
+			)
+			Expect(resp.Status).To(Equal(500))
+			Expect(filepath.Join(store(), "link")).NotTo(BeAnExistingFile())
+		})
+
+		It("fails an entry asking for more than the data volume holds", func() {
+			config.Get().Extensions[0].StoreBytes = 1 << 62
+			Expect(mgr.Reconcile(ctx)).To(Succeed())
+			st := mgr.Statuses()[0]
+			Expect(st.State).To(Equal(StateFailed))
+			Expect(st.Reason).To(ContainSubstring("store_bytes"))
+		})
+	})
+
 	Context("a folder that was not granted", func() {
 		BeforeEach(func() { start("echo.wasm") })
 

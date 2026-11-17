@@ -45,6 +45,9 @@ func validateExtension(e ExtensionEntry) error {
 			)
 		}
 	}
+	if e.StoreBytes < 0 {
+		return fmt.Errorf("extension %q: store_bytes cannot be negative", e.Name)
+	}
 	for name, path := range e.SecretFiles {
 		if name == "" || !filepath.IsAbs(path) {
 			return fmt.Errorf(

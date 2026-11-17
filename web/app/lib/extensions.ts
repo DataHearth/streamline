@@ -25,8 +25,9 @@ export type ExtensionBundle = "music" | "books" | "video";
 export type ExtensionView = { name: string; description: string; bundle?: ExtensionBundle };
 
 // A folder the module may use: Streamline's library folders and its cached
-// artwork, read only, and a cache of its own it can write.
-export type ExtensionFolder = "music" | "movies" | "series" | "artwork" | "cache";
+// artwork, read only, a cache of its own it can write, and a store for the
+// files it keeps.
+export type ExtensionFolder = "music" | "movies" | "series" | "artwork" | "cache" | "store";
 
 // `ffmpeg` is full trust, so it is never listed as a service: see hasFullAccess.
 export type ExtensionService = "serve_file" | "serve_poster" | "ffmpeg" | "library_scan" | "http";
@@ -171,6 +172,7 @@ export const FOLDER_META: Record<ExtensionFolder, { label: () => string; access:
 	series: { label: i18n.extensions_folder_series, access: i18n.extensions_folder_read_only },
 	artwork: { label: i18n.extensions_folder_artwork, access: i18n.extensions_folder_read_only, help: i18n.extensions_folder_artwork_help },
 	cache: { label: i18n.extensions_folder_cache, access: i18n.extensions_folder_cache_access },
+	store: { label: i18n.extensions_folder_store, access: i18n.extensions_folder_store_access },
 };
 
 export const BUNDLE_LABEL: Record<ExtensionBundle, () => string> = {
