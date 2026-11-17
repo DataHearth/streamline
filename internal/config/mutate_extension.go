@@ -45,6 +45,14 @@ func validateExtension(e ExtensionEntry) error {
 			)
 		}
 	}
+	for name, path := range e.SecretFiles {
+		if name == "" || !filepath.IsAbs(path) {
+			return fmt.Errorf(
+				"extension %q: secret file %q: want a name and an absolute path",
+				e.Name, name,
+			)
+		}
+	}
 	if e.SHA256 != "" && !extensionSHA256.MatchString(e.SHA256) {
 		return fmt.Errorf("extension %q: sha256 must be 64 hex digits", e.Name)
 	}

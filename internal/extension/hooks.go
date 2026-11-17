@@ -16,7 +16,7 @@ import (
 // or an episode changed.
 const HookLibrary = "library"
 
-var knownHooks = []string{HookLibrary}
+var knownHooks = []string{HookLibrary, HookSettings}
 
 const (
 	hookLibraryPath = "/hooks/library"

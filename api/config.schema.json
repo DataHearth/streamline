@@ -60,6 +60,15 @@
           "items": { "type": "string" },
           "description": "host:port pairs, lower case, the extension may call through the http service (engine.lan:8097). Written in this file only; the API never changes it. Empty allows none. A redirect is handed back to the extension, never followed."
         },
+        "settings": {
+          "type": "object",
+          "description": "The extension's own settings, handed to it on every call. A setting given here wins over what the extension stored, and the extension locks it in its UI. Written in this file only; the API never changes it."
+        },
+        "secret_files": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Secrets the extension needs, as name: absolute path. Each file is read when the extension loads (trailing newline trimmed); a missing or empty one fails the extension. Written in this file only."
+        },
         "grants": {
           "type": "object",
           "additionalProperties": false,

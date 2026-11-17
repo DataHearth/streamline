@@ -78,12 +78,14 @@ var (
 // Running is one live extension. A request holds it between Acquire and
 // Release; a replaced or disabled one is closed when the last holder lets go.
 type Running struct {
-	mgr      *Manager
-	name     string
-	module   *Module
-	store    *Store
-	hash     [sha256.Size]byte
-	grants   config.ExtensionGrants
+	mgr    *Manager
+	name   string
+	module *Module
+	store  *Store
+	hash   [sha256.Size]byte
+	grants config.ExtensionGrants
+	// given changes on a reconcile while calls run, without a new module.
+	given    atomic.Pointer[given]
 	mu       sync.Mutex
 	refs     int
 	retired  bool
@@ -322,6 +324,10 @@ func (m *Manager) reconcileOne(
 	if err := checkGrants(e.Grants); err != nil {
 		return fail("%s", err)
 	}
+	g, err := loadGiven(e)
+	if err != nil {
+		return fail("%s", err)
+	}
 	wasm, err := resolveSource(ctx, e, m.sourcesDir())
 	if err != nil {
 		return fail("%s", err)
@@ -372,6 +378,15 @@ func (m *Manager) reconcileOne(
 			return fail("open the extension database: %s", err)
 		}
 		run = newRunning(m, e.Name, mod, store, hash, e.Grants)
+	}
+	if !reuse || !run.given.Load().equal(g) {
+		if err := run.checkGiven(ctx, g, e.Hosts); err != nil {
+			if !reuse {
+				run.retire()
+			}
+			return fail("%s", err)
+		}
+		run.given.Store(g)
 	}
 	table[st.Path] = mountEntry{running: run, mounts: mf.Mounts}
 	st.State = StateRunning

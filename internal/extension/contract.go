@@ -2,6 +2,7 @@ package extension
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 )
 
@@ -95,6 +96,13 @@ type Request struct {
 	// TargetUser is the account a settings card is read or written for: an
 	// admin editing another user, so it can differ from Caller.
 	TargetUser uint32 `json:"target_user,omitempty"`
+	// Settings are the entry's settings in Streamline's config file, as given
+	// there, and Secrets the contents of its secret_files, by name. Both are
+	// empty when the file sets none.
+	Settings map[string]json.RawMessage `json:"settings,omitempty"`
+	Secrets  map[string]string          `json:"secrets,omitempty"`
+	// Hosts is the entry's hosts list. Only the settings hook carries it.
+	Hosts []string `json:"hosts,omitempty"`
 }
 
 // Folder is a granted directory as the guest sees it: HostPath is what the

@@ -3,6 +3,7 @@ package config_test
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -103,6 +104,41 @@ var _ = Describe("Extension CRUD", Label("unit", "config"), func() {
 		Expect(config.AddExtension(ctx, config.ExtensionEntry{
 			Name: "opds", Source: "https://example.com/a.wasm", SHA256: hash,
 		})).To(Succeed())
+	})
+
+	It("keeps settings and secret files through an update", func() {
+		e := local("player")
+		e.Settings = map[string]any{
+			"engine.url":     "http://engine.lan:8097",
+			"player.origins": []any{"https://player.lan"},
+		}
+		e.SecretFiles = map[string]string{"engine": "/etc/streamline/engine"}
+		Expect(config.AddExtension(ctx, e)).To(Succeed())
+		Expect(
+			config.UpdateExtension(
+				ctx,
+				"player",
+				func(e *config.ExtensionEntry) error {
+					e.Enabled = false
+					return nil
+				},
+			),
+		).To(Succeed())
+		_, err := config.Load(
+			filepath.Join(config.Get().DataDir, "config.yaml"),
+		)
+		Expect(err).NotTo(HaveOccurred())
+		got := config.Get().Extensions[0]
+		Expect(got.Settings).To(Equal(e.Settings))
+		Expect(got.SecretFiles).To(Equal(e.SecretFiles))
+	})
+
+	It("refuses a secret file that is not an absolute path", func() {
+		e := local("player")
+		e.SecretFiles = map[string]string{"engine": "secrets/engine"}
+		Expect(config.AddExtension(ctx, e)).To(MatchError(
+			ContainSubstring(`secret file "engine"`),
+		))
 	})
 
 	It("refuses an update that breaks a rule", func() {

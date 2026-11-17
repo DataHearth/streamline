@@ -827,6 +827,12 @@ type ExtensionEntry struct {
 	// service. The file is the only place they are written from: an API that
 	// could add one could point a guest at anything Streamline can reach.
 	Hosts []string `koanf:"hosts"`
+	// Settings are handed to the extension on every call, as written; only
+	// the extension knows what they mean. SecretFiles name files whose
+	// contents reach it the same way, by name. Both are file-only, as Hosts
+	// is: an API that could change them could swap a guest's secret.
+	Settings    map[string]any    `koanf:"settings"`
+	SecretFiles map[string]string `koanf:"secret_files"`
 }
 
 // BasePath is the path the extension is served under; its manifest's mounts

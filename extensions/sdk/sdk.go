@@ -30,12 +30,19 @@ type Manifest struct {
 	// Hooks are the calls the module wants from the host: POST /hooks/<name>
 	// with an empty Mount and no Caller, which no client can produce. "library"
 	// is sent when a movie, a series or an episode changed, with a
-	// LibraryChange as its body.
+	// LibraryChange as its body. "settings" is sent to check the settings the
+	// config file gives.
 	Hooks []string `json:"hooks,omitempty"`
 }
 
 // HookLibrary is the hook name for library changes.
 const HookLibrary = "library"
+
+// HookSettings is the hook a manifest lists to check what the config file
+// gives it. POST /hooks/settings carries Settings, Secrets and Hosts, before
+// the extension starts and whenever they change. Any answer but a 2xx keeps
+// the extension from running, with the body as the reason shown to the admin.
+const HookSettings = "settings"
 
 // LibraryChange is the body of the library hook: the folders to compare
 // whole ("movies", "series"), and the ids of what changed. An id may be of a
@@ -110,6 +117,13 @@ type Request struct {
 	// TargetUser is the account a settings card is read or written for: an
 	// admin editing another user, so it can differ from Caller.
 	TargetUser uint32 `json:"target_user,omitempty"`
+	// Settings are the entry's settings in Streamline's config file, as given
+	// there, and Secrets the contents of its secret_files, by name. Both are
+	// empty when the file sets none.
+	Settings map[string]json.RawMessage `json:"settings,omitempty"`
+	Secrets  map[string]string          `json:"secrets,omitempty"`
+	// Hosts is the entry's hosts list. Only the settings hook carries it.
+	Hosts []string `json:"hosts,omitempty"`
 }
 
 // Folder is a granted directory as the guest sees it: HostPath is what the

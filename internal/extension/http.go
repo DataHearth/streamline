@@ -348,6 +348,14 @@ type callResult struct {
 // call runs the guest on one pooled connection and returns it before the
 // answer is written, so a slow download holds none.
 func (r *Running) call(ctx context.Context, req Request) (callResult, error) {
+	return r.callWith(ctx, req, r.given.Load())
+}
+
+func (r *Running) callWith(
+	ctx context.Context,
+	req Request,
+	g *given,
+) (callResult, error) {
 	conn, err := r.store.Conn(ctx)
 	if err != nil {
 		return callResult{}, err
@@ -373,6 +381,9 @@ func (r *Running) call(ctx context.Context, req Request) (callResult, error) {
 	defer closeMounts()
 
 	req.Folders = folders
+	if g != nil {
+		req.Settings, req.Secrets = g.settings, g.secrets
+	}
 	ctx = context.WithValue(ctx, runningKey{}, r)
 	tc := tracedConn{c: conn, name: r.name}
 	resp, err := r.module.Handle(ctx, tc, req, mounts)

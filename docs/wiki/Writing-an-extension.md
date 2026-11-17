@@ -51,7 +51,7 @@ A fresh instance of the module handles **every** request, so nothing in memory s
 | `views[]` | Names from [the table below](#views) |
 | `folders[]` | `music`, `movies`, `series`, `artwork`, `cache`, see [Folders](#folders) |
 | `services[]` | `serve_file`, `serve_poster`, `ffmpeg`, `library_scan`, `http` |
-| `hooks[]` | `library`, see [Library changes](#library-changes). Not a grant: nothing to approve |
+| `hooks[]` | `library`, see [Library changes](#library-changes); `settings`, see [Settings and secrets from the config file](#settings-and-secrets-from-the-config-file). Not a grant: nothing to approve |
 | `account_cards[]` | `{id, kind, title, mount, username, fields}`. `kind: credential` is a credential the account page manages (`mount`, `username`). `mount` is the address the account page shows, the one a user pastes into their app, relative to your path like a mount (`/` is `/extensions/<name>` itself): name what the app expects to be given, never a path the app adds by itself. A Subsonic app appends `/rest` to its server address, so the Subsonic card is `/`; `/rest` there would send the app to `/rest/rest`; `kind: settings` is a set of per-user controls an admin edits (`fields`, see [Settings cards](#settings-cards)). Your module answers both at `/api/v1/extensions/<name>/cards/<id>` |
 
 Whatever you list must be granted by the admin, exactly, hooks aside. A settings card that declares no field, two fields with one id, a field of another kind or a number whose `min` is above its `max` makes the manifest unusable, and the extension fails to start.
@@ -205,6 +205,25 @@ func route(r sdk.Request) sdk.Response {
 - An id may be of a row that no longer exists, or of a change that was undone: read your views and drop what you kept for a row that is gone.
 - `Full` names a folder (`movies`, `series`) to look at whole. Streamline sends it in place of more than 500 ids.
 - You have the usual 30 seconds. An answer of 400 or more is logged and the change is not sent again, so keep a way to catch up, such as a scan of your own.
+
+## Settings and secrets from the config file
+
+The admin can give your extension settings and secrets in Streamline's config file, next to its grants:
+
+```yaml
+extensions:
+  - name: player
+    settings:
+      engine.url: http://engine.lan:8097
+    secret_files:
+      engine: /etc/streamline/secrets/player-engine-secret
+```
+
+Every call then carries them: `r.Settings` holds each setting as raw JSON, as written, and `r.Secrets` the content of each file by name. Streamline does not read the keys; they mean what you say they mean. Both are empty when the file gives none.
+
+- Treat a setting from the file as final: let it win over what you stored, and refuse to change it from your own UI.
+- A missing or empty secret file keeps the extension from starting.
+- To refuse a bad value before you run, list `settings` in `hooks`. Streamline then calls `POST /hooks/settings` (empty `Mount`, as for `library`) with `Settings`, `Secrets` and `Hosts`, the entry's hosts list, before the extension starts and whenever one of them changes. Any answer but a 2xx stops the extension, and the first 300 bytes of your body are the reason the admin sees. Never put a secret in it.
 
 ## Settings cards
 

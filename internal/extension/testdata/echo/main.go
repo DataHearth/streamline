@@ -44,7 +44,7 @@ func manifest() int32 {
 	if extra != "" {
 		mf.Folders = []string{"music", "artwork", "cache"}
 		mf.Services = append(mf.Services, "ffmpeg", "library_scan")
-		mf.Hooks = []string{sdk.HookLibrary}
+		mf.Hooks = []string{sdk.HookLibrary, sdk.HookSettings}
 	}
 	return sdk.WriteManifest(mf)
 }
@@ -94,6 +94,25 @@ func handle() int32 {
 			_, _ = sdk.Exec(`CREATE TABLE IF NOT EXISTS hooked(body TEXT)`)
 			_, _ = sdk.Exec(`INSERT INTO hooked(body) VALUES(?)`, string(r.Body))
 			return sdk.Response{Status: 202}
+		case "/hooks/settings":
+			if r.Mount != "" {
+				return sdk.Response{Status: 404}
+			}
+			if _, bad := r.Settings["refused"]; bad {
+				return sdk.Response{
+					Status: 422,
+					Body:   []byte("refused is not a setting"),
+				}
+			}
+			if len(r.Settings) > 0 && len(r.Hosts) == 0 {
+				return sdk.Response{Status: 422, Body: []byte("no hosts")}
+			}
+			return sdk.Response{Status: 204}
+		case "/given":
+			b, _ := json.Marshal(map[string]any{
+				"settings": r.Settings, "secrets": r.Secrets,
+			})
+			return sdk.Response{Status: 200, Body: b}
 		case "/hooked":
 			res, err := sdk.Query(`SELECT body FROM hooked ORDER BY rowid`)
 			if err != nil {
