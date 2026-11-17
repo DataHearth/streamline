@@ -54,8 +54,8 @@
 			onclick={() => onSelect(r)}
 			aria-current={sel ? "true" : undefined}
 			class={cn(
-				"flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
-				sel ? "bg-accent-soft ring-1 ring-accent-line" : "hover:bg-surface",
+				"flex w-full items-center gap-3 rounded-lg border px-2.5 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-ring",
+				sel ? "border-accent/60 bg-accent-soft" : "border-transparent hover:bg-surface",
 			)}
 		>
 			<div class="w-10 shrink-0">
