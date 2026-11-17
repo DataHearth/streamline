@@ -1156,6 +1156,7 @@
 	"lc_stopped": "stopped",
 	"lc_succeeded": "succeeded",
 	"lc_today": "today",
+	"lc_tomorrow": "tomorrow",
 	"lc_unaired": "unaired",
 	"lc_wanted": "wanted",
 	"library_allowed_roots": "Allowed download roots",

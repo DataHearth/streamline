@@ -41,10 +41,20 @@
 	}
 
 	function daysUntil(d: Date): string {
-		const target = d.getTime();
-		if (Number.isNaN(target)) return "";
-		const days = Math.max(0, Math.round((target - Date.now()) / 86_400_000));
-		return days === 0 ? i18n.lc_today() : i18n.upcoming_in_days({ days });
+		if (Number.isNaN(d.getTime())) return "";
+		// Whole calendar days in the viewer's zone, the same day the stamp
+		// shows: an episode airing at 01:00 tomorrow is a day off, however few
+		// hours away. Rounding copes with a 23 or 25 hour day across a DST change.
+		const now = new Date();
+		const from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const to = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+		const days = Math.max(
+			0,
+			Math.round((to.getTime() - from.getTime()) / 86_400_000),
+		);
+		if (days === 0) return i18n.lc_today();
+		if (days === 1) return i18n.lc_tomorrow();
+		return i18n.upcoming_in_days({ days });
 	}
 </script>
 
