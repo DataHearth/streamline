@@ -99,6 +99,13 @@ type FreeSpacer interface {
 	FreeSpace(ctx context.Context) (int64, error)
 }
 
+// TorrentLimiter is an optional Client capability: how many torrents the
+// client holds at most, as it enforces it. The builtin engine is the one that
+// has such a limit.
+type TorrentLimiter interface {
+	TorrentLimit() int
+}
+
 var (
 	_ FreeSpacer = (*QBittorrent)(nil)
 	_ FreeSpacer = (*Transmission)(nil)

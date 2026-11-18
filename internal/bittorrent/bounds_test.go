@@ -145,6 +145,11 @@ var _ = Describe("Engine.torrentCap", Label("unit", "bittorrent"), func() {
 	It("falls back to the default on an Engine not built by New", func() {
 		Expect((&Engine{}).torrentCap()).To(Equal(defaultMaxTorrents))
 	})
+
+	It("is the limit the download manager trims to", func() {
+		Expect((&Engine{maxTorrents: 3}).TorrentLimit()).To(Equal(3))
+		Expect((&Engine{}).TorrentLimit()).To(Equal(defaultMaxTorrents))
+	})
 })
 
 var _ = Describe("engine content storage", Label("unit", "bittorrent"), func() {

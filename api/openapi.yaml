@@ -14006,7 +14006,10 @@ components:
           description: >-
             Torrents the engine holds at once; a grab past it is refused with
             `422` `code: grab_rejected`. 0 or absent = the engine's default
-            (500). Lowering it below what the engine holds removes nothing.
+            (500). Lowering it below what the engine holds removes the excess
+            among the imported torrents, with their download copies, oldest
+            import first, once the restart applies it; torrents not imported
+            yet stay, and grabs are refused until the count is back under.
             Restart required.
         seed_ratio:
           type: number
@@ -14090,7 +14093,10 @@ components:
           description: >-
             Torrents the engine holds at once; a grab past it is refused with
             `422` `code: grab_rejected`. 0 or absent = the engine's default
-            (500). Lowering it below what the engine holds removes nothing.
+            (500). Lowering it below what the engine holds removes the excess
+            among the imported torrents, with their download copies, oldest
+            import first, once the restart applies it; torrents not imported
+            yet stay, and grabs are refused until the count is back under.
             Restart required.
         seed_ratio:
           type: number
