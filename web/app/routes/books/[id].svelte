@@ -142,7 +142,12 @@
 		const main = document.getElementById("main");
 		const el = editionsEl;
 		if (!main || !el) return;
-		const top = el.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - 88;
+		// Land a gap below what stays pinned: the top bar and the tab strip
+		// under it. Both are measured, since the tab strip has no fixed height
+		// to subtract.
+		const bar = main.querySelector<HTMLElement>(":scope > header")?.offsetHeight ?? 0;
+		const tabs = tabTrack?.parentElement?.offsetHeight ?? 0;
+		const top = el.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - bar - tabs - 16;
 		main.scrollTo({ top, behavior: "smooth" });
 	}
 	function use(e: Edition) {
