@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { Calendar } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
-	import { dotToken, kindLabel, statusPill, type CalendarEvent } from "@lib/calendar";
+	import {
+		dotToken,
+		hasAired,
+		kindLabel,
+		statusPill,
+		type CalendarEvent,
+	} from "@lib/calendar";
 	import StatusPill from "./StatusPill.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { getLocale } from "@lib/paraglide/runtime.js";
@@ -100,6 +106,7 @@
 				{@const date = stamp(ev.date)}
 				{@const when = daysUntil(ev.date)}
 				{@const pill = statusPill(ev)}
+				{@const aired = hasAired(ev)}
 				<!-- The meta line, in falling order of value: the episode number, the
 				     episode's own title, then how far off it is. A movie has only its
 				     reason for being here. `when` sits last because it is the one
@@ -108,12 +115,16 @@
 				<!-- The fallback is the movie's reason for being here, so it is the
 				     movie's alone: an episode TVDB has not titled yet has no detail
 				     either, and inheriting this one billed it as a digital release. -->
+				<!-- An episode that aired earlier today says so right after its
+				     number, where truncation cannot reach it, and drops `when`:
+				     "today" is what the stamp already shows. -->
 				{@const meta = [
 					ev.subtitle,
+					aired ? i18n.calendar_aired() : undefined,
 					ev.kind === "movie"
 						? (ev.detail ?? i18n.lc_digital_release())
 						: ev.detail,
-					when,
+					aired ? undefined : when,
 				]
 					.filter(Boolean)
 					.join(" · ")}
@@ -134,7 +145,12 @@
 							</span>
 						</span>
 						<div class="min-w-0">
-							<div class="truncate text-[13px] font-medium text-fg">
+							<div
+								class={cn(
+									"truncate text-[13px] font-medium",
+									aired ? "text-fg-muted" : "text-fg",
+								)}
+							>
 								{ev.title}
 							</div>
 							<div class="mt-0.5 truncate font-mono text-[10.5px] text-fg-subtle">

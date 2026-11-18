@@ -309,13 +309,23 @@ export function gridRange(
 	return { from: from.toISOString(), to: to.toISOString() };
 }
 
-// The rolling window behind the agenda. `from` is now rather than midnight, so
-// the list is forward-only by construction: an episode that aired this morning
-// is already history, and history is the Activity page's job.
+// The rolling window behind the agenda and the dashboard's upcoming panel.
+// `from` is midnight today, not now: today's releases stay on the list until
+// the day is over, so an episode that aired at 01:00 is still there at 02:00
+// (marked aired, see hasAired) rather than gone from the list while the grid
+// above still shows it. Yesterday's are history, the Activity page's job.
 export function next30Range(): { from: string; to: string } {
 	const now = new Date();
+	const from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 	return {
-		from: now.toISOString(),
+		from: from.toISOString(),
 		to: new Date(now.getTime() + 30 * 86_400_000).toISOString(),
 	};
+}
+
+// An event with a clock whose moment has passed: today's episodes that have
+// already aired. A date-only release (a movie, an album, a book) is out all
+// day, so it never reads as aired.
+export function hasAired(e: CalendarEvent, now: Date = new Date()): boolean {
+	return !!e.time && e.date.getTime() <= now.getTime();
 }

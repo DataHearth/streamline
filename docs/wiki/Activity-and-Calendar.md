@@ -219,6 +219,8 @@ A running job's progress comes from the encoder inside the running process, so i
 
 Filter chips switch between all / movies / episodes / albums / books. Click any day to see what lands on it; click an entry to jump to the title.
 
+The agenda (*Coming up*) and the dashboard's upcoming panel run from the start of today to 30 days out, so today's releases stay listed until midnight. An episode whose air time has already passed today is marked *aired*.
+
 > [!NOTE]
 > The calendar is a *forecast*, not a queue. An entry appearing today doesn't mean Streamline has grabbed it — it means the release date has arrived and the next RSS sync or missing search is now likely to find something.
 

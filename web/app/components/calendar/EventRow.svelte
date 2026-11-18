@@ -4,17 +4,24 @@
 	import Poster from "@components/shared/Poster.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import EventDot from "./EventDot.svelte";
-	import { dotToken, statusPill, type CalendarEvent } from "@lib/calendar";
+	import { dotToken, hasAired, statusPill, type CalendarEvent } from "@lib/calendar";
+	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
 		event,
 		size = "sm",
 	}: { event: CalendarEvent; size?: "sm" | "md" } = $props();
 
+	// Today's rows stay on the list all day; one whose air time has passed
+	// says so and steps its title down a grey, so what is still to come today
+	// reads first.
+	let aired = $derived(hasAired(event));
 	// Everything after the episode number: the clock, then the episode title.
 	// A movie has neither, only its reason for being here.
 	let tail = $derived(
-		[event.time, event.detail].filter(Boolean).join(" · "),
+		[event.time, aired ? i18n.calendar_aired() : undefined, event.detail]
+			.filter(Boolean)
+			.join(" · "),
 	);
 	let pill = $derived(statusPill(event));
 </script>
@@ -54,7 +61,10 @@
 
 	<span class="min-w-0">
 		<span
-			class="block truncate text-[14px] font-semibold tracking-[-0.01em] text-fg"
+			class={cn(
+				"block truncate text-[14px] tracking-[-0.01em]",
+				aired ? "font-medium text-fg-muted" : "font-semibold text-fg",
+			)}
 		>
 			{event.title}
 		</span>

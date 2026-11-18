@@ -346,6 +346,7 @@
 	"bulk_unmonitoring": "Suivi désactivé pour {items}",
 	"bulk_with_episodes": "{items} avec des épisodes sur le disque",
 	"bulk_with_files": "{items} avec des fichiers sur le disque",
+	"calendar_aired": "diffusé",
 	"calendar_coming_up": "À venir",
 	"calendar_digital_release": "Sortie numérique",
 	"calendar_show_remaining": "Afficher les {count} autres sorties du {date}",

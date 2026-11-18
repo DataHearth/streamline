@@ -346,6 +346,7 @@
 	"bulk_unmonitoring": "Stopped monitoring {items}",
 	"bulk_with_episodes": "{items} with episodes on disk",
 	"bulk_with_files": "{items} with files on disk",
+	"calendar_aired": "aired",
 	"calendar_coming_up": "Coming up",
 	"calendar_digital_release": "Digital release",
 	"calendar_show_remaining": "Show the {count} remaining releases on {date}",
