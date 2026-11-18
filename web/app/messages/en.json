@@ -279,7 +279,7 @@
 	"builtin_max_peers": "Peers per torrent",
 	"builtin_max_peers_help": "0 = default (15). Each connection costs about 160 KB of memory, up to about 420 KB while seeding.",
 	"builtin_max_torrents": "Max torrents",
-	"builtin_max_torrents_help": "0 = default (500). A grab past it is refused; lowering it removes nothing.",
+	"builtin_max_torrents_help": "0 = default (500). A grab past it is refused. Lowering it below what the engine holds removes the oldest imported torrents and their download copies after the restart.",
 	"builtin_max_unverified": "Unchecked data · MiB",
 	"builtin_max_unverified_help": "0 = default (16). Downloaded pieces not yet hash-checked, per torrent. Raise it for releases with large pieces; it costs disk cache, not process memory.",
 	"builtin_max_upload": "Max upload · KB/s",

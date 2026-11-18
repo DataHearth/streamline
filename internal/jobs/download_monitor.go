@@ -11,7 +11,8 @@ import (
 
 // DownloadMonitor returns a scheduler.JobFunc that polls the download manager
 // and forwards each completion to the importer, then reaps the builtin
-// torrents that have finished seeding, runs the manual-torrent adoption pass
+// torrents that have finished seeding and the imported ones held past the
+// engine's max_torrents, runs the manual-torrent adoption pass
 // and enqueues anything it auto-imported. Intended to run on a short interval
 // (default 30s).
 func DownloadMonitor(
@@ -49,6 +50,12 @@ func DownloadMonitor(
 		// idempotent and the same torrents are still there next time.
 		if err := r.RemoveSeedCompleteTorrents(ctx); err != nil {
 			slog.WarnContext(ctx, "remove seed-complete torrents failed",
+				"error", err)
+		}
+		// After the reap, so a torrent that finished seeding is not counted
+		// against the limit it is about to stop occupying.
+		if err := r.TrimOverLimitTorrents(ctx); err != nil {
+			slog.WarnContext(ctx, "trim over-limit torrents failed",
 				"error", err)
 		}
 		adopted, err := a.AdoptManualTorrents(ctx)

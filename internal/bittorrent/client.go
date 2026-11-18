@@ -889,3 +889,10 @@ func (e *Engine) torrentCap() int {
 	}
 	return defaultMaxTorrents
 }
+
+// TorrentLimit is the cap AddTorrent enforces, the one this engine started
+// with: a max_torrents edited since takes a restart to get here, and the
+// download manager trims to this value, never to the config's.
+func (e *Engine) TorrentLimit() int { return e.torrentCap() }
+
+var _ download.TorrentLimiter = (*Engine)(nil)

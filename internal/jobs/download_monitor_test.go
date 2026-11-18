@@ -47,6 +47,8 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 		enq.EXPECT().Enqueue(uint32(33)).Once()
 		reaper.EXPECT().RemoveSeedCompleteTorrents(mock.Anything).
 			Return(nil).Once()
+		reaper.EXPECT().TrimOverLimitTorrents(mock.Anything).
+			Return(nil).Once()
 		adopter.EXPECT().AdoptManualTorrents(mock.Anything).Return(nil, nil).Once()
 
 		Expect(DownloadMonitor(checker, reaper, adopter, enq)(ctx)).To(Succeed())
@@ -57,6 +59,8 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 		checker.EXPECT().CheckStatus(mock.Anything).Return(nil, nil).Once()
 		checker.EXPECT().ReconcileStrandedMedia(mock.Anything).Return(nil).Once()
 		reaper.EXPECT().RemoveSeedCompleteTorrents(mock.Anything).
+			Return(nil).Once()
+		reaper.EXPECT().TrimOverLimitTorrents(mock.Anything).
 			Return(nil).Once()
 		adopter.EXPECT().AdoptManualTorrents(mock.Anything).
 			Return([]uint32{42}, nil).Once()
@@ -71,6 +75,8 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 		checker.EXPECT().ReconcileStrandedMedia(mock.Anything).Return(nil).Once()
 		reaper.EXPECT().RemoveSeedCompleteTorrents(mock.Anything).
 			Return(nil).Once()
+		reaper.EXPECT().TrimOverLimitTorrents(mock.Anything).
+			Return(nil).Once()
 		adopter.EXPECT().AdoptManualTorrents(mock.Anything).Return(nil, nil).Once()
 
 		Expect(DownloadMonitor(checker, reaper, adopter, enq)(ctx)).To(Succeed())
@@ -83,6 +89,8 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 			Return(errors.New("reconcile boom")).Once()
 		reaper.EXPECT().RemoveSeedCompleteTorrents(mock.Anything).
 			Return(nil).Once()
+		reaper.EXPECT().TrimOverLimitTorrents(mock.Anything).
+			Return(nil).Once()
 		adopter.EXPECT().AdoptManualTorrents(mock.Anything).Return(nil, nil).Once()
 
 		Expect(DownloadMonitor(checker, reaper, adopter, enq)(ctx)).To(Succeed())
@@ -93,6 +101,8 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 		checker.EXPECT().CheckStatus(mock.Anything).Return(nil, nil).Once()
 		checker.EXPECT().ReconcileStrandedMedia(mock.Anything).Return(nil).Once()
 		reaper.EXPECT().RemoveSeedCompleteTorrents(mock.Anything).
+			Return(nil).Once()
+		reaper.EXPECT().TrimOverLimitTorrents(mock.Anything).
 			Return(nil).Once()
 		adopter.EXPECT().AdoptManualTorrents(mock.Anything).
 			Return(nil, errors.New("adopt boom")).Once()
@@ -106,6 +116,21 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 		checker.EXPECT().ReconcileStrandedMedia(mock.Anything).Return(nil).Once()
 		reaper.EXPECT().RemoveSeedCompleteTorrents(mock.Anything).
 			Return(errors.New("reap boom")).Once()
+		reaper.EXPECT().TrimOverLimitTorrents(mock.Anything).
+			Return(nil).Once()
+		adopter.EXPECT().AdoptManualTorrents(mock.Anything).Return(nil, nil).Once()
+
+		Expect(DownloadMonitor(checker, reaper, adopter, enq)(ctx)).To(Succeed())
+	})
+
+	It("keeps going when the over-limit trim fails", func() {
+		checker.EXPECT().RejectCueImages(mock.Anything).Return(nil).Once()
+		checker.EXPECT().CheckStatus(mock.Anything).Return(nil, nil).Once()
+		checker.EXPECT().ReconcileStrandedMedia(mock.Anything).Return(nil).Once()
+		reaper.EXPECT().RemoveSeedCompleteTorrents(mock.Anything).
+			Return(nil).Once()
+		reaper.EXPECT().TrimOverLimitTorrents(mock.Anything).
+			Return(errors.New("trim boom")).Once()
 		adopter.EXPECT().AdoptManualTorrents(mock.Anything).Return(nil, nil).Once()
 
 		Expect(DownloadMonitor(checker, reaper, adopter, enq)(ctx)).To(Succeed())
@@ -129,6 +154,8 @@ var _ = Describe("DownloadMonitor", Label("unit"), func() {
 				NotBefore(reject)
 			checker.EXPECT().ReconcileStrandedMedia(mock.Anything).Return(nil).Once()
 			reaper.EXPECT().RemoveSeedCompleteTorrents(mock.Anything).
+				Return(nil).Once()
+			reaper.EXPECT().TrimOverLimitTorrents(mock.Anything).
 				Return(nil).Once()
 			adopter.EXPECT().
 				AdoptManualTorrents(mock.Anything).

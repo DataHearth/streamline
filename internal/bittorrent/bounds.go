@@ -73,8 +73,10 @@ const (
 	// counts them: each costs resident state, a goroutine until its metadata
 	// resolves, and a re-add on every boot, and only an admin can remove one.
 	// A re-add of a torrent already held is never refused, and neither is a
-	// boot restore: lowering the cap below what the engine holds drops
-	// nothing, it only refuses new hashes until the count is back under.
+	// boot restore: an engine started with a cap below what it holds drops
+	// nothing itself and refuses new hashes until the count is back under.
+	// Bringing it back under is the download manager's pass
+	// (TrimOverLimitTorrents), which knows what was imported.
 	defaultMaxTorrents = 500
 )
 
