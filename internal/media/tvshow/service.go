@@ -682,6 +682,11 @@ func (s *Service) Delete(ctx context.Context, id uint32, opts DeleteOptions) err
 		if requested > 0 {
 			mediaserver.RefreshInBackground(ctx, s.ms, "series", root, removed...)
 		}
+		// Before DeleteTVShow: the download records cascade with the episodes,
+		// so after the row goes nothing says which torrents produced these
+		// files, and one still seeding comes back as an untracked adoption
+		// proposal on the next monitor tick.
+		s.removeShowSourceTorrents(ctx, show)
 	}
 	if err := s.db.DeleteTVShow(ctx, id); err != nil {
 		if ent.IsNotFound(err) {
@@ -764,18 +769,52 @@ func (s *Service) DeleteEpisodeFile(
 // removeEpisodeSourceTorrent best-effort removes the torrent that produced the
 // episode's most recent grab. Absence or any failure is logged, never surfaced.
 func (s *Service) removeEpisodeSourceTorrent(ctx context.Context, episodeID uint32) {
+	if rec := s.episodeSourceTorrent(ctx, episodeID); rec != nil {
+		s.removeTorrent(ctx, rec)
+	}
+}
+
+// removeShowSourceTorrents best-effort removes the torrent behind every file
+// of the show, a season pack once however many episodes it produced.
+func (s *Service) removeShowSourceTorrents(ctx context.Context, show *ent.TVShow) {
+	removed := map[string]bool{}
+	for _, se := range show.Edges.Seasons {
+		for _, e := range se.Edges.Episodes {
+			if len(e.Edges.MediaFiles) == 0 {
+				continue
+			}
+			rec := s.episodeSourceTorrent(ctx, e.ID)
+			if rec == nil || removed[rec.TorrentHash] {
+				continue
+			}
+			removed[rec.TorrentHash] = true
+			s.removeTorrent(ctx, rec)
+		}
+	}
+}
+
+// episodeSourceTorrent is the completed record behind the episode's file, nil
+// when there is none or it names no torrent.
+func (s *Service) episodeSourceTorrent(
+	ctx context.Context,
+	episodeID uint32,
+) *ent.DownloadRecord {
 	rec, err := s.db.LatestImportedRecordForEpisode(ctx, episodeID)
 	switch {
 	case ent.IsNotFound(err):
-		return
+		return nil
 	case err != nil:
 		slog.WarnContext(ctx, "lookup source torrent failed",
 			"episode.id", episodeID, "error", err)
-		return
+		return nil
 	}
 	if rec.TorrentHash == "" || rec.DownloadClientName == "" {
-		return
+		return nil
 	}
+	return rec
+}
+
+func (s *Service) removeTorrent(ctx context.Context, rec *ent.DownloadRecord) {
 	if err := s.download.RemoveTorrent(
 		ctx, rec.DownloadClientName, rec.TorrentHash, false,
 	); err != nil {

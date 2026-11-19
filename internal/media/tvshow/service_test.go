@@ -416,6 +416,38 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			}}},
 		}}}
 		storeMk.FindTVShowByID(mock.Anything, uint32(7)).Return(show, nil).Once()
+		storeMk.LatestImportedRecordForEpisode(mock.Anything, uint32(0)).
+			Return(nil, &ent.NotFoundError{}).Once()
+		storeMk.DeleteTVShow(mock.Anything, uint32(7)).Return(nil).Once()
+		postMk.Remove("tvshows", uint32(7)).Return(nil).Once()
+		refreshed := expectRefresh(root)
+
+		Expect(svc.Delete(ctx, 7, DeleteOptions{DeleteFiles: true})).To(Succeed())
+		Eventually(refreshed).Should(BeClosed())
+	})
+
+	It("Delete removes each source torrent once when it deletes the files", func() {
+		root := config.Get().Library.SeriesPath
+		episode := func(id uint32, name string) *ent.Episode {
+			return &ent.Episode{ID: id, Edges: ent.EpisodeEdges{
+				MediaFiles: []*ent.MediaFile{
+					{ID: id, Path: filepath.Join(root, name)},
+				},
+			}}
+		}
+		show := &ent.TVShow{ID: 7}
+		show.Edges.Seasons = []*ent.Season{{Edges: ent.SeasonEdges{
+			Episodes: []*ent.Episode{
+				episode(1, "e1.mkv"), episode(2, "e2.mkv"), {ID: 3},
+			},
+		}}}
+		pack := &ent.DownloadRecord{TorrentHash: "PACK", DownloadClientName: "qb"}
+		storeMk.FindTVShowByID(mock.Anything, uint32(7)).Return(show, nil).Once()
+		storeMk.LatestImportedRecordForEpisode(mock.Anything, uint32(1)).
+			Return(pack, nil).Once()
+		storeMk.LatestImportedRecordForEpisode(mock.Anything, uint32(2)).
+			Return(pack, nil).Once()
+		dlMk.RemoveTorrent(mock.Anything, "qb", "PACK", false).Return(nil).Once()
 		storeMk.DeleteTVShow(mock.Anything, uint32(7)).Return(nil).Once()
 		postMk.Remove("tvshows", uint32(7)).Return(nil).Once()
 		refreshed := expectRefresh(root)
