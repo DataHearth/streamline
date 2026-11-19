@@ -234,6 +234,20 @@ func New(cfg Config) *Server {
 		},
 	)
 
+	// A title's transparent logo, drawn in place of its name on the detail hero;
+	// 404 when none is cached, which is the SPA's cue for the text title.
+	s.router.Get(
+		"/posters/{kind}/{id}/logo.png",
+		func(w http.ResponseWriter, r *http.Request) {
+			idU, err := strconv.ParseUint(chi.URLParam(r, "id"), 10, 32)
+			if err != nil {
+				http.NotFound(w, r)
+				return
+			}
+			s.posters.ServeLogo(w, r, chi.URLParam(r, "kind"), uint32(idU))
+		},
+	)
+
 	// The one proxy for art of a title not in the library: the browser sees only
 	// same-origin bytes. Behind the session middleware like /posters above.
 	s.router.Get(

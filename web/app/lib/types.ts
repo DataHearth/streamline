@@ -320,6 +320,8 @@ export type Movie = {
 	crew?: CastMember[];
 	genres?: string[];
 	rating?: number;
+	// Detail responses only: whether movieLogoUrl serves the title's logo.
+	has_logo?: boolean;
 	added_at?: string;
 };
 

@@ -117,6 +117,132 @@ func (_c *MockManager_Fetch_Call) RunAndReturn(run func(ctx context.Context, kin
 	return _c
 }
 
+// FetchLogo provides a mock function for the type MockManager
+func (_mock *MockManager) FetchLogo(ctx context.Context, kind string, id uint32, src string) error {
+	ret := _mock.Called(ctx, kind, id, src)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FetchLogo")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, string) error); ok {
+		r0 = returnFunc(ctx, kind, id, src)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_FetchLogo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FetchLogo'
+type MockManager_FetchLogo_Call struct {
+	*mock.Call
+}
+
+// FetchLogo is a helper method to define mock.On call
+//   - ctx context.Context
+//   - kind string
+//   - id uint32
+//   - src string
+func (_e *MockManager_Expecter) FetchLogo(ctx any, kind any, id any, src any) *MockManager_FetchLogo_Call {
+	return &MockManager_FetchLogo_Call{Call: _e.mock.On("FetchLogo", ctx, kind, id, src)}
+}
+
+func (_c *MockManager_FetchLogo_Call) Run(run func(ctx context.Context, kind string, id uint32, src string)) *MockManager_FetchLogo_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_FetchLogo_Call) Return(err error) *MockManager_FetchLogo_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_FetchLogo_Call) RunAndReturn(run func(ctx context.Context, kind string, id uint32, src string) error) *MockManager_FetchLogo_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LogoPath provides a mock function for the type MockManager
+func (_mock *MockManager) LogoPath(kind string, id uint32) string {
+	ret := _mock.Called(kind, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LogoPath")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func(string, uint32) string); ok {
+		r0 = returnFunc(kind, id)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// MockManager_LogoPath_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LogoPath'
+type MockManager_LogoPath_Call struct {
+	*mock.Call
+}
+
+// LogoPath is a helper method to define mock.On call
+//   - kind string
+//   - id uint32
+func (_e *MockManager_Expecter) LogoPath(kind any, id any) *MockManager_LogoPath_Call {
+	return &MockManager_LogoPath_Call{Call: _e.mock.On("LogoPath", kind, id)}
+}
+
+func (_c *MockManager_LogoPath_Call) Run(run func(kind string, id uint32)) *MockManager_LogoPath_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_LogoPath_Call) Return(s string) *MockManager_LogoPath_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *MockManager_LogoPath_Call) RunAndReturn(run func(kind string, id uint32) string) *MockManager_LogoPath_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Path provides a mock function for the type MockManager
 func (_mock *MockManager) Path(kind string, id uint32) string {
 	ret := _mock.Called(kind, id)
@@ -354,6 +480,64 @@ func (_c *MockManager_Serve_Call) Return() *MockManager_Serve_Call {
 }
 
 func (_c *MockManager_Serve_Call) RunAndReturn(run func(w http.ResponseWriter, r *http.Request, kind string, id uint32)) *MockManager_Serve_Call {
+	_c.Run(run)
+	return _c
+}
+
+// ServeLogo provides a mock function for the type MockManager
+func (_mock *MockManager) ServeLogo(w http.ResponseWriter, r *http.Request, kind string, id uint32) {
+	_mock.Called(w, r, kind, id)
+	return
+}
+
+// MockManager_ServeLogo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ServeLogo'
+type MockManager_ServeLogo_Call struct {
+	*mock.Call
+}
+
+// ServeLogo is a helper method to define mock.On call
+//   - w http.ResponseWriter
+//   - r *http.Request
+//   - kind string
+//   - id uint32
+func (_e *MockManager_Expecter) ServeLogo(w any, r any, kind any, id any) *MockManager_ServeLogo_Call {
+	return &MockManager_ServeLogo_Call{Call: _e.mock.On("ServeLogo", w, r, kind, id)}
+}
+
+func (_c *MockManager_ServeLogo_Call) Run(run func(w http.ResponseWriter, r *http.Request, kind string, id uint32)) *MockManager_ServeLogo_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 http.ResponseWriter
+		if args[0] != nil {
+			arg0 = args[0].(http.ResponseWriter)
+		}
+		var arg1 *http.Request
+		if args[1] != nil {
+			arg1 = args[1].(*http.Request)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 uint32
+		if args[3] != nil {
+			arg3 = args[3].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_ServeLogo_Call) Return() *MockManager_ServeLogo_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockManager_ServeLogo_Call) RunAndReturn(run func(w http.ResponseWriter, r *http.Request, kind string, id uint32)) *MockManager_ServeLogo_Call {
 	_c.Run(run)
 	return _c
 }

@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -35,8 +36,11 @@ type CastMember struct {
 
 type MovieDetails struct {
 	MovieResult
-	Genres  []string
-	Runtime uint16
+	// LogoPath is the TMDB file path of the title's transparent logo, picked
+	// for the metadata language. Empty when TMDB has none.
+	LogoPath string
+	Genres   []string
+	Runtime  uint16
 	// Rating is TMDB's vote average (0–10). Zero when TMDB has no votes.
 	Rating           float32
 	VoteCount        uint32
@@ -103,6 +107,19 @@ func PosterURL(path, size string) string {
 		return ""
 	}
 	return "https://image.tmdb.org/t/p/" + size + path
+}
+
+// LogoURL returns the PNG rendition of a TMDB logo. TMDB keeps many logos as
+// SVG and serves any of them as PNG under the .png extension; the poster cache
+// serves only what sniffs as an image, which an SVG does not.
+func LogoURL(path, size string) string {
+	if path == "" {
+		return ""
+	}
+	if ext := filepath.Ext(path); ext != "" {
+		path = strings.TrimSuffix(path, ext)
+	}
+	return "https://image.tmdb.org/t/p/" + size + path + ".png"
 }
 
 // TVDBArtworkURL returns an absolute URL for a TVDB image reference. TVDB image

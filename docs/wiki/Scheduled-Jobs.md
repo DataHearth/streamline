@@ -22,7 +22,7 @@ Everything Streamline does on its own is a named job on a fixed interval. All of
 | `tv-missing-search` | `12h` | `schedules.tv_missing_search` | Same, for episodes | UI / API |
 | `music-missing-search` | `12h` | `schedules.music_missing_search` | Same, for wanted albums | UI / API |
 | `book-missing-search` | `12h` | `schedules.book_missing_search` | Same, for wanted book slots (ebook and audiobook searched separately; one query per series) | UI / API |
-| `movie-metadata-refresh` | `24h` | `schedules.movie_metadata_refresh` | Re-pulls TMDB metadata, posters, release dates and age ratings; keeps a local copy of every credited person's photo | UI / API |
+| `movie-metadata-refresh` | `24h` | `schedules.movie_metadata_refresh` | Re-pulls TMDB metadata, posters, title logos, release dates and age ratings; keeps a local copy of every credited person's photo | UI / API |
 | `tv-metadata-refresh` | `24h` | `schedules.tv_metadata_refresh` | Re-pulls TVDB metadata; discovers new seasons and episodes; reads each aired episode's guest stars and crew (once, then again only during its first month), and keeps a local copy of every credited person's photo | UI / API |
 | `music-metadata-refresh` | `24h` | `schedules.music_metadata_refresh` | Refreshes every artist not refreshed in the last 24h from MusicBrainz (oldest first) and retries missing album credits | UI / API |
 | `book-metadata-refresh` | `24h` | `schedules.book_metadata_refresh` | Refreshes books and series from Hardcover: series placeholders first, then up to 100 stale books in batches of twenty and up to 5 stale series per run, stopping when the day's request reserve is reached | UI / API |

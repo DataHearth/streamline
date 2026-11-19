@@ -183,6 +183,30 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				},
 			)
 
+			It("caches the logo's PNG rendition beside the poster", func() {
+				metaMock.GetMovie(mock.Anything, uint32(157336)).
+					Return(&metadata.MovieDetails{
+						TMDBID: 157336, Title: "Interstellar", Year: 2014,
+						LogoPath: "/logo.svg",
+					}, nil).Once()
+				storeMock.CreateMovie(mock.Anything, mock.AnythingOfType("db.CreateMovieParams")).
+					Return(&ent.Movie{ID: 11, Title: "Interstellar", TmdbID: 157336}, nil).
+					Once()
+
+				done := make(chan struct{})
+				fetchMock.FetchLogo(mock.Anything, "movies", uint32(11),
+					"https://image.tmdb.org/t/p/w500/logo.png").
+					RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error {
+						close(done)
+						return nil
+					}).
+					Once()
+
+				_, _, err := svc.Add(ctx, 157336, "default")
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(done).Should(BeClosed())
+			})
+
 			It("skips poster fetch when TMDB has no poster path", func() {
 				metaMock.GetMovie(mock.Anything, uint32(2)).
 					Return(&metadata.MovieDetails{
@@ -683,6 +707,8 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				Return(nil, &ent.NotFoundError{}).Once()
 			storeMock.SetMovieTMDBID(mock.Anything, uint32(7), uint32(604)).
 				Return(nil).Once()
+			// Fetch keeps a cached file, so the old title's art goes first.
+			fetchMock.Remove("movies", uint32(7)).Return(nil).Once()
 			// Proves the refresh reads the *new* id, not the one the row was
 			// loaded with — the whole point of the swap.
 			metaMock.GetMovie(mock.Anything, uint32(604)).
@@ -719,6 +745,10 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					Return(nil, &ent.NotFoundError{}).Once()
 				storeMock.SetMovieTMDBID(mock.Anything, uint32(7), uint32(604)).
 					Return(nil).Once()
+				// The row is on the new id from here, so the old title's art
+				// must go even though the refresh fails: the next metadata
+				// refresh keeps whatever file is cached.
+				fetchMock.Remove("movies", uint32(7)).Return(nil).Once()
 				metaMock.GetMovie(mock.Anything, uint32(604)).
 					Return(nil, errors.New("tmdb down")).Once()
 

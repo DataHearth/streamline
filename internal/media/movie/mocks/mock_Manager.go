@@ -614,6 +614,57 @@ func (_c *MockManager_GetByTMDBID_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// HasLogo provides a mock function for the type MockManager
+func (_mock *MockManager) HasLogo(id uint32) bool {
+	ret := _mock.Called(id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HasLogo")
+	}
+
+	var r0 bool
+	if returnFunc, ok := ret.Get(0).(func(uint32) bool); ok {
+		r0 = returnFunc(id)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	return r0
+}
+
+// MockManager_HasLogo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasLogo'
+type MockManager_HasLogo_Call struct {
+	*mock.Call
+}
+
+// HasLogo is a helper method to define mock.On call
+//   - id uint32
+func (_e *MockManager_Expecter) HasLogo(id any) *MockManager_HasLogo_Call {
+	return &MockManager_HasLogo_Call{Call: _e.mock.On("HasLogo", id)}
+}
+
+func (_c *MockManager_HasLogo_Call) Run(run func(id uint32)) *MockManager_HasLogo_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 uint32
+		if args[0] != nil {
+			arg0 = args[0].(uint32)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_HasLogo_Call) Return(b bool) *MockManager_HasLogo_Call {
+	_c.Call.Return(b)
+	return _c
+}
+
+func (_c *MockManager_HasLogo_Call) RunAndReturn(run func(id uint32) bool) *MockManager_HasLogo_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RefreshOne provides a mock function for the type MockManager
 func (_mock *MockManager) RefreshOne(ctx context.Context, id uint32) (*ent.Movie, error) {
 	ret := _mock.Called(ctx, id)

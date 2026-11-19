@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/scheduler"
@@ -79,6 +81,8 @@ type Manager interface {
 		p FilterParams,
 	) ([]*ent.Movie, map[uint32]db.MovieFileSummary, uint32, error)
 	Get(ctx context.Context, id uint32) (*ent.Movie, error)
+	// HasLogo reports whether the movie's logo is cached for the hero.
+	HasLogo(id uint32) bool
 	GetByTMDBID(ctx context.Context, tmdbID uint32) (*ent.Movie, error)
 	Update(ctx context.Context, id uint32, p UpdateParams) (*ent.Movie, error)
 	Delete(ctx context.Context, id uint32, opts DeleteOptions) error
@@ -265,7 +269,7 @@ func (s *Service) Add(
 			"movie.id", m.ID, "movie.tmdb_id", m.TmdbID, "error", err)
 	}
 
-	s.fetchPoster(ctx, m.ID, details.PosterPath)
+	s.fetchPoster(ctx, m.ID, details)
 	s.enrichPeople(ctx, m.ID)
 
 	moviesAdded.Add(ctx, 1)
@@ -500,10 +504,15 @@ func (s *Service) Update(
 	return m, nil
 }
 
-// fetchPoster caches the movie's poster in the background. Best-effort: a
-// missing poster is cosmetic and must not fail the operation that asked for it.
-func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string) {
-	if posterPath == "" || s.posters == nil {
+// fetchPoster caches the movie's poster and logo in the background.
+// Best-effort: missing art is cosmetic and must not fail the operation that
+// asked for it.
+func (s *Service) fetchPoster(
+	ctx context.Context,
+	id uint32,
+	details *metadata.MovieDetails,
+) {
+	if s.posters == nil {
 		return
 	}
 	bg := context.WithoutCancel(ctx)
@@ -511,13 +520,36 @@ func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string)
 	// one: the detail hero's 260px column at DPR 3 = 780px. The two full-bleed
 	// backdrops are blur-md, so they do not raise the bar. "original" is ~1.9 MB
 	// against w780's ~360 KB, and the cards only ever needed ~400px.
-	src := metadata.PosterURL(posterPath, "w780")
+	poster := metadata.PosterURL(details.PosterPath, "w780")
+	// The hero draws the logo at most ~420px wide; w500 is TMDB's largest size
+	// short of "original", which runs to several MB for a logo.
+	logo := metadata.LogoURL(details.LogoPath, "w500")
+	if poster == "" && logo == "" {
+		return
+	}
 	go func() {
-		if err := s.posters.Fetch(bg, "movies", id, src); err != nil {
-			slog.WarnContext(bg, "poster fetch failed",
-				"movie.id", id, "error", err)
+		defer observability.RecoverPanic(bg, "movie poster fetch", nil)
+		if poster != "" {
+			if err := s.posters.Fetch(bg, "movies", id, poster); err != nil {
+				slog.WarnContext(bg, "poster fetch failed",
+					"movie.id", id, "error", err)
+			}
+		}
+		if logo != "" {
+			if err := s.posters.FetchLogo(bg, "movies", id, logo); err != nil {
+				slog.WarnContext(bg, "logo fetch failed",
+					"movie.id", id, "error", err)
+			}
 		}
 	}()
+}
+
+func (s *Service) HasLogo(id uint32) bool {
+	if s.posters == nil {
+		return false
+	}
+	st, err := os.Stat(s.posters.LogoPath("movies", id))
+	return err == nil && st.Size() > 0
 }
 
 // Reidentify points the row at a different TMDB title and refreshes its
@@ -566,6 +598,16 @@ func (s *Service) Reidentify(
 	if err := s.db.SetMovieTMDBID(ctx, id, tmdbID); err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("set tmdb id: %w", err))
 	}
+	// The cached art is keyed by row id and Fetch keeps a cached file, so the
+	// old title's poster and logo go as soon as the row carries the new id:
+	// whichever step below fails, the next metadata refresh fetches the new
+	// title's art into an empty folder.
+	if s.posters != nil {
+		if err := s.posters.Remove("movies", id); err != nil {
+			slog.WarnContext(ctx, "poster cache eviction failed",
+				"movie.id", id, "error", err)
+		}
+	}
 	// The row now carries the new id with the old title. A failed refresh would
 	// leave it that way, so report it rather than swallowing it.
 	m.TmdbID = tmdbID
@@ -581,9 +623,7 @@ func (s *Service) Reidentify(
 	if err := s.fetchReleaseInfo(ctx, m); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	// The cached poster is keyed by row id, so it still shows the old title
-	// until it is replaced.
-	s.fetchPoster(ctx, id, details.PosterPath)
+	s.fetchPoster(ctx, id, details)
 	// Logged like the series twin: otherwise the rarer and more consequential
 	// of the two corrections — a movie repointed at different metadata — has
 	// no audit trail.
@@ -666,7 +706,7 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 	// on a populated cache and is the only thing that refills a cleared one —
 	// the series path does it too, and without it dropping the poster
 	// directory would leave movies with placeholders permanently.
-	s.fetchPoster(ctx, m.ID, details.PosterPath)
+	s.fetchPoster(ctx, m.ID, details)
 	// Only when the provider actually moved something. RefreshStale runs this
 	// over every stale row on a tick, and an unconditional event would bury a
 	// day of real activity under one row per movie in the library.
