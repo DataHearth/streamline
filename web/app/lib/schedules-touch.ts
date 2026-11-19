@@ -19,7 +19,7 @@ export type ScheduleState = {
 // "Running 12/240" when the job counts its work, "Running 12" when it counts
 // without knowing the total (a directory walk), "Running…" when it reports
 // nothing.
-export function runningLabel(s: Schedule) {
+function runningLabel(s: Schedule) {
 	if (!s.progress) return i18n.common_running_ellipsis();
 	if (s.progress.total > 0) return i18n.schedule_running_progress(s.progress);
 	return i18n.schedule_running_count(s.progress);

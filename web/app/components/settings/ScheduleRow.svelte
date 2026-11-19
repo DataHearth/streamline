@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Pause, Play, Zap, Pencil, Lock } from "@lucide/svelte";
+	import { Pause, Play, Zap, Pencil, Lock, LoaderCircle } from "@lucide/svelte";
 	import { cn } from "@lib/cn";
 	import { config, READONLY_HINT } from "@lib/config.svelte";
 	import { createScheduleActions } from "@lib/schedule-actions.svelte";
-	import { runningLabel } from "@lib/schedules-touch";
+	import { scheduleState } from "@lib/schedules-touch";
 	import { formatRelative, formatDateTime } from "@lib/dates";
 	import type { Schedule } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -39,46 +39,22 @@
 				},
 	);
 
-	function statusBadge(s: Schedule) {
-		if (s.running)
-			return { cls: "bg-accent/15 text-accent", label: runningLabel(s) };
-		if (s.paused)
-			return { cls: "bg-surface text-fg-muted", label: i18n.status_paused() };
-		switch (s.status) {
-			case "success":
-				return {
-					cls: "bg-status-available/10 text-status-available",
-					label: i18n.common_ok(),
-				};
-			case "error":
-				return {
-					cls: "bg-status-failed/10 text-status-failed",
-					label: i18n.status_failed(),
-				};
-			case "skipped":
-				return {
-					cls: "bg-surface text-fg-muted",
-					label: i18n.common_skipped(),
-				};
-			default:
-				return {
-					cls: "bg-surface text-fg-muted",
-					label: i18n.common_never(),
-				};
-		}
-	}
-
-	const sb = $derived(statusBadge(row));
+	const st = $derived(scheduleState(row));
+	// A state that needs no attention gets a hollow dot, so the filled ones
+	// (healthy, failed) are what the eye lands on down the column.
+	const quiet = $derived(
+		st.key === "paused" || st.key === "skipped" || st.key === "never",
+	);
 	// Only a known total draws a bar; a bare count has nothing to fill against.
 	const percent = $derived(
 		row.running && row.progress && row.progress.total > 0
 			? Math.min(100, (100 * row.progress.done) / row.progress.total)
 			: null,
 	);
-	const badgeTitle = $derived(
+	const startedTitle = $derived(
 		row.running && row.last_started_at
 			? i18n.schedule_started({ when: formatRelative(row.last_started_at) })
-			: (row.last_error ?? undefined),
+			: undefined,
 	);
 </script>
 
@@ -105,21 +81,39 @@
 		{/if}
 	</td>
 	<td class="px-4 py-3 align-middle">
-		<span
-			class="inline-flex min-w-[4.75rem] items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {sb.cls}"
-			title={badgeTitle}
+		<div
+			class={cn("flex items-center gap-2 text-[13px] font-medium", st.tone)}
+			title={startedTitle}
 		>
-			{sb.label}
-		</span>
+			{#if st.key === "running"}
+				<LoaderCircle size={13} class="shrink-0 animate-spin" aria-hidden="true" />
+			{:else}
+				<span
+					aria-hidden="true"
+					class={cn(
+						"size-1.5 shrink-0 rounded-full",
+						quiet ? "border border-current" : "bg-current",
+					)}
+				></span>
+			{/if}
+			<span class="whitespace-nowrap">{st.label}</span>
+		</div>
 		{#if percent !== null}
 			<div
-				class="mt-1 h-0.5 max-w-[7rem] overflow-hidden rounded-full bg-accent/20"
+				class="mt-1.5 h-0.5 max-w-[7rem] overflow-hidden rounded-full bg-accent/20"
 				role="progressbar"
 				aria-valuemin="0"
 				aria-valuemax="100"
 				aria-valuenow={Math.round(percent)}
 			>
 				<div class="progress-fill h-full bg-accent" style:--progress="{percent}%"></div>
+			</div>
+		{:else if st.key === "failed" && row.last_error}
+			<div
+				class="mt-0.5 max-w-[13rem] truncate pl-3.5 text-[11.5px] text-fg-subtle"
+				title={row.last_error}
+			>
+				{row.last_error}
 			</div>
 		{/if}
 	</td>
