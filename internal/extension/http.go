@@ -48,6 +48,11 @@ var sqlDuration = otelx.Must(
 			"streamline.extension.sql.duration",
 			metric.WithDescription("Duration of the SQL statements extensions run"),
 			metric.WithUnit("s"),
+			// The SDK's default boundaries start at 5 and suit milliseconds:
+			// in seconds every statement landed in the first bucket.
+			metric.WithExplicitBucketBoundaries(
+				0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30,
+			),
 		),
 )
 
