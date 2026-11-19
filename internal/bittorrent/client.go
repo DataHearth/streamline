@@ -114,6 +114,9 @@ func (e *Engine) AddTorrent(
 ) (string, error) {
 	ctx, span := tracer.Start(ctx, "bittorrent.add_torrent")
 	defer span.End()
+	if err := e.awaitRestore(ctx); err != nil {
+		return "", otelx.RecordSpanError(span, err)
+	}
 
 	spec, sourceMagnet, sourceBytes, err := specFromSource(src)
 	if err != nil {
@@ -219,6 +222,9 @@ func (e *Engine) GetTorrent(
 	ctx context.Context,
 	hash string,
 ) (*download.Torrent, error) {
+	if err := e.awaitRestore(ctx); err != nil {
+		return nil, err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		e.mu.Lock()
@@ -234,6 +240,9 @@ func (e *Engine) GetTorrent(
 }
 
 func (e *Engine) ListTorrents(ctx context.Context) ([]download.Torrent, error) {
+	if err := e.awaitRestore(ctx); err != nil {
+		return nil, err
+	}
 	live := e.client.Torrents()
 	out := make([]download.Torrent, 0, len(live))
 	for _, t := range live {
@@ -267,6 +276,9 @@ func (e *Engine) RemoveTorrent(
 ) error {
 	ctx, span := tracer.Start(ctx, "bittorrent.remove_torrent")
 	defer span.End()
+	if err := e.awaitRestore(ctx); err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
 
 	t, err := e.torrent(hash)
 	if err != nil {
@@ -359,6 +371,9 @@ func (e *Engine) forget(hash string) {
 }
 
 func (e *Engine) PauseTorrent(ctx context.Context, hash string) error {
+	if err := e.awaitRestore(ctx); err != nil {
+		return err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		return err
@@ -370,6 +385,9 @@ func (e *Engine) PauseTorrent(ctx context.Context, hash string) error {
 }
 
 func (e *Engine) ResumeTorrent(ctx context.Context, hash string) error {
+	if err := e.awaitRestore(ctx); err != nil {
+		return err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		return err
@@ -425,6 +443,9 @@ func (e *Engine) ListFiles(
 	ctx context.Context,
 	hash string,
 ) ([]download.TorrentFile, error) {
+	if err := e.awaitRestore(ctx); err != nil {
+		return nil, err
+	}
 	t, err := e.torrent(hash)
 	if err != nil {
 		return nil, err
@@ -464,6 +485,9 @@ func (e *Engine) SetWantedFiles(
 		return otelx.RecordSpanError(span, errors.New(
 			"builtin set wanted files: refusing to skip every file",
 		))
+	}
+	if err := e.awaitRestore(ctx); err != nil {
+		return otelx.RecordSpanError(span, err)
 	}
 	t, err := e.torrent(hash)
 	if err != nil {

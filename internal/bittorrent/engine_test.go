@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	antorrent "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/bencode"
@@ -367,5 +368,40 @@ var _ = Describe("newPeerSockets", Label("unit", "bittorrent"), func() {
 		})
 		Expect(pc.LocalAddr().(*net.UDPAddr).Port).To(Equal(int(port)))
 		Expect(ln.Addr().(*net.TCPAddr).Port).To(Equal(int(port)))
+	})
+})
+
+var _ = Describe("lookups while boot restores", Label("unit", "bittorrent"), func() {
+	const hash = "0123456789abcdef0123456789abcdef01234567"
+	var e *Engine
+
+	BeforeEach(func() {
+		e = &Engine{
+			client:    newTestClient(GinkgoT().TempDir()),
+			state:     map[string]*torrentState{},
+			refusals:  map[string]string{},
+			restoring: make(chan struct{}),
+			stop:      make(chan struct{}),
+		}
+	})
+
+	It("never reports a session not yet re-added as gone", func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+		_, err := e.GetTorrent(ctx, hash)
+		Expect(err).To(MatchError(context.DeadlineExceeded))
+		Expect(err).NotTo(MatchError(download.ErrTorrentNotFound))
+	})
+
+	It("answers once the restore is done", func() {
+		close(e.restoring)
+		_, err := e.GetTorrent(context.Background(), hash)
+		Expect(err).To(MatchError(download.ErrTorrentNotFound))
+	})
+
+	It("releases a waiting caller when the engine closes", func() {
+		close(e.stop)
+		_, err := e.ListTorrents(context.Background())
+		Expect(err).To(MatchError(errEngineClosed))
 	})
 })

@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"golang.org/x/time/rate"
 
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
@@ -118,12 +119,37 @@ type Engine struct {
 	// download manager why it is gone.
 	refusals map[string]string
 
+	// restoring is closed once boot has re-added every persisted session.
+	// Until then the client holds only some of them, and a missing torrent
+	// reads as ErrTorrentNotFound, which the download manager takes for
+	// "removed by hand" and purges the record: every method that looks a
+	// torrent up waits on it (awaitRestore). nil means nothing to restore.
+	restoring chan struct{}
+
 	stop chan struct{}
 	wg   sync.WaitGroup
 }
 
+var errEngineClosed = errors.New("torrent engine closed")
+
+func (e *Engine) awaitRestore(ctx context.Context) error {
+	if e.restoring == nil {
+		return nil
+	}
+	select {
+	case <-e.restoring:
+		return nil
+	case <-e.stop:
+		return errEngineClosed
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 // New starts the engine from the enabled builtin download-client config
-// entry and re-adds every persisted torrent session.
+// entry and re-adds every persisted torrent session in the background: with
+// hundreds of sessions on network storage that takes minutes, and boot must
+// not wait on it before it listens.
 func New(ctx context.Context, store db.Store) (*Engine, error) {
 	entry, ok := config.BuiltinDownloadClient()
 	if !ok {
@@ -195,28 +221,33 @@ func New(ctx context.Context, store db.Store) (*Engine, error) {
 		state:       map[string]*torrentState{},
 		sample:      map[string]*rateMonitor{},
 		refusals:    map[string]string{},
+		restoring:   make(chan struct{}),
 		stop:        make(chan struct{}),
 	}
 	paths.onRefuse = e.refuseTorrent
-	if err := e.restore(ctx); err != nil {
-		if cerr := e.Close(); cerr != nil {
-			slog.WarnContext(ctx, "engine close after failed restore", "error", cerr)
-		}
-		return nil, fmt.Errorf("restore torrent sessions: %w", err)
-	}
 	if err := e.removals.load(ctx); err != nil {
 		if cerr := e.Close(); cerr != nil {
 			slog.WarnContext(ctx, "engine close after failed load", "error", cerr)
 		}
 		return nil, err
 	}
-	// After restore: a name a restored torrent claimed is that torrent's, and
-	// the retry leaves its files alone.
-	e.removals.retryAll(ctx)
 	e.registerEngineGauges(ctx)
-	e.wg.Go(e.enforceSeedLimits)
-	e.wg.Go(e.dropRedundantSeeders)
-	e.wg.Go(e.sampleRates)
+	e.wg.Go(func() {
+		started := time.Now()
+		if !e.restore(ctx, sessions) {
+			return
+		}
+		close(e.restoring)
+		slog.InfoContext(ctx, "torrent sessions restored",
+			"sessions", len(sessions), "elapsed", time.Since(started))
+		// After restore: a name a restored torrent claimed is that torrent's,
+		// and the retry leaves its files alone. The enforcer retries every
+		// minute, so it starts after this too.
+		e.removals.retryAll(ctx)
+		e.wg.Go(e.enforceSeedLimits)
+		e.wg.Go(e.dropRedundantSeeders)
+		e.wg.Go(e.sampleRates)
+	})
 	return e, nil
 }
 
@@ -596,19 +627,22 @@ func pieceMarkInFlight(t *antorrent.Torrent) bool {
 	return false
 }
 
-// restore re-adds every persisted torrent session. Unrestorable rows are
-// skipped with a warning rather than failing boot.
+// restore re-adds every persisted torrent session and reports whether it got
+// through all of them; it stops early, returning false, once the engine is
+// closing. Unrestorable rows are skipped with a warning rather than failing
+// boot.
 //
 // A row whose stored source no longer parses is deleted: it fails the same way
 // on every boot, and no API can reach a torrent that never goes live. A failed
 // re-add keeps its row — that can be transient, a download mount not ready
 // yet, and deleting on it would lose the torrent for good.
-func (e *Engine) restore(ctx context.Context) error {
-	sessions, err := e.store.ListTorrentSessions(ctx)
-	if err != nil {
-		return err
-	}
+func (e *Engine) restore(ctx context.Context, sessions []*ent.TorrentSession) bool {
 	for _, s := range sessions {
+		select {
+		case <-e.stop:
+			return false
+		default:
+		}
 		spec, _, _, err := specFromSource(download.TorrentSource{
 			Magnet: s.SourceMagnet,
 			Bytes:  s.SourceTorrent,
@@ -679,7 +713,7 @@ func (e *Engine) restore(ctx context.Context) error {
 		// pieces. Data stays gated by the Disallow calls above until resumed.
 		e.startWhenReady(t, s.SeedStopped, s.SourceMagnet != "")
 	}
-	return nil
+	return true
 }
 
 // startWhenReady begins downloading once torrent metadata is known. Magnet

@@ -215,6 +215,9 @@ func newEngineBoundTo(
 	})
 	e, err := New(ctx, store)
 	Expect(err).NotTo(HaveOccurred())
+	// Specs reach into the client directly (e.torrent), which the restore
+	// gate does not cover.
+	Expect(e.awaitRestore(ctx)).To(Succeed())
 	closed := false
 	stop := func() {
 		GinkgoHelper()
@@ -949,7 +952,9 @@ func newUnboundEngineNoPortForwarding(
 		sample:      map[string]*rateMonitor{},
 		stop:        make(chan struct{}),
 	}
-	Expect(e.restore(ctx)).To(Succeed())
+	sessions, err := store.ListTorrentSessions(ctx)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(e.restore(ctx, sessions)).To(BeTrue())
 	e.wg.Go(e.enforceSeedLimits)
 	e.wg.Go(e.sampleRates)
 
