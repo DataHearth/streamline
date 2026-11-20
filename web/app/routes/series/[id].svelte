@@ -111,11 +111,17 @@
 			tab = oneOf(param(p, "tab"), TAB_KEYS, "overview");
 			const season = param(p, "season");
 			seasonsClosed = season === "none";
-			const n = season === null ? Number.NaN : Number(season);
-			// Unset, the show's default is picked once its seasons load.
+			// Number("") is 0: an empty season would open the specials.
+			const n = season ? Number(season) : Number.NaN;
+			// Unset, the season is picked once the show's seasons load: the one
+			// holding a linked episode, else the show's default.
 			selectedSeason = Number.isInteger(n) && n >= 0 ? n : null;
 			const ep = Number(param(p, "episode"));
-			if (!ep) return;
+			if (!ep) {
+				// Back to an entry naming no episode closes the sheet a link opened.
+				focusEpisodeId = null;
+				return;
+			}
 			tab = "episodes";
 			focusEpisodeId = ep;
 		},
@@ -169,6 +175,16 @@
 		// — covers both the initial default and a carry-over from the previously
 		// viewed series, which would otherwise render an empty season strip.
 		if (seasons.some((s) => s.number === selectedSeason)) return;
+		// An episode link naming no season, or one the show does not have, opens
+		// on the season holding the episode.
+		const held =
+			focusEpisodeId === null
+				? undefined
+				: seasons.find((s) => s.episodes?.some((e) => e.id === focusEpisodeId));
+		if (held) {
+			selectedSeason = held.number;
+			return;
+		}
 		if (defaultSeason !== null) selectedSeason = defaultSeason;
 	});
 	let currentSeason = $derived(
