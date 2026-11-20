@@ -44,12 +44,14 @@ type MovieDetails struct {
 	Tagline          string
 	ReleaseDate      string // ISO yyyy-mm-dd, as TMDB returns it
 	OriginalLanguage string // ISO 639-1
-	IMDbID           string // "tt" + digits; empty when TMDB links none
 	// Aliases are TMDB's translated and alternative titles, excluding Title and
 	// OriginalTitle. A film held under its localized title equals none of the
 	// releases named in another language, so matchers compare against these as
 	// well — the movie counterpart of TVResult.Aliases.
 	Aliases []string
+	// TMDB's cross-references, empty when it has none.
+	IMDbID     string
+	WikidataID string
 }
 
 // PersonDetails is one person's biographical record, as either provider
@@ -178,7 +180,10 @@ type TVDetails struct {
 	Seasons    []SeasonInfo
 	Episodes   []EpisodeInfo
 	FirstAired string // ISO yyyy-mm-dd, as TVDB returns it
-	IMDbID     string // "tt" + digits; empty when TVDB links none
+	// TVDB's remoteIds cross-references, zero when none.
+	TMDBID     uint32
+	IMDbID     string
+	WikidataID string
 	// Certification is the content rating for metadata.tmdb_region, empty
 	// when the region is unset or TVDB lists none for it.
 	Certification string
@@ -367,6 +372,8 @@ type ReleaseGroupDetails struct {
 	// CreditsComplete is false when the heavy call failed and the light one
 	// supplied the tracks: the album is hydrated but its credits are not.
 	CreditsComplete bool
+	// Links keyed by Source*: from the release group and the canonical release.
+	ExternalIDs map[string]string
 }
 
 // ArtistMemberInfo is one member of a group.
@@ -410,7 +417,9 @@ type ArtistDetails struct {
 	// DeezerID comes from MusicBrainz's own url-rel, 0 when it has none.
 	DeezerID uint32
 	// WikidataID is the Q-number of the artist's Wikidata item.
-	WikidataID    string
+	WikidataID string
+	// Links keyed by Source*, Wikidata and Deezer aside.
+	ExternalIDs   map[string]string
 	ReleaseGroups []ReleaseGroupInfo
 }
 
@@ -470,6 +479,12 @@ type MusicProvider interface {
 		mbid, edition string,
 	) (*ReleaseGroupDetails, error)
 	ReleaseGroupEditions(ctx context.Context, mbid string) ([]ReleaseEdition, error)
+	// ArtistLinks and AlbumLinks read only url-rels, for the links backfill.
+	ArtistLinks(ctx context.Context, mbid string) (map[string]string, error)
+	AlbumLinks(
+		ctx context.Context,
+		releaseGroup, release string,
+	) (map[string]string, error)
 	SearchReleaseGroups(
 		ctx context.Context,
 		artist, album string,

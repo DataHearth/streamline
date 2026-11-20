@@ -49,6 +49,8 @@ const (
 	FieldDeezerID = "deezer_id"
 	// FieldWikidataID holds the string denoting the wikidata_id field in the database.
 	FieldWikidataID = "wikidata_id"
+	// FieldLinksFetchedAt holds the string denoting the links_fetched_at field in the database.
+	FieldLinksFetchedAt = "links_fetched_at"
 	// FieldQualityProfile holds the string denoting the quality_profile field in the database.
 	FieldQualityProfile = "quality_profile"
 	// FieldLastRefreshedAt holds the string denoting the last_refreshed_at field in the database.
@@ -57,6 +59,8 @@ const (
 	FieldDetailsFetchedAt = "details_fetched_at"
 	// FieldArtSidecarHash holds the string denoting the art_sidecar_hash field in the database.
 	FieldArtSidecarHash = "art_sidecar_hash"
+	// EdgeExternalIds holds the string denoting the external_ids edge name in mutations.
+	EdgeExternalIds = "external_ids"
 	// EdgeAlbums holds the string denoting the albums edge name in mutations.
 	EdgeAlbums = "albums"
 	// EdgeMembers holds the string denoting the members edge name in mutations.
@@ -69,6 +73,13 @@ const (
 	EdgeCoAlbums = "co_albums"
 	// Table holds the table name of the artist in the database.
 	Table = "artists"
+	// ExternalIdsTable is the table that holds the external_ids relation/edge.
+	ExternalIdsTable = "external_ids"
+	// ExternalIdsInverseTable is the table name for the ExternalID entity.
+	// It exists in this package in order to avoid circular dependency with the "externalid" package.
+	ExternalIdsInverseTable = "external_ids"
+	// ExternalIdsColumn is the table column denoting the external_ids relation/edge.
+	ExternalIdsColumn = "artist_id"
 	// AlbumsTable is the table that holds the albums relation/edge.
 	AlbumsTable = "albums"
 	// AlbumsInverseTable is the table name for the Album entity.
@@ -124,6 +135,7 @@ var Columns = []string{
 	FieldGenre,
 	FieldDeezerID,
 	FieldWikidataID,
+	FieldLinksFetchedAt,
 	FieldQualityProfile,
 	FieldLastRefreshedAt,
 	FieldDetailsFetchedAt,
@@ -298,6 +310,11 @@ func ByWikidataID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWikidataID, opts...).ToFunc()
 }
 
+// ByLinksFetchedAt orders the results by the links_fetched_at field.
+func ByLinksFetchedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLinksFetchedAt, opts...).ToFunc()
+}
+
 // ByQualityProfile orders the results by the quality_profile field.
 func ByQualityProfile(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldQualityProfile, opts...).ToFunc()
@@ -316,6 +333,20 @@ func ByDetailsFetchedAt(opts ...sql.OrderTermOption) OrderOption {
 // ByArtSidecarHash orders the results by the art_sidecar_hash field.
 func ByArtSidecarHash(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldArtSidecarHash, opts...).ToFunc()
+}
+
+// ByExternalIdsCount orders the results by external_ids count.
+func ByExternalIdsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newExternalIdsStep(), opts...)
+	}
+}
+
+// ByExternalIds orders the results by external_ids terms.
+func ByExternalIds(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newExternalIdsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
 }
 
 // ByAlbumsCount orders the results by albums count.
@@ -386,6 +417,13 @@ func ByCoAlbums(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newCoAlbumsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
+}
+func newExternalIdsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ExternalIdsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ExternalIdsTable, ExternalIdsColumn),
+	)
 }
 func newAlbumsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(

@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -13,19 +14,23 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/bookedition"
+	"github.com/datahearth/streamline/ent/externalid"
 	"github.com/datahearth/streamline/ent/predicate"
 )
 
 // BookEditionQuery is the builder for querying BookEdition entities.
 type BookEditionQuery struct {
 	config
-	ctx        *QueryContext
-	order      []bookedition.OrderOption
-	inters     []Interceptor
-	predicates []predicate.BookEdition
-	withBook   *BookQuery
-	withFKs    bool
-	modifiers  []func(*sql.Selector)
+	ctx             *QueryContext
+	order           []bookedition.OrderOption
+	inters          []Interceptor
+	predicates      []predicate.BookEdition
+	withBook        *BookQuery
+	withEbookOf     *BookQuery
+	withAudiobookOf *BookQuery
+	withExternalIds *ExternalIDQuery
+	withFKs         bool
+	modifiers       []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -77,6 +82,72 @@ func (_q *BookEditionQuery) QueryBook() *BookQuery {
 			sqlgraph.From(bookedition.Table, bookedition.FieldID, selector),
 			sqlgraph.To(book.Table, book.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, bookedition.BookTable, bookedition.BookColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryEbookOf chains the current query on the "ebook_of" edge.
+func (_q *BookEditionQuery) QueryEbookOf() *BookQuery {
+	query := (&BookClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookedition.Table, bookedition.FieldID, selector),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, bookedition.EbookOfTable, bookedition.EbookOfColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryAudiobookOf chains the current query on the "audiobook_of" edge.
+func (_q *BookEditionQuery) QueryAudiobookOf() *BookQuery {
+	query := (&BookClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookedition.Table, bookedition.FieldID, selector),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, bookedition.AudiobookOfTable, bookedition.AudiobookOfColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryExternalIds chains the current query on the "external_ids" edge.
+func (_q *BookEditionQuery) QueryExternalIds() *ExternalIDQuery {
+	query := (&ExternalIDClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(bookedition.Table, bookedition.FieldID, selector),
+			sqlgraph.To(externalid.Table, externalid.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, bookedition.ExternalIdsTable, bookedition.ExternalIdsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -271,12 +342,15 @@ func (_q *BookEditionQuery) Clone() *BookEditionQuery {
 		return nil
 	}
 	return &BookEditionQuery{
-		config:     _q.config,
-		ctx:        _q.ctx.Clone(),
-		order:      append([]bookedition.OrderOption{}, _q.order...),
-		inters:     append([]Interceptor{}, _q.inters...),
-		predicates: append([]predicate.BookEdition{}, _q.predicates...),
-		withBook:   _q.withBook.Clone(),
+		config:          _q.config,
+		ctx:             _q.ctx.Clone(),
+		order:           append([]bookedition.OrderOption{}, _q.order...),
+		inters:          append([]Interceptor{}, _q.inters...),
+		predicates:      append([]predicate.BookEdition{}, _q.predicates...),
+		withBook:        _q.withBook.Clone(),
+		withEbookOf:     _q.withEbookOf.Clone(),
+		withAudiobookOf: _q.withAudiobookOf.Clone(),
+		withExternalIds: _q.withExternalIds.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -292,6 +366,39 @@ func (_q *BookEditionQuery) WithBook(opts ...func(*BookQuery)) *BookEditionQuery
 		opt(query)
 	}
 	_q.withBook = query
+	return _q
+}
+
+// WithEbookOf tells the query-builder to eager-load the nodes that are connected to
+// the "ebook_of" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *BookEditionQuery) WithEbookOf(opts ...func(*BookQuery)) *BookEditionQuery {
+	query := (&BookClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withEbookOf = query
+	return _q
+}
+
+// WithAudiobookOf tells the query-builder to eager-load the nodes that are connected to
+// the "audiobook_of" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *BookEditionQuery) WithAudiobookOf(opts ...func(*BookQuery)) *BookEditionQuery {
+	query := (&BookClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withAudiobookOf = query
+	return _q
+}
+
+// WithExternalIds tells the query-builder to eager-load the nodes that are connected to
+// the "external_ids" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *BookEditionQuery) WithExternalIds(opts ...func(*ExternalIDQuery)) *BookEditionQuery {
+	query := (&ExternalIDClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withExternalIds = query
 	return _q
 }
 
@@ -374,8 +481,11 @@ func (_q *BookEditionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 		nodes       = []*BookEdition{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [4]bool{
 			_q.withBook != nil,
+			_q.withEbookOf != nil,
+			_q.withAudiobookOf != nil,
+			_q.withExternalIds != nil,
 		}
 	)
 	if _q.withBook != nil {
@@ -411,6 +521,27 @@ func (_q *BookEditionQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 			return nil, err
 		}
 	}
+	if query := _q.withEbookOf; query != nil {
+		if err := _q.loadEbookOf(ctx, query, nodes,
+			func(n *BookEdition) { n.Edges.EbookOf = []*Book{} },
+			func(n *BookEdition, e *Book) { n.Edges.EbookOf = append(n.Edges.EbookOf, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withAudiobookOf; query != nil {
+		if err := _q.loadAudiobookOf(ctx, query, nodes,
+			func(n *BookEdition) { n.Edges.AudiobookOf = []*Book{} },
+			func(n *BookEdition, e *Book) { n.Edges.AudiobookOf = append(n.Edges.AudiobookOf, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withExternalIds; query != nil {
+		if err := _q.loadExternalIds(ctx, query, nodes,
+			func(n *BookEdition) { n.Edges.ExternalIds = []*ExternalID{} },
+			func(n *BookEdition, e *ExternalID) { n.Edges.ExternalIds = append(n.Edges.ExternalIds, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -443,6 +574,98 @@ func (_q *BookEditionQuery) loadBook(ctx context.Context, query *BookQuery, node
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
+	}
+	return nil
+}
+func (_q *BookEditionQuery) loadEbookOf(ctx context.Context, query *BookQuery, nodes []*BookEdition, init func(*BookEdition), assign func(*BookEdition, *Book)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*BookEdition)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Book(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(bookedition.EbookOfColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.book_ebook_edition
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "book_ebook_edition" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "book_ebook_edition" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *BookEditionQuery) loadAudiobookOf(ctx context.Context, query *BookQuery, nodes []*BookEdition, init func(*BookEdition), assign func(*BookEdition, *Book)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*BookEdition)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Book(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(bookedition.AudiobookOfColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.book_audiobook_edition
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "book_audiobook_edition" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "book_audiobook_edition" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *BookEditionQuery) loadExternalIds(ctx context.Context, query *ExternalIDQuery, nodes []*BookEdition, init func(*BookEdition), assign func(*BookEdition, *ExternalID)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*BookEdition)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(externalid.FieldBookEditionID)
+	}
+	query.Where(predicate.ExternalID(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(bookedition.ExternalIdsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.BookEditionID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "book_edition_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

@@ -74,6 +74,7 @@ Hardware encoding through VAAPI is shipped on Linux (`transcoding.hw_accel`, wit
 | API keys with a read-only scope and an expiry | ✅ Shipped |
 | Request system | ✅ Shipped |
 | REST API (OpenAPI 3.0) | ✅ Shipped |
+| Links to other sites on every detail page (IMDb, TMDB, Trakt, Discogs, Spotify, Goodreads…), and every id of a title in one `external_ids` object on the API | ✅ Shipped |
 | OpenTelemetry traces, metrics, logs | ✅ Shipped |
 | Docker images, Helm chart, single binary | ✅ Shipped |
 | Nix flake — package, NixOS module, home-manager module | ✅ Shipped |

@@ -76,11 +76,16 @@ var _ = Describe("Book series covers", Label("e2e"), func() {
 		page := newSessionPage(fmt.Sprintf("/books/series/%d", id))
 		hero := visibleElement(page, "[data-series-cover]")
 		Expect(hero.MustElements("[data-cover-sheet]")).To(HaveLen(3))
-		link := visibleElement(
-			page,
-			`a[href="https://hardcover.app/series/foundation"]`,
-		)
-		Expect(link.MustText()).To(ContainSubstring("5450"))
+		// The hero's outbound link and the Info panel's id row both open the
+		// series on Hardcover; the id row is the one that names it.
+		const hardcover = `a[href="https://hardcover.app/series/foundation"]`
+		visibleElement(page, hardcover)
+		links := page.MustElements(hardcover)
+		texts := make([]string, 0, len(links))
+		for _, l := range links {
+			texts = append(texts, l.MustText())
+		}
+		Expect(texts).To(ContainElement(ContainSubstring("5450")))
 	})
 
 	It(

@@ -9,6 +9,7 @@
 	import { formatBytes } from "@lib/format";
 	import { formatDate, formatRelative } from "@lib/dates";
 	import { cn } from "@lib/cn";
+	import { imdbTitleUrl, tmdbUrl, wikidataUrl } from "@lib/external-links";
 	import {
 		audioSummary,
 		audioLanguages,
@@ -390,21 +391,31 @@
 				<dt class="text-fg-subtle">{i18n.detail_runtime()}</dt>
 				<dd class="text-right font-mono text-fg">{movie.runtime}m</dd>
 			{/if}
-			<dt class="text-fg-subtle">TMDB</dt>
-			<dd class="text-right">
-				<a
-					href="https://www.themoviedb.org/movie/{movie.tmdb_id}"
-					target="_blank"
-					rel="noopener noreferrer"
-					class="inline-flex items-center gap-1 font-mono text-accent-text transition hover:text-accent"
-				>
-					{movie.tmdb_id}
-					<ExternalLink size={11} aria-hidden="true" />
-				</a>
-			</dd>
+			{@render idRow("TMDB", String(movie.tmdb_id), tmdbUrl("movie", movie.tmdb_id))}
+			{#if movie.external_ids?.imdb}
+				{@render idRow("IMDb", movie.external_ids.imdb, imdbTitleUrl(movie.external_ids.imdb))}
+			{/if}
+			{#if movie.external_ids?.wikidata}
+				{@render idRow("Wikidata", movie.external_ids.wikidata, wikidataUrl(movie.external_ids.wikidata))}
+			{/if}
 		</dl>
 	</section>
 </aside>
+
+{#snippet idRow(label: string, value: string, href: string)}
+	<dt class="text-fg-subtle">{label}</dt>
+	<dd class="text-right">
+		<a
+			{href}
+			target="_blank"
+			rel="noopener noreferrer"
+			class="inline-flex items-center gap-1 font-mono text-accent-text transition hover:text-accent"
+		>
+			{value}
+			<ExternalLink size={11} aria-hidden="true" />
+		</a>
+	</dd>
+{/snippet}
 
 {#snippet trackRow(
 	label: string,

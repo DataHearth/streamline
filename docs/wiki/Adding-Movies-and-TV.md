@@ -92,6 +92,14 @@ The detail page is where all of this comes together — cast, artwork, and once 
 
 [![Movie detail](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/movie-detail.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/movie-detail.png)
 
+### Links to other sites
+
+Under the overview, a row of links opens the title elsewhere. The first group are the databases that know it by id — **IMDb**, **TMDB**, **TVDB** (series), **Trakt** and **Wikidata** — and after the divider come the review sites: **Letterboxd** (movies), **Rotten Tomatoes** and **Metacritic**, plus **SensCritique** and **AlloCiné** when the interface is in French.
+
+The ids are cross-referenced from the provider the title was added from: TMDB gives a film its IMDb and Wikidata ids, TVDB gives a series its IMDb, TMDB and Wikidata ids. The Info panel lists each one with its link. Trakt and Letterboxd open the title's own page straight from its TMDB or TVDB id. Rotten Tomatoes, Metacritic, SensCritique and AlloCiné have no address keyed on any of those ids, so their links search the title instead (they show a magnifier, not an arrow). Rotten Tomatoes and Metacritic search the original title (the one the library shows when the original is written in another script, as an anime's or a Korean film's is), the French sites the one the library shows. A Wikidata page lists every other site's id for the work, which makes it the way to reach one that isn't in the row.
+
+A title already in the library gets its new ids at its next metadata refresh (`movie-metadata-refresh`, `tv-metadata-refresh`). Run either job from **Settings → Schedules** to fill them all at once. Until then the row shows the links it can build without them: TMDB, Trakt and Letterboxd for a movie, TVDB and Trakt for a series, and the review searches.
+
 ---
 
 ## How automatic grabbing works

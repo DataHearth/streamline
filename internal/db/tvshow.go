@@ -63,6 +63,7 @@ type CreateTVShowParams struct {
 	QualityProfile string
 	Seasons        []SeasonSeed
 	FirstAired     *time.Time
+	ExternalIDs    ExternalIDs
 }
 
 type UpdateTVShowParams struct {
@@ -89,6 +90,7 @@ type UpdateTVShowMetadataParams struct {
 	Certification string
 	Cast          []metadata.CastMember
 	FirstAired    *time.Time
+	ExternalIDs   ExternalIDs
 }
 
 // UpdateTVShowMetadata persists refreshed provider metadata onto an existing
@@ -106,7 +108,6 @@ func (db *DB) UpdateTVShowMetadata(
 		SetTitle(p.Title).
 		SetOriginalTitle(p.OriginalTitle).
 		SetYear(p.Year).
-		SetImdbID(p.IMDbID).
 		SetOverview(p.Overview).
 		SetNetwork(p.Network).
 		SetCreator(p.Creator).
@@ -115,6 +116,7 @@ func (db *DB) UpdateTVShowMetadata(
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
 		SetCertification(p.Certification).
+		SetImdbID(p.IMDbID).
 		SetNillableFirstAired(p.FirstAired)
 	if p.SeriesStatus != "" {
 		u = u.SetSeriesStatus(tvshow.SeriesStatus(p.SeriesStatus))
@@ -133,6 +135,12 @@ func (db *DB) UpdateTVShowMetadata(
 		CastOwnerSeries,
 		id,
 		p.Cast,
+	); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := replaceExternalIDs(
+		ctx, tx.Client(), ExternalIDsOfSeries, id, p.ExternalIDs,
 	); err != nil {
 		tx.Rollback()
 		return err
@@ -325,7 +333,6 @@ func (db *DB) CreateTVShow(
 		SetYear(p.Year).
 		SetOverview(p.Overview).
 		SetTvdbID(p.TvdbID).
-		SetImdbID(p.IMDbID).
 		SetSeriesStatus(tvshow.SeriesStatus(orDefault(p.SeriesStatus, "continuing"))).
 		SetType(tvshow.Type(orDefault(p.Type, "standard"))).
 		SetNetwork(p.Network).
@@ -335,6 +342,7 @@ func (db *DB) CreateTVShow(
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
 		SetCertification(p.Certification).
+		SetImdbID(p.IMDbID).
 		SetPosterPath(p.PosterPath).
 		SetQualityProfile(p.QualityProfile).
 		SetNillableFirstAired(p.FirstAired).
@@ -378,6 +386,12 @@ func (db *DB) CreateTVShow(
 		CastOwnerSeries,
 		show.ID,
 		p.Cast,
+	); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if err := replaceExternalIDs(
+		ctx, tx.Client(), ExternalIDsOfSeries, show.ID, p.ExternalIDs,
 	); err != nil {
 		tx.Rollback()
 		return nil, err

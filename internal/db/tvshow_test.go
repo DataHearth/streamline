@@ -332,6 +332,37 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got.ImdbID).To(Equal("tt0000002"))
 		})
+		It(
+			"writes the cross-references as TVDB answers, clearing ones it dropped",
+			func() {
+				show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+					Title: "X", Year: 2020, TvdbID: 12,
+					ExternalIDs: ExternalIDs{
+						"tmdb": "1396", "imdb": "tt0903747", "wikidata": "Q1079",
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+				ids, err := store.TitleExternalIDs(ctx, ExternalIDsOfSeries, show.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids).To(Equal(ExternalIDs{
+					"tmdb": "1396", "imdb": "tt0903747", "wikidata": "Q1079",
+				}))
+
+				Expect(
+					store.UpdateTVShowMetadata(
+						ctx,
+						show.ID,
+						UpdateTVShowMetadataParams{
+							Title: "X", Year: 2020,
+							ExternalIDs: ExternalIDs{"imdb": "tt0903747"},
+						},
+					),
+				).To(Succeed())
+				ids, err = store.TitleExternalIDs(ctx, ExternalIDsOfSeries, show.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids).To(Equal(ExternalIDs{"imdb": "tt0903747"}))
+			},
+		)
 	})
 
 	Describe("ListTVShowsStaleSince", func() {

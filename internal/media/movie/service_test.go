@@ -604,6 +604,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				Once()
 			storeMock.UpdateMovieMetadata(
 				mock.Anything, uint32(1), db.UpdateMovieMetadataParams{
+					ExternalIDs:   db.ExternalIDs{"imdb": "", "wikidata": ""},
 					Title:         "New",
 					OriginalTitle: "Nouveau",
 					Overview:      "fresh",
@@ -634,6 +635,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				Once()
 			storeMock.UpdateMovieMetadata(
 				mock.Anything, uint32(2), db.UpdateMovieMetadataParams{
+					ExternalIDs:   db.ExternalIDs{"imdb": "", "wikidata": ""},
 					Title:         "B",
 					OriginalTitle: "B",
 					Year:          2024,
@@ -694,6 +696,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				}, nil).Once()
 			storeMock.UpdateMovieMetadata(
 				mock.Anything, uint32(7), db.UpdateMovieMetadataParams{
+					ExternalIDs:   db.ExternalIDs{"imdb": "", "wikidata": ""},
 					Title:         "The Matrix Reloaded",
 					OriginalTitle: "The Matrix Reloaded",
 					Year:          2003,
@@ -765,6 +768,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				Once()
 			storeMock.UpdateMovieMetadata(
 				mock.Anything, uint32(7), db.UpdateMovieMetadataParams{
+					ExternalIDs:   db.ExternalIDs{"imdb": "", "wikidata": ""},
 					Title:         "New",
 					OriginalTitle: "Nouveau",
 					Year:          2024,

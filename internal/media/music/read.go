@@ -3,7 +3,9 @@ package music
 import (
 	"context"
 	"log/slog"
+	"maps"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 )
@@ -204,6 +207,9 @@ func (s *Service) Detail(
 		v.Size += av.Size
 		v.Albums = append(v.Albums, av)
 	}
+	if err := s.attachExternalIDs(ctx, v); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
 	for _, m := range row.Edges.Members {
 		mv := MemberView{
 			PersonView:  people.person(m.Name, m.Mbid),
@@ -269,7 +275,49 @@ func (s *Service) AlbumDetail(ctx context.Context, id uint32) (*AlbumView, error
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	v := fullAlbum(a, s.progressByAlbum(ctx), people, time.Now())
+	if v.ExternalIDs, err = s.db.TitleExternalIDs(
+		ctx, db.ExternalIDsOfAlbum, a.ID,
+	); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
 	return &v, nil
+}
+
+// ArtistExternalIDs is the wire set: MBID, stored rows, Wikidata and Deezer
+// columns.
+func ArtistExternalIDs(a *ent.Artist, stored db.ExternalIDs) db.ExternalIDs {
+	out := make(db.ExternalIDs, len(stored)+3)
+	maps.Copy(out, stored)
+	out[metadata.SourceMusicBrainz] = a.Mbid
+	if a.WikidataID != "" {
+		out[metadata.SourceWikidata] = a.WikidataID
+	}
+	if a.DeezerID != 0 {
+		out[metadata.SourceDeezer] = strconv.FormatUint(uint64(a.DeezerID), 10)
+	}
+	return out
+}
+
+// attachExternalIDs fills the artist's and every album's ids in two reads.
+func (s *Service) attachExternalIDs(ctx context.Context, v *ArtistView) error {
+	ids, err := s.db.TitleExternalIDs(ctx, db.ExternalIDsOfArtist, v.Artist.ID)
+	if err != nil {
+		return err
+	}
+	v.ExternalIDs = ArtistExternalIDs(v.Artist, ids)
+
+	albumIDs := make([]uint32, 0, len(v.Albums))
+	for _, a := range v.Albums {
+		albumIDs = append(albumIDs, a.Album.ID)
+	}
+	byAlbum, err := s.db.ExternalIDsFor(ctx, db.ExternalIDsOfAlbum, albumIDs)
+	if err != nil {
+		return err
+	}
+	for i := range v.Albums {
+		v.Albums[i].ExternalIDs = byAlbum[v.Albums[i].Album.ID]
+	}
+	return nil
 }
 
 // peopleIndex resolves a MusicBrainz artist id to the library artist it

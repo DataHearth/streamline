@@ -241,6 +241,13 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 	})
 
 	Describe("RefreshStale", func() {
+		// The edition links backfill ends every run, over the editions the
+		// seeded books' slots follow; these specs are about the refreshes.
+		BeforeEach(func() {
+			f.meta.EXPECT().EditionLinks(anyCtx, anyCtx).
+				Return(map[uint32]map[string]string{}, nil).Maybe()
+		})
+
 		stale := func(b *ent.Book) {
 			GinkgoHelper()
 			f.client.Book.UpdateOneID(b.ID).
@@ -435,6 +442,13 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 	})
 
 	Describe("hydration", func() {
+		// These run RefreshStale too, which ends in the edition links
+		// backfill over the volumes the stubs became.
+		BeforeEach(func() {
+			f.meta.EXPECT().EditionLinks(anyCtx, anyCtx).
+				Return(map[uint32]map[string]string{}, nil).Maybe()
+		})
+
 		series := func() *ent.BookSeries {
 			s, _, err := f.store.CreateSeries(f.ctx, dbSeriesWithStubs())
 			Expect(err).NotTo(HaveOccurred())
@@ -551,3 +565,65 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 		})
 	})
 })
+
+var _ = Describe(
+	"Edition links backfill",
+	Label("unit", "integration", "books"),
+	func() {
+		var f *fixture
+
+		BeforeEach(func() {
+			f = newFixture()
+		})
+
+		It(
+			"reads the followed editions once, in one request, and never again",
+			func() {
+				b := f.addBook(1, "Elantris", "")
+				var asked [][]uint32
+				f.meta.EXPECT().EditionLinks(anyCtx, anyCtx).
+					RunAndReturn(func(_ context.Context, ids []uint32) (map[uint32]map[string]string, error) {
+						asked = append(asked, ids)
+						out := map[uint32]map[string]string{}
+						for _, id := range ids {
+							out[id] = map[string]string{
+								metadata.SourceGoodreads: "34168383",
+							}
+						}
+						return out, nil
+					}).
+					Once()
+
+				f.svc.backfillEditionLinks(f.ctx)
+				// The strict mock carries one call: a second pass asks nothing.
+				f.svc.backfillEditionLinks(f.ctx)
+
+				Expect(asked).To(HaveLen(1))
+				row := f.reloadBook(b.ID)
+				Expect(row.Edges.EbookEdition).NotTo(BeNil())
+				Expect(
+					asked[0],
+				).To(ContainElement(row.Edges.EbookEdition.HardcoverEditionID))
+				ids, err := f.store.TitleExternalIDs(
+					f.ctx,
+					db.ExternalIDsOfBookEdition,
+					row.Edges.EbookEdition.ID,
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids).To(Equal(db.ExternalIDs{"goodreads": "34168383"}))
+			},
+		)
+
+		It("stops on a rate limit and leaves the editions for the next run", func() {
+			b := f.addBook(1, "Elantris", "")
+			f.meta.EXPECT().EditionLinks(anyCtx, anyCtx).
+				Return(nil, &metadata.RateLimitedError{RetryAfter: time.Minute}).
+				Once()
+
+			f.svc.backfillEditionLinks(f.ctx)
+
+			row := f.reloadBook(b.ID)
+			Expect(row.Edges.EbookEdition.LinksFetchedAt).To(BeNil())
+		})
+	},
+)

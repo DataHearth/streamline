@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -173,6 +174,7 @@ func (s *Service) Add(
 		QualityProfile: qualityProfile,
 		Seasons:        seedSeasons(d),
 		FirstAired:     metadata.ParseISODate(d.FirstAired),
+		ExternalIDs:    ExternalIDs(d),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create tv show: %w", err)
@@ -1043,6 +1045,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 		Certification: d.Certification,
 		Cast:          cast,
 		FirstAired:    metadata.ParseISODate(d.FirstAired),
+		ExternalIDs:   ExternalIDs(d),
 	}); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
@@ -1181,6 +1184,7 @@ func (s *Service) Reidentify(
 		Certification: d.Certification,
 		Cast:          cast,
 		FirstAired:    metadata.ParseISODate(d.FirstAired),
+		ExternalIDs:   ExternalIDs(d),
 	}); err != nil {
 		return nil, nil, otelx.RecordSpanError(span, err)
 	}
@@ -1460,4 +1464,17 @@ type Counts struct {
 	// badge and the dashboard read them, and neither knows the list's state.
 	WantedEpisodes      int
 	DownloadingEpisodes int
+}
+
+// ExternalIDs is what a series stores of TVDB's cross-references, the map
+// every metadata write and the lookup detail build.
+func ExternalIDs(d *metadata.TVDetails) db.ExternalIDs {
+	ids := db.ExternalIDs{
+		metadata.SourceIMDb:     d.IMDbID,
+		metadata.SourceWikidata: d.WikidataID,
+	}
+	if d.TMDBID != 0 {
+		ids[metadata.SourceTMDB] = strconv.FormatUint(uint64(d.TMDBID), 10)
+	}
+	return ids
 }

@@ -17,6 +17,7 @@
 	let {
 		release: r,
 		artistId,
+		artistName = "",
 		canEdit = false,
 		onSearch,
 		onManualSearch,
@@ -31,6 +32,8 @@
 		release: Release;
 		// The artist whose page the release is on.
 		artistId: number;
+		// For the release links' searches.
+		artistName?: string;
 		canEdit?: boolean;
 		onSearch: () => void;
 		onManualSearch: () => void;
@@ -191,6 +194,6 @@
 	</div>
 
 	<div class="mt-6">
-		<ReleaseCredits release={r} />
+		<ReleaseCredits release={r} {artistName} />
 	</div>
 </section>

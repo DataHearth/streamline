@@ -44,6 +44,8 @@ func (Artist) Fields() []ent.Field {
 		field.String("genre").Optional(),
 		field.Uint32("deezer_id").Optional(),
 		field.String("wikidata_id").Optional(),
+		// links_fetched_at NULL is the links backfill's work list.
+		field.Time("links_fetched_at").Optional().Nillable(),
 		field.String("quality_profile").Optional(),
 		field.Time("last_refreshed_at").Optional().Nillable(),
 		// Stamped once the overview and photo steps have run, so neither is
@@ -58,6 +60,8 @@ func (Artist) Fields() []ent.Field {
 
 func (Artist) Edges() []ent.Edge {
 	return []ent.Edge{
+		edge.To("external_ids", ExternalID.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("albums", Album.Type).
 			Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("members", ArtistMember.Type).

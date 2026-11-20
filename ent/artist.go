@@ -52,6 +52,8 @@ type Artist struct {
 	DeezerID uint32 `json:"deezer_id,omitempty"`
 	// WikidataID holds the value of the "wikidata_id" field.
 	WikidataID string `json:"wikidata_id,omitempty"`
+	// LinksFetchedAt holds the value of the "links_fetched_at" field.
+	LinksFetchedAt *time.Time `json:"links_fetched_at,omitempty"`
 	// QualityProfile holds the value of the "quality_profile" field.
 	QualityProfile string `json:"quality_profile,omitempty"`
 	// LastRefreshedAt holds the value of the "last_refreshed_at" field.
@@ -68,6 +70,8 @@ type Artist struct {
 
 // ArtistEdges holds the relations/edges for other nodes in the graph.
 type ArtistEdges struct {
+	// ExternalIds holds the value of the external_ids edge.
+	ExternalIds []*ExternalID `json:"external_ids,omitempty"`
 	// Albums holds the value of the albums edge.
 	Albums []*Album `json:"albums,omitempty"`
 	// Members holds the value of the members edge.
@@ -80,13 +84,22 @@ type ArtistEdges struct {
 	CoAlbums []*Album `json:"co_albums,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [6]bool
+}
+
+// ExternalIdsOrErr returns the ExternalIds value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArtistEdges) ExternalIdsOrErr() ([]*ExternalID, error) {
+	if e.loadedTypes[0] {
+		return e.ExternalIds, nil
+	}
+	return nil, &NotLoadedError{edge: "external_ids"}
 }
 
 // AlbumsOrErr returns the Albums value or an error if the edge
 // was not loaded in eager-loading.
 func (e ArtistEdges) AlbumsOrErr() ([]*Album, error) {
-	if e.loadedTypes[0] {
+	if e.loadedTypes[1] {
 		return e.Albums, nil
 	}
 	return nil, &NotLoadedError{edge: "albums"}
@@ -95,7 +108,7 @@ func (e ArtistEdges) AlbumsOrErr() ([]*Album, error) {
 // MembersOrErr returns the Members value or an error if the edge
 // was not loaded in eager-loading.
 func (e ArtistEdges) MembersOrErr() ([]*ArtistMember, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[2] {
 		return e.Members, nil
 	}
 	return nil, &NotLoadedError{edge: "members"}
@@ -104,7 +117,7 @@ func (e ArtistEdges) MembersOrErr() ([]*ArtistMember, error) {
 // DownloadRecordsOrErr returns the DownloadRecords value or an error if the edge
 // was not loaded in eager-loading.
 func (e ArtistEdges) DownloadRecordsOrErr() ([]*DownloadRecord, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.DownloadRecords, nil
 	}
 	return nil, &NotLoadedError{edge: "download_records"}
@@ -113,7 +126,7 @@ func (e ArtistEdges) DownloadRecordsOrErr() ([]*DownloadRecord, error) {
 // EventsOrErr returns the Events value or an error if the edge
 // was not loaded in eager-loading.
 func (e ArtistEdges) EventsOrErr() ([]*MediaEvent, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[4] {
 		return e.Events, nil
 	}
 	return nil, &NotLoadedError{edge: "events"}
@@ -122,7 +135,7 @@ func (e ArtistEdges) EventsOrErr() ([]*MediaEvent, error) {
 // CoAlbumsOrErr returns the CoAlbums value or an error if the edge
 // was not loaded in eager-loading.
 func (e ArtistEdges) CoAlbumsOrErr() ([]*Album, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[5] {
 		return e.CoAlbums, nil
 	}
 	return nil, &NotLoadedError{edge: "co_albums"}
@@ -139,7 +152,7 @@ func (*Artist) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case artist.FieldMbid, artist.FieldName, artist.FieldSortName, artist.FieldOverview, artist.FieldOverviewSource, artist.FieldOverviewFr, artist.FieldOverviewSourceFr, artist.FieldMonitor, artist.FieldType, artist.FieldOrigin, artist.FieldGenre, artist.FieldWikidataID, artist.FieldQualityProfile, artist.FieldArtSidecarHash:
 			values[i] = new(sql.NullString)
-		case artist.FieldCreateTime, artist.FieldUpdateTime, artist.FieldLastRefreshedAt, artist.FieldDetailsFetchedAt:
+		case artist.FieldCreateTime, artist.FieldUpdateTime, artist.FieldLinksFetchedAt, artist.FieldLastRefreshedAt, artist.FieldDetailsFetchedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -266,6 +279,13 @@ func (_m *Artist) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.WikidataID = value.String
 			}
+		case artist.FieldLinksFetchedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field links_fetched_at", values[i])
+			} else if value.Valid {
+				_m.LinksFetchedAt = new(time.Time)
+				*_m.LinksFetchedAt = value.Time
+			}
 		case artist.FieldQualityProfile:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field quality_profile", values[i])
@@ -303,6 +323,11 @@ func (_m *Artist) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Artist) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryExternalIds queries the "external_ids" edge of the Artist entity.
+func (_m *Artist) QueryExternalIds() *ExternalIDQuery {
+	return NewArtistClient(_m.config).QueryExternalIds(_m)
 }
 
 // QueryAlbums queries the "albums" edge of the Artist entity.
@@ -403,6 +428,11 @@ func (_m *Artist) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("wikidata_id=")
 	builder.WriteString(_m.WikidataID)
+	builder.WriteString(", ")
+	if v := _m.LinksFetchedAt; v != nil {
+		builder.WriteString("links_fetched_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("quality_profile=")
 	builder.WriteString(_m.QualityProfile)

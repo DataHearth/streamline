@@ -30,6 +30,7 @@ type CreateMovieParams struct {
 	Aliases        []string
 	Cast           []metadata.CastMember
 	ReleaseDate    *time.Time
+	ExternalIDs    ExternalIDs
 }
 
 func (db *DB) CreateMovie(
@@ -77,6 +78,12 @@ func (db *DB) CreateMovie(
 		CastOwnerMovie,
 		m.ID,
 		p.Cast,
+	); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if err := replaceExternalIDs(
+		ctx, tx.Client(), ExternalIDsOfMovie, m.ID, p.ExternalIDs,
 	); err != nil {
 		tx.Rollback()
 		return nil, err
@@ -485,6 +492,7 @@ type UpdateMovieMetadataParams struct {
 	Aliases       []string
 	Cast          []metadata.CastMember
 	ReleaseDate   *time.Time
+	ExternalIDs   ExternalIDs
 }
 
 // UpdateMovieMetadata updates only the TMDB-sourced metadata fields. Status and
@@ -503,12 +511,12 @@ func (db *DB) UpdateMovieMetadata(
 		SetTitle(p.Title).
 		SetOriginalTitle(p.OriginalTitle).
 		SetYear(p.Year).
-		SetImdbID(p.IMDbID).
 		SetOverview(p.Overview).
 		SetRuntime(p.Runtime).
 		SetRating(p.Rating).
 		SetGenres(p.Genres).
 		SetAliases(p.Aliases).
+		SetImdbID(p.IMDbID).
 		SetNillableReleaseDate(p.ReleaseDate).
 		SetLastRefreshedAt(time.Now()).
 		Exec(ctx); err != nil {
@@ -516,6 +524,12 @@ func (db *DB) UpdateMovieMetadata(
 		return err
 	}
 	if err := replaceCast(ctx, tx.Client(), CastOwnerMovie, id, p.Cast); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := replaceExternalIDs(
+		ctx, tx.Client(), ExternalIDsOfMovie, id, p.ExternalIDs,
+	); err != nil {
 		tx.Rollback()
 		return err
 	}

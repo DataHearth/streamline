@@ -125,6 +125,11 @@ func Asin(v string) predicate.BookEdition {
 	return predicate.BookEdition(sql.FieldEQ(FieldAsin, v))
 }
 
+// LinksFetchedAt applies equality check predicate on the "links_fetched_at" field. It's identical to LinksFetchedAtEQ.
+func LinksFetchedAt(v time.Time) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldEQ(FieldLinksFetchedAt, v))
+}
+
 // Popularity applies equality check predicate on the "popularity" field. It's identical to PopularityEQ.
 func Popularity(v uint32) predicate.BookEdition {
 	return predicate.BookEdition(sql.FieldEQ(FieldPopularity, v))
@@ -915,6 +920,56 @@ func AsinContainsFold(v string) predicate.BookEdition {
 	return predicate.BookEdition(sql.FieldContainsFold(FieldAsin, v))
 }
 
+// LinksFetchedAtEQ applies the EQ predicate on the "links_fetched_at" field.
+func LinksFetchedAtEQ(v time.Time) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldEQ(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtNEQ applies the NEQ predicate on the "links_fetched_at" field.
+func LinksFetchedAtNEQ(v time.Time) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldNEQ(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtIn applies the In predicate on the "links_fetched_at" field.
+func LinksFetchedAtIn(vs ...time.Time) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldIn(FieldLinksFetchedAt, vs...))
+}
+
+// LinksFetchedAtNotIn applies the NotIn predicate on the "links_fetched_at" field.
+func LinksFetchedAtNotIn(vs ...time.Time) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldNotIn(FieldLinksFetchedAt, vs...))
+}
+
+// LinksFetchedAtGT applies the GT predicate on the "links_fetched_at" field.
+func LinksFetchedAtGT(v time.Time) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldGT(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtGTE applies the GTE predicate on the "links_fetched_at" field.
+func LinksFetchedAtGTE(v time.Time) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldGTE(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtLT applies the LT predicate on the "links_fetched_at" field.
+func LinksFetchedAtLT(v time.Time) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldLT(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtLTE applies the LTE predicate on the "links_fetched_at" field.
+func LinksFetchedAtLTE(v time.Time) predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldLTE(FieldLinksFetchedAt, v))
+}
+
+// LinksFetchedAtIsNil applies the IsNil predicate on the "links_fetched_at" field.
+func LinksFetchedAtIsNil() predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldIsNull(FieldLinksFetchedAt))
+}
+
+// LinksFetchedAtNotNil applies the NotNil predicate on the "links_fetched_at" field.
+func LinksFetchedAtNotNil() predicate.BookEdition {
+	return predicate.BookEdition(sql.FieldNotNull(FieldLinksFetchedAt))
+}
+
 // PopularityEQ applies the EQ predicate on the "popularity" field.
 func PopularityEQ(v uint32) predicate.BookEdition {
 	return predicate.BookEdition(sql.FieldEQ(FieldPopularity, v))
@@ -970,6 +1025,75 @@ func HasBook() predicate.BookEdition {
 func HasBookWith(preds ...predicate.Book) predicate.BookEdition {
 	return predicate.BookEdition(func(s *sql.Selector) {
 		step := newBookStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasEbookOf applies the HasEdge predicate on the "ebook_of" edge.
+func HasEbookOf() predicate.BookEdition {
+	return predicate.BookEdition(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, EbookOfTable, EbookOfColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasEbookOfWith applies the HasEdge predicate on the "ebook_of" edge with a given conditions (other predicates).
+func HasEbookOfWith(preds ...predicate.Book) predicate.BookEdition {
+	return predicate.BookEdition(func(s *sql.Selector) {
+		step := newEbookOfStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasAudiobookOf applies the HasEdge predicate on the "audiobook_of" edge.
+func HasAudiobookOf() predicate.BookEdition {
+	return predicate.BookEdition(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, true, AudiobookOfTable, AudiobookOfColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAudiobookOfWith applies the HasEdge predicate on the "audiobook_of" edge with a given conditions (other predicates).
+func HasAudiobookOfWith(preds ...predicate.Book) predicate.BookEdition {
+	return predicate.BookEdition(func(s *sql.Selector) {
+		step := newAudiobookOfStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasExternalIds applies the HasEdge predicate on the "external_ids" edge.
+func HasExternalIds() predicate.BookEdition {
+	return predicate.BookEdition(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ExternalIdsTable, ExternalIdsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasExternalIdsWith applies the HasEdge predicate on the "external_ids" edge with a given conditions (other predicates).
+func HasExternalIdsWith(preds ...predicate.ExternalID) predicate.BookEdition {
+	return predicate.BookEdition(func(s *sql.Selector) {
+		step := newExternalIdsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

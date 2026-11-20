@@ -688,6 +688,10 @@ var _ = Describe(
 					Return(&ent.Movie{ID: movieID, Title: "Film", Year: 2020, TmdbID: 43}, nil).
 					Once()
 				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.ExternalIDsOfMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
+				app.store.EXPECT().
 					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return([]db.CastEntry{
 						{PersonID: 1, Name: "Lead", Character: "Hero"},
@@ -733,6 +737,10 @@ var _ = Describe(
 						Status: movie.StatusAvailable,
 					}, nil).
 					Once()
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.ExternalIDsOfMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
 				app.store.EXPECT().
 					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return(nil, nil).
@@ -782,6 +790,10 @@ var _ = Describe(
 						Status: movie.StatusWanted,
 					}, nil).
 					Once()
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.ExternalIDsOfMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
 				app.store.EXPECT().
 					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return(nil, nil).
@@ -838,6 +850,10 @@ var _ = Describe(
 						QualityProfile: "default",
 					}, nil).
 					Once()
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.ExternalIDsOfMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
 				app.store.EXPECT().
 					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return(nil, nil).
@@ -935,6 +951,10 @@ var _ = Describe(
 					ListMediaFilesByMovieID(mock.Anything, movieID).
 					Return(nil, nil).
 					Once()
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.ExternalIDsOfMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Maybe()
 				app.store.EXPECT().
 					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
 					Return([]db.CastEntry{{
@@ -1081,6 +1101,10 @@ var _ = Describe(
 						Status: movie.StatusAvailable,
 					}, nil).
 					Once()
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.ExternalIDsOfMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
+					Once()
 
 				body := `{"status": "available"}`
 				req, err := http.NewRequest(
@@ -1115,6 +1139,10 @@ var _ = Describe(
 						TmdbID: 102,
 						Status: movie.StatusFailed,
 					}, nil).
+					Once()
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.ExternalIDsOfMovie, movieID).
+					Return(db.ExternalIDs{}, nil).
 					Once()
 
 				req, err := http.NewRequest(
@@ -1207,6 +1235,11 @@ var _ = Describe(
 						Status: movie.StatusAvailable,
 					}, nil).
 					Once()
+				// The answer is the movie's detail, its external ids included.
+				app.store.EXPECT().
+					TitleExternalIDs(mock.Anything, db.ExternalIDsOfMovie, uint32(5)).
+					Return(db.ExternalIDs{"imdb": "tt0137523"}, nil).
+					Once()
 
 				resp := app.do(app.req(
 					http.MethodPost,
@@ -1220,6 +1253,9 @@ var _ = Describe(
 				var refreshed Movie
 				Expect(json.NewDecoder(resp.Body).Decode(&refreshed)).To(Succeed())
 				Expect(refreshed.Title).To(Equal("Fight Club"))
+				Expect(refreshed.ExternalIds).NotTo(BeNil())
+				Expect(refreshed.ExternalIds.Imdb).To(HaveValue(Equal("tt0137523")))
+				Expect(refreshed.ExternalIds.Tmdb).To(HaveValue(Equal("550")))
 			})
 		})
 

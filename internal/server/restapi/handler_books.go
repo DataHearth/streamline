@@ -241,7 +241,12 @@ func (s *Server) ListBooks(
 	}
 	items := make([]ShelfItem, 0, len(res.Rows))
 	for _, r := range res.Rows {
-		items = append(items, toShelfItem(r, res.Progress))
+		item := toShelfItem(r, res.Progress)
+		// The Hardcover id rides the shelf row, so this costs no query.
+		if want := req.Params.WithExternalIds; want != nil && *want {
+			item.ExternalIds = hardcoverIDs(r.HardcoverID)
+		}
+		items = append(items, item)
 	}
 	return ListBooks200JSONResponse{
 		Items: items,
@@ -386,6 +391,11 @@ func (s *Server) GetBook(
 	}
 	progress := s.books.Progress(ctx, []uint32{row.ID})[row.ID]
 	out := toAPIBook(row, progress)
+	if err := s.attachEditionLinks(ctx, &out, row); err != nil {
+		return GetBook500JSONResponse{
+			InternalErrorJSONResponse: errInternal(ctx, err),
+		}, nil
+	}
 	if claims := auth.ClaimsFromContext(ctx); claims != nil {
 		state := s.books.SendState(ctx, claims.UserID, row)
 		out.EbookSend = &BookSendState{Ok: state.OK, Reason: optString(state.Reason)}
@@ -448,7 +458,9 @@ func (s *Server) PatchBook(
 	}
 	progress := s.books.Progress(ctx, []uint32{row.ID})[row.ID]
 	return PatchBook200JSONResponse{
-		BookDetailJSONResponse: BookDetailJSONResponse(toAPIBook(row, progress)),
+		BookDetailJSONResponse: BookDetailJSONResponse(
+			s.bookAfterWrite(ctx, row, progress),
+		),
 	}, nil
 }
 
@@ -579,7 +591,9 @@ func (s *Server) RefreshBook(
 	}
 	progress := s.books.Progress(ctx, []uint32{row.ID})[row.ID]
 	return RefreshBook200JSONResponse{
-		BookDetailJSONResponse: BookDetailJSONResponse(toAPIBook(row, progress)),
+		BookDetailJSONResponse: BookDetailJSONResponse(
+			s.bookAfterWrite(ctx, row, progress),
+		),
 	}, nil
 }
 

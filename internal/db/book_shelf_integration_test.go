@@ -162,6 +162,11 @@ var _ = Describe("Book shelf", Label("integration", "db"), func() {
 				"series:One Piece",
 				"book:Warbreaker",
 			}))
+			// Both arms carry the row's Hardcover id, which the API's
+			// external_ids reads without a query of its own.
+			for _, r := range rows {
+				Expect(r.HardcoverID).NotTo(BeZero(), r.Type+":"+r.Title)
+			}
 		})
 
 		It("derives a book's status and slot states", func() {
