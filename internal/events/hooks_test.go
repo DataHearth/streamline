@@ -57,6 +57,78 @@ var _ = Describe("hooks via Register", Label("integration", "events"), func() {
 		).To(HaveKeyWithValue("release_title", "Fight.Club.1999.1080p.BluRay-X"))
 	})
 
+	It("names the record a grab and its status changes came from", func() {
+		movie := client.Movie.Create().
+			SetTitle("Heat").
+			SetOriginalTitle("Heat").
+			SetYear(1995).
+			SetTmdbID(949).
+			SaveX(ctx)
+
+		dl := client.DownloadRecord.Create().
+			SetMovieID(movie.ID).
+			SetTitle("Heat.1995.1080p").
+			SaveX(ctx)
+		client.DownloadRecord.UpdateOne(dl).
+			SetStatus(downloadrecord.StatusFailed).
+			SetFailureReason("stalled").
+			SaveX(ctx)
+
+		for _, t := range []Type{TypeGrabbed, TypeDownloadFailed} {
+			evs := eventsOfType(ctx, client, t)
+			Expect(evs).To(HaveLen(1), string(t))
+			Expect(DownloadID(evs[0].Payload)).To(Equal(dl.ID), string(t))
+		}
+	})
+
+	It("names the importer's record on the imported row of a file it files", func() {
+		movie := client.Movie.Create().
+			SetTitle("Ronin").
+			SetOriginalTitle("Ronin").
+			SetYear(1998).
+			SetTmdbID(8195).
+			SaveX(ctx)
+		dl := client.DownloadRecord.Create().
+			SetMovieID(movie.ID).
+			SetTitle("Ronin.1998.1080p").
+			SaveX(ctx)
+
+		client.MediaFile.Create().
+			SetMovieID(movie.ID).
+			SetPath("/movies/Ronin (1998)/Ronin.mkv").
+			SetSize(1).
+			SaveX(WithDownloadRecord(ctx, dl.ID))
+
+		evs := eventsOfType(ctx, client, TypeImported)
+		Expect(evs).To(HaveLen(1))
+		Expect(DownloadID(evs[0].Payload)).To(Equal(dl.ID))
+	})
+
+	It("does not lend the importer's record to another record's event", func() {
+		movie := client.Movie.Create().
+			SetTitle("Collateral").
+			SetOriginalTitle("Collateral").
+			SetYear(2004).
+			SetTmdbID(1538).
+			SaveX(ctx)
+		other := client.DownloadRecord.Create().
+			SetMovieID(movie.ID).
+			SetTitle("Collateral.2004.720p").
+			SaveX(ctx)
+
+		upgrade := client.DownloadRecord.Create().
+			SetMovieID(movie.ID).
+			SetTitle("Collateral.2004.2160p").
+			SaveX(WithDownloadRecord(ctx, other.ID))
+
+		evs := eventsOfType(ctx, client, TypeGrabbed)
+		ids := make([]uint32, 0, len(evs))
+		for _, e := range evs {
+			ids = append(ids, DownloadID(e.Payload))
+		}
+		Expect(ids).To(ConsistOf(other.ID, upgrade.ID))
+	})
+
 	It("emits download_completed on status transition to completed", func() {
 		movie := client.Movie.Create().
 			SetTitle("Inception").

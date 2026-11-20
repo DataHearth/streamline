@@ -154,6 +154,24 @@ func (s *Server) ListDownloadHistory(
 	}, nil
 }
 
+// GetHistoryItem is one history row, for a link to a record the history's
+// loaded pages do not reach.
+func (s *Server) GetHistoryItem(
+	ctx context.Context,
+	request GetHistoryItemRequestObject,
+) (GetHistoryItemResponseObject, error) {
+	rec, err := s.store.FindDownloadHistoryEntry(ctx, request.Id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return GetHistoryItem404JSONResponse{
+				NotFoundJSONResponse: errNotFound("download record not in history"),
+			}, nil
+		}
+		return nil, err
+	}
+	return GetHistoryItem200JSONResponse(toHistoryEntry(rec)), nil
+}
+
 func (s *Server) DeleteHistoryItem(
 	ctx context.Context,
 	request DeleteHistoryItemRequestObject,
