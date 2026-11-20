@@ -10,6 +10,7 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entimportscanshow "github.com/datahearth/streamline/ent/importscanshow"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/ffmpeg"
 	"github.com/datahearth/streamline/internal/library"
@@ -106,11 +107,13 @@ type Service struct {
 	movieSvc    *movie.Service
 	seriesAdder SeriesAdder
 	ms          mediaserver.Refresher
-	moviePath   string
-	seriesPath  string
-	musicmeta   metadata.MusicProvider
-	musicAdder  MusicAdder
-	prober      ffmpeg.Prober
+	// moviePath and seriesPath pin a library root when non-empty. Empty reads
+	// the live config per call; see movieRoot and seriesRoot.
+	moviePath  string
+	seriesPath string
+	musicmeta  metadata.MusicProvider
+	musicAdder MusicAdder
+	prober     ffmpeg.Prober
 }
 
 // Option tunes optional collaborators of the bulk-import service.
@@ -123,7 +126,10 @@ func WithProber(p ffmpeg.Prober) Option {
 	return func(s *Service) { s.prober = p }
 }
 
-// NewService constructs the bulk-import service.
+// NewService constructs the bulk-import service. An empty moviePath or
+// seriesPath follows library.movie_path / library.series_path as the config
+// holds them at each call, which is what the running app wants: a path
+// migration re-points a root with no restart. A non-empty one pins that root.
 func NewService(
 	store db.Store,
 	meta metadata.Provider,
@@ -159,6 +165,22 @@ func NewService(
 		o(s)
 	}
 	return s
+}
+
+// movieRoot is the movie library root a scan or commit works with.
+func (s *Service) movieRoot() string {
+	if s.moviePath != "" {
+		return s.moviePath
+	}
+	return config.Get().Library.MoviePath
+}
+
+// seriesRoot is the series library root a scan or commit works with.
+func (s *Service) seriesRoot() string {
+	if s.seriesPath != "" {
+		return s.seriesPath
+	}
+	return config.Get().Library.SeriesPath
 }
 
 // AbortInflight is the boot-time helper. Called from wire.go before the HTTP server starts.

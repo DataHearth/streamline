@@ -32,10 +32,13 @@ func (s *Service) RunOrphanScan(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "hygiene.orphan_scan")
 	defer span.End()
 
-	if _, err := os.Stat(s.cfg.MoviePath); err != nil {
+	// Read once: a path migration can persist a new root mid-pass, and the
+	// orphans found under one root must not be queued against another.
+	root := s.lib().MoviePath
+	if _, err := os.Stat(root); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			slog.InfoContext(ctx, "library path missing; skipping orphan scan",
-				"path", s.cfg.MoviePath)
+				"path", root)
 			return nil
 		}
 		return otelx.RecordSpanError(span, fmt.Errorf("stat library root: %w", err))
@@ -60,7 +63,7 @@ func (s *Service) RunOrphanScan(ctx context.Context) error {
 	var queue []queuedOrphan
 	candidates := 0
 	walkErr := filepath.WalkDir(
-		s.cfg.MoviePath,
+		root,
 		func(p string, d fs.DirEntry, err error) error {
 			if err != nil {
 				slog.WarnContext(ctx, "walk error", "path", p, "error", err)
@@ -132,7 +135,7 @@ func (s *Service) RunOrphanScan(ctx context.Context) error {
 	}
 
 	if len(queue) > 0 {
-		if err := s.queueAsImportScan(ctx, queue); err != nil {
+		if err := s.queueAsImportScan(ctx, root, queue); err != nil {
 			return otelx.RecordSpanError(span, err)
 		}
 	}
@@ -269,6 +272,7 @@ func (s *Service) handleOrphan(
 
 func (s *Service) queueAsImportScan(
 	ctx context.Context,
+	root string,
 	queue []queuedOrphan,
 ) error {
 	fileParams := make([]db.CreateImportScanFileParams, 0, len(queue))
@@ -296,7 +300,7 @@ func (s *Service) queueAsImportScan(
 	// minting a fresh scan each run. Orphans trickle in across runs (a large
 	// or migrated library classifies over several passes), and one directory
 	// should surface as one review entry, not a new one on every restart.
-	scanID, err := s.openReviewScanID(ctx, s.cfg.MoviePath, entimportscan.KindMovie)
+	scanID, err := s.openReviewScanID(ctx, root, entimportscan.KindMovie)
 	if err != nil {
 		return err
 	}
