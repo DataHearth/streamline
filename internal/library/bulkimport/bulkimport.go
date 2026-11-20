@@ -111,6 +111,8 @@ type Service struct {
 	musicmeta   metadata.MusicProvider
 	musicAdder  MusicAdder
 	prober      ffmpeg.Prober
+	// movieFiles serialises commitAttach per movie: see there.
+	movieFiles keyedMutex
 }
 
 // Option tunes optional collaborators of the bulk-import service.

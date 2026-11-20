@@ -2,8 +2,11 @@ package bulkimport
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sync"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -159,5 +162,191 @@ var _ = Describe(
 			Expect(row.Path).To(BeAnExistingFile())
 			Expect(tracked.Path).NotTo(BeAnExistingFile())
 		})
+
+		// Two scanned copies of one tracked movie, accepted in one scan: the
+		// commit runs them in parallel. Serialised, both attach and the later
+		// one replaces the earlier; the invariant is what is left afterwards.
+		// Without the lock a round still passes when one commit happens to
+		// finish before the other lists the movie's rows, which a hardlink or
+		// a rename does in about half of them and a copy almost never: hence
+		// the rounds, 40 of the quick ones and 8 of the slow.
+		DescribeTable(
+			"leaves the movie one row and its file when two copies are committed at once",
+			func(mode entimportscan.ImportMode, trackedRel string, rounds int) {
+				scan.ImportMode = mode
+				srcRoot := filepath.Dir(srcDir)
+				movieDir := filepath.Join(libDir, "Fight Club (1999)")
+				sizes := []int64{library.MinMediaSize + 1, library.MinMediaSize + 2}
+				for round := range rounds {
+					client.MediaFile.Delete().ExecX(ctx)
+					Expect(os.RemoveAll(libDir)).To(Succeed())
+					Expect(os.RemoveAll(srcRoot)).To(Succeed())
+					trackedPath := filepath.Join(libDir, trackedRel)
+					sparseFile(trackedPath, library.MinMediaSize)
+					_, err := store.CreateMediaFile(ctx, db.CreateMediaFileParams{
+						MovieID: movie.ID, Path: trackedPath,
+						Size:   library.MinMediaSize,
+						Source: entmediafile.SourceWizard,
+					})
+					Expect(err).NotTo(HaveOccurred())
+					sources := []string{
+						filepath.Join(
+							srcRoot,
+							"a",
+							"Fight.Club.1999.1080p.GRP1.mkv",
+						),
+						filepath.Join(
+							srcRoot,
+							"b",
+							"Fight.Club.1999.1080p.GRP2.mkv",
+						),
+					}
+					for i, src := range sources {
+						sparseFile(src, sizes[i])
+					}
+
+					var (
+						wg       sync.WaitGroup
+						start    = make(chan struct{})
+						outcomes = make([]entimportscanfile.Outcome, len(sources))
+						msgs     = make([]string, len(sources))
+					)
+					for i, src := range sources {
+						wg.Go(func() {
+							<-start
+							outcomes[i], msgs[i], _ = svc.commitAttach(
+								ctx, scan, &ent.ImportScanFile{
+									ID:              uint32(7 + i),
+									ExistingMovieID: movie.ID,
+									SourcePath:      src,
+								},
+							)
+						})
+					}
+					close(start)
+					wg.Wait()
+
+					at := fmt.Sprintf("round %d", round)
+					Expect(msgs).To(HaveEach(BeEmpty()), at)
+					Expect(outcomes).To(
+						HaveEach(entimportscanfile.OutcomeAttached), at,
+					)
+					rows := client.MediaFile.Query().AllX(ctx)
+					Expect(rows).To(HaveLen(1), at)
+					Expect(rows[0].Path).To(
+						Equal(filepath.Join(movieDir, "Fight Club.mkv")), at,
+					)
+					info, err := os.Stat(rows[0].Path)
+					Expect(err).NotTo(HaveOccurred(), at)
+					Expect(info.Size()).To(Equal(rows[0].Size), at)
+					Expect(sizes).To(ContainElement(info.Size()), at)
+					// Neither the replaced file nor one set aside is left.
+					entries, err := os.ReadDir(movieDir)
+					Expect(err).NotTo(HaveOccurred(), at)
+					Expect(entries).To(HaveLen(1), at)
+				}
+			},
+			Entry(
+				"hardlink, tracked file at the destination",
+				entimportscan.ImportModeHardlink,
+				"Fight Club (1999)/Fight Club.mkv",
+				40,
+			),
+			Entry(
+				"move, tracked file at the destination",
+				entimportscan.ImportModeMove,
+				"Fight Club (1999)/Fight Club.mkv",
+				40,
+			),
+			Entry(
+				"copy, tracked file at the destination",
+				entimportscan.ImportModeCopy,
+				"Fight Club (1999)/Fight Club.mkv",
+				8,
+			),
+			Entry(
+				"copy, tracked file elsewhere",
+				entimportscan.ImportModeCopy,
+				"Fight Club (1999)/Fight Club 720p.mkv",
+				8,
+			),
+		)
+
+		Context("on an in-place scan", func() {
+			BeforeEach(func() {
+				scan = &ent.ImportScan{ID: 1, Mode: entimportscan.ModeInPlace}
+			})
+
+			// expectUntouched asserts the movie still holds exactly the row
+			// and the file it had before the commit.
+			expectUntouched := func(tracked *ent.MediaFile) {
+				GinkgoHelper()
+				Expect(tracked.Path).To(BeAnExistingFile())
+				row := client.MediaFile.Query().OnlyX(ctx)
+				Expect(row.ID).To(Equal(tracked.ID))
+				Expect(row.Path).To(Equal(tracked.Path))
+			}
+
+			It(
+				"keeps a tracked file scanned again under its symlink-resolved path",
+				func() {
+					// The library root is a symlink: the row keeps the path
+					// the file was imported under, the scanner resolves it.
+					realLib := filepath.Join(filepath.Dir(libDir), "real-movies")
+					Expect(os.MkdirAll(realLib, 0o755)).To(Succeed())
+					symlinkOrSkip(realLib, libDir)
+					tracked := track("Fight Club (1999)/Fight Club.mkv")
+					resolved, err := filepath.EvalSymlinks(tracked.Path)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(resolved).NotTo(Equal(tracked.Path))
+
+					outcome, msg := attach(resolved)
+
+					Expect(msg).To(BeEmpty())
+					Expect(outcome).To(Equal(entimportscanfile.OutcomeAttached))
+					expectUntouched(tracked)
+				},
+			)
+
+			It(
+				"fails and keeps the tracked file when the scanned file is gone",
+				func() {
+					tracked := track("Fight Club (1999)/Fight Club.mkv")
+					// Scanned as a second copy, then removed while the scan
+					// sat in review.
+					gone := filepath.Join(
+						libDir, "Fight Club (1999)", "Fight.Club.1999.REPACK.mkv",
+					)
+
+					outcome, msg := attach(gone)
+
+					Expect(outcome).To(Equal(entimportscanfile.OutcomeFailed))
+					Expect(msg).To(HavePrefix("stat source: "))
+					expectUntouched(tracked)
+				},
+			)
+		})
 	},
 )
+
+// sparseFile creates a file of the given size without writing its content,
+// for specs that need the importer's size floor and many files.
+func sparseFile(path string, size int64) {
+	GinkgoHelper()
+	Expect(os.MkdirAll(filepath.Dir(path), 0o755)).To(Succeed())
+	f, err := os.Create(path)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(f.Truncate(size)).To(Succeed())
+	Expect(f.Close()).To(Succeed())
+}
+
+// symlinkOrSkip creates link pointing at target, skipping the spec where the
+// platform refuses: Windows needs a privilege or developer mode for it.
+func symlinkOrSkip(target, link string) {
+	GinkgoHelper()
+	err := os.Symlink(target, link)
+	if err != nil && runtime.GOOS == "windows" {
+		Skip("symlinks are unavailable here: " + err.Error())
+	}
+	Expect(err).NotTo(HaveOccurred())
+}
