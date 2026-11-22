@@ -56,6 +56,14 @@ type TVIndexerSearcher interface {
 		imdbID string,
 		season, episode uint16,
 	) ([]indexer.SearchResult, int, error)
+	SearchSpecial(
+		ctx context.Context,
+		titles, aliases []string,
+		tvdbID uint32,
+		imdbID string,
+		episode uint16,
+		special string,
+	) ([]indexer.SearchResult, int, error)
 }
 
 // EpisodeGrabber is the subset of download.Downloader that

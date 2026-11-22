@@ -197,6 +197,16 @@ type Manager interface {
 		imdbID string,
 		season, episode uint16,
 	) ([]SearchResult, int, error)
+	// SearchSpecial is SearchEpisode for season 0, also finding the releases
+	// that name the special by its title rather than by a number.
+	SearchSpecial(
+		ctx context.Context,
+		titles, aliases []string,
+		tvdbID uint32,
+		imdbID string,
+		episode uint16,
+		special string,
+	) ([]SearchResult, int, error)
 	// SearchAlbum queries every enabled indexer for an album release. The
 	// music newznab root is 3000 (Audio); q is "<artist> <album>", then
 	// "<artist> <album> <year>" when year > 0.
@@ -809,8 +819,42 @@ func (i *indexer) SearchEpisode(
 	imdbID string,
 	season, episode uint16,
 ) ([]SearchResult, int, error) {
+	return i.searchEpisode(
+		ctx, titles, aliases, tvdbID, imdbID, season, episode, "",
+	)
+}
+
+// SearchSpecial is SearchEpisode for a special (season 0) the library knows
+// by title. Most specials are released under that title and no number
+// ("Show.The.Special.Title.1080p"), which the episode filter drops as naming
+// nothing, so the search also asks every indexer for "<show> <title>" and
+// keeps the releases that name the special (library.NamesSpecial). The
+// numbered search runs first and decides the error: the title query failing
+// costs only its own results. An empty title is a plain SearchEpisode.
+func (i *indexer) SearchSpecial(
+	ctx context.Context,
+	titles, aliases []string,
+	tvdbID uint32,
+	imdbID string,
+	episode uint16,
+	special string,
+) ([]SearchResult, int, error) {
+	return i.searchEpisode(
+		ctx, titles, aliases, tvdbID, imdbID, 0, episode, special,
+	)
+}
+
+func (i *indexer) searchEpisode(
+	ctx context.Context,
+	titles, aliases []string,
+	tvdbID uint32,
+	imdbID string,
+	season, episode uint16,
+	special string,
+) ([]SearchResult, int, error) {
 	titles = dedupTitles(titles)
 	match := matchTitles(titles, aliases)
+	special = strings.TrimSpace(special)
 	ctx, span := tracer.Start(ctx, "indexer.search_episode",
 		trace.WithAttributes(
 			attribute.Int("series.titles.count", len(titles)),
@@ -819,6 +863,7 @@ func (i *indexer) SearchEpisode(
 			attribute.String("series.imdb_id", imdbID),
 			attribute.Int("series.season", int(season)),
 			attribute.Int("series.episode", int(episode)),
+			attribute.Bool("series.special_title", special != ""),
 		),
 	)
 	defer span.End()
@@ -851,14 +896,87 @@ func (i *indexer) SearchEpisode(
 	if err != nil {
 		return nil, 0, otelx.RecordSpanError(span, err)
 	}
+	if special != "" {
+		results = append(results, i.searchSpecialTitle(
+			ctx, span, titles, tvdbID, imdbID, special,
+		)...)
+		results = dedupResults(results)
+	}
 	filtered, hiddenPacks := filterToEpisode(results, season, episode)
 	filtered = preferTitleMatches(filtered, match)
+	if special != "" {
+		named := namedSpecials(results, match, special)
+		span.SetAttributes(attribute.Int("results.named_specials", len(named)))
+		filtered = dedupResults(append(filtered, named...))
+		sort.SliceStable(filtered, func(a, b int) bool {
+			return filtered[a].Seeders > filtered[b].Seeders
+		})
+	}
 	span.SetAttributes(
 		attribute.Int("results.pre_episode_filter", len(results)),
 		attribute.Int("results.hidden_packs", hiddenPacks),
 		attribute.Int("results.total", len(filtered)),
 	)
 	return filtered, hiddenPacks, nil
+}
+
+// searchSpecialTitle asks every indexer for "<show> <special>" under each
+// queried title, with the ids but no season: Prowlarr never sends season 0
+// (prowlarrQuery) and a Torznab tvsearch for it would narrow nothing. A
+// failure is logged and costs these results only, since the numbered search
+// already answered.
+func (i *indexer) searchSpecialTitle(
+	ctx context.Context,
+	span trace.Span,
+	titles []string,
+	tvdbID uint32,
+	imdbID string,
+	special string,
+) []SearchResult {
+	queries := make([]string, 0, len(titles))
+	for _, t := range titles {
+		queries = append(queries, t+" "+special)
+	}
+	res, err := i.searchAll(ctx, span, dedupTitles(queries), SearchParams{
+		Kind:   KindTV,
+		TVDBID: tvdbID,
+		IMDbID: imdbID,
+	})
+	if err != nil {
+		slog.WarnContext(ctx, "special title search failed",
+			"series.tvdb_id", tvdbID, "error", err)
+		span.AddEvent("special title search failed")
+		return nil
+	}
+	return res
+}
+
+// namedSpecials keeps the releases that name the special by its title and
+// by no number: a release with an episode number, an absolute number or a
+// date is filterToEpisode's to judge, and one naming a season or the whole
+// series is a pack. The show must be one of titles (library.NamesSpecial), so
+// these are kept unflagged however preferTitleMatches read the rest.
+func namedSpecials(
+	results []SearchResult,
+	titles []string,
+	special string,
+) []SearchResult {
+	var out []SearchResult
+	for _, r := range results {
+		p := library.Parse(r.Title)
+		if p.Episode != 0 || p.AbsoluteNumber != 0 || p.AirDate != nil ||
+			library.ParseSeasonSpan(r.Title) != (library.SeasonSpan{}) {
+			continue
+		}
+		for _, t := range titles {
+			if library.NamesSpecial(r.Title, t, special) {
+				r.TitleMismatch = false
+				out = append(out, r)
+				break
+			}
+		}
+	}
+	return out
 }
 
 // filterToEpisode keeps only releases naming exactly the requested episode.

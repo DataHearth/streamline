@@ -209,6 +209,40 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 		})
 	})
 
+	When("a special is wanted", func() {
+		It("searches it by its title too and grabs it", func() {
+			sp := &ent.Episode{ID: 21, Number: 2, Title: "The Lost Night"}
+			show := showWith(sp)
+			show.Edges.Seasons[0].Number = 0
+			expectEligible([]*ent.TVShow{show}, nil)
+
+			const named = "The.Black.Sea.The.Lost.Night.1080p.WEB-DL.x265-GRP"
+			indexerM.EXPECT().
+				SearchSpecial(mock.Anything, []string{"The Black Sea", "Karadeniz"},
+					mock.Anything, uint32(9001), "", uint16(2), "The Lost Night").
+				Return([]indexer.SearchResult{{Title: named, Seeders: 10}}, 0, nil).
+				Once()
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything,
+					mock.MatchedBy(func(r indexer.SearchResult) bool {
+						return r.Title == named
+					}),
+					uint32(21), []uint32{21}).
+				Return(&ent.DownloadRecord{}, nil).Once()
+			store.EXPECT().
+				SetEpisodeStatus(mock.Anything, uint32(21), episode.StatusDownloading).
+				Return(nil).Once()
+			store.EXPECT().
+				ResetEpisodeGrabFailures(mock.Anything, uint32(21)).
+				Return(nil).Once()
+			store.EXPECT().
+				SetEpisodeLastSearchAt(mock.Anything, uint32(21), mock.AnythingOfType("time.Time")).
+				Return(nil).Once()
+
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+	})
+
 	When("the single-episode grab fails because the client is unreachable", func() {
 		// A timeout says nothing about the release. Counted, three unlucky
 		// ticks reach max_grab_failures and the eligibility query then stops

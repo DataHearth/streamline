@@ -119,3 +119,39 @@ var _ = Describe("MatchEpisode", Label("unit", "library"), func() {
 		Expect(ep).To(BeNil())
 	})
 })
+
+var _ = Describe("NamesSpecial", Label("unit", "library"), func() {
+	DescribeTable("names the special by its own title",
+		func(release, show, special string) {
+			Expect(NamesSpecial(release, show, special)).To(BeTrue())
+		},
+		Entry("title right after the show",
+			"Doctor.Who.The.Day.of.the.Doctor.1080p.BluRay.x264-GRP",
+			"Doctor Who", "The Day of the Doctor"),
+		Entry("year between the show and the title",
+			"Doctor.Who.2005.The.Day.of.the.Doctor.1080p.BluRay.x264-GRP",
+			"Doctor Who (2005)", "The Day of the Doctor"),
+		Entry("spaces, accents and case",
+			"Kaamelott - Le Dernier Duel (Spécial) MULTI 1080p",
+			"Kaamelott", "Le dernier duel"),
+	)
+
+	DescribeTable("refuses",
+		func(release, show, special string) {
+			Expect(NamesSpecial(release, show, special)).To(BeFalse())
+		},
+		Entry("another work built on the show's name",
+			"Doctor.Who.Confidential.The.Day.of.the.Doctor.1080p-GRP",
+			"Doctor Who", "The Day of the Doctor"),
+		Entry("another show",
+			"Torchwood.The.Day.of.the.Doctor.1080p-GRP",
+			"Doctor Who", "The Day of the Doctor"),
+		Entry("the special's title missing",
+			"Doctor.Who.2005.1080p.BluRay.x264-GRP",
+			"Doctor Who", "The Day of the Doctor"),
+		Entry("a title folding under four characters",
+			"Show.Pie.1080p.WEB-GRP", "Show", "Pie"),
+		Entry("the title only inside the show's own name",
+			"Doctor.Who.2005.1080p.BluRay-GRP", "Doctor Who", "Doctor"),
+	)
+})

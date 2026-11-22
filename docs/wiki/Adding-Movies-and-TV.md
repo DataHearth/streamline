@@ -149,6 +149,8 @@ When an episode search hides packs that *did* cover the episode, it says so abov
 
 An episode search also drops releases whose name carries no season and no episode at all — a tracker that lists a torrent under the bare show title tells you nothing about what is in it. Anime releases using absolute numbering (`Show - 18`) and daily shows using a date (`Show 2011.09.25`) are kept, since those never spell `SxxExx`.
 
+Specials (season 0) are usually released under their own title and no number at all (`Doctor.Who.2005.The.Day.of.the.Doctor.1080p.BluRay`). A special's search therefore also asks your indexers for the show's title followed by the special's, and keeps a release whose name carries the show and then the special's title, both compared without regard to case, punctuation or accents. A title that folds to fewer than four letters is never matched this way, since it would match too much. This applies to the automatic missing search too, so a monitored special can now be grabbed when no tracker numbers it.
+
 The season and episode tabs both know the French spellings: `Saison 04` counts as a season token, and a `Complete` / `Complète` tag attached to a named season (`S05 Complete`, `Saison 04 Complète`) is read as that season's pack rather than as a whole-series pack.
 
 From the **Episodes** tab, the season header has its own **Search season** button, which opens the release search already scoped to the season you are looking at.

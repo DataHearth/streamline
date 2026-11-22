@@ -449,6 +449,25 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 	return false, nil
 }
 
+// searchEpisode asks the indexers for one episode: by title as well for a
+// special, which most trackers carry under its title and no number.
+func (s *EpisodeMissingSearcher) searchEpisode(
+	ctx context.Context,
+	show *ent.TVShow,
+	se *ent.Season,
+	e *ent.Episode,
+	titles []string,
+) ([]indexer.SearchResult, int, error) {
+	if se.Number == 0 {
+		return s.indexers.SearchSpecial(
+			ctx, titles, show.Aliases, show.TvdbID, show.ImdbID, e.Number, e.Title,
+		)
+	}
+	return s.indexers.SearchEpisode(
+		ctx, titles, show.Aliases, show.TvdbID, show.ImdbID, se.Number, e.Number,
+	)
+}
+
 // grabEpisode searches for a single episode and grabs the best-scoring
 // acceptable result, bumping/resetting grab_failures accordingly.
 // last_search_at is stamped whenever an indexer answered so the cooldown
@@ -483,9 +502,7 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 	)
 	defer span.End()
 
-	results, _, err := s.indexers.SearchEpisode(
-		ctx, titles, show.Aliases, show.TvdbID, show.ImdbID, se.Number, e.Number,
-	)
+	results, _, err := s.searchEpisode(ctx, show, se, e, titles)
 	if err != nil {
 		slog.WarnContext(ctx, "tv missing-search: episode search failed",
 			"show", show.Title, "season", se.Number, "episode", e.Number,

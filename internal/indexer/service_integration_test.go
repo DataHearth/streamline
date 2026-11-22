@@ -464,6 +464,62 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			Expect(queries[1].Get("categories")).To(Equal("5000"))
 		})
 
+		It("searches a special by its title too and keeps it", func() {
+			// The numbered search sees the series' releases (Prowlarr is sent
+			// no season 0); the title query adds the special named by title.
+			rec := newProwlarrRecorder(`[
+				{"title":"Show.S00E01.1080p.WEB-GRP","downloadUrl":"http://x/a.torrent",
+				 "protocol":"torrent","seeders":5},
+				{"title":"Show.S02E01.1080p.WEB-GRP","downloadUrl":"http://x/b.torrent",
+				 "protocol":"torrent","seeders":50}
+			]`, `[
+				{"title":"Show.The.Christmas.Invasion.1080p.WEB-GRP",
+				 "downloadUrl":"http://x/c.torrent","protocol":"torrent","seeders":20},
+				{"title":"Show.Christmas.Recap.1080p.WEB-GRP",
+				 "downloadUrl":"http://x/d.torrent","protocol":"torrent","seeders":90}
+			]`)
+			DeferCleanup(rec.Close)
+			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
+
+			results, hidden, err := New(nil).SearchSpecial(
+				context.Background(), []string{"Show"}, nil, 111, "",
+				1, "The Christmas Invasion",
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hidden).To(BeZero())
+			titles := make([]string, 0, len(results))
+			for _, r := range results {
+				titles = append(titles, r.Title)
+			}
+			// Best seeded first across both queries.
+			Expect(titles).To(Equal([]string{
+				"Show.The.Christmas.Invasion.1080p.WEB-GRP",
+				"Show.S00E01.1080p.WEB-GRP",
+			}))
+
+			queries := rec.Queries()
+			Expect(queries).To(HaveLen(2))
+			Expect(queries[0].Get("query")).To(Equal("Show"))
+			Expect(queries[1].Get("query")).To(Equal("Show The Christmas Invasion"))
+			Expect(queries[1].Get("type")).To(Equal("tvsearch"))
+		})
+
+		It("keeps the numbered results when the title query fails", func() {
+			rec := newProwlarrRecorder(`[
+				{"title":"Show.S00E01.1080p.WEB-GRP","downloadUrl":"http://x/a.torrent",
+				 "protocol":"torrent","seeders":5}
+			]`, `not json`)
+			DeferCleanup(rec.Close)
+			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
+
+			results, _, err := New(nil).SearchSpecial(
+				context.Background(), []string{"Show"}, nil, 111, "",
+				1, "The Christmas Invasion",
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(1))
+		})
+
 		It("does not re-send a movie search it sent no id with", func() {
 			// prowlarrQuery never forwards the TMDB id, so the bare title
 			// would be this very request again.

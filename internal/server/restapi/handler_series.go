@@ -13,6 +13,7 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/media/tvshow"
@@ -585,13 +586,17 @@ func (s *Server) BrowseEpisodeReleases(
 			NotFoundJSONResponse: errNotFound(err.Error()),
 		}, nil
 	}
-	var season, episode uint16
+	var (
+		season, episode uint16
+		episodeTitle    string
+	)
 	found := false
 	for _, se := range show.Edges.Seasons {
 		for _, ep := range se.Edges.Episodes {
 			if ep.ID == request.EpisodeId {
 				season = se.Number
 				episode = ep.Number
+				episodeTitle = ep.Title
 				found = true
 			}
 		}
@@ -601,15 +606,24 @@ func (s *Server) BrowseEpisodeReleases(
 			NotFoundJSONResponse: errNotFound("episode not found"),
 		}, nil
 	}
-	results, hiddenPacks, err := s.indexers.SearchEpisode(
-		ctx,
-		[]string{show.Title, show.OriginalTitle},
-		show.Aliases,
-		show.TvdbID,
-		show.ImdbID,
-		season,
-		episode,
+	titles := []string{show.Title, show.OriginalTitle}
+	var (
+		results     []indexer.SearchResult
+		hiddenPacks int
 	)
+	// A special is searched by its title too: most are released under it and
+	// no number.
+	if season == 0 {
+		results, hiddenPacks, err = s.indexers.SearchSpecial(
+			ctx, titles, show.Aliases, show.TvdbID, show.ImdbID,
+			episode, episodeTitle,
+		)
+	} else {
+		results, hiddenPacks, err = s.indexers.SearchEpisode(
+			ctx, titles, show.Aliases, show.TvdbID, show.ImdbID,
+			season, episode,
+		)
+	}
 	if indexerSearchFailed(err) {
 		return nil, err
 	}

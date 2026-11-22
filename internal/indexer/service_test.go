@@ -426,6 +426,34 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 		)
 	})
 
+	Describe("namedSpecials", func() {
+		It("keeps a release naming the special by title and by no number", func() {
+			in := []SearchResult{
+				{Title: "Doctor.Who.2005.The.Day.of.the.Doctor.1080p.BluRay-GRP"},
+				{
+					Title:         "Doctor.Who.The.Day.of.the.Doctor.720p.HDTV-GRP",
+					TitleMismatch: true,
+				},
+				// Numbered: filterToEpisode's to judge, not this filter's.
+				{Title: "Doctor.Who.S00E77.The.Day.of.the.Doctor.1080p-GRP"},
+				// A pack, whatever else it names.
+				{Title: "Doctor.Who.S07.The.Day.of.the.Doctor.1080p-GRP"},
+				{Title: "Doctor.Who.COMPLETE.The.Day.of.the.Doctor.1080p-GRP"},
+				// Another special, another show.
+				{Title: "Doctor.Who.The.Time.of.the.Doctor.1080p-GRP"},
+				{Title: "Torchwood.The.Day.of.the.Doctor.1080p-GRP"},
+			}
+			out := namedSpecials(
+				in, []string{"Doctor Who (2005)"}, "The Day of the Doctor",
+			)
+			Expect(out).To(HaveLen(2))
+			Expect(out[0].Title).To(HavePrefix("Doctor.Who.2005"))
+			Expect(out[1].Title).To(HaveSuffix("HDTV-GRP"))
+			Expect(out[1].TitleMismatch).To(BeFalse(),
+				"the show was confirmed, so the automatic searches may grab it")
+		})
+	})
+
 	Describe("filterProviderIDs", func() {
 		It("drops a release the tracker labelled as another show", func() {
 			// The one filter here that does not guess: the tracker said what

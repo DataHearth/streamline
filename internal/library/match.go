@@ -223,6 +223,41 @@ func TitleNamesSameWork(release, title string) bool {
 	return found && titleTagSuffix.MatchString(rest)
 }
 
+// minSpecialTitleChars is the shortest folded special title a release is
+// matched by, the alias harvest's floor (internal/metadata/aliases.go) for the
+// same reason: a title folding to a short common word would match most of a
+// show's releases.
+const minSpecialTitleChars = 4
+
+// NamesSpecial reports whether a release names a special (season 0) by its
+// own title rather than by a number, the way most specials are released:
+// "Show.The.Special.Title.1080p.WEB-GRP", or with the year between them,
+// "Doctor.Who.2005.The.Day.of.the.Doctor.1080p".
+//
+// Two things must hold. The parsed title is the show's, alone (the parser cut
+// at a year or a tag) or followed by the special's title, so a longer work
+// built on the show's name ("Show Confidential …") is refused as
+// TitleNamesSameWork refuses it. And the special's title appears after the
+// show's in the whole name. Both titles fold through normalizeTitle, so
+// separators, case, accents and a leading article never matter.
+func NamesSpecial(release, show, special string) bool {
+	ns, nshow := normalizeTitle(special), normalizeTitle(show)
+	if len(ns) < minSpecialTitleChars || nshow == "" {
+		return false
+	}
+	rest, found := strings.CutPrefix(normalizeTitle(Parse(release).Title), nshow)
+	if !found {
+		return false
+	}
+	if rest = titleArticleHead.ReplaceAllString(rest, ""); rest != "" &&
+		!strings.HasPrefix(rest, ns) && !titleTagSuffix.MatchString(rest) {
+		return false
+	}
+	full := normalizeTitle(release)
+	i := strings.Index(full, nshow)
+	return i >= 0 && strings.Contains(full[i+len(nshow):], ns)
+}
+
 // MatchEpisode resolves a parsed release to an episode within the show's
 // seasons. Anime packs match on absolute number; everything else on
 // season+episode number. Returns nil when nothing matches.

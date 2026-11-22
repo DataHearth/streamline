@@ -1082,6 +1082,32 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(body.Items).To(BeEmpty())
 			Expect(body.HiddenPacks).To(HaveValue(Equal(4)))
 		})
+
+		It("searches a special by its title as well", func() {
+			withTree := *show
+			withTree.Edges.Seasons = []*ent.Season{
+				{
+					ID:     9,
+					Number: 0,
+					Edges: ent.SeasonEdges{
+						Episodes: []*ent.Episode{
+							{ID: 90, Number: 3, Title: "No Half Measures"},
+						},
+					},
+				},
+			}
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
+				Return(&withTree, nil).Once()
+			app.indexers.EXPECT().
+				SearchSpecial(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
+					uint32(81189), "", uint16(3), "No Half Measures").
+				Return(nil, 0, nil).Once()
+
+			resp := app.do(app.req(http.MethodPost,
+				"/api/v1/series/3/episodes/90/search", app.adminKey, nil))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
 	})
 
 	Describe("GrabSeriesRelease", func() {
