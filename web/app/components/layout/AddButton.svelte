@@ -56,8 +56,10 @@
 			(route === "/requests" && !auth.isAdmin),
 	);
 	// A bulk selection owns the bottom of the screen; the pill would land on top
-	// of BulkTouchBar's buttons. The on-screen keyboard owns it too.
-	let visible = $derived(onRoute && !bulkMode.active && !keyboardUp());
+	// of BulkTouchBar's buttons. The on-screen keyboard owns it too, read on
+	// every route so it is never a stale value when the pill comes back.
+	let keyboard = $derived(keyboardUp());
+	let visible = $derived(onRoute && !bulkMode.active && !keyboard);
 
 	$effect(() => {
 		if (!visible) open = false;
