@@ -375,6 +375,23 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			Expect(hidden).To(Equal(1))
 		})
 
+		It("counts a range opening at S00 for the specials and its seasons", func() {
+			// S00 is the specials season beside the numbered range, not its
+			// lower bound: read as a bound, "S00-S12" was season 12 alone.
+			in := []SearchResult{
+				{Title: "The.Big.Bang.Theory.S00-S12.1080p.BluRay-GRP"},
+			}
+			for _, season := range []uint16{0, 1, 5, 12} {
+				out, hidden := filterToEpisode(in, season, 1)
+				Expect(out).To(BeEmpty())
+				Expect(hidden).To(Equal(1), "season %d", season)
+			}
+
+			out, hidden := filterToEpisode(in, 13, 1)
+			Expect(out).To(BeEmpty())
+			Expect(hidden).To(BeZero())
+		})
+
 		DescribeTable(
 			"drops a complete pack carrying an absolute number or a date",
 			func(title string) {

@@ -894,12 +894,12 @@ func filterToEpisode(
 		// fallback would otherwise keep every integral in an episode search.
 		sp := library.ParseSeasonSpan(r.Title)
 		switch {
-		case packCoversSeason(sp, p, season):
+		case packCoversSeason(sp, season):
 			hiddenPacks++
 		case sp.Complete:
 			// A complete pack is dropped from every episode search, a
 			// special's included, where it is not counted either.
-		case sp.From == 0 && p.Season == 0 && p.Episode == 0 &&
+		case sp.From == 0 && !sp.Specials && p.Season == 0 && p.Episode == 0 &&
 			(p.AbsoluteNumber > 0 || p.AirDate != nil):
 			out = append(out, r)
 		}
@@ -913,16 +913,11 @@ func filterToEpisode(
 // its name, so a complete pack is taken to hold the numbered seasons only, as
 // the show-level counts leave season 0 out: the hint then never sends anyone
 // to a whole-series pack for a special it most likely lacks, at the cost of
-// staying silent about one that has it. Season 0 is covered only by a pack of
-// the specials season itself, which ParseSeasonSpan cannot name (From 0 is its
-// "no season"), hence the parse's SeasonPack flag.
-func packCoversSeason(
-	sp library.SeasonSpan,
-	p library.ParseResult,
-	season uint16,
-) bool {
+// staying silent about one that has it. Season 0 is covered only by a pack
+// naming the specials season, alone ("S00") or opening a range ("S00-S05").
+func packCoversSeason(sp library.SeasonSpan, season uint16) bool {
 	if season == 0 {
-		return p.SeasonPack && p.Season == 0
+		return sp.Specials
 	}
 	return sp.Complete || (sp.From != 0 && sp.From <= season && season <= sp.To)
 }

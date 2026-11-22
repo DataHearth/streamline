@@ -334,14 +334,22 @@ func namesOneSeason(name string) bool {
 // pairwise matches cannot overlap, so a chain ("S01 & S02 & S03") matches
 // "S01 & S02" and then resumes past it, leaving the tail unread and the pack
 // sized two seasons short.
-func seasonRangeBounds(name string) (uint16, uint16) {
-	var lo, hi uint16
+//
+// An S00 token is reported apart, as specials, since lo is 0 until a numbered
+// season is seen. A range opening at the specials runs on from season 1, the
+// way the lowest and highest token bound every other range: "S00-S12" is the
+// specials plus seasons 1 to 12, not season 12 alone.
+func seasonRangeBounds(name string) (lo, hi uint16, specials bool) {
 	for _, m := range seasonTokenRe.FindAllStringSubmatch(name, -1) {
 		n, err := strconv.ParseUint(m[1], 10, 16)
 		if err != nil {
 			continue
 		}
 		s := uint16(n)
+		if s == 0 {
+			specials = true
+			continue
+		}
 		if lo == 0 || s < lo {
 			lo = s
 		}
@@ -349,7 +357,10 @@ func seasonRangeBounds(name string) (uint16, uint16) {
 			hi = s
 		}
 	}
-	return lo, hi
+	if specials && lo > 0 {
+		lo = 1
+	}
+	return lo, hi, specials
 }
 
 // SeasonSpan is which seasons a release covers. It exists to size a pack: the
@@ -360,10 +371,15 @@ type SeasonSpan struct {
 	// Complete spans every season the show has, from a "COMPLETE"/"INTEGRALE"
 	// tag. From and To are meaningless when it is set.
 	Complete bool
-	// From and To are inclusive and equal for a single-season pack. Both zero
-	// means the release covers no whole season — a single episode, or a name
-	// nothing could be read out of.
+	// From and To are inclusive and equal for a single-season pack, and name
+	// numbered seasons only. Both zero with Specials unset means the release
+	// covers no whole season — a single episode, or a name nothing could be
+	// read out of.
 	From, To uint16
+	// Specials is set when the name claims season 0 ("S00", "S00-S05"),
+	// alone or beside the numbered range. It is a field of its own because
+	// From 0 already means "no season".
+	Specials bool
 }
 
 // ParseSeasonSpan reads a release name's season scope. A season range wins over
@@ -373,11 +389,14 @@ type SeasonSpan struct {
 // (same reasoning as IsWholeSeriesPack).
 func ParseSeasonSpan(name string) SeasonSpan {
 	if seasonRangeRe.MatchString(name) {
-		if from, to := seasonRangeBounds(name); from > 0 {
-			return SeasonSpan{From: from, To: to}
+		if from, to, specials := seasonRangeBounds(name); from > 0 {
+			return SeasonSpan{From: from, To: to, Specials: specials}
 		}
 	}
 	if p := Parse(name); p.SeasonPack {
+		if p.Season == 0 {
+			return SeasonSpan{Specials: true}
+		}
 		return SeasonSpan{From: p.Season, To: p.Season}
 	}
 	if completePackRe.MatchString(name) {
@@ -405,10 +424,13 @@ func (s SeasonSpan) EpisodeCount(perSeason map[uint16]int) int {
 		}
 		return total
 	}
-	if s.From == 0 && s.To == 0 {
-		return 0
-	}
 	total := 0
+	if s.Specials {
+		total += perSeason[0]
+	}
+	if s.From == 0 && s.To == 0 {
+		return total
+	}
 	for n := s.From; n <= s.To; n++ {
 		total += perSeason[n]
 	}

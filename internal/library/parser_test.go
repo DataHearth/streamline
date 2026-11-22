@@ -431,6 +431,17 @@ var _ = Describe("season spans", Label("unit", "library"), func() {
 			"Breaking.Bad.COMPLETE.MULTI.1080p-GRP", SeasonSpan{Complete: true}),
 		Entry("integrale is the same tag in French",
 			"Kaamelott.INTEGRALE.1080p-GRP", SeasonSpan{Complete: true}),
+		// S00 is the specials season: a span of its own, since From 0 is "no
+		// season", and never a bound of the numbered range.
+		Entry("specials pack", "The.Big.Bang.Theory.S00.Specials.1080p.WEB-GRP",
+			SeasonSpan{Specials: true}),
+		Entry("range opening at the specials", "Show.S00-S12.1080p.BluRay-GRP",
+			SeasonSpan{From: 1, To: 12, Specials: true}),
+		Entry("chain listing the specials", "Show.S00 & S01 & S02.1080p-GRP",
+			SeasonSpan{From: 1, To: 2, Specials: true}),
+		Entry("complete range opening at the specials",
+			"Show.COMPLETE.S00-S05.1080p-GRP",
+			SeasonSpan{From: 1, To: 5, Specials: true}),
 	)
 
 	counts := map[uint16]int{0: 4, 1: 7, 2: 13, 3: 13}
@@ -450,6 +461,9 @@ var _ = Describe("season spans", Label("unit", "library"), func() {
 		Entry("season the library does not track", SeasonSpan{From: 9, To: 9}, 0),
 		Entry("range partly tracked counts what it knows",
 			SeasonSpan{From: 3, To: 9}, 13),
+		Entry("specials pack", SeasonSpan{Specials: true}, 4),
+		Entry("range with the specials",
+			SeasonSpan{From: 1, To: 3, Specials: true}, 37),
 	)
 
 	It("reads a complete pack of a show tracking only specials as unknown", func() {
