@@ -131,6 +131,12 @@
 			}
 			anchor.scrollIntoView({ block: "nearest" });
 			r = anchor.getBoundingClientRect();
+			// No scroller could bring it back (a fixed container, a landscape
+			// phone too short): a menu placed from it would be off screen too.
+			if (offScreen(r)) {
+				onClose();
+				return;
+			}
 		}
 		menuWidth = r.width;
 		const w = matchAnchor ? r.width : (menuEl?.offsetWidth ?? 0);

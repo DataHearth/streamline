@@ -337,7 +337,7 @@
 
 {#if open}
 	<div
-		class="fixed inset-0 z-50 flex flex-col bg-bg-deep md:hidden"
+		class="fixed inset-0 bottom-[var(--keyboard-inset,0px)] z-50 flex flex-col bg-bg-deep md:hidden"
 		transition:fly={{ y: 28, duration: 200, easing: cubicOut }}
 	>
 		<header class="flex flex-none items-center justify-between gap-3 px-3 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-2">

@@ -102,14 +102,15 @@ var _ = Describe("On-screen keyboard", Label("e2e"), func() {
 		settle(page, false)
 
 		// A tap on nothing: focus leaves the field, the keyboard starts down.
+		// The steps stay well inside the idle wait (lib/keyboard.svelte.ts).
 		page.MustEval(`() => document.activeElement.blur()`)
 		Consistently(navShown(page)).
-			WithTimeout(300 * time.Millisecond).
+			WithTimeout(100 * time.Millisecond).
 			WithPolling(25 * time.Millisecond).
 			Should(BeFalse())
 		page.MustSetViewport(width, height-keyboard/2, 1, true)
 		Consistently(navShown(page)).
-			WithTimeout(300 * time.Millisecond).
+			WithTimeout(100 * time.Millisecond).
 			WithPolling(25 * time.Millisecond).
 			Should(BeFalse())
 

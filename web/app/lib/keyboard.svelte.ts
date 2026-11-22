@@ -41,15 +41,17 @@ function measure(kind: KeyboardReading["kind"]): boolean {
 }
 
 // Where the layout viewport does not shrink for the keyboard (iOS Safari has
-// no `interactive-widget`), the part of it the keyboard covers, for AppShell
-// and the search page to stop above. Elsewhere the layout viewport ends at the
-// keyboard already, and it is 0.
+// no `interactive-widget`), the part of it the keyboard covers, for AppShell,
+// the search page and the phone lookup screens to stop above. All three
+// numbers are layout px (`innerHeight` follows the zoom in WebKit, the layout
+// viewport's clientHeight does not), so iOS zooming in on a small field
+// changes nothing. Elsewhere the layout viewport ends at the keyboard already,
+// and it is 0.
 function inset(keyboard: boolean) {
 	const vv = window.visualViewport;
+	const layout = document.documentElement.clientHeight;
 	const px =
-		keyboard && vv
-			? Math.max(0, window.innerHeight - (vv.offsetTop + vv.height))
-			: 0;
+		keyboard && vv ? Math.max(0, layout - (vv.offsetTop + vv.height)) : 0;
 	document.documentElement.style.setProperty(
 		"--keyboard-inset",
 		`${Math.round(px)}px`,

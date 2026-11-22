@@ -19,11 +19,15 @@ const NOT_TYPED = new Set([
 	"submit",
 ]);
 
-// Whether focus on this element brings the on-screen keyboard up.
-export const typesText = (el: EventTarget | null): boolean =>
-	el instanceof HTMLTextAreaElement ||
-	(el instanceof HTMLInputElement && !NOT_TYPED.has(el.type)) ||
-	(el instanceof HTMLElement && el.isContentEditable);
+// Whether focus on this element brings the on-screen keyboard up: a field
+// that takes text, unless it is read-only or asks for no keyboard.
+export const typesText = (el: EventTarget | null): boolean => {
+	if (!(el instanceof HTMLElement) || el.inputMode === "none") return false;
+	if (el instanceof HTMLTextAreaElement) return !el.readOnly;
+	if (el instanceof HTMLInputElement)
+		return !el.readOnly && !NOT_TYPED.has(el.type);
+	return el.isContentEditable;
+};
 
 // One reading of the page: its size, whether a text field has focus, and what
 // prompted it: the page resized, focus moved, or focus has been out of every
@@ -64,9 +68,9 @@ const remember = (map: Map<number, number>, width: number, value: number) => {
 // it, while the page growing is the keyboard closing and raises it.
 //
 // A width met while the keyboard is up (a rotation to a side never seen) has
-// nothing to count from: the keyboard stays up, whatever focus does, and the
-// height stays unknown until the page grows there by KEYBOARD_MIN_PX, the
-// keyboard closing, or focus goes idle.
+// nothing to count from: the keyboard stays up through focus moving between
+// fields, and the height stays unknown until the page grows there by
+// KEYBOARD_MIN_PX, the keyboard closing, or focus goes idle.
 //
 // The player (streamline-player, src/lib/platform/keyboard.ts) runs the same
 // rules; a change here goes there too.
