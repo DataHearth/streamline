@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { untrack } from "svelte";
 	import Modal from "@components/modals/Modal.svelte";
 	import Select from "@components/forms/Select.svelte";
@@ -41,13 +42,14 @@
 		>
 			{i18n.common_cancel()}
 		</button>
-		<button
+		<Button
+			size="sm"
 			type="button"
 			disabled={saving || selected === current}
 			onclick={() => onSave(selected)}
-			class="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+		
 		>
 			{saving ? i18n.common_saving() : i18n.common_save()}
-		</button>
+		</Button>
 	{/snippet}
 </Modal>

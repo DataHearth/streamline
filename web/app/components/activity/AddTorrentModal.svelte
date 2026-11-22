@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { parts } from "@lib/message-parts";
 	import { Magnet, Upload, Info, FileText } from "@lucide/svelte";
 	import Modal from "@components/modals/Modal.svelte";
@@ -148,13 +149,12 @@
 		>
 			{i18n.common_cancel()}
 		</button>
-		<button
+		<Button
 			type="button"
 			onclick={submit}
 			disabled={!canSubmit}
-			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			{busy ? i18n.action_adding() : i18n.action_add_torrent()}
-		</button>
+		</Button>
 	{/snippet}
 </Modal>

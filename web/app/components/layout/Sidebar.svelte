@@ -281,7 +281,7 @@
 				<div class="text-[15px] font-semibold leading-tight tracking-tight text-fg">
 					streamline
 				</div>
-				<div class="mt-px font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+				<div class="mt-px eyebrow text-[10px] text-fg-subtle">
 					cinematic ops
 				</div>
 			</div>
@@ -293,7 +293,7 @@
 		class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pr-0.5"
 	>
 		<div
-			class="px-2 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle"
+			class="px-2 pb-1 pt-2 eyebrow text-[10px] text-fg-subtle"
 		>
 			{i18n.nav_library()}
 		</div>
@@ -345,7 +345,7 @@
 		</ul>
 
 		<div
-			class="px-2 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle"
+			class="px-2 pb-1 pt-2 eyebrow text-[10px] text-fg-subtle"
 		>
 			{i18n.nav_operations()}
 		</div>

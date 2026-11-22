@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { Plus } from "@lucide/svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -43,7 +44,7 @@
 						{counts[chip.key]}
 					</div>
 					<div
-						class="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle"
+						class="mt-0.5 eyebrow text-[9.5px] text-fg-subtle"
 					>
 						{chip.label}
 					</div>
@@ -51,14 +52,14 @@
 			{/each}
 		</ul>
 
-		<button
+		<Button
+			class="w-full md:w-auto"
 			type="button"
 			onclick={onNewScan}
-			class="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring md:h-auto md:w-auto md:py-2"
 		>
 			<Plus size={16} aria-hidden="true" />
 			{i18n.imports_new_scan()}
-		</button>
+		</Button>
 	</div>
 </header>
 

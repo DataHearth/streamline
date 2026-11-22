@@ -1,11 +1,11 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { ChevronRight, LoaderCircle } from "@lucide/svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import Checkbox from "@components/forms/Checkbox.svelte";
 	import IdentifyDialog from "./IdentifyDialog.svelte";
 	import { api } from "@lib/api";
-	import { twMerge } from "tailwind-merge";
 	import type { PendingItem, PendingPreview } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -225,14 +225,15 @@
 			the *anchor* episode, which says nothing about the torrent.
 		-->
 		{#if !item.media}
-			<button
+			<Button
+				size="sm"
 				type="button"
 				onclick={() => (identifyOpen = true)}
 				disabled={busy}
-				class="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-xs font-semibold text-fg-on-accent transition hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
+			
 			>
 				{i18n.pending_identify()}
-			</button>
+			</Button>
 			<!-- Only offered here: an unidentified proposal is the one shape a
 			     later library change can turn into a real match, and forgetting
 			     it is what lets the next adoption sweep try again. Nothing is
@@ -248,35 +249,31 @@
 			</button>
 		{:else}
 			{#if showImport}
-				<button
+				<Button
+					size="sm"
 					type="button"
 					onclick={onImport}
 					disabled={busy || settling}
-					class="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-xs font-semibold text-fg-on-accent transition hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
 				>
 					{#if busy}
 						<LoaderCircle class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
 					{/if}
 					{i18n.pending_import()}
-				</button>
+				</Button>
 			{/if}
 			{#if showReplace}
-				<button
+				<Button
+					variant={showImport ? "secondary" : "primary"}
+					size="sm"
 					type="button"
 					onclick={openReplace}
 					disabled={busy || settling}
-					class={twMerge(
-						"inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60",
-						showImport
-							? "border border-border text-fg-muted hover:bg-bg-elevated hover:text-fg"
-							: "bg-accent text-fg-on-accent hover:bg-accent-hover",
-					)}
 				>
 					{#if busy && !showImport}
 						<LoaderCircle class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
 					{/if}
 					{i18n.common_replace()}
-				</button>
+				</Button>
 			{/if}
 		{/if}
 		<button

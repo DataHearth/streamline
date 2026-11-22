@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { Plus, X } from "@lucide/svelte";
 	import { INPUT_CLASS } from "@lib/form";
 	import { twMerge } from "tailwind-merge";
@@ -81,14 +82,13 @@
 			{i18n.music_tag_override_add()}
 		</button>
 		{#if dirty}
-			<button
+			<Button
 				type="button"
-				class="inline-flex h-9 items-center rounded-md bg-accent px-3 text-[13px] font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:opacity-50"
 				onclick={() => onSave(rowsToOverrides(rows))}
 				disabled={disabled || pending}
 			>
 				{i18n.common_save()}
-			</button>
+			</Button>
 			<button
 				type="button"
 				class="inline-flex h-9 items-center rounded-md px-3 text-[13px] text-fg-muted transition hover:text-fg"

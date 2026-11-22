@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
 	import { ExternalLink, Plus, Puzzle } from "@lucide/svelte";
@@ -69,14 +70,15 @@
 <div class="mx-auto flex max-w-4xl flex-col gap-5">
 	<header class="flex flex-wrap items-end justify-between gap-3">
 		<p class="min-w-0 max-w-2xl flex-1 basis-72 text-sm leading-relaxed text-fg-muted">{i18n.extensions_intro()}</p>
-		<button
+		<Button
+			class="shrink-0"
 			type="button"
 			onclick={() => (adding = true)}
-			class="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
+		
 		>
 			<Plus size={16} aria-hidden="true" />
 			{i18n.extensions_add()}
-		</button>
+		</Button>
 	</header>
 
 	{#if list.isPending}

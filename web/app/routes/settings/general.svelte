@@ -361,7 +361,7 @@
 		<div class="min-w-0 flex-1">
 			<div class="flex items-center justify-between gap-2">
 				<span
-					class="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted"
+					class="eyebrow text-[10px] text-fg-muted"
 					>{label}</span
 				>
 				{#if pill}
@@ -401,7 +401,7 @@
 		<div class="min-w-0 flex-1">
 			<div class="flex items-center justify-between gap-2">
 				<span
-					class="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-muted"
+					class="eyebrow text-[10px] text-fg-muted"
 					>{label}</span
 				>
 				{#if usage}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { createForm } from "@tanstack/svelte-form";
 	import { createMutation } from "@tanstack/svelte-query";
 	import * as v from "valibot";
@@ -93,7 +94,7 @@
 		<!-- We never see the cleartext, so this presents the static enforced
 		     minimum rather than pretending to grade the current secret. -->
 		<span
-			class="inline-flex items-center rounded-full bg-status-available/15 px-2 py-0.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.1em] text-status-available"
+			class="inline-flex items-center rounded-full bg-status-available/15 px-2 py-0.5 eyebrow text-[9.5px] text-status-available"
 		>
 			{i18n.common_set()}
 		</span>
@@ -171,7 +172,7 @@
 						</div>
 						<span
 							class={[
-								"inline-flex items-center rounded-full px-2 py-0.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.1em]",
+								"inline-flex items-center rounded-full px-2 py-0.5 eyebrow text-[9.5px]",
 								PILL_CLASSES[score],
 							]}
 						>
@@ -220,13 +221,12 @@
 		>
 			{i18n.common_cancel()}
 		</button>
-		<button
+		<Button
 			type="submit"
 			form="change-password-form"
 			disabled={mutation.isPending}
-			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			{mutation.isPending ? i18n.common_changing() : i18n.account_change_password()}
-		</button>
+		</Button>
 	{/snippet}
 </Modal>

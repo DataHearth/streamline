@@ -256,7 +256,7 @@
 				{#if reviewer && pending}
 					<div class="mt-3 border-t border-border pt-4">
 						<div
-							class="mb-2 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
+							class="mb-2 eyebrow text-[9.5px] text-fg-subtle"
 						>
 							{i18n.requests_add_with_profile()}
 						</div>

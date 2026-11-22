@@ -349,7 +349,7 @@
 				<ChevronLeft size={20} aria-hidden="true" />
 				{i18n.nav_library()}
 			</button>
-			<span class="font-mono text-[10.5px] uppercase tracking-[0.16em] text-fg-subtle">
+			<span class="eyebrow text-[10.5px] text-fg-subtle">
 				{isMovie ? "TMDB" : "TVDB"}
 			</span>
 		</header>
@@ -524,7 +524,7 @@
 					<div class="flex min-w-0 flex-1 flex-col justify-center">
 						{#if selectedHeld}
 							<span
-								class="mb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-accent-text"
+								class="mb-1.5 eyebrow text-[10px] text-accent-text"
 							>
 								{i18n.status_in_library()}
 							</span>
@@ -566,7 +566,7 @@
 				{#if synopsis}
 					<section class="mt-4">
 						<h3
-							class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle"
+							class="mb-2 eyebrow text-[10.5px] text-fg-subtle"
 						>
 							{i18n.detail_synopsis()}
 						</h3>

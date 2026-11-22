@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
@@ -463,11 +464,11 @@
 			</p>
 
 			<div class="mt-4 flex flex-wrap items-center gap-3">
-				<button
+				<Button
 					type="button"
 					disabled={config.readOnly || scan.isPending || scanStarted || missing || ffmpegOff || !transcoding.data.enabled}
 					onclick={() => scan.mutate()}
-					class="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 lg:h-9 lg:min-h-0"
+				
 				>
 					{#if scan.isPending}
 						<LoaderCircle size={14} class="motion-safe:animate-spin" aria-hidden="true" />
@@ -475,7 +476,7 @@
 						<Radar size={14} aria-hidden="true" />
 					{/if}
 					{i18n.transcode_scan()}
-				</button>
+				</Button>
 				{#if scanStarted}
 					<a
 						href="/transcoding"

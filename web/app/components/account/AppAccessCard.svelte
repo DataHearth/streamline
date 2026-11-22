@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { createQuery, createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { Clipboard, Plus, Puzzle, RotateCw, ShieldAlert, X } from "@lucide/svelte";
@@ -197,15 +198,15 @@
 	{:else if data}
 		<div class="px-5 py-4">
 			<p class="text-sm text-fg-muted">{meta.intro()}</p>
-			<button
+			<Button
+				class="mt-3"
 				type="button"
 				disabled={create.isPending}
 				onclick={() => create.mutate()}
-				class="{btn} mt-3 bg-accent font-semibold text-fg-on-accent hover:bg-accent-hover"
 			>
 				<Plus size={14} aria-hidden="true" />
 				{create.isPending ? i18n.common_creating() : meta.create()}
-			</button>
+			</Button>
 		</div>
 	{/if}
 </section>

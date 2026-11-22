@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
@@ -150,14 +151,13 @@
 					onChange={(v) => (newExpiry = v)}
 				/>
 			</div>
-			<button
+			<Button
 				type="submit"
 				disabled={create.isPending || newName.trim().length === 0}
-				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				<Plus size={14} aria-hidden="true" />
 				{create.isPending ? i18n.common_creating() : i18n.common_create()}
-			</button>
+			</Button>
 		</form>
 	</div>
 

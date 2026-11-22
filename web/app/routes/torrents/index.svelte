@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { onMount, untrack } from "svelte";
 	import {
 		createQuery,
@@ -397,14 +398,13 @@
 						}}
 						class="h-9 w-28 rounded-md border border-border bg-bg px-3 font-mono text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
 					/>
-					<button
+					<Button
 						type="button"
 						disabled={setPort.isPending}
 						onclick={submitPort}
-						class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 					>
 						{setPort.isPending ? i18n.common_applying() : i18n.torrent_port_apply()}
-					</button>
+					</Button>
 					<button
 						type="button"
 						onclick={() => (portOpen = false)}
@@ -446,13 +446,12 @@
 					{i18n.torrents_empty_help()}
 				</p>
 			</div>
-			<a
+			<Button
 				href="/settings/download-clients"
-				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
 			>
 				{i18n.torrent_enable_in_settings()}
 				<ArrowUpRight size={15} aria-hidden="true" />
-			</a>
+			</Button>
 		</div>
 	{:else}
 		<TouchStatLine

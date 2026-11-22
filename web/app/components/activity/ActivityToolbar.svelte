@@ -44,6 +44,7 @@
 </script>
 
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import type { Snippet } from "svelte";
 	import { Magnet, Search, Trash2, X } from "@lucide/svelte";
 	import { twMerge } from "tailwind-merge";
@@ -231,14 +232,15 @@
 		<div class="ml-auto flex items-center gap-2">
 			<!-- Below md adding is the pill above the bottom nav, not a button in a
 			     line the thumb can't reach. -->
-			<button
+			<Button
+				class="hidden shrink-0 md:inline-flex"
 				type="button"
 				onclick={() => onAddTorrent?.()}
-				class="hidden h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow md:inline-flex"
+			
 			>
 				<Magnet size={14} aria-hidden="true" />
 				{i18n.action_add_torrent()}
-			</button>
+			</Button>
 		</div>
 	{/if}
 </div>

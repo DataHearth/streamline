@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { createForm } from "@tanstack/svelte-form";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { goto } from "@roxi/routify";
@@ -249,13 +250,12 @@
 	{/if}
 
 	<div class="flex justify-end">
-		<button
+		<Button
 			type="submit"
 			disabled={!form.state.canSubmit || form.state.isSubmitting}
-			class="inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			<Play size={14} aria-hidden="true" />
 			{form.state.isSubmitting ? i18n.common_starting() : i18n.imports_start_scan()}
-		</button>
+		</Button>
 	</div>
 </form>

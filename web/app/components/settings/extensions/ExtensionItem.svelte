@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { ChevronDown, CircleAlert, Pencil, Puzzle, ShieldCheck, Trash2 } from "@lucide/svelte";
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -131,14 +132,14 @@
 				{i18n.extensions_needs_approval_lead({ version: version || ext.name })}
 			</p>
 			<ExtensionPermissions permissions={added} base={ext.path} mark="added" class="mt-2.5" />
-			<button
+			<Button
+				class="mt-3.5"
 				type="button"
 				onclick={onApprove}
-				class="mt-3.5 inline-flex min-h-11 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover lg:h-8 lg:min-h-0"
 			>
 				<ShieldCheck size={14} aria-hidden="true" />
 				{i18n.extensions_review_approve()}
-			</button>
+			</Button>
 		</div>
 	{:else if ext.state === "failed"}
 		<div class="border-t border-status-failed/25 bg-status-failed/[0.05] px-4 py-3 md:px-5">

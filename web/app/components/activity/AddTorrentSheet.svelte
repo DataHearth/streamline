@@ -134,7 +134,7 @@
 				data-sheet-scroll
 				class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-2"
 			>
-				<div class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle">
+				<div class="mb-2.5 eyebrow text-[9.5px] text-fg-subtle">
 					{i18n.torrent_magnet_link()}
 				</div>
 				<div

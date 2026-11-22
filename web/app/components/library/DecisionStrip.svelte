@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { CircleCheckBig, TriangleAlert } from "@lucide/svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -70,17 +71,16 @@
 				{skipBusy ? i18n.common_skipping() : i18n.imports_skip_unmatched()}
 			</button>
 		{/if}
-		<button
+		<Button
 			type="button"
 			disabled={commitBusy || commitableCount === 0}
 			onclick={onCommit}
-			class="inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			<CircleCheckBig size={14} aria-hidden="true" />
 			{commitBusy
 				? i18n.common_starting()
 				: i18n.imports_commit_items({ items: noun.count(commitableCount) })}
-		</button>
+		</Button>
 	</div>
 </div>
 

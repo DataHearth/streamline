@@ -193,7 +193,7 @@
 	{:else if data.pack}
 		{@render headline(packTone, packSummary)}
 		{#if packAlbums.length > 0}
-			<div class="mt-2.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle">
+			<div class="mt-2.5 eyebrow text-[9.5px] text-fg-subtle">
 				{upload ? i18n.upload_pack_heading() : i18n.release_files_pack_heading()}
 			</div>
 			<ul class="mt-1 flex max-h-56 flex-col gap-0.5 overflow-y-auto overscroll-contain">
@@ -219,7 +219,7 @@
 			</ul>
 		{/if}
 		{#if packSkipped.length > 0}
-			<div class="mt-2.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle">
+			<div class="mt-2.5 eyebrow text-[9.5px] text-fg-subtle">
 				{upload ? i18n.upload_pack_skipped_heading() : i18n.release_files_pack_skipped_heading()}
 			</div>
 			<ul class="mt-1 flex max-h-40 flex-col gap-0.5 overflow-y-auto overscroll-contain">
@@ -242,7 +242,7 @@
 			{@render headline(tone, summary)}
 		{/if}
 		{#if missing.length > 0}
-			<div class="mt-2.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle">
+			<div class="mt-2.5 eyebrow text-[9.5px] text-fg-subtle">
 				{text.heading()}
 			</div>
 			<ul class="mt-1 flex max-h-56 flex-col gap-0.5 overflow-y-auto overscroll-contain">

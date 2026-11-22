@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -523,22 +524,14 @@
 
 {#snippet selectButton(r: SearchResult, extra = "")}
 	{@const pending = pendingId === r.download_url}
-	<button
-		type="button"
-		onclick={() => onSelect(r)}
-		disabled={pending || grab.isPending}
-		class={twMerge(
-			"inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover active:bg-accent-pressed disabled:cursor-not-allowed disabled:opacity-60 lg:h-9 lg:min-h-0",
-			extra,
-		)}
-	>
+	<Button type="button" onclick={() => onSelect(r)} disabled={pending || grab.isPending} class={["shrink-0", extra]}>
 		{#if pending}
 			<LoaderCircle size={13} class="animate-spin" aria-hidden="true" />
 		{:else}
 			<Download size={13} aria-hidden="true" />
 		{/if}
 		{i18n.releases_select()}
-	</button>
+	</Button>
 {/snippet}
 
 {#snippet friendlyCard(r: SearchResult, isRec: boolean)}
@@ -1171,11 +1164,13 @@
 								▲ {r.seeders}
 							</td>
 							<td class="px-3 py-2.5 text-right">
-								<button
+								<Button
+									size="sm"
+									class="lg:h-7"
 									type="button"
 									onclick={() => onSelect(r)}
 									disabled={pending || grab.isPending}
-									class="inline-flex h-10 items-center gap-1 rounded-md bg-accent px-2.5 text-[11px] font-semibold text-fg-on-accent lg:h-7 transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+								
 								>
 									{#if pending}
 										<LoaderCircle
@@ -1187,7 +1182,7 @@
 										<Download size={12} aria-hidden="true" />
 									{/if}
 									{i18n.releases_select()}
-								</button>
+								</Button>
 							</td>
 						</tr>
 						{#if filesPath && filesFor === r.download_url}
@@ -1248,7 +1243,7 @@
 	</p>
 	{#if existing && replaceCount === 1}
 		<div class="mt-3.5 rounded-md border border-border bg-bg-base px-3 py-2.5">
-			<div class="font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle">
+			<div class="eyebrow text-[9.5px] text-fg-subtle">
 				{i18n.replace_current_file()}
 			</div>
 			{#if existing.name}

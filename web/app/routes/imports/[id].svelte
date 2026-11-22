@@ -683,7 +683,7 @@
 		<header class="mt-3 flex flex-wrap items-start justify-between gap-3">
 			<div class="min-w-0 flex-1">
 				<p
-					class="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle"
+					class="eyebrow text-[10px] text-fg-subtle"
 				>
 					{i18n.imports_scan_hash({ id: scan.id })}
 				</p>

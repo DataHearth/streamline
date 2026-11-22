@@ -242,7 +242,7 @@
 		{#if synopsis && !headless}
 			<section>
 				<h4
-					class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle"
+					class="mb-2 eyebrow text-[10.5px] text-fg-subtle"
 				>
 					{i18n.detail_synopsis()}
 				</h4>
@@ -262,7 +262,7 @@
 		{:else if loading && !detail}
 			<section>
 				<h4
-					class="mb-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle"
+					class="mb-2 eyebrow text-[10.5px] text-fg-subtle"
 				>
 					{i18n.detail_top_billed()}
 				</h4>
@@ -282,7 +282,7 @@
 		{:else if cast.length > 0}
 			<section>
 				<h4
-					class="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle"
+					class="mb-2.5 eyebrow text-[10.5px] text-fg-subtle"
 				>
 					{i18n.detail_top_billed()}
 				</h4>
@@ -293,7 +293,7 @@
 		{#if facts.length > 0}
 			<section>
 				<h4
-					class="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle"
+					class="mb-2.5 eyebrow text-[10.5px] text-fg-subtle"
 				>
 					{i18n.common_details()}
 				</h4>

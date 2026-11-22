@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import {
 		createMutation,
 		createQuery,
@@ -98,22 +99,24 @@
 								{i18n.cardigann_update_reject()}
 							</button>
 							{#if config.readOnly}
-								<button
+								<Button
+									size="sm"
 									type="button"
 									onclick={() => copyCommit(u.commit)}
-									class="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-fg-on-accent transition hover:bg-accent-hover"
+								
 								>
 									{i18n.cardigann_update_copy()}
-								</button>
+								</Button>
 							{:else}
-								<button
+								<Button
+									size="sm"
 									type="button"
 									disabled={decide.isPending}
 									onclick={() => decide.mutate({ file: u.file, verb: "approve" })}
-									class="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:opacity-60"
+								
 								>
 									{i18n.cardigann_update_approve()}
-								</button>
+								</Button>
 							{/if}
 						</div>
 					</div>

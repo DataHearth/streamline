@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { PenLine } from "@lucide/svelte";
 	import Modal from "@components/modals/Modal.svelte";
@@ -80,7 +81,7 @@
 			hint: differing(f) ? String(differing(f)) : undefined,
 		})),
 	);
-	const caps = "font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted";
+	const caps = "eyebrow text-[11px] text-fg-muted";
 	const values = (v: string[]) => (v.length ? v.join(" ; ") : "—");
 </script>
 
@@ -115,15 +116,16 @@
 						disabled={saveAlbum.isPending}
 						onChange={(v: boolean) => saveAlbum.mutate({ tags_managed: v })}
 					/>
-					<button
+					<Button
+						class="shrink-0"
 						type="button"
 						onclick={() => writeNow.mutate()}
 						disabled={off || writeNow.isPending || tags.files.length === 0}
-						class="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-accent px-3 text-[13px] font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:opacity-50"
+					
 					>
 						<PenLine size={15} aria-hidden="true" />
 						{i18n.music_tags_panel_write()}
-					</button>
+					</Button>
 				</div>
 			</section>
 

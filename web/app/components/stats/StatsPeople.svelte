@@ -12,7 +12,7 @@
 	// worth seeing too. A row opens the user in Settings → Users.
 	let { people }: { people: StatsPerson[] } = $props();
 
-	const head = "font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle";
+	const head = "eyebrow text-[10px] text-fg-subtle";
 	const num = (n: number, cls: string) => (n > 0 ? cls : "text-fg-subtle");
 </script>
 

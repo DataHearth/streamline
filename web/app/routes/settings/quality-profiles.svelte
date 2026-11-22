@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
@@ -212,16 +213,17 @@
 				</button>
 			{/each}
 		</div>
-		<button
+		<Button
+			class="w-full sm:w-auto"
 			type="button"
 			onclick={() => (media === "video" ? openCreate() : panel?.openCreate())}
 			disabled={config.readOnly}
 			title={config.readOnly ? READONLY_HINT : null}
-			class="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-accent px-3.5 py-2.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:py-2"
+		
 		>
 			<Plus size={16} aria-hidden="true" />
 			{i18n.quality_add()}
-		</button>
+		</Button>
 	</header>
 	<p class="mt-4 text-sm text-fg-muted">
 		{media === "music" ? i18n.qp_intro_music() : media === "books" ? i18n.qp_intro_books() : i18n.quality_intro()}

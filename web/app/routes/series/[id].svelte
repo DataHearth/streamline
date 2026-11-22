@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import ClampedText from "@components/shared/ClampedText.svelte";
 	import { around } from "@lib/message-parts";
 	import {
@@ -789,14 +790,14 @@
 							disabledTitle={i18n.series_available_after_import()}
 						/>
 
-						<button
+						<Button
 							type="button"
 							onclick={() => openPackSearch("series")}
-							class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
+						
 						>
 							<Search size={14} aria-hidden="true" />
 							{i18n.action_manual_search()}
-						</button>
+						</Button>
 
 						<SeriesKebabMenu
 							onPick={onKebabPick}
@@ -862,7 +863,7 @@
 					>
 						<h4
 							id="series-info-library"
-							class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
+							class="eyebrow text-[11px] text-fg-subtle"
 						>
 							{i18n.nav_library()}
 						</h4>
@@ -1115,7 +1116,7 @@
 		{:else if tab === "cast"}
 			<DetailCast cast={show.cast ?? []} />
 			{#if show.crew?.length}
-				<h3 class="mb-3 mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle">{i18n.cast_crew()}</h3>
+				<h3 class="mb-3 mt-8 eyebrow text-[11px] text-fg-subtle">{i18n.cast_crew()}</h3>
 				<DetailCast cast={show.crew} />
 			{/if}
 		{/if}

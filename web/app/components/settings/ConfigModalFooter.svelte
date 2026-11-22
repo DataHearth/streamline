@@ -1,6 +1,6 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import type { Snippet } from "svelte";
-	import { twMerge } from "tailwind-merge";
 	import { config } from "@lib/config.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -31,25 +31,16 @@
 </script>
 
 {@render left?.()}
-<button
-	type="button"
-	onclick={onCancel}
-	class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
->
+<Button variant="secondary" type="button" onclick={onCancel}>
 	{submitShown ? i18n.common_cancel() : i18n.common_close()}
-</button>
+</Button>
 {#if submitShown}
-	<button
+	<Button
+		variant={submitTone === "danger" ? "danger" : "primary"}
 		type="submit"
 		form={formId}
 		disabled={submitDisabled}
-		class={twMerge(
-			"inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60",
-			submitTone === "danger"
-				? "bg-status-failed text-bg-deep hover:bg-status-failed/90"
-				: "bg-accent text-fg-on-accent hover:bg-accent-hover",
-		)}
 	>
 		{submitLabel}
-	</button>
+	</Button>
 {/if}

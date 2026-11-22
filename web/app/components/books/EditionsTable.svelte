@@ -80,7 +80,7 @@
 		<thead>
 			<tr class="border-b border-border">
 				{#each [i18n.common_language(), i18n.books_edition(), i18n.books_format(), i18n.common_details()] as h (h)}
-					<th class="px-3 py-2.5 text-left font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-fg-subtle">{h}</th>
+					<th class="px-3 py-2.5 text-left eyebrow text-[10px] text-fg-subtle">{h}</th>
 				{/each}
 				<th class="px-3 py-2.5"><span class="sr-only">{i18n.books_use()}</span></th>
 			</tr>
@@ -92,7 +92,7 @@
 						<div class="flex items-center gap-1.5">
 							<LangChip code={e.language} active={used(e)} />
 							{#if e.original}
-								<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-subtle">{i18n.books_original()}</span>
+								<span class="eyebrow text-[10px] text-fg-subtle">{i18n.books_original()}</span>
 							{/if}
 						</div>
 					</td>
@@ -128,7 +128,7 @@
 				<div class="flex items-center gap-1.5">
 					<LangChip code={e.language} active={used(e)} />
 					{#if e.original}
-						<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-subtle">{i18n.books_original()}</span>
+						<span class="eyebrow text-[10px] text-fg-subtle">{i18n.books_original()}</span>
 					{/if}
 				</div>
 				<p class="mt-1 truncate text-[13.5px] text-fg">{e.publisher} · {e.year}</p>

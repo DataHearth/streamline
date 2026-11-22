@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -65,7 +66,7 @@
 				>
 					<div class="flex gap-2.5 px-3 py-2">
 						<span
-							class="w-8 shrink-0 pt-px font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle"
+							class="w-8 shrink-0 pt-px eyebrow text-[9.5px] text-fg-subtle"
 						>
 							{i18n.common_from()}
 						</span>
@@ -77,7 +78,7 @@
 						class="flex gap-2.5 border-t border-border bg-accent-soft px-3 py-2"
 					>
 						<span
-							class="w-8 shrink-0 pt-px font-mono text-[9.5px] uppercase tracking-[0.14em] text-accent-text"
+							class="w-8 shrink-0 pt-px eyebrow text-[9.5px] text-accent-text"
 						>
 							{i18n.common_to()}
 						</span>
@@ -98,14 +99,15 @@
 			{opsCount === 0 ? i18n.common_close() : i18n.common_cancel()}
 		</button>
 		{#if opsCount > 0}
-			<button
+			<Button
+				size="sm"
 				type="button"
 				disabled={apply.isPending}
 				onclick={() => apply.mutate()}
-				class="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+			
 			>
 				{apply.isPending ? i18n.common_applying() : i18n.common_apply()}
-			</button>
+			</Button>
 		{/if}
 	{/snippet}
 </Modal>

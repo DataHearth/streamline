@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { Radar, Search, Tags, Upload } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
@@ -53,7 +54,7 @@
 	let pill = $derived(releasePill(r));
 	let facts = $derived(releaseFacts(r));
 	let shared = $derived(sharedWith(r, artistId));
-	const caps = "font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted";
+	const caps = "eyebrow text-[11px] text-fg-muted";
 </script>
 
 <section aria-labelledby="release-title" class="min-w-0">
@@ -109,14 +110,13 @@
 				     plus the gaps, which gap-2 took to 267. -->
 				<div class="mt-4 flex flex-wrap items-center gap-1.5">
 					{#if !up && !failed}
-						<button
+						<Button
 							type="button"
 							onclick={onSearch}
-							class="inline-flex h-11 items-center gap-2 rounded-lg bg-accent px-3 text-[13px] font-semibold text-fg-on-accent transition hover:bg-accent-hover lg:h-9"
 						>
 							<Radar size={15} aria-hidden="true" />
 							{i18n.music_search_now()}
-						</button>
+						</Button>
 					{/if}
 					{#if !up}
 						<button

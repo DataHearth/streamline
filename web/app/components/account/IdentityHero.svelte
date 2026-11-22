@@ -73,14 +73,14 @@
 					</h2>
 					{#if user?.role === "admin"}
 						<span
-							class="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-accent-text"
+							class="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 eyebrow text-[10px] text-accent-text"
 						>
 							<ShieldCheck size={10} aria-hidden="true" />
 							{i18n.common_admin()}
 						</span>
 					{:else if user?.role}
 						<span
-							class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-fg-muted"
+							class="inline-flex items-center rounded-full bg-surface px-2 py-0.5 eyebrow text-[10px] text-fg-muted"
 						>
 							{user.role}
 						</span>
@@ -137,7 +137,7 @@
 			: ''}"
 	>
 		<dt
-			class="flex items-center gap-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-fg-subtle"
+			class="flex items-center gap-1.5 eyebrow text-[9.5px] text-fg-subtle"
 		>
 			<Icon size={11} aria-hidden="true" />
 			{label}

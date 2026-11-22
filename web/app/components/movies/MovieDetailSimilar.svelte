@@ -89,7 +89,7 @@
 		<header class="mb-3 flex items-baseline justify-between gap-3">
 			<h3
 				id="similar-label"
-				class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
+				class="eyebrow text-[11px] text-fg-subtle"
 			>
 				{i18n.movies_more_like_this()}
 			</h3>

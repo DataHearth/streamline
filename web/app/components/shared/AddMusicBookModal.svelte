@@ -422,14 +422,14 @@
 											<span class="mt-1 flex flex-wrap items-center gap-1">
 												{#if held}
 													<span
-														class="inline-flex w-fit items-center rounded-full border border-border bg-bg-elevated px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-fg-subtle"
+														class="inline-flex w-fit items-center rounded-full border border-border bg-bg-elevated px-2 py-0.5 eyebrow text-[10px] text-fg-subtle"
 													>
 														{i18n.status_in_library()}
 													</span>
 												{/if}
 												{#if r.series && r.book?.volumes}
 													<span
-														class="inline-flex w-fit items-center rounded-full border border-accent/40 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-accent-text"
+														class="inline-flex w-fit items-center rounded-full border border-accent/40 px-2 py-0.5 eyebrow text-[10px] text-accent-text"
 													>
 														{i18n.lookup_series_badge({ count: String(r.book.volumes) })}
 													</span>

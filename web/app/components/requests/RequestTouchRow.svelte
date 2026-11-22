@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { ChevronRight } from "@lucide/svelte";
 	import { twMerge } from "tailwind-merge";
 	import { formatRelative } from "@lib/dates";
@@ -109,14 +110,15 @@
 			>
 				{i18n.common_reject()}
 			</button>
-			<button
+			<Button
+				class="h-11"
 				type="button"
 				disabled={busy}
 				onclick={() => onApprove?.(request)}
-				class="inline-flex h-11 items-center rounded-lg bg-accent px-4 text-[13px] font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:opacity-60"
+			
 			>
 				{i18n.requests_approve_add()}
-			</button>
+			</Button>
 		</div>
 	{:else if wide}
 		<!-- The word the row would have shown, in the column the buttons occupy on a

@@ -89,7 +89,7 @@
 		<div class="flex items-center gap-2">
 			<Globe size={13} class="text-fg-faint" aria-hidden="true" />
 			<span
-				class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
+				class="eyebrow text-[10px] text-fg-muted"
 				>{i18n.builtin_network()}</span
 			>
 		</div>
@@ -176,7 +176,7 @@
 		<div class="flex items-center gap-2">
 			<Gauge size={13} class="text-fg-faint" aria-hidden="true" />
 			<span
-				class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
+				class="eyebrow text-[10px] text-fg-muted"
 				>{i18n.builtin_speed_limits()}</span
 			>
 			<span
@@ -218,7 +218,7 @@
 		<div class="flex items-center gap-2">
 			<Folder size={13} class="text-fg-faint" aria-hidden="true" />
 			<span
-				class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
+				class="eyebrow text-[10px] text-fg-muted"
 				>{i18n.status_seeding()}</span
 			>
 		</div>

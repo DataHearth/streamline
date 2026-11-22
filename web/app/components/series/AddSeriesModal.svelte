@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -478,7 +479,7 @@
 									</span>
 									{#if inLibrary}
 										<span
-											class="mt-1 inline-flex w-fit items-center rounded-full border border-border bg-bg-elevated px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-fg-subtle"
+											class="mt-1 inline-flex w-fit items-center rounded-full border border-border bg-bg-elevated px-2 py-0.5 eyebrow text-[10px] text-fg-subtle"
 										>
 											{i18n.status_in_library()}
 										</span>
@@ -559,14 +560,14 @@
 
 	{#if selected}
 		{#if mode === "pick"}
-			<button
+			<Button
 				type="button"
 				onclick={() => selected && onPick?.(selected)}
-				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover"
+			
 			>
 				<Check size={15} aria-hidden="true" />
 				{i18n.action_use_match()}
-			</button>
+			</Button>
 		{:else if selectedInLibrary && !outcome.showing(selected.tvdb_id) && selectedLocalId !== undefined}
 			<a
 				href={`/series/${selectedLocalId}`}

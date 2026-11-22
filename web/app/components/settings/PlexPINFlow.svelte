@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { Cast, CircleCheck, RefreshCw } from "@lucide/svelte";
 	import { toast } from "@lib/toast";
 	import { startPlexPin } from "@lib/plex_pin";
@@ -45,11 +46,12 @@
 <div
 	class="flex flex-wrap items-center gap-3 rounded-md border border-border bg-bg-base px-3 py-2"
 >
-	<button
+	<Button
+		size="sm"
+		class="shrink-0"
 		type="button"
 		disabled={busy}
 		onclick={start}
-		class="touch-hit inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
 	>
 		{#if token}
 			<RefreshCw size={14} aria-hidden="true" />
@@ -58,7 +60,7 @@
 			<Cast size={14} aria-hidden="true" />
 			{i18n.plex_connect()}
 		{/if}
-	</button>
+	</Button>
 	<span class="min-w-0 flex-1 text-[11px] text-fg-muted">
 		{i18n.plex_pin_help()}
 	</span>

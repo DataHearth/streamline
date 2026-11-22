@@ -229,7 +229,7 @@
 	const gridClass =
 		"grid gap-x-4 gap-y-6 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]";
 	const headingClass =
-		"mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle";
+		"mb-3 eyebrow text-[11px] text-fg-subtle";
 </script>
 
 {#if personQuery.isLoading}
@@ -294,7 +294,7 @@
 
 			<div class="min-w-0 text-left">
 				<div
-					class="mb-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-black/40 px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-muted backdrop-blur-sm"
+					class="mb-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-black/40 px-2.5 py-1 eyebrow text-[10.5px] text-fg-muted backdrop-blur-sm"
 				>
 					<UserRound size={12} aria-hidden="true" />
 					{i18n.common_person()}

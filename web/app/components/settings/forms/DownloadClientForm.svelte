@@ -163,7 +163,7 @@
 				{#snippet children(field)}
 					<div class="flex flex-wrap items-center gap-2" role="radiogroup">
 						<span
-							class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
+							class="eyebrow text-[10px] text-fg-muted"
 							>{i18n.dlclient_auth_method()}</span
 						>
 						{#each [{ v: "password" as const, l: i18n.dlclient_user_pass() }, { v: "api_key" as const, l: i18n.field_api_key() }] as o}

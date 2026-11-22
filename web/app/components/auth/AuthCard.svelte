@@ -43,7 +43,7 @@
 				/>
 				{#if eyebrow}
 					<span
-						class="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle"
+						class="eyebrow text-[10px] text-fg-subtle"
 					>
 						{eyebrow}
 					</span>

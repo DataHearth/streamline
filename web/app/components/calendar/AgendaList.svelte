@@ -37,13 +37,13 @@
 				class="sticky top-(--top-bar-height) z-10 flex items-center gap-2.5 bg-bg-deep px-3 pb-1.5 pt-4"
 			>
 				<span
-					class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
+					class="eyebrow text-[11px] text-fg-muted"
 				>
 					{dayLabel(group.date)}
 				</span>
 				{#if isToday(group.date)}
 					<span
-						class="rounded-full bg-accent px-[7px] py-[2px] font-mono text-[9.5px] font-semibold uppercase tracking-[0.12em] text-fg-on-accent"
+						class="rounded-full bg-accent px-[7px] py-[2px] eyebrow text-[9.5px] text-fg-on-accent"
 					>
 						{i18n.common_today()}
 					</span>

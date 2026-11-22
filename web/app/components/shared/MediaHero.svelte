@@ -83,7 +83,7 @@
 
 		<div class="min-w-0 text-left">
 			{#if facts.length > 0}
-				{@render dotted(facts, "mb-3 font-mono text-[11px] uppercase tracking-[0.08em] text-fg-muted")}
+				{@render dotted(facts, "mb-3 eyebrow text-[11px] text-fg-muted")}
 			{/if}
 			<h1
 				id={labelId}

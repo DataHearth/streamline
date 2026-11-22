@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
@@ -163,16 +164,15 @@
 			</p>
 		</div>
 		<div class="flex flex-wrap items-center gap-2">
-			<button
+			<Button
 				type="button"
 				onclick={openCreate}
 				disabled={config.readOnly}
 				title={config.readOnly ? READONLY_HINT : null}
-				class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				<Plus size={16} aria-hidden="true" />
 				{i18n.mediaserver_add()}
-			</button>
+			</Button>
 		</div>
 	</header>
 

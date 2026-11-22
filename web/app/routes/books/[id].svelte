@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { tick } from "svelte";
 	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
@@ -168,7 +169,7 @@
 			? [book.author, i18n.books_first_published({ year: String(book.first_published) }), (book.editions.length === 1 ? i18n.books_editions_n_one : i18n.books_editions_n_other)({ count: String(book.editions.length) })]
 			: [],
 	);
-	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle";
+	const h3 = "eyebrow text-[11px] text-fg-subtle";
 
 	// The movie overview's two columns, under the format cards: what the book
 	// is and who made it, beside its facts and our copy of it. Translators and
@@ -272,19 +273,19 @@
 				     menu, with the searches in the pinned bar. No "Downloading…"
 				     chip: the status pill on the cover already says it. -->
 				<div class="flex flex-wrap items-center gap-2 md:gap-x-2.5 md:gap-y-3">
-					<span class="basis-full font-mono text-[10.5px] uppercase tracking-[0.1em] text-fg-subtle md:basis-auto">{i18n.action_monitor()}</span>
+					<span class="basis-full eyebrow text-[10.5px] text-fg-subtle md:basis-auto">{i18n.action_monitor()}</span>
 					<MonitorSelect value={book.monitor} options={MONITOR} onChange={(v) => setMonitor.mutate(v)} label={i18n.action_monitor()} class="flex-1 md:flex-none" />
 					<MonitorToggle monitored={book.monitor !== "none"} onToggle={toggleMonitor} pending={setMonitor.isPending} />
 					<span class="hidden h-0 basis-full md:block" aria-hidden="true"></span>
-					<button
+					<Button
+						class="hidden h-11 md:inline-flex"
 						type="button"
 						onclick={searchAll}
 						disabled={book.monitor === "none"}
-						class="hidden h-11 items-center gap-2 rounded-lg bg-accent px-4 text-[14px] font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 md:inline-flex"
 					>
 						<Radar size={16} aria-hidden="true" />
 						{i18n.books_search_now()}
-					</button>
+					</Button>
 					<button
 						type="button"
 						onclick={() => (manualOpen = true)}
@@ -467,11 +468,11 @@
 			<div class="mt-5 grid gap-3 sm:grid-cols-2">
 				{#each [{ label: i18n.replace_current_file(), e: pendingCurrent, detail: [pendingCurrent.publisher, String(pendingCurrent.year), pendingSlot.file?.container, pendingSlot.file ? formatBytes(pendingSlot.file.size, "") : ""] }, { label: i18n.replace_replaced_by(), e: pending, detail: [pending.publisher, String(pending.year), editionDetail(pending)] }] as box (box.label)}
 					<div class="rounded-lg border border-border bg-bg-deep/60 p-3.5">
-						<p class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle">{box.label}</p>
+						<p class="eyebrow text-[10px] text-fg-subtle">{box.label}</p>
 						<div class="mt-2 flex items-center gap-1.5">
 							<LangChip code={box.e.language} active />
 							{#if box.e.original}
-								<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-subtle">{i18n.books_original()}</span>
+								<span class="eyebrow text-[10px] text-fg-subtle">{i18n.books_original()}</span>
 							{/if}
 						</div>
 						<p class="mt-1.5 text-[13.5px] text-fg">{box.e.title}</p>

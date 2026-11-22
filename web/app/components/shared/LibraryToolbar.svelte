@@ -25,6 +25,7 @@
 </script>
 
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { CheckCheck, ChevronDown, LayoutGrid, List, ListChecks, Plus, Search, SlidersHorizontal, X } from "@lucide/svelte";
 	import { twMerge } from "tailwind-merge";
 	import { dragScroll } from "@lib/drag-scroll";
@@ -102,7 +103,7 @@
 {#snippet facetChips()}
 	{#each facets as f (f.key)}
 		<div class="pt-5">
-			<div class="mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-subtle">
+			<div class="mb-2.5 eyebrow text-[10.5px] text-fg-subtle">
 				{f.label}
 			</div>
 			<div class="flex flex-wrap gap-2">
@@ -334,14 +335,14 @@
 	{/if}
 
 	{#if add}
-		<button
+		<Button
+			class="shrink-0"
 			type="button"
 			onclick={add.onClick}
-			class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
 		>
 			<Plus size={14} aria-hidden="true" />
 			{add.label}
-		</button>
+		</Button>
 	{/if}
 </div>
 

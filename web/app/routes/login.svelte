@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { onMount, tick } from "svelte";
 	import { slide } from "svelte/transition";
 	import { ChevronDown, Mail } from "@lucide/svelte";
@@ -144,13 +145,13 @@
 				/>
 			{/snippet}
 		</form.Field>
-		<button
+		<Button
+			class="h-11 w-full"
 			type="submit"
 			disabled={!form.state.canSubmit || login.isPending}
-			class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent text-sm font-semibold text-fg-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			{login.isPending ? i18n.auth_signing_in() : i18n.auth_sign_in()}
-		</button>
+		</Button>
 	</form>
 {/snippet}
 
@@ -175,19 +176,15 @@
 	{#if hasSSO}
 		<div class="grid gap-2">
 			{#each providers as p, i}
-				<a
+				<Button
+					variant={i === 0 ? "primary" : "secondary"}
 					href={oidcStartURL(p.name, nextParam)}
 					target="_self"
-					class={[
-						"inline-flex h-11 w-full items-center justify-center gap-3 rounded-md px-4 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
-						i === 0
-							? "bg-accent font-semibold text-fg-on-accent hover:bg-accent-hover"
-							: "border border-border-strong bg-surface font-medium text-fg hover:border-accent hover:bg-surface-2",
-					]}
+					class="h-11 w-full gap-3"
 				>
 					<BrandLogo name={p.name} size={20} />
 					{i18n.auth_continue_with_provider({ provider: p.name })}
-				</a>
+				</Button>
 			{/each}
 		</div>
 

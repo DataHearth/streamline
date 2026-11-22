@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import {
 		Search,
@@ -328,7 +329,7 @@
 	{#snippet extra()}
 		<div class="pt-5">
 			<div
-				class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
+				class="mb-2.5 eyebrow text-[9.5px] text-fg-subtle"
 			>
 				{i18n.monitor_monitoring()}
 			</div>
@@ -616,10 +617,10 @@
 			{/if}
 		{/if}
 
-		<button
+		<Button
+			class="hidden shrink-0 md:inline-flex"
 			type="button"
 			onclick={onAddMovie}
-			class="hidden h-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-accent px-3.5 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow md:inline-flex lg:h-9"
 		>
 			<Plus size={14} aria-hidden="true" />
 			<span class="add-long hidden">
@@ -628,7 +629,7 @@
 			<span class="add-short">
 				{auth.canAddDirectly ? i18n.common_add() : i18n.action_request()}
 			</span>
-		</button>
+		</Button>
 	</div>
 </div>
 

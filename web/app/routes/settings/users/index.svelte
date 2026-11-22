@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { ArrowDown, ArrowUp, ArrowUpDown } from "@lucide/svelte";
 	import {
@@ -224,14 +225,15 @@
 			</p>
 		</div>
 	</div>
-	<button
+	<Button
+		class="w-full sm:w-auto"
 		type="button"
 		onclick={() => (creating = true)}
-		class="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-accent px-3.5 py-2.5 text-sm font-medium text-fg-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 sm:w-auto sm:py-2"
+	
 	>
 		<UserPlus size={16} aria-hidden="true" />
 		{i18n.users_new()}
-	</button>
+	</Button>
 </header>
 
 <section

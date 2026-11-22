@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { Search, Send } from "@lucide/svelte";
@@ -134,7 +135,7 @@
 		if (next?.release_date) p.push(i18n.books_next_volume({ n: String(next.number), date: formatDate(next.release_date) }));
 		return p;
 	});
-	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle";
+	const h3 = "eyebrow text-[11px] text-fg-subtle";
 
 	let people = $derived(
 		(s ? bookPeople(s.contributors ?? []) : []).map((x) => ({
@@ -256,19 +257,19 @@
 					     the search lives in the pinned bar there. The edition is a
 					     setting, not an action, and keeps its own line. -->
 					<div class="flex flex-wrap items-center gap-2 md:gap-x-2.5 md:gap-y-3">
-						<span class="basis-full font-mono text-[10.5px] uppercase tracking-[0.1em] text-fg-subtle md:basis-auto">{i18n.action_monitor()}</span>
+						<span class="basis-full eyebrow text-[10.5px] text-fg-subtle md:basis-auto">{i18n.action_monitor()}</span>
 						<MonitorSelect value={s.monitor} options={MONITOR} onChange={(v) => patch({ monitor: v })} label={i18n.action_monitor()} class="flex-1 md:flex-none" />
 						<MonitorToggle monitored={s.monitor !== "none"} onToggle={toggleMonitor} pending={update.isPending} />
 						{#if wanted > 0}
 							<span class="hidden h-0 basis-full md:block" aria-hidden="true"></span>
-							<button
+							<Button
+								class="hidden h-11 md:inline-flex"
 								type="button"
 								onclick={searchMissing}
-								class="hidden h-11 items-center gap-2 rounded-lg bg-accent px-4 text-[14px] font-semibold text-fg-on-accent transition hover:bg-accent-hover md:inline-flex"
 							>
 								<Search size={16} aria-hidden="true" />
 								{i18n.music_search_missing()}
-							</button>
+							</Button>
 						{/if}
 						<LibraryActions
 							base={`/books/series/${s.id}`}
@@ -283,7 +284,7 @@
 						/>
 					</div>
 					<div class="flex flex-col gap-2 md:flex-row md:items-center md:gap-2.5">
-						<span class="font-mono text-[10.5px] uppercase tracking-[0.1em] text-fg-subtle">{i18n.books_edition()}</span>
+						<span class="eyebrow text-[10.5px] text-fg-subtle">{i18n.books_edition()}</span>
 						<MonitorSelect
 							value={s.edition}
 							options={s.editions.map((e) => ({ key: e, label: e }))}

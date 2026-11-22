@@ -156,7 +156,7 @@
 				{#if canPick}
 					{#if entry.candidates.length > 0}
 						<div
-							class="mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
+							class="mb-2.5 eyebrow text-[9.5px] text-fg-subtle"
 						>
 							{i18n.imports_candidates_from({ source })}
 						</div>

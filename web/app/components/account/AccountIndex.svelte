@@ -185,7 +185,7 @@
 		<div class="flex items-center gap-2.5 pb-2 pt-5">
 			<h2
 				class={twMerge(
-					"font-mono text-[11px] font-semibold uppercase tracking-[0.14em]",
+					"eyebrow text-[11px]",
 					g.danger ? "text-status-failed" : "text-fg-muted",
 				)}
 			>

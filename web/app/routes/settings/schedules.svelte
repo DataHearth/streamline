@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { onMount } from "svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
@@ -225,7 +226,7 @@
 							<th
 								colspan="6"
 								scope="colgroup"
-								class="px-4 py-1.5 text-left font-mono text-[10px] uppercase tracking-[0.16em] text-fg-subtle"
+								class="px-4 py-1.5 text-left eyebrow text-[10px] text-fg-subtle"
 							>
 								{g.label}
 							</th>
@@ -248,13 +249,13 @@
 				aria-hidden="true"
 			>
 				<span
-					class="font-mono text-[10px] uppercase tracking-[0.18em] text-fg-subtle"
+					class="eyebrow text-[10px] text-fg-subtle"
 				>
 					{i18n.settings_system()}
 				</span>
 				<div class="h-px flex-1 bg-border"></div>
 				<span
-					class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle"
+					class="eyebrow text-[10px] text-fg-subtle"
 				>
 					{i18n.schedules_predefined()}
 				</span>
@@ -346,13 +347,12 @@
 		>
 			{i18n.common_cancel()}
 		</button>
-		<button
+		<Button
 			type="submit"
 			form="schedule-form"
 			disabled={config.readOnly || !form.state.canSubmit || form.state.isSubmitting}
-			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
 		>
 			{form.state.isSubmitting ? i18n.common_saving() : i18n.common_save()}
-		</button>
+		</Button>
 	{/snippet}
 </Modal>

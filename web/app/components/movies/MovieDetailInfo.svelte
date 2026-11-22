@@ -154,14 +154,14 @@
 			<div class="flex min-w-0 items-center gap-2">
 				<h4
 					id="info-file"
-					class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
+					class="eyebrow text-[11px] text-fg-subtle"
 				>
 					{i18n.common_file()}
 				</h4>
 				{#if primary}
 					<span
 						class={twMerge(
-							"shrink-0 rounded-full border px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.1em]",
+							"shrink-0 rounded-full border px-1.5 py-px eyebrow text-[9px]",
 							probe
 								? "border-status-available/30 bg-status-available/10 text-status-available"
 								: "border-border-strong text-fg-subtle",
@@ -173,7 +173,7 @@
 				{#if primary?.file_score !== undefined}
 					<span
 						class={twMerge(
-							"shrink-0 rounded-full border px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.1em]",
+							"shrink-0 rounded-full border px-1.5 py-px eyebrow text-[9px]",
 							primary.file_score > 0
 								? "border-status-available/30 bg-status-available/10 text-status-available"
 								: primary.file_score < 0
@@ -358,7 +358,7 @@
 	>
 		<h4
 			id="info-library"
-			class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
+			class="eyebrow text-[11px] text-fg-subtle"
 		>
 			{i18n.nav_library()}
 		</h4>
@@ -442,7 +442,7 @@
 
 {#snippet group(label: string)}
 	<div
-		class="col-span-2 mt-2 flex items-center gap-2.5 font-mono text-[9px] uppercase tracking-[0.12em] text-fg-subtle"
+		class="col-span-2 mt-2 flex items-center gap-2.5 eyebrow text-[9px] text-fg-subtle"
 	>
 		<span>{label}</span>
 		<span class="h-px flex-1 bg-border" aria-hidden="true"></span>

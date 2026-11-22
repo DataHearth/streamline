@@ -150,7 +150,7 @@
 	>
 		{#each labels as label (label)}
 			<span
-				class="font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle"
+				class="eyebrow text-[9.5px] text-fg-subtle"
 			>
 				{label}
 			</span>
@@ -247,7 +247,7 @@
 		style:--pop-w="{POP_W}px"
 	>
 		<div
-			class="border-b border-border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle"
+			class="border-b border-border px-3 py-2 eyebrow text-[10px] text-fg-subtle"
 		>
 			{popLabel}
 		</div>

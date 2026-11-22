@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { CircleX, Replace, TriangleAlert } from "@lucide/svelte";
 	import TranscodeRow from "./TranscodeRow.svelte";
 	import { errorText } from "@lib/api";
@@ -105,13 +106,13 @@
 					{i18n.settings_quality_profiles()}
 				</a>
 				{#if onScan}
-					<button
+					<Button
 						type="button"
 						onclick={() => onScan?.()}
-						class="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-accent px-3.5 text-[13px] font-semibold text-fg-on-accent transition hover:bg-accent-hover lg:h-9 lg:min-h-0"
+					
 					>
 						{i18n.transcode_scan()}
-					</button>
+					</Button>
 				{/if}
 			</div>
 		{/if}

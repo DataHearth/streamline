@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
 	import { Radar, Search, Tags, Upload, UserRound } from "@lucide/svelte";
@@ -328,7 +329,7 @@
 			{ label: i18n.music_fact_last_added(), value: formatRelative(artist.added_at) },
 		];
 	});
-	const h3 = "font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle";
+	const h3 = "eyebrow text-[11px] text-fg-subtle";
 </script>
 
 {#if artistQuery.isLoading || !id}
@@ -416,7 +417,7 @@
 					     third line. -->
 					<div class="@container">
 					<div class="flex flex-wrap items-center gap-2 md:gap-x-2.5 md:gap-y-3">
-						<span class="basis-full font-mono text-[10.5px] uppercase tracking-[0.1em] text-fg-subtle md:basis-auto">{i18n.action_monitor()}</span>
+						<span class="basis-full eyebrow text-[10.5px] text-fg-subtle md:basis-auto">{i18n.action_monitor()}</span>
 						<MonitorSelect
 							value={artist.monitor}
 							options={MONITOR}
@@ -428,15 +429,15 @@
 						<span class="hidden h-0 basis-full md:block" aria-hidden="true"></span>
 						<!-- Always offered, as the book page's Search now: with nothing
 						     wanted it looks for upgrades to what the profile allows. -->
-						<button
+						<Button
+							class="hidden h-11 md:inline-flex"
 							type="button"
 							onclick={searchMissing}
 							disabled={artist.monitor === "none"}
-							class="hidden h-11 items-center gap-2 rounded-lg bg-accent px-4 text-[14px] font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 md:inline-flex"
 						>
 							<Radar size={16} aria-hidden="true" />
 							{tally.wanted > 0 ? i18n.music_search_missing() : i18n.music_search_now()}
-						</button>
+						</Button>
 						<button
 							type="button"
 							onclick={() => openManual("artist")}

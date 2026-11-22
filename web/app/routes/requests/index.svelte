@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -664,16 +665,16 @@
 													<X size={14} aria-hidden="true" />
 													{i18n.common_reject()}
 												</button>
-												<button
+												<Button
 													type="button"
 													disabled={approve.isPending}
 													onclick={() =>
 														approve.mutate({ r, profile: selectedProfile })}
-													class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:opacity-60"
+												
 												>
 													<Check size={14} aria-hidden="true" />
 													{i18n.requests_approve_add()}
-												</button>
+												</Button>
 											</div>
 										</div>
 									{:else}

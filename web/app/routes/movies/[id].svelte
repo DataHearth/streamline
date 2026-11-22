@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { params, goto } from "@roxi/routify";
 	import { Search, LoaderCircle } from "@lucide/svelte";
@@ -178,14 +179,14 @@
 					disabledTitle={i18n.movies_available_after_import()}
 				/>
 
-				<button
+				<Button
 					type="button"
 					onclick={() => (searchOpen = true)}
-					class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover hover:shadow-glow"
+				
 				>
 					<Search size={14} aria-hidden="true" />
 					{i18n.action_manual_search()}
-				</button>
+				</Button>
 
 				<MonitorToggle monitored={movie.monitored ?? false} onToggle={() => monitor.mutate(!(movie.monitored ?? false))} pending={monitor.isPending} size="md" backdrop />
 
@@ -253,7 +254,7 @@
 		{:else if tab === "cast"}
 			<DetailCast cast={movie.cast ?? []} />
 			{#if movie.crew?.length}
-				<h3 class="mb-3 mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle">{i18n.cast_crew()}</h3>
+				<h3 class="mb-3 mt-8 eyebrow text-[11px] text-fg-subtle">{i18n.cast_crew()}</h3>
 				<DetailCast cast={movie.crew} />
 			{/if}
 		{/if}

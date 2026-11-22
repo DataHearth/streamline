@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { onMount } from "svelte";
 	import { createMutation, createQuery } from "@tanstack/svelte-query";
 	import { createForm } from "@tanstack/svelte-form";
@@ -184,13 +185,13 @@
 					/>
 				{/snippet}
 			</form.Field>
-			<button
+			<Button
+				class="h-11 w-full"
 				type="submit"
 				disabled={!form.state.canSubmit || register.isPending}
-				class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent text-sm font-semibold text-fg-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{register.isPending ? i18n.auth_creating_account() : i18n.auth_create_account()}
-			</button>
+			</Button>
 		</form>
 	{/if}
 

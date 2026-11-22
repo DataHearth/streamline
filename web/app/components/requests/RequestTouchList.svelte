@@ -42,7 +42,7 @@
 			{#if g.rows.length > 0}
 				<div class="flex items-center gap-2.5 pb-2 pt-5 first:pt-0">
 					<h2
-						class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
+						class="eyebrow text-[11px] text-fg-muted"
 					>
 						{g.label}
 					</h2>

@@ -155,7 +155,7 @@
 			<div>
 				<div class="mb-1.5 flex flex-wrap items-center gap-2">
 					<span
-						class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
+						class="eyebrow text-[10px] text-fg-muted"
 						>{i18n.indexer_aggregators()}</span
 					>
 					<span class="text-[11px] text-fg-subtle"
@@ -172,7 +172,7 @@
 			<div>
 				<div class="mb-1.5 flex flex-wrap items-center gap-2">
 					<span
-						class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
+						class="eyebrow text-[10px] text-fg-muted"
 						>{i18n.indexer_single_feed()}</span
 					>
 					<span class="text-[11px] text-fg-subtle"

@@ -254,7 +254,7 @@
 				<h2 class="text-sm font-semibold tracking-[-0.01em] text-fg">
 					{dayLabel(selected)}
 					{#if isSameDay(selected, today)}
-						<span class="ml-1 font-mono text-[10px] uppercase tracking-[0.12em] text-accent-text">
+						<span class="ml-1 eyebrow text-[10px] text-accent-text">
 							{i18n.common_today()}
 						</span>
 					{/if}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { BookOpen, Eye, Headphones, Info, Search } from "@lucide/svelte";
 	import { formatBytes } from "@lib/format";
 	import LabelPill from "@components/shared/LabelPill.svelte";
@@ -87,7 +88,7 @@
 		<div class="mt-3 flex min-w-0 items-center gap-2">
 			<LangChip code={edition.language} active />
 			{#if edition.original}
-				<span class="font-mono text-[10px] uppercase tracking-[0.08em] text-fg-subtle">{i18n.books_original()}</span>
+				<span class="eyebrow text-[10px] text-fg-subtle">{i18n.books_original()}</span>
 			{/if}
 			<p class="min-w-0 truncate text-[13.5px] text-fg">{edition.title}</p>
 		</div>
@@ -107,14 +108,13 @@
 		{#if canEdit}
 			<div class="mt-4 flex flex-wrap gap-2">
 				{#if slot.state === "wanted"}
-					<button
+					<Button
 						type="button"
 						onclick={onSearch}
-						class="inline-flex h-11 items-center gap-2 rounded-lg bg-accent px-3 text-[13px] font-semibold text-fg-on-accent transition hover:bg-accent-hover lg:h-9"
 					>
 						<Search size={15} aria-hidden="true" />
 						{i18n.action_manual_search()}
-					</button>
+					</Button>
 				{/if}
 				{#if editionCount > 1}
 					<button type="button" onclick={onChangeEdition} class={ghost}>{i18n.books_change_edition()}</button>

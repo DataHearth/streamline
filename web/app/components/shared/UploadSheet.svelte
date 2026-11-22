@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { untrack } from "svelte";
 	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
 	import { FolderUp, Files, Upload, X } from "@lucide/svelte";
@@ -190,7 +191,7 @@
 	<div class="flex flex-col gap-4">
 		{#if target === "book" && !slot}
 			<div role="radiogroup" aria-label={i18n.upload_slot()} class="flex items-center gap-2">
-				<span class="font-mono text-[10.5px] uppercase tracking-[0.1em] text-fg-subtle">{i18n.upload_slot()}</span>
+				<span class="eyebrow text-[10.5px] text-fg-subtle">{i18n.upload_slot()}</span>
 				{#each ["ebook", "audiobook"] as const as s (s)}
 					<label
 						class={twMerge(
@@ -319,14 +320,13 @@
 
 	{#snippet footer()}
 		<button type="button" onclick={close} class={btn}>{i18n.common_cancel()}</button>
-		<button
+		<Button
 			type="button"
 			onclick={send}
 			disabled={!wouldImport || sending}
-			class="inline-flex h-11 items-center gap-2 rounded-lg bg-accent px-4 text-[13px] font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 lg:h-9"
 		>
 			<Upload size={15} aria-hidden="true" />
 			{sending ? i18n.upload_sending() : i18n.upload_send()}
-		</button>
+		</Button>
 	{/snippet}
 </Modal>

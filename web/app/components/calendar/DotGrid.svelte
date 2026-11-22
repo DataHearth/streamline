@@ -42,7 +42,7 @@
 	<div class="grid grid-cols-7" aria-hidden="true">
 		{#each labels as label, i (i)}
 			<span
-				class="pb-1.5 text-center font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle"
+				class="pb-1.5 text-center eyebrow text-[9.5px] text-fg-subtle"
 			>
 				{label}
 			</span>

@@ -14,6 +14,7 @@
 </script>
 
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import type { Snippet } from "svelte";
 	import Modal from "./Modal.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -45,13 +46,6 @@
 	}: Props = $props();
 
 	let inline = $derived(inlineActions ?? actions.length === 2);
-
-	const VARIANT: Record<NonNullable<DialogAction["variant"]>, string> = {
-		primary: "bg-accent text-fg-on-accent hover:bg-accent-hover",
-		danger: "bg-status-failed text-bg-deep hover:bg-status-failed/90",
-		ghost:
-			"border border-border bg-bg-elevated text-fg hover:border-border-strong",
-	};
 
 	function run(a: DialogAction) {
 		if (a.disabled || a.pending) return;
@@ -94,15 +88,13 @@
 </Modal>
 
 {#snippet action(a: DialogAction)}
-	<button
+	<Button
+		variant={a.variant === "ghost" ? "secondary" : a.variant}
 		type="button"
 		onclick={() => run(a)}
 		disabled={a.disabled || a.pending}
 		data-autofocus={a.autofocus ? true : undefined}
-		class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md px-3.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 {VARIANT[
-			a.variant ?? 'primary'
-		]}"
 	>
 		{a.pending ? i18n.common_working() : a.label}
-	</button>
+	</Button>
 {/snippet}

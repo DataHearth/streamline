@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { parts } from "@lib/message-parts";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
@@ -84,16 +85,16 @@
 				{i18n.settings_oidc_intro()}
 			</p>
 		</div>
-		<button
+		<Button
 			type="button"
 			onclick={() => (modalOpen = true)}
 			disabled={config.readOnly}
 			title={config.readOnly ? READONLY_HINT : null}
-			class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-fg-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+		
 		>
 			<Plus size={16} aria-hidden="true" />
 			{i18n.oidc_add_provider()}
-		</button>
+		</Button>
 	</header>
 
 	{#if restartRequired}

@@ -30,7 +30,7 @@
 >
 	<div class="mb-3.5 px-2">
 		<div
-			class="font-mono text-[9.5px] uppercase tracking-[0.18em] text-fg-subtle"
+			class="eyebrow text-[9.5px] text-fg-subtle"
 		>
 			{i18n.nav_settings()}
 		</div>
@@ -42,7 +42,7 @@
 		{#each nav.groups as g (g.name)}
 			<div>
 				<div
-					class="px-2.5 pb-1.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-fg-subtle"
+					class="px-2.5 pb-1.5 eyebrow text-[9.5px] text-fg-subtle"
 				>
 					{g.name}
 				</div>

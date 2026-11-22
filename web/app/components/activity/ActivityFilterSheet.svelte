@@ -63,7 +63,7 @@
 	const chipOff = "border-border bg-surface text-fg-muted active:bg-surface-2";
 	const chipOn = "border-accent-line bg-accent-soft text-accent-text";
 	const label =
-		"mb-2.5 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle";
+		"mb-2.5 eyebrow text-[9.5px] text-fg-subtle";
 </script>
 
 {#if open}

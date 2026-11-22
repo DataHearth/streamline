@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { House, LogOut, ShieldX } from "@lucide/svelte";
 	import AuthCard from "@components/auth/AuthCard.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -32,13 +33,13 @@
 	</div>
 
 	<div class="flex flex-col gap-2">
-		<a
+		<Button
+			class="h-11 w-full"
 			href="/"
-			class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent text-sm font-semibold text-fg-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 		>
 			<House size={16} aria-hidden="true" />
 			{i18n.error_go_to_dashboard()}
-		</a>
+		</Button>
 		<button
 			type="button"
 			onclick={signOut}

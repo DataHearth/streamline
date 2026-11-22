@@ -238,7 +238,7 @@
 			<div class="flex-1 overflow-y-auto p-1.5">
 				{#each sections as section, sIdx (section.label)}
 					<div
-						class="px-3 pt-2.5 pb-1 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
+						class="px-3 pt-2.5 pb-1 eyebrow text-[9.5px] text-fg-subtle"
 					>
 						{section.label}
 					</div>
@@ -354,7 +354,7 @@
 								{/if}
 							</div>
 							<span
-								class="font-mono text-[9.5px] uppercase tracking-[0.1em] text-fg-subtle"
+								class="eyebrow text-[9.5px] text-fg-subtle"
 							>
 								{itemKindLabel(item)}
 							</span>

@@ -79,7 +79,7 @@
 		<header class="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
 			<h2
 				class={[
-					"font-mono text-[11px] font-semibold uppercase tracking-[0.16em]",
+					"eyebrow text-[11px]",
 					danger ? "text-status-failed" : "text-fg-subtle",
 				]}
 			>

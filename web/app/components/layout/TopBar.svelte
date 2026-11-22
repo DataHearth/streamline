@@ -479,7 +479,7 @@
 		style:--menu-width="{ADD_MENU_W}px"
 	>
 		<div
-			class="px-3 pb-1.5 pt-2 font-mono text-[9.5px] uppercase tracking-[0.18em] text-fg-subtle"
+			class="px-3 pb-1.5 pt-2 eyebrow text-[9.5px] text-fg-subtle"
 		>
 			{addHeading}
 		</div>
@@ -511,7 +511,7 @@
 				</span>
 				{#if item.soon}
 					<span
-						class="rounded-sm border border-border px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.1em] text-fg-subtle"
+						class="rounded-sm border border-border px-1.5 py-px eyebrow text-[9px] text-fg-subtle"
 					>
 						{i18n.common_soon()}
 					</span>

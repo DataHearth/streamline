@@ -39,7 +39,7 @@
 		class?: string;
 	} = $props();
 
-	const head = "font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-fg-faint";
+	const head = "eyebrow text-[10.5px] text-fg-faint";
 	let ink = $derived(mark === "kept" ? "text-fg-muted" : mark === "dropped" ? "text-fg-subtle line-through decoration-fg-faint" : "text-fg");
 
 	let full = $derived(hasFullAccess(permissions));

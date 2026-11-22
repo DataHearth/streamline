@@ -23,6 +23,7 @@
 </script>
 
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { api } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
@@ -133,7 +134,7 @@
 )}
 	<div class="mt-3.5">
 		<h5
-			class="font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle"
+			class="eyebrow text-[10px] text-fg-subtle"
 		>
 			{heading}
 		</h5>
@@ -171,7 +172,7 @@
 			{#if episode.file_score !== undefined}
 				<span
 					class={twMerge(
-						"shrink-0 rounded-full border px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.1em]",
+						"shrink-0 rounded-full border px-1.5 py-px eyebrow text-[9px]",
 						episode.file_score > 0
 							? "border-status-available/30 bg-status-available/10 text-status-available"
 							: episode.file_score < 0
@@ -203,12 +204,12 @@
 			<div class="mt-4 border-t border-border pt-3">
 				<div class="flex items-center gap-2">
 					<h4
-						class="font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle"
+						class="eyebrow text-[11px] text-fg-subtle"
 					>
 						{i18n.file_media()}
 					</h4>
 					<span
-						class="rounded-full border border-status-available/30 bg-status-available/10 px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.1em] text-status-available"
+						class="rounded-full border border-status-available/30 bg-status-available/10 px-1.5 py-px eyebrow text-[9px] text-status-available"
 					>
 						{i18n.file_probed()}
 					</span>
@@ -239,7 +240,7 @@
 
 		{#if credits.length > 0}
 			<div class="mt-4 border-t border-border pt-3">
-				<h4 class="mb-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle">
+				<h4 class="mb-2.5 eyebrow text-[11px] text-fg-subtle">
 					{i18n.episode_credits()}
 				</h4>
 				<DetailCast cast={credits} dense />
@@ -274,18 +275,18 @@
 				</button>
 			{/if}
 			{#if episode && episode.status !== "unaired" && auth.canAddDirectly}
-				<button
+				<Button
 					type="button"
 					onclick={() => {
 						const ep = episode;
 						onClose();
 						if (ep) onManualSearch(ep);
 					}}
-					class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-medium text-fg-on-accent transition hover:bg-accent-hover"
+				
 				>
 					<Search size={15} aria-hidden="true" />
 					{i18n.action_manual_search()}
-				</button>
+				</Button>
 			{/if}
 		{/snippet}
 	</Modal>

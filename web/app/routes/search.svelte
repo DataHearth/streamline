@@ -244,7 +244,7 @@
 		<div class="md:mx-auto md:max-w-2xl">
 			{#each model.sections as section (section.id)}
 				<div
-					class="flex items-baseline justify-between px-3 pb-1 pt-3 font-mono text-[9.5px] uppercase tracking-[0.16em] text-fg-subtle"
+					class="flex items-baseline justify-between px-3 pb-1 pt-3 eyebrow text-[9.5px] text-fg-subtle"
 				>
 					<span>{section.label}</span>
 				</div>

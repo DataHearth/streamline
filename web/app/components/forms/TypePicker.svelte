@@ -39,7 +39,7 @@
 	aria-label={label}
 >
 	<span
-		class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
+		class="eyebrow text-[10px] text-fg-muted"
 		>{label}</span
 	>
 	{#each options as o (o.value)}

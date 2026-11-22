@@ -101,7 +101,7 @@
 		return rows.filter((f) => f !== null);
 	});
 
-	const h4 = "mb-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-fg-subtle";
+	const h4 = "mb-2.5 eyebrow text-[10.5px] text-fg-subtle";
 	const chip = "inline-flex h-6 items-center rounded-full border border-border bg-surface px-2.5 font-mono text-[11px] text-fg-muted";
 </script>
 
@@ -258,7 +258,7 @@
 							<span class="text-[13px] font-medium text-fg">
 								{languageName(e.language, true)}
 								{#if e.original}
-									<span class="ml-1 font-mono text-[10px] uppercase tracking-[0.1em] text-fg-subtle">{i18n.books_original()}</span>
+									<span class="ml-1 eyebrow text-[10px] text-fg-subtle">{i18n.books_original()}</span>
 								{/if}
 							</span>
 							<span class="text-[12px] text-fg-muted">{e.formats.join(" · ")}</span>

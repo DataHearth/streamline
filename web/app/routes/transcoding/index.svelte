@@ -236,7 +236,7 @@
 				     matches neither the row metrics nor the tinted surface every other
 				     picker in the app opens. -->
 				<label class="hidden items-center gap-2 lg:flex">
-					<span class="font-mono text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+					<span class="eyebrow text-[10px] text-fg-subtle">
 						{i18n.filter_sort()}
 					</span>
 					<div class="w-[190px]">

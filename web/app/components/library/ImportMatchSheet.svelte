@@ -227,7 +227,7 @@
 					class="flex items-center gap-2.5 border-y border-accent-line bg-accent-soft px-5 py-2"
 				>
 					<span
-						class="shrink-0 font-mono text-[9.5px] uppercase tracking-[0.14em] text-accent-text"
+						class="shrink-0 eyebrow text-[9.5px] text-accent-text"
 					>
 						{i18n.imports_matching()}
 					</span>

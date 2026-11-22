@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { Search, Trash2 } from "@lucide/svelte";
 	import Modal from "@components/modals/Modal.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
@@ -87,14 +88,14 @@
 			</button>
 		{/if}
 		{#if canEdit && onManualSearch}
-			<button
+			<Button
 				type="button"
 				onclick={() => act(onManualSearch)}
-				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md bg-accent px-3.5 text-sm font-medium text-fg-on-accent transition hover:bg-accent-hover"
+			
 			>
 				<Search size={15} aria-hidden="true" />
 				{i18n.action_manual_search()}
-			</button>
+			</Button>
 		{/if}
 	{/snippet}
 </Modal>
