@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
@@ -82,13 +83,14 @@
 		<div class="flex flex-col items-start gap-3 rounded-lg border border-border bg-bg-elevated p-5">
 			<p class="text-[14px] text-fg">{i18n.stats_load_failed()}</p>
 			<p class="text-[13px] text-fg-subtle">{errorText(statsQuery.error, i18n.err_generic())}</p>
-			<button
+			<Button
+				variant="secondary"
 				type="button"
 				onclick={() => qc.refetchQueries({ queryKey: ["stats", range] })}
-				class="h-9 rounded-md border border-border-strong bg-surface px-3.5 text-[13px] font-semibold text-fg transition hover:bg-surface-2"
+			
 			>
 				{i18n.common_retry()}
-			</button>
+			</Button>
 		</div>
 	{:else if !stats}
 		<StatsSkeleton />

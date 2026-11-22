@@ -90,14 +90,16 @@
 							</ul>
 						</div>
 						<div class="flex shrink-0 gap-2">
-							<button
+							<Button
+								variant="secondary"
+								size="sm"
 								type="button"
 								disabled={decide.isPending}
 								onclick={() => decide.mutate({ file: u.file, verb: "reject" })}
-								class="rounded-md border border-border bg-bg-elevated px-3 py-1.5 text-xs font-semibold text-fg transition hover:border-border-strong disabled:opacity-60"
+							
 							>
 								{i18n.cardigann_update_reject()}
-							</button>
+							</Button>
 							{#if config.readOnly}
 								<Button
 									size="sm"

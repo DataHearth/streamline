@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import { RefreshCw } from "@lucide/svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
@@ -88,14 +89,16 @@
 					alt={i18n.indexer_captcha_alt()}
 					class="max-h-24 rounded border border-border bg-white"
 				/>
-				<button
+				<Button
+					variant="ghost"
+					size="icon"
 					type="button"
 					onclick={() => indexer && load(indexer.name)}
-					class="grid h-9 w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+				
 					aria-label={i18n.indexer_captcha_reload()}
 				>
 					<RefreshCw size={16} aria-hidden="true" />
-				</button>
+				</Button>
 			</div>
 			<input
 				type="text"

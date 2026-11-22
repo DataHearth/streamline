@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { createMutation, createQuery, useQueryClient } from "@tanstack/svelte-query";
 	import { api, apiAllPages, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
@@ -72,13 +73,14 @@
 				<h2 class="text-sm font-semibold text-fg">{i18n.file_missing_from_disk()}</h2>
 				<p class="mt-0.5 text-xs leading-relaxed text-fg-subtle">{i18n.library_missing_help()}</p>
 			</div>
-			<button
+			<Button
+				variant="secondary"
+				size="sm"
 				type="button"
-				class="rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-fg hover:border-border-strong"
 				onclick={() => (forgetting = files)}
 			>
 				{i18n.library_missing_forget_all()}
-			</button>
+			</Button>
 		</div>
 		<ul class="mt-3 max-h-96 divide-y divide-border overflow-y-auto">
 			{#each files as f (f.id)}
@@ -94,13 +96,15 @@
 								: i18n.library_missing_never()}
 						</p>
 					</div>
-					<button
+					<Button
+						variant="secondary"
+						size="sm"
+						class="shrink-0"
 						type="button"
-						class="touch-hit shrink-0 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-fg hover:border-border-strong"
 						onclick={() => (forgetting = [f])}
 					>
 						{i18n.library_missing_forget()}
-					</button>
+					</Button>
 				</li>
 			{/each}
 		</ul>

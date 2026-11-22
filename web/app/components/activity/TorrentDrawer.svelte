@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { onMount } from "svelte";
@@ -224,14 +225,16 @@
 							</button>
 						</div>
 					</div>
-					<button
+					<Button
+						variant="ghost"
+						size="icon"
+						class="shrink-0"
 						type="button"
 						onclick={onClose}
 						aria-label={i18n.common_close()}
-						class="grid h-11 w-11 shrink-0 place-items-center rounded-md text-fg-muted lg:h-9 lg:w-9 transition hover:bg-surface hover:text-fg"
 					>
 						<X size={16} aria-hidden="true" />
-					</button>
+					</Button>
 				</div>
 
 				<div class="mt-3 flex flex-wrap items-center gap-2">

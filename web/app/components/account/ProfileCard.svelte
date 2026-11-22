@@ -42,13 +42,14 @@
 <section class="rounded-lg border border-border bg-bg-elevated p-6">
 	<header class="mb-4 flex items-start justify-between gap-3">
 		<h3 class="text-base font-semibold text-fg">{i18n.common_profile()}</h3>
-		<button
+		<Button
+			variant="secondary"
+			size="sm"
 			type="button"
 			onclick={startEdit}
-			class="inline-flex min-h-11 items-center rounded-md border border-border bg-surface px-3 text-xs font-medium text-fg-muted lg:h-7 lg:min-h-0 transition hover:bg-surface-2 hover:text-fg"
 		>
 			{i18n.common_edit()}
-		</button>
+		</Button>
 	</header>
 
 	<dl class="grid gap-2.5 text-sm">
@@ -131,16 +132,17 @@
 	</form>
 
 	{#snippet footer()}
-		<button
+		<Button
+			variant="secondary"
 			type="button"
 			onclick={() => {
 				if (!mutation.isPending) open = false;
 			}}
 			disabled={mutation.isPending}
-			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border bg-surface px-3.5 text-sm font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:opacity-60"
+		
 		>
 			{i18n.common_cancel()}
-		</button>
+		</Button>
 		<Button
 			type="submit"
 			form="edit-profile-form"

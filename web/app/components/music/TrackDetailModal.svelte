@@ -78,14 +78,16 @@
 		<!-- The episode details modal's footer: no Close (the header's ✕ is
 		     it), the file delete muted until hovered, the search the accent. -->
 		{#if canEdit && track?.has_file && onDeleteFile}
-			<button
+			<Button
+				variant="secondary"
+				class="hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
 				type="button"
 				onclick={() => act(onDeleteFile)}
-				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3.5 text-sm font-medium text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
+			
 			>
 				<Trash2 size={15} aria-hidden="true" />
 				{i18n.action_delete_file()}
-			</button>
+			</Button>
 		{/if}
 		{#if canEdit && onManualSearch}
 			<Button

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import { around } from "@lib/message-parts";
 	import { ChevronDown, ExternalLink, Trash2, ArrowUpRight } from "@lucide/svelte";
@@ -188,7 +189,10 @@
 				{/if}
 			</div>
 			{#if primary && auth.canAddDirectly}
-				<button
+				<Button
+					variant="ghost"
+					size="icon"
+					class="hover:bg-status-failed/10 hover:text-status-failed"
 					type="button"
 					onclick={() => {
 						removeTorrent = false;
@@ -196,10 +200,10 @@
 					}}
 					aria-label={i18n.action_delete_file()}
 					title={i18n.action_delete_file()}
-					class="grid h-11 w-11 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 lg:h-7 lg:w-7 hover:text-status-failed focus:outline-none focus:ring-2 focus:ring-accent-ring"
+				
 				>
 					<Trash2 class="h-4 w-4" aria-hidden="true" />
-				</button>
+				</Button>
 			{/if}
 		</div>
 		{#if primary?.missing_from_disk}

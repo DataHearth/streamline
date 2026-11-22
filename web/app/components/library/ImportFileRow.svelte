@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { createMutation, useQueryClient } from "@tanstack/svelte-query";
 	import {
 		ArrowUp,
@@ -226,14 +227,16 @@
 			</div>
 		{:else if reviewing && file.classification === "confirmed"}
 			<div class="inline-flex items-center gap-1.5">
-				<button
+				<Button
+					variant="secondary"
+					size="sm"
 					type="button"
 					onclick={() => onChooseMatch(file)}
-					class="inline-flex items-center gap-1 rounded-md border border-border bg-bg-card px-2.5 py-1 text-xs font-medium text-fg-muted transition hover:border-accent/40 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
+				
 				>
 					<Pencil size={12} aria-hidden="true" />
 					{i18n.imports_change_match()}
-				</button>
+				</Button>
 				{@render skipToggle()}
 			</div>
 		{:else if reviewing && file.classification === "existing"}

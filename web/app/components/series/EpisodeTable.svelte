@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import { auth } from "@lib/auth.svelte";
@@ -155,36 +156,43 @@
 					</td>
 					<td class="px-2 py-2.5">
 						<div class="flex items-center justify-end gap-0.5">
-							<button
+							<Button
+								variant="ghost"
+								size="icon"
 								type="button"
 								onclick={() => (detail = ep)}
 								aria-label={i18n.series_details_for({ code: epCode(ep) })}
 								title={i18n.common_details()}
-								class="grid h-11 w-11 place-items-center rounded-md text-fg-subtle transition hover:bg-surface hover:text-fg focus-visible:ring-2 focus-visible:ring-accent-ring lg:h-7 lg:w-7"
+							
 							>
 								<Info size={14} aria-hidden="true" />
-							</button>
+							</Button>
 							{#if ep.status !== "unaired" && auth.canAddDirectly}
-								<button
+								<Button
+									variant="ghost"
+									size="icon"
 									type="button"
 									onclick={() => onManualSearch(ep)}
 									aria-label={i18n.series_manual_search_for({ code: epCode(ep) })}
 									title={i18n.action_manual_search()}
-									class="grid h-11 w-11 place-items-center rounded-md text-fg-subtle transition hover:bg-surface hover:text-fg focus-visible:ring-2 focus-visible:ring-accent-ring lg:h-7 lg:w-7"
+								
 								>
 									<Search size={14} aria-hidden="true" />
-								</button>
+								</Button>
 							{/if}
 							{#if (ep.size ?? 0) > 0 && auth.canAddDirectly}
-								<button
+								<Button
+									variant="ghost"
+									size="icon"
+									class="hover:bg-status-failed/10 hover:text-status-failed"
 									type="button"
 									onclick={() => onDeleteFile(ep)}
 									aria-label={i18n.series_delete_file_for({ code: epCode(ep) })}
 									title={i18n.action_delete_file()}
-									class="grid h-11 w-11 place-items-center rounded-md text-fg-subtle transition hover:bg-status-failed/10 hover:text-status-failed focus-visible:ring-2 focus-visible:ring-accent-ring lg:h-7 lg:w-7"
+								
 								>
 									<Trash2 size={14} aria-hidden="true" />
-								</button>
+								</Button>
 							{/if}
 						</div>
 					</td>

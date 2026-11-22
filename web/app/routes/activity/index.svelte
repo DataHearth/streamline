@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { untrack } from "svelte";
 	import { pageTitle } from "@lib/page-title.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
@@ -572,14 +573,15 @@
 					{:else}
 						{#if unidentified.length > 1}
 							<div class="mb-2 flex justify-end">
-								<button
+								<Button
+									variant="secondary"
+									size="sm"
 									type="button"
 									onclick={forgetAllUnidentified}
 									disabled={forgettingAll}
-									class="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium text-fg-muted transition hover:bg-bg-elevated hover:text-fg focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
 								>
 									{i18n.imports_forget_all({ count: unidentified.length })}
-								</button>
+								</Button>
 							</div>
 						{/if}
 						<div class="flex flex-col gap-2">

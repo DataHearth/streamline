@@ -340,13 +340,14 @@
 	</form>
 
 	{#snippet footer()}
-		<button
+		<Button
+			variant="secondary"
 			type="button"
 			onclick={() => (modalOpen = false)}
-			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border px-3 text-sm text-fg-muted hover:text-fg"
+		
 		>
 			{i18n.common_cancel()}
-		</button>
+		</Button>
 		<Button
 			type="submit"
 			form="schedule-form"

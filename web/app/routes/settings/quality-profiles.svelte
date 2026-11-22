@@ -318,14 +318,16 @@
 					</button>
 					<div class="flex shrink-0 items-center gap-0.5 md:gap-1">
 						{#if config.readOnly}
-							<button
+							<Button
+								variant="ghost"
+								size="icon"
 								type="button"
 								onclick={() => openEdit(p)}
-								class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-fg"
+							
 								aria-label={i18n.quality_view_short()}
 							>
 								<Eye size={16} aria-hidden="true" />
-							</button>
+							</Button>
 						{:else}
 							<ProfileDefaultControl
 								name={p.name}
@@ -334,24 +336,29 @@
 								busy={makeDefault.isPending}
 								onMake={(kind) => makeDefault.mutate({ name: p.name, kind })}
 							/>
-							<button
+							<Button
+								variant="ghost"
+								size="icon"
 								type="button"
 								onclick={() => openEdit(p)}
-								class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-surface hover:text-fg"
+							
 								aria-label={i18n.quality_edit_short()}
 							>
 								<Pencil size={16} aria-hidden="true" />
-							</button>
-							<button
+							</Button>
+							<Button
+								variant="ghost"
+								size="icon"
+								class="hover:bg-status-failed/10 hover:text-status-failed"
 								type="button"
 								disabled={held(p).length > 0}
 								title={held(p).length ? i18n.quality_default_undeletable_for({ kinds: heldLabels(kinds, held(p)) }) : null}
 								onclick={() => onDelete(p)}
-								class="rounded-md p-3 text-fg-muted lg:p-1.5 transition hover:bg-status-failed/10 hover:text-status-failed"
+							
 								aria-label={i18n.quality_delete()}
 							>
 								<Trash2 size={16} aria-hidden="true" />
-							</button>
+							</Button>
 						{/if}
 					</div>
 				</div>

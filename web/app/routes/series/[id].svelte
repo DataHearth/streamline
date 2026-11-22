@@ -1066,17 +1066,20 @@
 							</div>
 							{#if auth.canAddDirectly}
 								<div class="flex items-center gap-2">
-									<button
+									<Button
+										variant="secondary"
 										type="button"
 										onclick={() =>
 											currentSeason && openPackSearch(String(currentSeason.number))}
-										class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-border-strong hover:text-fg"
+									
 									>
 										<Search size={15} aria-hidden="true" />
 										{i18n.series_search_season()}
-									</button>
+									</Button>
 									{#if seasonFileEpisodes.length > 0}
-										<button
+										<Button
+											variant="secondary"
+											class="hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
 											type="button"
 											onclick={() =>
 												currentSeason &&
@@ -1086,11 +1089,11 @@
 														: seasonTitle(currentSeason.number),
 													seasonFileEpisodes,
 												)}
-											class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
+										
 										>
 											<Trash2 size={15} aria-hidden="true" />
 											{i18n.action_delete_files()}
-										</button>
+										</Button>
 									{/if}
 								</div>
 							{/if}

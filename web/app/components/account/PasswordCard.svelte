@@ -112,13 +112,14 @@
 		{/each}
 	</div>
 
-	<button
+	<Button
+		variant="secondary"
+		class="mt-4"
 		type="button"
 		onclick={startChange}
-		class="mt-4 inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border bg-surface px-3.5 text-sm font-medium text-fg transition hover:bg-surface-2"
 	>
 		{i18n.account_change_password()}
-	</button>
+	</Button>
 </section>
 
 <Modal
@@ -211,16 +212,17 @@
 	</form>
 
 	{#snippet footer()}
-		<button
+		<Button
+			variant="secondary"
 			type="button"
 			onclick={() => {
 				if (!mutation.isPending) open = false;
 			}}
 			disabled={mutation.isPending}
-			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border bg-surface px-3.5 text-sm font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:opacity-60"
+		
 		>
 			{i18n.common_cancel()}
-		</button>
+		</Button>
 		<Button
 			type="submit"
 			form="change-password-form"

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { slide } from "svelte/transition";
 	import { ArrowUpRight, Ban, ChevronDown, LoaderCircle, RotateCcw } from "@lucide/svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
@@ -205,13 +206,14 @@
 				{/if}
 			</dl>
 			{#if href}
-				<a
+				<Button
+					variant="secondary"
+					class="mt-3"
 					{href}
-					class="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg lg:h-8 lg:min-h-0"
 				>
 					{i18n.transcode_open_item({ title: job.media_title })}
 					<ArrowUpRight size={13} aria-hidden="true" />
-				</a>
+				</Button>
 			{/if}
 			{#if job.error}
 				<pre

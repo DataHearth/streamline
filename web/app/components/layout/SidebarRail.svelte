@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { onMount } from "svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -319,15 +320,17 @@
 			>
 				<Avatar email={auth.user.email} name={auth.user.display_name} size={34} />
 			</a>
-			<button
+			<Button
+				variant="ghost"
+				size="icon"
+				class="hover:bg-status-failed/10 hover:text-status-failed"
 				type="button"
 				onclick={signOut}
 				aria-label={i18n.common_sign_out()}
 				title={i18n.common_sign_out()}
-				class="grid h-11 w-11 place-items-center rounded-xl text-fg-muted transition-colors hover:bg-status-failed/10 hover:text-status-failed"
 			>
 				<LogOut size={19} aria-hidden="true" />
-			</button>
+			</Button>
 		</div>
 	{/if}
 </aside>

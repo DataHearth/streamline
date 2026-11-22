@@ -299,31 +299,38 @@
 						{#snippet trailing()}
 							<div class="flex shrink-0 items-center gap-1">
 								{#if config.readOnly}
-									<button
+									<Button
+										variant="ghost"
+										size="icon"
 										type="button"
 										onclick={() => openEdit(s)}
-										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+									
 										aria-label={i18n.mediaserver_view_short()}
 									>
 										<Eye size={16} aria-hidden="true" />
-									</button>
+									</Button>
 								{:else}
-									<button
+									<Button
+										variant="ghost"
+										size="icon"
 										type="button"
 										onclick={() => openEdit(s)}
-										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+									
 										aria-label={i18n.mediaserver_edit_short()}
 									>
 										<Pencil size={16} aria-hidden="true" />
-									</button>
-									<button
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon"
+										class="hover:bg-status-failed/10 hover:text-status-failed"
 										type="button"
 										onclick={() => onDelete(s)}
-										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
+									
 										aria-label={i18n.mediaserver_delete()}
 									>
 										<Trash2 size={16} aria-hidden="true" />
-									</button>
+									</Button>
 								{/if}
 							</div>
 						{/snippet}

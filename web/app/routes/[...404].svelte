@@ -68,13 +68,14 @@
 				<House size={16} aria-hidden="true" />
 				{i18n.error_back_to_dashboard()}
 			</Button>
-			<a
+			<Button
+				variant="secondary"
+				class="h-11 w-full"
 				href="/movies"
-				class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-border-strong bg-surface px-4 text-sm font-medium text-fg transition-colors hover:border-accent hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 			>
 				<Film size={16} aria-hidden="true" />
 				{i18n.error_browse_movies()}
-			</a>
+			</Button>
 		</div>
 	</AuthCard>
 {/if}

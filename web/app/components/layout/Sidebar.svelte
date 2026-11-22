@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { roleLabel } from "@lib/roles";
 	import { onMount } from "svelte";
 	import {
@@ -446,15 +447,17 @@
 						</div>
 					</div>
 				</a>
-				<button
+				<Button
+					variant="ghost"
+					size="icon"
+					class="shrink-0 hover:bg-status-failed/10 hover:text-status-failed"
 					type="button"
 					onclick={signOut}
 					aria-label={i18n.common_sign_out()}
 					title={i18n.common_sign_out()}
-					class="grid h-10 w-10 shrink-0 place-items-center rounded-md text-fg-muted transition-colors hover:bg-status-failed/10 hover:text-status-failed"
 				>
 					<LogOut size={18} aria-hidden="true" />
-				</button>
+				</Button>
 			</div>
 		{/if}
 	</div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { onMount, tick, onDestroy } from "svelte";
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
@@ -396,13 +397,15 @@
 	<div class={twMerge("flex flex-none items-center justify-end gap-2 lg:flex-1", hideForSelection)}>
 		<!-- A link, not the palette: below md search is a page of its own, so
 		     Back closes it (routes/search.svelte). -->
-		<a
+		<Button
+			variant="ghost"
+			size="icon"
+			class="md:hidden"
 			href="/search"
-			class="grid h-11 w-11 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg md:hidden"
 		>
 			<span class="sr-only">{i18n.common_search()}</span>
 			<Search size={19} aria-hidden="true" />
-		</a>
+		</Button>
 		<button
 			bind:this={addTrigger}
 			type="button"
@@ -434,14 +437,16 @@
 			role="toolbar"
 			aria-label={i18n.bulk_selection()}
 		>
-			<button
+			<Button
+				variant="ghost"
+				size="icon"
+				class="shrink-0"
 				type="button"
 				onclick={selection.onClear}
 				aria-label={i18n.bulk_exit_selection()}
-				class="grid h-11 w-11 shrink-0 place-items-center rounded-full text-fg-muted transition active:bg-surface"
 			>
 				<X size={20} aria-hidden="true" />
-			</button>
+			</Button>
 			<span class={twMerge(titleClass, "min-w-0 flex-1 pl-1 tabular-nums")} aria-live="polite">
 				{selection.count === 0
 					? i18n.a11y_select_all_of({ items: selection.noun.items })

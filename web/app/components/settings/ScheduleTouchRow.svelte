@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { Ellipsis, Lock } from "@lucide/svelte";
 	import { twMerge } from "tailwind-merge";
 	import { formatRelative, formatDateTime } from "@lib/dates";
@@ -71,13 +72,16 @@
 			<span class="sr-only">{i18n.settings_managed_by_streamline()}</span>
 		</span>
 	{:else}
-		<button
+		<Button
+			variant="ghost"
+			size="icon"
+			class="shrink-0"
 			type="button"
 			onclick={() => onMenu(row)}
 			aria-label={i18n.schedule_actions_for({ name: row.name })}
-			class="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-fg-muted transition active:bg-bg-hover"
+		
 		>
 			<Ellipsis size={18} aria-hidden="true" />
-		</button>
+		</Button>
 	{/if}
 </div>

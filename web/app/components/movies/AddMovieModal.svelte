@@ -544,14 +544,14 @@
 				{i18n.action_use_match()}
 			</Button>
 		{:else if selectedInLibrary && !outcome.showing(selected.tmdb_id) && selectedLocalId !== undefined}
-			<a
+			<Button
+				variant="secondary"
 				href={`/movies/${selectedLocalId}`}
 				onclick={onClose}
-				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-4 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 			>
 				{i18n.action_open_in_library()}
 				<ArrowUpRight size={15} aria-hidden="true" />
-			</a>
+			</Button>
 		{:else if selectedInLibrary && !outcome.showing(selected.tmdb_id)}
 			<span
 				class="inline-flex h-9 items-center rounded-md border border-border bg-bg-elevated px-4 text-sm font-medium text-fg-muted"

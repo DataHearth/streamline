@@ -3,12 +3,14 @@
 		primary:
 			"bg-accent text-fg-on-accent hover:bg-accent-hover hover:shadow-glow active:bg-accent-pressed disabled:shadow-none",
 		secondary: "border-border-strong bg-surface text-fg hover:bg-surface-2",
+		ghost: "text-fg-muted hover:bg-surface hover:text-fg",
 		danger: "bg-status-failed text-bg-deep hover:bg-status-failed/90",
 	};
 
 	const sizes = {
 		sm: "h-8 px-3 max-lg:min-h-11",
 		md: "h-10 px-4 max-lg:min-h-11",
+		icon: "size-10 rounded-full px-0 max-lg:size-11",
 	};
 </script>
 

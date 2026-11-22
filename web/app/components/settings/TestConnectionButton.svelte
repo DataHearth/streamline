@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import type { Snippet } from "svelte";
 	import { createMutation } from "@tanstack/svelte-query";
 	import { Plug, CircleCheck, CircleX, TriangleAlert } from "@lucide/svelte";
@@ -59,15 +60,17 @@
 {#if variant === "card"}
 	<div class="mt-1 border-t border-border pt-3">
 		<div class="flex items-center gap-2">
-			<button
+			<Button
+				variant="secondary"
+				class="min-w-0 flex-1"
 				type="button"
 				disabled={test.isPending}
 				onclick={() => test.mutate()}
-				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md border border-border bg-bg-base text-[13px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg active:bg-bg-hover disabled:cursor-progress disabled:opacity-60"
+			
 			>
 				<Plug size={13} aria-hidden="true" />
 				{test.isPending ? i18n.common_testing() : label}
-			</button>
+			</Button>
 			{#if test.isSuccess || test.isError}
 				<span
 					class={twMerge(

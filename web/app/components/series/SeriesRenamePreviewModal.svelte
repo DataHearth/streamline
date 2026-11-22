@@ -91,13 +91,14 @@
 		</ul>
 	{/if}
 	{#snippet footer()}
-		<button
+		<Button
+			variant="secondary"
+			size="sm"
 			type="button"
 			onclick={onClose}
-			class="rounded-md border border-border bg-bg-elevated px-3 py-1.5 text-sm font-medium text-fg hover:border-border-strong"
 		>
 			{opsCount === 0 ? i18n.common_close() : i18n.common_cancel()}
-		</button>
+		</Button>
 		{#if opsCount > 0}
 			<Button
 				size="sm"

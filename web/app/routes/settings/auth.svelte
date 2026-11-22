@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
@@ -341,24 +342,27 @@
 	>
 		{pendingSecret}
 	</code>
-	<button
+	<Button
+		variant="secondary"
+		size="sm"
+		class="mt-2"
 		type="button"
 		onclick={copySecret}
-		class="mt-2 inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
 	>
 		<Clipboard size={13} aria-hidden="true" />
 		{i18n.auth_copy_secret()}
-	</button>
+	</Button>
 
 	{#snippet footer()}
-		<button
+		<Button
+			variant="secondary"
 			type="button"
 			data-autofocus
 			onclick={() => (pendingSecret = null)}
-			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border px-3 text-sm text-fg-muted transition hover:text-fg"
+		
 		>
 			{i18n.common_cancel()}
-		</button>
+		</Button>
 		<button
 			type="button"
 			disabled={rotate.isPending}

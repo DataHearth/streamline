@@ -657,14 +657,15 @@
 												{/if}
 											</div>
 											<div class="flex items-center gap-2">
-												<button
+												<Button
+													variant="secondary"
 													type="button"
 													onclick={() => openDeny(r)}
-													class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
+												
 												>
 													<X size={14} aria-hidden="true" />
 													{i18n.common_reject()}
-												</button>
+												</Button>
 												<Button
 													type="button"
 													disabled={approve.isPending}
@@ -679,14 +680,15 @@
 										</div>
 									{:else}
 										<div class="mt-4 flex items-center justify-end gap-2">
-											<button
+											<Button
+												variant="secondary"
 												type="button"
 												onclick={() => reopen.mutate(r)}
-												class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
+											
 											>
 												<RotateCcw size={14} aria-hidden="true" />
 												{i18n.requests_reopen()}
-											</button>
+											</Button>
 										</div>
 									{/if}
 								{/if}

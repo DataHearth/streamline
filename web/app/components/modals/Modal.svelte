@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import type { Snippet } from "svelte";
 	import { tick } from "svelte";
@@ -121,14 +122,15 @@
 					>
 						{title}
 					</h2>
-					<button
+					<Button
+						variant="ghost"
+						size="icon"
 						type="button"
 						onclick={onClose}
 						aria-label={i18n.common_close()}
-						class="grid h-11 w-11 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg lg:h-8 lg:w-8"
 					>
 						<X size={16} aria-hidden="true" />
-					</button>
+					</Button>
 				</header>
 				<div class="flex-1 overflow-y-auto px-5 py-4">
 					{@render children()}

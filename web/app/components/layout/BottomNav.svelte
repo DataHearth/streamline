@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { roleLabel } from "@lib/roles";
 	import { sheetSwipe } from "@lib/sheet-swipe";
@@ -520,15 +521,17 @@
 								</div>
 							</div>
 						</a>
-						<button
+						<Button
+							variant="ghost"
+							size="icon"
+							class="shrink-0 hover:bg-status-failed/10 hover:text-status-failed"
 							type="button"
 							onclick={signOut}
 							aria-label={i18n.common_sign_out()}
 							title={i18n.common_sign_out()}
-							class="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-fg-muted transition-colors hover:bg-status-failed/10 hover:text-status-failed"
 						>
 							<LogOut size={19} aria-hidden="true" />
-						</button>
+						</Button>
 					</div>
 				{/if}
 			</div>

@@ -131,14 +131,17 @@
 				</button>
 			</div>
 			<code class="block break-all rounded-md bg-bg-deep px-3 py-2 font-mono text-xs text-fg">{secret}</code>
-			<button
+			<Button
+				variant="secondary"
+				size="sm"
+				class="w-fit"
 				type="button"
 				onclick={() => copy(secret)}
-				class="inline-flex min-h-11 w-fit items-center gap-1.5 rounded-md border border-border bg-bg-base px-2.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg lg:h-8 lg:min-h-0"
+			
 			>
 				<Clipboard size={12} aria-hidden="true" />
 				{i18n.common_copy_clipboard()}
-			</button>
+			</Button>
 		</div>
 	{/if}
 

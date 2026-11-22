@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { parts } from "@lib/message-parts";
 	import { Check, Copy, TriangleAlert } from "@lucide/svelte";
 	import { toast } from "@lib/toast";
@@ -120,12 +121,12 @@
 	</div>
 
 	{#snippet footer()}
-		<button
+		<Button
+			variant="secondary"
 			type="button"
 			onclick={close}
-			class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
 		>
 			{i18n.common_close()}
-		</button>
+		</Button>
 	{/snippet}
 </Modal>

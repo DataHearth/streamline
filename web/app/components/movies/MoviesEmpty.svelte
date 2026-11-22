@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { Clapperboard, SearchX, X } from "@lucide/svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -22,13 +23,14 @@
 		<p class="mt-1 max-w-sm text-sm text-fg-subtle">
 			{i18n.movies_try_other_tab()}
 		</p>
-		<button
+		<Button
+			variant="secondary"
+			class="mt-5"
 			type="button"
 			onclick={onClear}
-			class="mt-5 inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-3.5 py-2 text-sm font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 		>
 			<X class="h-4 w-4" aria-hidden="true" />
 			{i18n.common_clear_filters()}
-		</button>
+		</Button>
 	{/if}
 </div>

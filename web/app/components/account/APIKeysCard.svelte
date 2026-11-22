@@ -179,27 +179,32 @@
 						{i18n.account_token_once()}
 					</p>
 				</div>
-				<button
+				<Button
+					variant="ghost"
+					size="icon"
+					class="shrink-0"
 					type="button"
 					onclick={() => (revealed = null)}
-					class="grid h-11 w-11 shrink-0 place-items-center rounded-md text-fg-muted lg:h-7 lg:w-7 transition hover:bg-surface hover:text-fg"
+				
 					aria-label={i18n.common_dismiss()}
 				>
 					<X size={14} aria-hidden="true" />
-				</button>
+				</Button>
 			</div>
 			<code
 				class="block break-all rounded-md bg-bg-deep px-3 py-2 font-mono text-xs text-fg"
 				>{revealed.raw_token}</code
 			>
-			<button
+			<Button
+				variant="secondary"
+				size="sm"
+				class="w-fit"
 				type="button"
 				onclick={copyRaw}
-				class="inline-flex h-8 w-fit items-center gap-1.5 rounded-md border border-border bg-bg-base px-2.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 			>
 				<Clipboard size={12} aria-hidden="true" />
 				{i18n.common_copy_clipboard()}
-			</button>
+			</Button>
 		</div>
 	{/if}
 

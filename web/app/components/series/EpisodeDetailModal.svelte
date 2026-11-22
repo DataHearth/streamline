@@ -261,18 +261,20 @@
 
 		{#snippet footer()}
 			{#if (episode?.size ?? 0) > 0 && auth.canAddDirectly}
-				<button
+				<Button
+					variant="secondary"
+					class="hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
 					type="button"
 					onclick={() => {
 						const ep = episode;
 						onClose();
 						if (ep) onDeleteFile(ep);
 					}}
-					class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3.5 text-sm font-medium text-fg-muted transition hover:border-status-failed/40 hover:bg-status-failed/10 hover:text-status-failed"
+				
 				>
 					<Trash2 size={15} aria-hidden="true" />
 					{i18n.action_delete_file()}
-				</button>
+				</Button>
 			{/if}
 			{#if episode && episode.status !== "unaired" && auth.canAddDirectly}
 				<Button

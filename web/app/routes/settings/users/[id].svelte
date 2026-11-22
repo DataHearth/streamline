@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { params } from "@roxi/routify";
 	import { onMount } from "svelte";
@@ -53,13 +54,14 @@
 </script>
 
 <div class="mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-7">
-	<a
+	<Button
+		variant="secondary"
+		size="sm"
 		href="/settings/users"
-		class="touch-hit inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 py-1.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg"
 	>
 		<ArrowLeft class="h-3.5 w-3.5" aria-hidden="true" />
 		{i18n.users_back()}
-	</a>
+	</Button>
 
 	{#if detail.isPending}
 		<div class="mt-6 py-16 text-center text-sm text-fg-subtle">

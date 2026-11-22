@@ -238,15 +238,16 @@
 			     later library change can turn into a real match, and forgetting
 			     it is what lets the next adoption sweep try again. Nothing is
 			     asked of the download client, so there is no confirmation. -->
-			<button
+			<Button
+				variant="secondary"
+				size="sm"
 				type="button"
 				onclick={onForget}
 				disabled={busy}
 				title={i18n.imports_forget_help()}
-				class="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium text-fg-muted transition hover:bg-bg-elevated hover:text-fg focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
 			>
 				{i18n.imports_forget()}
-			</button>
+			</Button>
 		{:else}
 			{#if showImport}
 				<Button

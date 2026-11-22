@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type { Snippet } from "svelte";
@@ -68,14 +69,16 @@
 			<header
 				class="flex min-h-14 shrink-0 items-center gap-1 border-b border-border bg-bg-elevated px-2 pt-[env(safe-area-inset-top)]"
 			>
-				<button
+				<Button
+					variant="ghost"
+					size="icon"
+					class="shrink-0"
 					type="button"
 					onclick={onClose}
-					class="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-fg-muted transition active:bg-bg-hover"
 					aria-label={i18n.common_back()}
 				>
 					<ChevronLeft size={20} aria-hidden="true" />
-				</button>
+				</Button>
 				<h2
 					id={titleId}
 					class="min-w-0 flex-1 truncate pr-11 text-center text-[15px] font-semibold tracking-tight text-fg"

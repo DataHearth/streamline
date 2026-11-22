@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { Plus, X } from "@lucide/svelte";
 	import { readOnlyLock } from "@lib/config.svelte";
 	import { INPUT_CLASS } from "@lib/form";
@@ -50,14 +51,17 @@
 					class="{INPUT_CLASS} min-w-0 flex-1 font-mono"
 				/>
 				{#if !locked}
-					<button
+					<Button
+						variant="ghost"
+						size="icon"
+						class="shrink-0 hover:bg-status-failed/10 hover:text-status-failed"
 						type="button"
 						onclick={() => onChange(value.filter((_, j) => j !== i))}
-						class="grid h-9 w-9 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
+					
 						aria-label={i18n.mediaserver_path_remove()}
 					>
 						<X size={14} aria-hidden="true" />
-					</button>
+					</Button>
 				{/if}
 			</div>
 			{#if pathMappingIssue(m)}
@@ -66,13 +70,15 @@
 		</div>
 	{/each}
 	{#if !locked}
-		<button
+		<Button
+			variant="secondary"
+			size="sm"
 			type="button"
 			onclick={() => onChange([...value, { from: "", to: "" }])}
-			class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong bg-surface px-3 text-xs font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg"
+		
 		>
 			<Plus size={13} aria-hidden="true" />
 			{i18n.mediaserver_path_add()}
-		</button>
+		</Button>
 	{/if}
 </div>

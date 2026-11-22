@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { KeyRound, ShieldX } from "@lucide/svelte";
 	import { auth } from "@lib/auth.svelte";
 	import type { HardcoverIssue } from "@lib/music-books-lookup";
@@ -29,7 +30,9 @@
 		{rejected ? i18n.books_lookup_key_rejected() : i18n.books_lookup_needs_key()}
 	</p>
 	{#if isAdmin}
-		<a
+		<Button
+			variant="secondary"
+			class="mt-3"
 			href="/settings/metadata#hardcover"
 			onclick={() => {
 				// The settings page focuses the field it is sent to; a client-side
@@ -37,10 +40,10 @@
 				sessionStorage.setItem("streamline:focus-field", "hardcover");
 				onNavigate?.();
 			}}
-			class="mt-3 inline-flex min-h-11 items-center rounded-md border border-border-strong px-3.5 text-sm font-medium text-fg transition hover:bg-surface lg:h-9 lg:min-h-0"
+		
 		>
 			{rejected ? i18n.books_lookup_check_key() : i18n.books_lookup_add_key()}
-		</a>
+		</Button>
 		<p class="mt-2 max-w-[34ch] text-xs text-fg-muted">{i18n.books_lookup_restart_hint()}</p>
 	{:else}
 		<p class="mt-1 text-xs text-fg-muted">

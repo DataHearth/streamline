@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
@@ -150,17 +151,19 @@
 					{i18n.settings_music_applies()}
 				</p>
 				<div class="mt-2.5 flex flex-wrap items-center gap-2">
-					<button
+					<Button
+						variant="secondary"
+						size="sm"
 						type="button"
 						disabled={applyExisting.isPending}
 						onclick={() => applyExisting.mutate()}
-						class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong bg-bg px-2.5 text-xs font-medium text-fg transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
+					
 					>
 						<ListChecks size={13} aria-hidden="true" />
 						{applyExisting.isPending
 							? i18n.common_applying()
 							: i18n.music_apply_existing()}
-					</button>
+					</Button>
 					<span>{i18n.music_apply_existing_help()}</span>
 				</div>
 			</div>
@@ -272,15 +275,17 @@
 			{/each}
 
 			<div class="flex flex-wrap items-center gap-2 border-t border-border pt-3 text-xs text-fg-subtle">
-				<button
+				<Button
+					variant="secondary"
+					size="sm"
 					type="button"
 					disabled={retag.isPending || tags.mode === "off" || config.readOnly}
 					onclick={() => retag.mutate()}
-					class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong bg-bg px-2.5 text-xs font-medium text-fg transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
+				
 				>
 					<Tags size={13} aria-hidden="true" />
 					{retag.isPending ? i18n.common_applying() : i18n.music_tags_retag()}
-				</button>
+				</Button>
 				<span>{i18n.music_tags_retag_help()}</span>
 			</div>
 		</section>

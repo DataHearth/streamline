@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { ChevronRight } from "@lucide/svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
@@ -172,7 +173,9 @@
 				{i18n.action_resolve()}
 			</button>
 		{:else}
-		<button
+		<Button
+			variant="ghost"
+			size="icon"
 			type="button"
 			aria-label={expanded ? i18n.action_collapse_details() : i18n.common_expand_details()}
 			aria-expanded={expanded}
@@ -180,7 +183,7 @@
 				e.stopPropagation();
 				onToggle(item.id);
 			}}
-			class="inline-flex h-11 w-11 items-center justify-center rounded-md text-fg-faint lg:h-7 lg:w-7 transition hover:bg-bg-subtle hover:text-fg"
+		
 		>
 			<ChevronRight
 				size={15}
@@ -190,7 +193,7 @@
 				)}
 				aria-hidden="true"
 			/>
-		</button>
+		</Button>
 		{/if}
 	</td>
 </tr>

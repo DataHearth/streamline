@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { untrack } from "svelte";
 	import { Search } from "@lucide/svelte";
 	import { createMutation } from "@tanstack/svelte-query";
@@ -287,11 +288,13 @@
 					"show",
 				)}
 				<div class="flex flex-wrap items-center gap-3">
-					<button
+					<Button
+						variant="secondary"
+						size="sm"
 						type="button"
 						disabled={discover.isPending || (!apiKey.current && !isEdit)}
 						onclick={() => discover.mutate()}
-						class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong bg-surface px-3 text-xs font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
+					
 					>
 						<Search size={13} aria-hidden="true" />
 						{#if discover.isPending}
@@ -301,17 +304,19 @@
 						{:else}
 							{i18n.plex_discover()}
 						{/if}
-					</button>
+					</Button>
 					{#if lock() && sections.length > 0}
 						<!-- Reopens the snippet after the pickers above have been used,
 						so choosing a section does not mean discovering again. -->
-						<button
+						<Button
+							variant="secondary"
+							size="sm"
 							type="button"
 							onclick={() => (sectionsOpen = true)}
-							class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong bg-surface px-3 text-xs font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg"
+						
 						>
 							{i18n.mediaserver_plex_sections_show()}
-						</button>
+						</Button>
 					{/if}
 					{#if !apiKey.current && !isEdit}
 						<span class="font-mono text-[10.5px] text-fg-subtle">

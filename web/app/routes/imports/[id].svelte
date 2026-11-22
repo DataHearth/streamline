@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import {
 		createMutation,
 		createQuery,
@@ -743,25 +744,30 @@
 					{headerMeta.label}
 				</span>
 				{#if isLive}
-					<button
+					<Button
+						variant="secondary"
+						size="sm"
 						type="button"
 						disabled={cancel.isPending}
 						onclick={() => (confirmCancel = true)}
-						class="touch-hit inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:opacity-60"
+					
 					>
 						<Square size={13} aria-hidden="true" />
 						{cancel.isPending ? i18n.common_cancelling() : i18n.common_cancel()}
-					</button>
+					</Button>
 				{:else if isReviewing}
-					<button
+					<Button
+						variant="secondary"
+						size="sm"
+						class="hover:border-status-failed/50 hover:text-status-failed"
 						type="button"
 						disabled={discard.isPending}
 						onclick={() => (confirmDiscard = true)}
-						class="touch-hit inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs font-medium text-fg-muted transition hover:border-status-failed/50 hover:text-status-failed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:opacity-60"
+					
 					>
 						<Trash2 size={13} aria-hidden="true" />
 						{discard.isPending ? i18n.common_discarding() : i18n.common_discard()}
-					</button>
+					</Button>
 				{/if}
 			</div>
 		</header>

@@ -40,13 +40,14 @@
 			<House size={16} aria-hidden="true" />
 			{i18n.error_go_to_dashboard()}
 		</Button>
-		<button
+		<Button
+			variant="secondary"
+			class="h-11 w-full"
 			type="button"
 			onclick={signOut}
-			class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-border-strong bg-surface px-4 text-sm font-medium text-fg transition-colors hover:border-accent hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
 		>
 			<LogOut size={16} aria-hidden="true" />
 			{i18n.common_sign_out()}
-		</button>
+		</Button>
 	</div>
 </AuthCard>

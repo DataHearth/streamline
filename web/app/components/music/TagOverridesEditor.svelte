@@ -59,28 +59,30 @@
 				bind:value={row.values}
 				{disabled}
 			/>
-			<button
+			<Button
+				variant="ghost"
+				size="icon"
+				class="shrink-0"
 				type="button"
-				class="grid h-9 w-9 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-white/[0.08] hover:text-fg disabled:opacity-50"
 				aria-label={i18n.music_tag_override_remove()}
 				title={i18n.music_tag_override_remove()}
 				onclick={() => remove(i)}
 				{disabled}
 			>
 				<X size={15} aria-hidden="true" />
-			</button>
+			</Button>
 		</div>
 	{/each}
 	<div class="flex flex-wrap items-center gap-2">
-		<button
+		<Button
+			variant="secondary"
 			type="button"
-			class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border-strong px-3 text-[13px] text-fg transition hover:bg-white/[0.08] disabled:opacity-50"
 			onclick={add}
 			{disabled}
 		>
 			<Plus size={14} aria-hidden="true" />
 			{i18n.music_tag_override_add()}
-		</button>
+		</Button>
 		{#if dirty}
 			<Button
 				type="button"

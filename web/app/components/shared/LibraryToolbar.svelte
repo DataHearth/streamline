@@ -305,16 +305,17 @@
 	<!-- A list's rows carry their own checkboxes; only cards need the mode. -->
 	{#if selection && view !== "list"}
 		{#if selection.mode}
-			<button
+			<Button
+				variant="secondary"
+				class="shrink-0"
 				type="button"
 				onclick={selection.onSelectAll}
 				disabled={selection.total === 0}
-				class="inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:pointer-events-none disabled:opacity-40"
 			>
 				<CheckCheck size={14} aria-hidden="true" />
 				{i18n.common_select_all()}
 				<span class="font-mono text-[10px] tabular text-fg-subtle">{selection.total}</span>
-			</button>
+			</Button>
 		{/if}
 		<button
 			type="button"

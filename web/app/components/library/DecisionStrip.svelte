@@ -62,14 +62,15 @@
 	</div>
 	<div class="flex shrink-0 items-center gap-2">
 		{#if pendingCount > 0}
-			<button
+			<Button
+				variant="secondary"
 				type="button"
 				disabled={skipBusy}
 				onclick={() => (confirmSkipOpen = true)}
-				class="inline-flex items-center gap-1.5 rounded-md border border-border-strong bg-surface px-3.5 py-2 text-sm font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60"
+			
 			>
 				{skipBusy ? i18n.common_skipping() : i18n.imports_skip_unmatched()}
-			</button>
+			</Button>
 		{/if}
 		<Button
 			type="button"

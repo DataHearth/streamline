@@ -186,18 +186,20 @@
 	{/if}
 
 	{#if view === "history" && onClearCompleted}
-		<button
+		<Button
+			variant="secondary"
+			class="ml-auto shrink-0"
 			type="button"
 			onclick={() => onClearCompleted?.()}
 			disabled={clearableCount === 0}
-			class="ml-auto inline-flex min-h-11 lg:h-9 lg:min-h-0 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-border bg-bg-elevated px-3 text-[12.5px] font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
+		
 		>
 			<Trash2 size={14} aria-hidden="true" />
 			<span class="md:hidden">{i18n.common_clear()}{clearableCount > 0 ? ` (${clearableCount})` : ""}</span>
 			<span class="hidden md:inline">
 				{i18n.activity_clear_completed()}{clearableCount > 0 ? ` (${clearableCount})` : ""}
 			</span>
-		</button>
+		</Button>
 	{/if}
 
 	<div

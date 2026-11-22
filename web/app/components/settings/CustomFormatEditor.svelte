@@ -213,6 +213,7 @@
 </script>
 
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import * as v from "valibot";
 	import { Check, Plus, Trash2, X, Ban, Asterisk } from "@lucide/svelte";
@@ -484,15 +485,16 @@
 					{i18n.cf_conditions_help()}
 				</p>
 			</div>
-			<button
+			<Button
+				variant="secondary"
 				type="button"
 				disabled={locked}
 				onclick={() => draft.conditions.push(newCondition())}
-				class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3 text-sm font-medium text-fg transition hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-60"
+			
 			>
 				<Plus size={15} aria-hidden="true" />
 				{i18n.cf_add_condition()}
-			</button>
+			</Button>
 		</div>
 
 		<div class="mt-3 space-y-2">
@@ -692,15 +694,18 @@
 									{/if}
 								</span>
 							{/if}
-							<button
+							<Button
+								variant="ghost"
+								size="icon"
+								class="hover:bg-status-failed/10 hover:text-status-failed"
 								type="button"
 								disabled={locked || draft.conditions.length === 1}
 								onclick={() => draft.conditions.splice(i, 1)}
-								class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed disabled:cursor-not-allowed disabled:opacity-40"
+							
 								aria-label={i18n.cf_remove_condition()}
 							>
 								<Trash2 size={16} aria-hidden="true" />
-							</button>
+							</Button>
 						</div>
 					</div>
 

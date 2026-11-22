@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import type { Snippet } from "svelte";
 	import { X } from "@lucide/svelte";
 	import { fly } from "svelte/transition";
@@ -64,14 +65,16 @@
 
 		<div class="h-6 w-px shrink-0 bg-border" aria-hidden="true"></div>
 
-		<button
+		<Button
+			variant="ghost"
+			size="icon"
+			class="shrink-0"
 			type="button"
 			onclick={onClear}
 			aria-label={i18n.bulk_clear_selection()}
 			title={i18n.bulk_clear_selection()}
-			class="grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 		>
 			<X size={16} aria-hidden="true" />
-		</button>
+		</Button>
 	</div>
 </div>

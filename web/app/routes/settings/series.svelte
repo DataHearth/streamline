@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import {
 		createQuery,
@@ -86,17 +87,19 @@
 					{i18n.settings_series_applies()}
 				</p>
 				<div class="mt-2.5 flex flex-wrap items-center gap-2">
-					<button
+					<Button
+						variant="secondary"
+						size="sm"
 						type="button"
 						disabled={applyExisting.isPending}
 						onclick={() => applyExisting.mutate()}
-						class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong bg-bg px-2.5 text-xs font-medium text-fg transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
+					
 					>
 						<CalendarCog size={13} aria-hidden="true" />
 						{applyExisting.isPending
 							? i18n.common_applying()
 							: i18n.series_apply_existing()}
-					</button>
+					</Button>
 					<span>
 						{cfg.data.monitor_specials
 							? i18n.series_specials_switch()

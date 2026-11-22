@@ -201,14 +201,15 @@
 			</p>
 		</div>
 		<div class="flex flex-wrap gap-2">
-		<button
+		<Button
+			variant="secondary"
 			type="button"
 			onclick={() => (catalogOpen = true)}
-			class="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg-elevated px-3.5 py-2 text-sm font-semibold text-fg transition hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-60"
+		
 		>
 			<Library size={16} aria-hidden="true" />
 			{i18n.cardigann_add()}
-		</button>
+		</Button>
 		<Button
 			type="button"
 			onclick={openCreate}
@@ -352,43 +353,52 @@
 						{#snippet trailing()}
 							<div class="flex shrink-0 items-center gap-1">
 								{#if i.session?.login_required}
-									<button
+									<Button
+										variant="ghost"
+										size="icon"
 										type="button"
 										onclick={() => onLogin(i)}
 										disabled={login.isPending}
-										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg disabled:opacity-60"
+									
 										aria-label={i18n.indexer_login()}
 										title={i18n.indexer_login()}
 									>
 										<KeyRound size={16} aria-hidden="true" />
-									</button>
+									</Button>
 								{/if}
 								{#if config.readOnly}
-									<button
+									<Button
+										variant="ghost"
+										size="icon"
 										type="button"
 										onclick={() => openEdit(i)}
-										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+									
 										aria-label={i18n.indexer_view()}
 									>
 										<Eye size={16} aria-hidden="true" />
-									</button>
+									</Button>
 								{:else}
-									<button
+									<Button
+										variant="ghost"
+										size="icon"
 										type="button"
 										onclick={() => openEdit(i)}
-										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-surface hover:text-fg"
+									
 										aria-label={i18n.indexer_edit()}
 									>
 										<Pencil size={16} aria-hidden="true" />
-									</button>
-									<button
+									</Button>
+									<Button
+										variant="ghost"
+										size="icon"
+										class="hover:bg-status-failed/10 hover:text-status-failed"
 										type="button"
 										onclick={() => onDelete(i)}
-										class="grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md text-fg-muted transition hover:bg-status-failed/10 hover:text-status-failed"
+									
 										aria-label={i18n.indexer_delete()}
 									>
 										<Trash2 size={16} aria-hidden="true" />
-									</button>
+									</Button>
 								{/if}
 							</div>
 						{/snippet}

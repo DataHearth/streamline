@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from "@components/shared/Button.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
@@ -60,13 +61,14 @@
 				</span>
 			{/if}
 			{#if onCancel}
-				<button
+				<Button
+					variant="secondary"
+					size="sm"
 					type="button"
 					onclick={onCancel}
-					class="inline-flex min-h-11 items-center rounded-md border border-border bg-bg-base px-3 text-xs font-medium text-fg-muted transition hover:bg-surface hover:text-fg lg:h-7 lg:min-h-0"
 				>
 					{i18n.common_cancel()}
-				</button>
+				</Button>
 			{/if}
 		</div>
 	{/if}

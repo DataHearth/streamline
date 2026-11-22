@@ -405,23 +405,25 @@
 					>
 						{setPort.isPending ? i18n.common_applying() : i18n.torrent_port_apply()}
 					</Button>
-					<button
+					<Button
+						variant="secondary"
 						type="button"
 						onclick={() => (portOpen = false)}
-						class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md border border-border px-3 text-sm text-fg-muted transition hover:text-fg"
+					
 					>
 						{i18n.common_cancel()}
-					</button>
+					</Button>
 				{:else}
-					<button
+					<Button
+						variant="secondary"
 						type="button"
 						onclick={() => (portOpen = true)}
 						title={i18n.torrent_port_help()}
-						class="inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-fg-muted transition hover:bg-surface hover:text-fg"
+					
 					>
 						<Network size={14} aria-hidden="true" />
 						{i18n.torrent_port_move()}
-					</button>
+					</Button>
 				{/if}
 			</div>
 		{/if}

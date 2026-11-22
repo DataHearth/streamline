@@ -85,7 +85,9 @@
 			<p class="mt-1 truncate font-mono text-[11.5px] text-fg-subtle" title={ext.source}>{ext.source}</p>
 		</div>
 		<div class="flex shrink-0 items-center">
-			<button
+			<Button
+				variant="ghost"
+				size="icon"
 				type="button"
 				role="switch"
 				aria-checked={ext.enabled}
@@ -95,7 +97,7 @@
 				title={config.readOnly ? READONLY_HINT : undefined}
 				disabled={busy || config.readOnly}
 				onclick={() => onToggle(!ext.enabled)}
-				class="grid h-11 w-11 place-items-center rounded-md transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+			
 			>
 				<span
 					class={twMerge(
@@ -111,7 +113,7 @@
 						)}
 					></span>
 				</span>
-			</button>
+			</Button>
 			<KebabMenu items={menu} variant="row" />
 		</div>
 	</div>
