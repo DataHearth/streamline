@@ -1,6 +1,7 @@
 <script lang="ts">
 	import BottomSheet from "@components/shared/BottomSheet.svelte";
 	import Button from "@components/shared/Button.svelte";
+	import { keyboardUp } from "@lib/keyboard.svelte";
 	import { roleLabel } from "@lib/roles";
 	import { onMount } from "svelte";
 	import {
@@ -283,6 +284,8 @@
 		// A phone bulk selection puts its action bar here rather than stacking a
 		// second bar on top of this one.
 		bulkMode.active && "hidden",
+		// The keyboard takes its place: a page being typed into keeps the room.
+		keyboardUp() && "hidden",
 	)}
 	aria-label={i18n.nav_primary()}
 >

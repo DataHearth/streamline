@@ -5,6 +5,7 @@
 	import { auth } from "@lib/auth.svelte";
 	import { twMerge } from "tailwind-merge";
 	import { bulkMode } from "@lib/bulk-mode.svelte";
+	import { keyboardUp } from "@lib/keyboard.svelte";
 	import { openAdd } from "@lib/add-flow";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -55,8 +56,8 @@
 			(route === "/requests" && !auth.isAdmin),
 	);
 	// A bulk selection owns the bottom of the screen; the pill would land on top
-	// of BulkTouchBar's buttons.
-	let visible = $derived(onRoute && !bulkMode.active);
+	// of BulkTouchBar's buttons. The on-screen keyboard owns it too.
+	let visible = $derived(onRoute && !bulkMode.active && !keyboardUp());
 
 	$effect(() => {
 		if (!visible) open = false;
