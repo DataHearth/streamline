@@ -95,7 +95,7 @@
 		mode="pick"
 		seedQuery={currentTitle}
 		onPick={onPickMovie}
-		onClose={onClose}
+		{onClose}
 	/>
 {:else}
 	<AddSeriesModal
@@ -103,7 +103,7 @@
 		mode="pick"
 		seedQuery={currentTitle}
 		onPick={onPickSeries}
-		onClose={onClose}
+		{onClose}
 	/>
 {/if}
 

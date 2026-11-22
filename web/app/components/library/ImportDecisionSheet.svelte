@@ -1,11 +1,7 @@
 <script lang="ts">
-	import { closeOnBack } from "@lib/close-on-back.svelte";
-	import { fly, fade } from "svelte/transition";
-	import { cubicOut } from "svelte/easing";
-	import { Check, Search, X } from "@lucide/svelte";
+	import BottomSheet from "@components/shared/BottomSheet.svelte";
+	import { Check, Search } from "@lucide/svelte";
 	import { twMerge } from "tailwind-merge";
-	import { lockScroll, unlockScroll } from "@lib/scrollLock";
-	import { sheetSwipe } from "@lib/sheet-swipe";
 	import {
 		CLASS_META,
 		isActionable,
@@ -44,20 +40,6 @@
 
 	// Mounted with the page; open while it renders an entry. A watcher armed while closed
 	// would take the phone's Back from the page.
-	closeOnBack(() => !!(entry && cls && word), () => onClose());
-
-	$effect(() => {
-		if (!entry) return;
-		lockScroll();
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") onClose();
-		};
-		document.addEventListener("keydown", onKey);
-		return () => {
-			document.removeEventListener("keydown", onKey);
-			unlockScroll();
-		};
-	});
 
 	let cls = $derived(entry ? CLASS_META[entry.classification] : null);
 	let word = $derived(entry ? outcomeWord(entry, kind === "series") : null);
@@ -75,51 +57,45 @@
 </script>
 
 {#if entry && cls && word}
-	<div
-		class="fixed inset-0 z-50 lg:hidden"
-		role="dialog"
-		aria-modal="true"
-		aria-label={text.decide}
+	{#snippet sheetFooter()}
+					<button
+						type="button"
+						disabled={busy}
+						onclick={() => onSkipToggle(entry)}
+						class="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-border bg-surface text-[14px] font-medium text-fg transition active:bg-surface-2 disabled:opacity-60"
+					>
+						{skipped ? i18n.common_restore() : text.skipThis}
+					</button>
+					{#if entry.chosenId != null}
+						<button
+							type="button"
+							onclick={onClose}
+							class="inline-flex h-11 flex-[1.4] items-center justify-center gap-2 rounded-xl bg-accent text-[14px] font-semibold text-fg-on-accent transition active:bg-accent-pressed"
+						>
+							<Check size={15} aria-hidden="true" />
+							<span class="truncate">{i18n.common_use_label({ label: entry.chosenLabel ?? "" })}</span>
+						</button>
+					{/if}
+	{/snippet}
+
+	<BottomSheet
+		label={text.decide}
+		{onClose}
+		headerClass="items-start pb-3"
+		bodyClass="pt-4"
+		footer={reviewing ? sheetFooter : undefined}
 	>
-		<button
-			type="button"
-			aria-label={i18n.common_close()}
-			data-sheet-scrim
-			transition:fade={{ duration: 160 }}
-			onclick={onClose}
-			class="absolute inset-0 h-full w-full cursor-default bg-black/55"
-		></button>
-
-		<div
-			use:sheetSwipe={{ onDismiss: onClose }}
-			transition:fly={{ y: 420, duration: 280, easing: cubicOut }}
-			class="absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col overflow-hidden rounded-t-2xl border-t border-border-strong bg-bg-elevated shadow-4"
-		>
-			<div
-				class="relative flex cursor-grab touch-none select-none items-start justify-between gap-3 px-5 pb-3 pt-4 active:cursor-grabbing"
-			>
-				<span
-					aria-hidden="true"
-					class="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong"
-				></span>
-				<div class="min-w-0 pt-1">
-					<h2 class="text-[17px] font-semibold tracking-tight text-fg">
-						{entry.heading}
-					</h2>
-					<p class="mt-1 break-all font-mono text-[11px] leading-relaxed text-fg-subtle">
-						{entry.path}
-					</p>
-				</div>
-				<button
-					type="button"
-					onclick={onClose}
-					aria-label={i18n.common_close()}
-					class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface text-fg-subtle transition active:bg-bg-hover"
-				>
-					<X size={16} aria-hidden="true" />
-				</button>
+		{#snippet header()}
+			<div class="min-w-0 pt-1">
+				<h2 class="text-[17px] font-semibold tracking-tight text-fg">
+					{entry.heading}
+				</h2>
+				<p class="mt-1 break-all font-mono text-[11px] leading-relaxed text-fg-subtle">
+					{entry.path}
+				</p>
 			</div>
-
+		{/snippet}
+		{#snippet subheader()}
 			<div class="flex flex-wrap items-center gap-2 border-b border-border px-5 pb-3.5">
 				<span
 					class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
@@ -148,101 +124,70 @@
 					</span>
 				{/if}
 			</div>
-
-			<div
-				data-sheet-scroll
-				class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-2 pt-4"
-			>
-				{#if canPick}
-					{#if entry.candidates.length > 0}
-						<div
-							class="mb-2.5 eyebrow text-[9.5px] text-fg-subtle"
-						>
-							{i18n.imports_candidates_from({ source })}
-						</div>
-						<div class="flex flex-col gap-2">
-							{#each entry.candidates as c (c.id)}
-								{@const on = entry.chosenId === c.id}
-								<button
-									type="button"
-									disabled={busy}
-									onclick={() => onPick(entry, c.id)}
-									class={twMerge(
-										"flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition disabled:opacity-60",
-										on
-											? "border-accent bg-accent-soft"
-											: "border-border bg-bg-card active:bg-surface",
-									)}
-								>
-									<span class="min-w-0 flex-1">
-										<span class="block truncate text-[13px] font-semibold text-fg">
-											{c.title}
-										</span>
-										<span class="mt-0.5 block truncate font-mono text-[10.5px] text-fg-subtle">
-											{#if c.sub}{c.sub}{" · "}{/if}{c.year ?? "—"}{#if c.tag}{" · "}{c.tag}{/if} · {source} {shortId(c.id)}
-										</span>
-									</span>
-									{#if on}
-										<Check size={16} class="shrink-0 text-accent-text" aria-hidden="true" />
-									{/if}
-								</button>
-							{/each}
-						</div>
-					{:else}
-						<p class="text-[13px] text-fg-muted">
-							{text.nothingParsed}
-						</p>
-					{/if}
-
-					<!-- Deliberately a fallback: the candidate list answers most entries,
-					     and this opens the full lookup screen seeded with the parsed title. -->
-					<button
-						type="button"
-						onclick={() => onSearch(entry)}
-						class="mt-3 flex w-full items-center gap-2.5 rounded-xl border border-dashed border-border-strong px-3 py-2.5 text-left text-[13px] font-medium text-fg-muted transition active:bg-surface"
-					>
-						<Search size={16} class="shrink-0" aria-hidden="true" />
-						<span class="flex-1">
-							{entry.candidates.length > 0
-								? i18n.imports_none_of_these()
-								: i18n.common_search()} — {i18n.imports_search_provider({ source })}
-						</span>
-					</button>
-				{:else}
-					<p class="text-[13px] text-fg-muted">
-						{#if !reviewing}
-							{i18n.imports_no_longer_review()}
-						{:else}
-							{text.alreadyMatched}
-						{/if}
-					</p>
-				{/if}
-			</div>
-
-			{#if reviewing}
+		{/snippet}
+		{#if canPick}
+			{#if entry.candidates.length > 0}
 				<div
-					class="flex items-center gap-2.5 border-t border-border px-5 pb-[max(env(safe-area-inset-bottom),14px)] pt-3.5"
+					class="mb-2.5 eyebrow text-[9.5px] text-fg-subtle"
 				>
-					<button
-						type="button"
-						disabled={busy}
-						onclick={() => onSkipToggle(entry)}
-						class="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-border bg-surface text-[14px] font-medium text-fg transition active:bg-surface-2 disabled:opacity-60"
-					>
-						{skipped ? i18n.common_restore() : text.skipThis}
-					</button>
-					{#if entry.chosenId != null}
+					{i18n.imports_candidates_from({ source })}
+				</div>
+				<div class="flex flex-col gap-2">
+					{#each entry.candidates as c (c.id)}
+						{@const on = entry.chosenId === c.id}
 						<button
 							type="button"
-							onclick={onClose}
-							class="inline-flex h-11 flex-[1.4] items-center justify-center gap-2 rounded-xl bg-accent text-[14px] font-semibold text-fg-on-accent transition active:bg-accent-pressed"
+							disabled={busy}
+							onclick={() => onPick(entry, c.id)}
+							class={twMerge(
+								"flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition disabled:opacity-60",
+								on
+									? "border-accent bg-accent-soft"
+									: "border-border bg-bg-card active:bg-surface",
+							)}
 						>
-							<Check size={15} aria-hidden="true" />
-							<span class="truncate">{i18n.common_use_label({ label: entry.chosenLabel ?? "" })}</span>
+							<span class="min-w-0 flex-1">
+								<span class="block truncate text-[13px] font-semibold text-fg">
+									{c.title}
+								</span>
+								<span class="mt-0.5 block truncate font-mono text-[10.5px] text-fg-subtle">
+									{#if c.sub}{c.sub}{" · "}{/if}{c.year ?? "—"}{#if c.tag}{" · "}{c.tag}{/if} · {source} {shortId(c.id)}
+								</span>
+							</span>
+							{#if on}
+								<Check size={16} class="shrink-0 text-accent-text" aria-hidden="true" />
+							{/if}
 						</button>
-					{/if}
+					{/each}
 				</div>
+			{:else}
+				<p class="text-[13px] text-fg-muted">
+					{text.nothingParsed}
+				</p>
 			{/if}
-		</div>
-	</div>
+
+			<!-- Deliberately a fallback: the candidate list answers most entries,
+			     and this opens the full lookup screen seeded with the parsed title. -->
+			<button
+				type="button"
+				onclick={() => onSearch(entry)}
+				class="mt-3 flex w-full items-center gap-2.5 rounded-xl border border-dashed border-border-strong px-3 py-2.5 text-left text-[13px] font-medium text-fg-muted transition active:bg-surface"
+			>
+				<Search size={16} class="shrink-0" aria-hidden="true" />
+				<span class="flex-1">
+					{entry.candidates.length > 0
+						? i18n.imports_none_of_these()
+						: i18n.common_search()} — {i18n.imports_search_provider({ source })}
+				</span>
+			</button>
+		{:else}
+			<p class="text-[13px] text-fg-muted">
+				{#if !reviewing}
+					{i18n.imports_no_longer_review()}
+				{:else}
+					{text.alreadyMatched}
+				{/if}
+			</p>
+		{/if}
+	</BottomSheet>
 {/if}
