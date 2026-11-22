@@ -59,7 +59,7 @@
 	// of BulkTouchBar's buttons. The on-screen keyboard owns it too, read on
 	// every route so it is never a stale value when the pill comes back.
 	let keyboard = $derived(keyboardUp());
-	let visible = $derived(onRoute && !bulkMode.active && !keyboard);
+	let visible = $derived(!keyboard && onRoute && !bulkMode.active);
 
 	$effect(() => {
 		if (!visible) open = false;

@@ -103,16 +103,24 @@
 
 	function recompute() {
 		if (!anchor) return;
-		const r = anchor.getBoundingClientRect();
-		// Scrolled out of view: the anchor is gone, so the menu goes with it.
-		if (
-			r.bottom < 0 ||
-			r.top > window.innerHeight ||
-			r.right < 0 ||
-			r.left > window.innerWidth
-		) {
-			onClose();
-			return;
+		const offScreen = (box: DOMRect) =>
+			box.bottom < 0 ||
+			box.top > window.innerHeight ||
+			box.right < 0 ||
+			box.left > window.innerWidth;
+		let r = anchor.getBoundingClientRect();
+		if (offScreen(r)) {
+			// Scrolled out of view: the anchor is gone, so the menu goes with it.
+			// Unless focus is in the menu: on a phone the on-screen keyboard its own
+			// search field raises shortens the page under a low anchor, and closing
+			// would drop the field and the keyboard under the person typing. The
+			// anchor is brought back above the keyboard instead.
+			if (!menuEl?.contains(document.activeElement)) {
+				onClose();
+				return;
+			}
+			anchor.scrollIntoView({ block: "nearest" });
+			r = anchor.getBoundingClientRect();
 		}
 		menuWidth = r.width;
 		const w = matchAnchor ? r.width : (menuEl?.offsetWidth ?? 0);

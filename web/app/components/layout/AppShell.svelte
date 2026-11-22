@@ -13,6 +13,8 @@
 	import MusicBookLookupScreen from "@components/shared/MusicBookLookupScreen.svelte";
 	import { restoreScrollOnBack } from "@lib/scroll-restore";
 	import { BELOW_MD, createMediaQuery } from "@lib/viewport.svelte";
+	import { keyboardUp } from "@lib/keyboard.svelte";
+	import { twMerge } from "tailwind-merge";
 	import { onOpenAdd } from "@lib/add-flow";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -65,11 +67,16 @@
 	     document, which then draws a second scrollbar beside this one.
 	     The bottom padding clears the fixed BottomNav below md, which is its
 	     row plus the safe-area inset, so the inset belongs here as well: on a
-	     device with one the nav otherwise covers the end of every page. -->
+	     device with one the nav otherwise covers the end of every page. While
+	     the on-screen keyboard is up the nav is hidden, and the page ends at
+	     the keyboard. -->
 	<main
 		bind:this={main}
 		id="main"
-		class="relative min-w-0 flex-1 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] [scrollbar-gutter:stable] md:pb-0"
+		class={twMerge(
+			"relative min-w-0 flex-1 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] [scrollbar-gutter:stable] md:pb-0",
+			keyboardUp() && "pb-0",
+		)}
 	>
 		<TopBar />
 		{@render children?.()}

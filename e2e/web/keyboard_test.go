@@ -21,11 +21,11 @@ var _ = Describe("On-screen keyboard", Label("e2e"), func() {
 		field    = `main input:not([type=checkbox]):not([type=radio]):not([type=hidden])`
 	)
 
-	// phone opens a settings page holding a text field at a phone's size, with
-	// a touch screen or with a mouse alone.
-	phone := func(touch bool) *rod.Page {
+	// phone opens a settings page at a phone's size, with a touch screen or
+	// with a mouse alone.
+	phone := func(path string, touch bool) *rod.Page {
 		GinkgoHelper()
-		page := newSessionPage("/settings/general")
+		page := newSessionPage(path)
 		points := 5
 		Expect(proto.EmulationSetTouchEmulationEnabled{
 			Enabled:        touch,
@@ -33,7 +33,7 @@ var _ = Describe("On-screen keyboard", Label("e2e"), func() {
 		}.Call(page)).To(Succeed())
 		page.MustSetViewport(width, height, 1, touch)
 		page.MustReload()
-		page.MustElement(field)
+		page.MustElement("main input")
 		return page
 	}
 
@@ -53,7 +53,7 @@ var _ = Describe("On-screen keyboard", Label("e2e"), func() {
 	}
 
 	It("hides the bottom nav while the keyboard is up on a touch screen", func() {
-		page := phone(true)
+		page := phone("/settings/general", true)
 		settle(page, true)
 
 		page.MustElement(field).MustFocus()
@@ -67,13 +67,73 @@ var _ = Describe("On-screen keyboard", Label("e2e"), func() {
 		settle(page, true)
 	})
 
+	It("keeps the bottom nav hidden while focus passes through a button", func() {
+		page := phone("/settings/general", true)
+		page.MustElement(field).MustFocus()
+		page.MustSetViewport(width, height-keyboard, 1, true)
+		settle(page, false)
+
+		// A Select taking focus to its trigger and then, a microtask later, to
+		// its own search field: the keyboard never closes.
+		passed := page.MustEval(`(f) => {
+			const input = document.querySelector(f);
+			const button = document.createElement("button");
+			button.textContent = "trigger";
+			input.after(button);
+			button.focus();
+			const reached = document.activeElement === button;
+			queueMicrotask(() => input.focus());
+			return reached;
+		}`, field).Bool()
+		Expect(passed).To(BeTrue(), "focus reached the button")
+		Consistently(navShown(page)).
+			WithTimeout(500 * time.Millisecond).
+			WithPolling(25 * time.Millisecond).
+			Should(BeFalse())
+	})
+
 	It("keeps the bottom nav when a mouse-driven window is made shorter", func() {
-		page := phone(false)
+		page := phone("/settings/general", false)
 		page.MustElement(field).MustFocus()
 		page.MustSetViewport(width, height-keyboard, 1, false)
 		Consistently(navShown(page)).
 			WithTimeout(500 * time.Millisecond).
 			WithPolling(50 * time.Millisecond).
 			Should(BeTrue())
+	})
+
+	It("keeps a searchable Select open over the keyboard it raises", func() {
+		page := phone("/settings/library", true)
+		// The book language Select, scrolled to where the keyboard will cover it.
+		trigger := page.MustElementByJS(`() => {
+			const label = [...document.querySelectorAll("main *")].find((el) =>
+				el.childElementCount === 0 &&
+				el.textContent.trim() === "Preferred book language");
+			const button = label.closest("div.max-w-xs")
+				.querySelector("button[aria-haspopup=listbox]");
+			const main = document.getElementById("main");
+			main.scrollTop += button.getBoundingClientRect().top - 600;
+			return button;
+		}`)
+		searching := func() bool {
+			return page.MustEval(`() =>
+				document.activeElement?.matches("input[type=search]") ?? false`).Bool()
+		}
+
+		trigger.MustClick()
+		Eventually(searching).
+			WithTimeout(3 * time.Second).
+			WithPolling(50 * time.Millisecond).
+			Should(BeTrue())
+
+		page.MustSetViewport(width, height-keyboard, 1, true)
+		Consistently(searching).
+			WithTimeout(time.Second).
+			WithPolling(50 * time.Millisecond).
+			Should(BeTrue())
+		Expect(trigger.MustEval(`function () {
+			const r = this.getBoundingClientRect();
+			return r.top >= 0 && r.bottom <= window.innerHeight;
+		}`).Bool()).To(BeTrue(), "the trigger is back above the keyboard")
 	})
 })
