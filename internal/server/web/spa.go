@@ -3,8 +3,6 @@ package web
 import (
 	"log/slog"
 	"net/http"
-
-	webassets "github.com/datahearth/streamline/web"
 )
 
 // SPAShell serves the embedded Svelte single-page app entry HTML. Every
@@ -14,7 +12,7 @@ import (
 func (h *Handler) SPAShell(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
-	if _, err := w.Write(webassets.SPAShell); err != nil {
+	if _, err := w.Write(static.spaShell); err != nil {
 		slog.DebugContext(
 			r.Context(),
 			"spa shell write failed",
@@ -27,7 +25,7 @@ func (h *Handler) SPAShell(w http.ResponseWriter, r *http.Request) {
 // JS + CSS live under /static/.
 func (h *Handler) APIDocs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if _, err := w.Write(webassets.APIDocsShell); err != nil {
+	if _, err := w.Write(static.apiDocs); err != nil {
 		slog.DebugContext(
 			r.Context(),
 			"api docs shell write failed",

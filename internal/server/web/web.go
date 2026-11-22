@@ -56,7 +56,10 @@ func Mount(r chi.Router, h *Handler) {
 	}
 	r.Handle(
 		"/static/*",
-		http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))),
+		http.StripPrefix(
+			"/static/",
+			staticFiles(http.FileServer(http.FS(staticFS))),
+		),
 	)
 	h.registerWebAuthRoutes(r)
 	h.registerWebMediaServerRoutes(r)
