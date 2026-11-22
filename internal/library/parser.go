@@ -390,11 +390,18 @@ func ParseSeasonSpan(name string) SeasonSpan {
 // totals. Zero means "the library cannot say" — an untracked season, or a name
 // that named no season at all — and callers must read it as unknown rather than
 // as an empty pack.
+//
+// A complete pack totals the numbered seasons and leaves the specials out: its
+// name never says whether it ships them, and the episode search reads one the
+// same way (packCoversSeason in internal/indexer), so the size bound and the
+// hidden-packs hint agree on what an integral holds.
 func (s SeasonSpan) EpisodeCount(perSeason map[uint16]int) int {
 	if s.Complete {
 		total := 0
-		for _, n := range perSeason {
-			total += n
+		for season, n := range perSeason {
+			if season != 0 {
+				total += n
+			}
 		}
 		return total
 	}

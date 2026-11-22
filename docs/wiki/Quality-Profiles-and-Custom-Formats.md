@@ -131,7 +131,7 @@ Write a `release_title` regex if you need one of these from the release side —
 
 Score that format very negative (`-5000`) and the remux is rejected at every scope, while the ordinary season and series packs pass untouched. Without the scaling you would have to pick between a cap that lets the remux through and one that rejects every legitimate pack.
 
-**Where the episode count comes from.** It is looked up in *your library*, per season, from the scope the release name claims — `S03` is season 3, `S01-S05` is those five seasons summed, `COMPLETE`/`INTEGRALE` is every season the show has. It is **not** the torrent's file count: no indexer reports that, and the torrent's contents are only knowable after grabbing it, which is too late to reject anything.
+**Where the episode count comes from.** It is looked up in *your library*, per season, from the scope the release name claims — `S03` is season 3, `S01-S05` is those five seasons summed, `COMPLETE`/`INTEGRALE` is every numbered season the show has. Specials (season 0) are left out of an integral's count, since a release name never says whether it includes them. It is **not** the torrent's file count: no indexer reports that, and the torrent's contents are only knowable after grabbing it, which is too late to reject anything.
 
 Two consequences worth knowing:
 

@@ -433,7 +433,7 @@ var _ = Describe("season spans", Label("unit", "library"), func() {
 			"Kaamelott.INTEGRALE.1080p-GRP", SeasonSpan{Complete: true}),
 	)
 
-	counts := map[uint16]int{1: 7, 2: 13, 3: 13}
+	counts := map[uint16]int{0: 4, 1: 7, 2: 13, 3: 13}
 
 	DescribeTable("episodes totalled against the library's season lengths",
 		func(span SeasonSpan, want int) {
@@ -441,7 +441,9 @@ var _ = Describe("season spans", Label("unit", "library"), func() {
 		},
 		Entry("one season", SeasonSpan{From: 2, To: 2}, 13),
 		Entry("a range sums its seasons", SeasonSpan{From: 1, To: 3}, 33),
-		Entry("complete sums every season", SeasonSpan{Complete: true}, 33),
+		// An integral is taken to hold the numbered seasons only, as the episode
+		// search reads one: the four specials stay out of its size.
+		Entry("complete sums every numbered season", SeasonSpan{Complete: true}, 33),
 		// Zero is "the library cannot say", which callers read as unknown and
 		// degrade to an unscaled bound — never as an empty pack.
 		Entry("no season named", SeasonSpan{}, 0),
@@ -449,4 +451,9 @@ var _ = Describe("season spans", Label("unit", "library"), func() {
 		Entry("range partly tracked counts what it knows",
 			SeasonSpan{From: 3, To: 9}, 13),
 	)
+
+	It("reads a complete pack of a show tracking only specials as unknown", func() {
+		Expect(SeasonSpan{Complete: true}.EpisodeCount(map[uint16]int{0: 4})).
+			To(BeZero())
+	})
 })
