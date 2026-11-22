@@ -1,11 +1,8 @@
 <script lang="ts">
+	import BottomSheet from "@components/shared/BottomSheet.svelte";
 	import Button from "@components/shared/Button.svelte";
-	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { roleLabel } from "@lib/roles";
-	import { sheetSwipe } from "@lib/sheet-swipe";
 	import { onMount } from "svelte";
-	import { fly, fade } from "svelte/transition";
-	import { cubicOut } from "svelte/easing";
 	import {
 		LayoutDashboard,
 		Library,
@@ -24,7 +21,6 @@
 		LogOut,
 		Ellipsis,
 		ChevronRight,
-		X,
 		ChartColumn,
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
@@ -240,7 +236,6 @@
 	function toggleSheet(s: Section) {
 		sheet = sheet === s ? "" : s;
 	}
-	closeOnBack(() => sheet !== "", closeSheet);
 
 	// Routify intercepts internal <a> clicks and navigates client-side; close
 	// the sheet on any click inside it so a tapped link doesn't leave the
@@ -248,15 +243,6 @@
 	function onSheetClick(e: MouseEvent) {
 		if ((e.target as HTMLElement).closest("a")) closeSheet();
 	}
-
-	$effect(() => {
-		if (!sheet) return;
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") closeSheet();
-		};
-		document.addEventListener("keydown", onKey);
-		return () => document.removeEventListener("keydown", onKey);
-	});
 
 	async function signOut() {
 		closeSheet();
@@ -352,55 +338,100 @@
 </nav>
 
 {#if sheet}
-	<div
-		class="fixed inset-0 z-[60] md:hidden"
-		role="dialog"
-		aria-modal="true"
-		aria-label={SECTION_LABELS[sheet]}
+	<BottomSheet
+		title={SECTION_LABELS[sheet]}
+		label={SECTION_LABELS[sheet]}
+		onClose={closeSheet}
+		hideFrom="md"
+		layerClass="z-[60]"
+		class="max-h-[85dvh]"
+		headerClass="pb-1"
+		bodyClass="px-2.5 pb-[max(env(safe-area-inset-bottom),12px)] pt-1"
 	>
-		<button
-			type="button"
-			aria-label={i18n.nav_close_menu()}
-			data-sheet-scrim
-			transition:fade={{ duration: 180 }}
-			onclick={closeSheet}
-			class="absolute inset-0 h-full w-full cursor-default bg-black/55 backdrop-blur-[2px]"
-		></button>
+		<div use:sheetLinks>
+			<ul class="flex flex-col gap-0.5">
+				{#each sheetRows as row (row.href)}
+					{@const active =
+						sheet === "Activity"
+							? activityCurrent(isActiveFn, row.href)
+							: isActiveFn(row.href)}
+					<li>
+						<a
+							href={row.href}
+							aria-current={active ? "page" : undefined}
+							class={twMerge(rowBase, active ? rowActive : rowInactive)}
+						>
+							<row.icon size={22} class="shrink-0" />
+							<span class="min-w-0 flex-1">
+								<span class="block text-[15px] font-medium leading-tight tracking-tight">
+									{row.label}
+								</span>
+								{#if row.torrents}
+									<span
+										class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] leading-none tabular-nums text-fg-subtle"
+									>
+										{#each TORRENT_PILLS as p (p.key)}
+											{#if (torrentCounts.counts[p.key] ?? 0) > 0}
+												<span class="flex items-center gap-1.5">
+													<span
+														class="h-[6px] w-[6px] rounded-full"
+														style:background-color="var(--status-{p.dot})"
+													></span>
+													{torrentCounts.counts[p.key]}
+													{p.key}
+												</span>
+											{/if}
+										{/each}
+									</span>
+								{:else if row.dots?.length}
+									<span
+										class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] leading-none tabular-nums text-fg-subtle"
+									>
+										{#each row.dots as p (p.key)}
+											<span class="flex items-center gap-1.5">
+												<span
+													class="h-[6px] w-[6px] rounded-full"
+													style:background-color="var(--status-{p.dot})"
+												></span>
+												{p.count}
+												{p.label}
+											</span>
+										{/each}
+									</span>
+								{:else if row.line}
+									<span
+										class={twMerge(
+											"mt-1 block truncate font-mono text-[11px]",
+											active ? "text-accent-text opacity-80" : "text-fg-subtle",
+										)}
+									>
+										{row.line}
+									</span>
+								{/if}
+							</span>
+							{#if row.badge}
+								<span
+									class="shrink-0 rounded-full bg-status-wanted/20 px-2 py-0.5 font-mono text-[11px] tabular-nums text-status-wanted"
+								>
+									{row.badge.toLocaleString()}
+								</span>
+							{:else}
+								<ChevronRight
+									size={18}
+									class={twMerge("shrink-0", active ? "text-accent-text" : "text-fg-faint")}
+									aria-hidden="true"
+								/>
+							{/if}
+						</a>
+					</li>
+				{/each}
+			</ul>
 
-		<div
-			use:sheetSwipe={{ onDismiss: closeSheet }}
-			use:sheetLinks
-			transition:fly={{ y: 420, duration: 300, easing: cubicOut }}
-			class="absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col overflow-hidden rounded-t-2xl border-t border-border-strong bg-bg-elevated shadow-4"
-		>
-			<div
-				class="relative flex cursor-grab touch-none select-none items-center justify-between px-5 pb-1 pt-4 active:cursor-grabbing"
-			>
-				<span
-					aria-hidden="true"
-					class="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong"
-				></span>
-				<h2 class="text-[17px] font-semibold tracking-tight text-fg">{SECTION_LABELS[sheet]}</h2>
-				<button
-					type="button"
-					onclick={closeSheet}
-					aria-label={i18n.common_close()}
-					class="grid h-11 w-11 place-items-center rounded-full bg-surface text-fg-subtle transition hover:bg-bg-hover hover:text-fg"
-				>
-					<X size={16} aria-hidden="true" />
-				</button>
-			</div>
-
-			<div
-				data-sheet-scroll
-				class="min-h-0 flex-1 overscroll-contain overflow-y-auto px-2.5 pb-[max(env(safe-area-inset-bottom),12px)] pt-1"
-			>
+			{#if sheet === "More" && adminRows.length}
+				<div class="my-2 h-px bg-border" role="presentation"></div>
 				<ul class="flex flex-col gap-0.5">
-					{#each sheetRows as row (row.href)}
-						{@const active =
-							sheet === "Activity"
-								? activityCurrent(isActiveFn, row.href)
-								: isActiveFn(row.href)}
+					{#each adminRows as row (row.href)}
+						{@const active = isActiveFn(row.href)}
 						<li>
 							<a
 								href={row.href}
@@ -408,133 +439,55 @@
 								class={twMerge(rowBase, active ? rowActive : rowInactive)}
 							>
 								<row.icon size={22} class="shrink-0" />
-								<span class="min-w-0 flex-1">
-									<span class="block text-[15px] font-medium leading-tight tracking-tight">
-										{row.label}
-									</span>
-									{#if row.torrents}
-										<span
-											class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] leading-none tabular-nums text-fg-subtle"
-										>
-											{#each TORRENT_PILLS as p (p.key)}
-												{#if (torrentCounts.counts[p.key] ?? 0) > 0}
-													<span class="flex items-center gap-1.5">
-														<span
-															class="h-[6px] w-[6px] rounded-full"
-															style:background-color="var(--status-{p.dot})"
-														></span>
-														{torrentCounts.counts[p.key]}
-														{p.key}
-													</span>
-												{/if}
-											{/each}
-										</span>
-									{:else if row.dots?.length}
-										<span
-											class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] leading-none tabular-nums text-fg-subtle"
-										>
-											{#each row.dots as p (p.key)}
-												<span class="flex items-center gap-1.5">
-													<span
-														class="h-[6px] w-[6px] rounded-full"
-														style:background-color="var(--status-{p.dot})"
-													></span>
-													{p.count}
-													{p.label}
-												</span>
-											{/each}
-										</span>
-									{:else if row.line}
-										<span
-											class={twMerge(
-												"mt-1 block truncate font-mono text-[11px]",
-												active ? "text-accent-text opacity-80" : "text-fg-subtle",
-											)}
-										>
-											{row.line}
-										</span>
-									{/if}
+								<span class="min-w-0 flex-1 text-[15px] font-medium tracking-tight">
+									{row.label}
 								</span>
-								{#if row.badge}
-									<span
-										class="shrink-0 rounded-full bg-status-wanted/20 px-2 py-0.5 font-mono text-[11px] tabular-nums text-status-wanted"
-									>
-										{row.badge.toLocaleString()}
-									</span>
-								{:else}
-									<ChevronRight
-										size={18}
-										class={twMerge("shrink-0", active ? "text-accent-text" : "text-fg-faint")}
-										aria-hidden="true"
-									/>
-								{/if}
+								<ChevronRight
+									size={18}
+									class={twMerge("shrink-0", active ? "text-accent-text" : "text-fg-faint")}
+									aria-hidden="true"
+								/>
 							</a>
 						</li>
 					{/each}
 				</ul>
+			{/if}
 
-				{#if sheet === "More" && adminRows.length}
-					<div class="my-2 h-px bg-border" role="presentation"></div>
-					<ul class="flex flex-col gap-0.5">
-						{#each adminRows as row (row.href)}
-							{@const active = isActiveFn(row.href)}
-							<li>
-								<a
-									href={row.href}
-									aria-current={active ? "page" : undefined}
-									class={twMerge(rowBase, active ? rowActive : rowInactive)}
-								>
-									<row.icon size={22} class="shrink-0" />
-									<span class="min-w-0 flex-1 text-[15px] font-medium tracking-tight">
-										{row.label}
-									</span>
-									<ChevronRight
-										size={18}
-										class={twMerge("shrink-0", active ? "text-accent-text" : "text-fg-faint")}
-										aria-hidden="true"
-									/>
-								</a>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-
-				{#if sheet === "More" && auth.user}
-					<div class="mt-2 flex items-center gap-2 border-t border-border px-1 pt-3">
-						<a
-							href="/account"
-							aria-current={isActiveFn("/account") ? "page" : undefined}
-							class={twMerge(
-								"flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1.5 py-2 transition-colors",
-								isActiveFn("/account")
-									? "bg-accent-soft text-accent-text"
-									: "text-fg-muted hover:bg-surface hover:text-fg",
-							)}
-						>
-							<Avatar email={auth.user.email} name={auth.user.display_name} size={38} />
-							<div class="min-w-0 flex-1">
-								<div class="truncate text-[14px] font-medium leading-tight text-fg">
-									{auth.user.display_name || auth.user.email}
-								</div>
-								<div class="mt-0.5 truncate font-mono text-[11px] text-fg-subtle">
-									{role}{version ? ` · ${version}` : ""}
-								</div>
+			{#if sheet === "More" && auth.user}
+				<div class="mt-2 flex items-center gap-2 border-t border-border px-1 pt-3">
+					<a
+						href="/account"
+						aria-current={isActiveFn("/account") ? "page" : undefined}
+						class={twMerge(
+							"flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1.5 py-2 transition-colors",
+							isActiveFn("/account")
+								? "bg-accent-soft text-accent-text"
+								: "text-fg-muted hover:bg-surface hover:text-fg",
+						)}
+					>
+						<Avatar email={auth.user.email} name={auth.user.display_name} size={38} />
+						<div class="min-w-0 flex-1">
+							<div class="truncate text-[14px] font-medium leading-tight text-fg">
+								{auth.user.display_name || auth.user.email}
 							</div>
-						</a>
-						<Button
-							variant="ghost"
-							size="icon"
-							class="shrink-0 hover:bg-status-failed/10 hover:text-status-failed"
-							type="button"
-							onclick={signOut}
-							aria-label={i18n.common_sign_out()}
-							title={i18n.common_sign_out()}
-						>
-							<LogOut size={19} aria-hidden="true" />
-						</Button>
-					</div>
-				{/if}
-			</div>
+							<div class="mt-0.5 truncate font-mono text-[11px] text-fg-subtle">
+								{role}{version ? ` · ${version}` : ""}
+							</div>
+						</div>
+					</a>
+					<Button
+						variant="ghost"
+						size="icon"
+						class="shrink-0 hover:bg-status-failed/10 hover:text-status-failed"
+						type="button"
+						onclick={signOut}
+						aria-label={i18n.common_sign_out()}
+						title={i18n.common_sign_out()}
+					>
+						<LogOut size={19} aria-hidden="true" />
+					</Button>
+				</div>
+			{/if}
 		</div>
-	</div>
+	</BottomSheet>
 {/if}

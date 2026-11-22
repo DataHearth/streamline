@@ -22,6 +22,7 @@
 		children: Snippet;
 		hideFrom?: "md" | "lg";
 		class?: ClassNameValue;
+		layerClass?: ClassNameValue;
 		headerClass?: ClassNameValue;
 		bodyClass?: ClassNameValue;
 	};
@@ -37,6 +38,7 @@
 		children,
 		hideFrom = "lg",
 		class: className,
+		layerClass,
 		headerClass,
 		bodyClass,
 	}: Props = $props();
@@ -60,7 +62,11 @@
 </script>
 
 <div
-	class={twMerge("fixed inset-0 z-50", hideFrom === "md" ? "md:hidden" : "lg:hidden")}
+	class={twMerge(
+		"fixed inset-0 z-50",
+		hideFrom === "md" ? "md:hidden" : "lg:hidden",
+		layerClass,
+	)}
 	role="dialog"
 	aria-modal="true"
 	aria-label={label}

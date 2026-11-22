@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BottomSheet from "@components/shared/BottomSheet.svelte";
 	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import {
 		Play,
@@ -6,15 +7,12 @@
 		ExternalLink,
 		ServerOff,
 		TriangleAlert,
-		X,
 	} from "@lucide/svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { fly, fade } from "svelte/transition";
+	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { api } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
-	import { lockScroll, unlockScroll } from "@lib/scrollLock";
-	import { sheetSwipe } from "@lib/sheet-swipe";
 	import BrandLogo from "@components/settings/BrandLogo.svelte";
 	import type { PlayOnLink, PlayOnLinkList } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -40,7 +38,7 @@
 	}: Props = $props();
 
 	let open = $state(false);
-	closeOnBack(() => open, () => close());
+	closeOnBack(() => open && !primary, () => close());
 	let triggerEl = $state<HTMLButtonElement | null>(null);
 
 	const q = createQuery<PlayOnLinkList>(() => ({
@@ -75,17 +73,12 @@
 		};
 	}
 
-	// Escape belongs to the document while the menu is open, since the phone
-	// sheet is portalled out of this component.
+	// The phone sheet handles its own Escape and Back; these are the desktop
+	// popover's.
 	$effect(() => {
-		if (!open) return;
-		const sheet = primary;
-		if (sheet) lockScroll();
+		if (!open || primary) return;
 		document.addEventListener("keydown", onKey);
-		return () => {
-			document.removeEventListener("keydown", onKey);
-			if (sheet) unlockScroll();
-		};
+		return () => document.removeEventListener("keydown", onKey);
 	});
 </script>
 
@@ -268,52 +261,19 @@
      a full-width trigger ran off the left edge of a 390px viewport, and every
      other list a phone opens in this app is a sheet. -->
 {#if open && primary}
-	<div
-		use:portal
-		class="fixed inset-0 z-50 md:hidden"
-		role="dialog"
-		aria-modal="true"
-		aria-label={i18n.action_play_on()}
-	>
-		<button
-			type="button"
-			aria-label={i18n.common_close()}
-			data-sheet-scrim
-			transition:fade={{ duration: 160 }}
-			onclick={close}
-			class="absolute inset-0 h-full w-full cursor-default bg-black/55"
-		></button>
-
-		<div
-			use:sheetSwipe={{ onDismiss: close }}
-			transition:fly={{ y: 420, duration: 280, easing: cubicOut }}
-			class="absolute inset-x-0 bottom-0 flex max-h-[80dvh] flex-col overflow-hidden rounded-t-2xl border-t border-border-strong bg-bg-elevated shadow-4"
+	<div use:portal>
+		<BottomSheet
+			title={i18n.action_play_on()}
+			label={i18n.action_play_on()}
+			onClose={close}
+			hideFrom="md"
+			class="max-h-[80dvh]"
+			headerClass="pb-3"
+			bodyClass="border-t border-border px-0 pb-[max(env(safe-area-inset-bottom),8px)]"
 		>
-			<div
-				class="relative flex cursor-grab touch-none select-none items-center justify-between px-5 pb-3 pt-4 active:cursor-grabbing"
-			>
-				<span
-					aria-hidden="true"
-					class="absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong"
-				></span>
-				<h2 class="text-[17px] font-semibold tracking-tight text-fg">{i18n.action_play_on()}</h2>
-				<button
-					type="button"
-					onclick={close}
-					aria-label={i18n.common_close()}
-					class="grid h-11 w-11 place-items-center rounded-full bg-surface text-fg-subtle transition active:bg-bg-hover"
-				>
-					<X size={16} aria-hidden="true" />
-				</button>
-			</div>
-
-			<div
-				data-sheet-scroll
-				aria-live="polite"
-				class="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-border pb-[max(env(safe-area-inset-bottom),8px)]"
-			>
+			<div aria-live="polite">
 				{@render body(true)}
 			</div>
-		</div>
+		</BottomSheet>
 	</div>
 {/if}
