@@ -202,7 +202,7 @@ func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string)
 	bg := context.WithoutCancel(ctx)
 	src := metadata.TVDBArtworkURL(posterPath)
 	go func() {
-		if err := s.posters.Fetch(bg, "tvshows", id, src); err != nil {
+		if err := s.posters.Follow(bg, "tvshows", id, src); err != nil {
 			slog.WarnContext(bg, "tv poster fetch failed",
 				"tvshow.id", id, "error", err)
 		}

@@ -80,6 +80,66 @@ var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
 		})
 	})
 
+	Describe("Follow", func() {
+		var other *httptest.Server
+
+		BeforeEach(func() {
+			other = httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "image/jpeg")
+					_, _ = w.Write([]byte("new-poster"))
+				}),
+			)
+			DeferCleanup(other.Close)
+		})
+
+		poster := func() string {
+			GinkgoHelper()
+			got, err := os.ReadFile(svc.Path("movies", 5))
+			Expect(err).NotTo(HaveOccurred())
+			return string(got)
+		}
+
+		It("keeps the poster while the address stays the same", func() {
+			ctx := context.Background()
+			Expect(svc.Follow(ctx, "movies", 5, src.URL)).To(Succeed())
+			payload = []byte("changed-behind-the-same-address")
+
+			Expect(svc.Follow(ctx, "movies", 5, src.URL)).To(Succeed())
+			Expect(poster()).To(Equal("fake-jpeg-bytes"))
+		})
+
+		It("replaces the poster when the address changes", func() {
+			ctx := context.Background()
+			Expect(svc.Follow(ctx, "movies", 5, src.URL)).To(Succeed())
+
+			Expect(svc.Follow(ctx, "movies", 5, other.URL)).To(Succeed())
+			Expect(poster()).To(Equal("new-poster"))
+		})
+
+		It("takes a poster cached without its address as the current one", func() {
+			ctx := context.Background()
+			Expect(svc.Fetch(ctx, "movies", 5, src.URL)).To(Succeed())
+
+			Expect(
+				svc.Follow(ctx, "movies", 5, "http://unreachable.invalid"),
+			).To(Succeed())
+			Expect(poster()).To(Equal("fake-jpeg-bytes"))
+
+			Expect(svc.Follow(ctx, "movies", 5, other.URL)).To(Succeed())
+			Expect(poster()).To(Equal("new-poster"))
+		})
+
+		It("forgets the address with the poster", func() {
+			ctx := context.Background()
+			Expect(svc.Follow(ctx, "movies", 5, src.URL)).To(Succeed())
+			Expect(svc.Remove("movies", 5)).To(Succeed())
+
+			Expect(svc.Follow(ctx, "movies", 5, other.URL)).To(Succeed())
+			Expect(poster()).To(Equal("new-poster"))
+		})
+	})
+
 	Describe("Fetch", func() {
 		It("keeps a poster that appeared while it was downloading", func() {
 			ctx := context.Background()
@@ -221,11 +281,36 @@ var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
 			svc.Serve(rec, req, "movies", 7)
 			Expect(rec.Code).To(Equal(http.StatusOK))
 			Expect(rec.Header().Get("Content-Type")).To(Equal("image/jpeg"))
-			Expect(
-				rec.Header().Get("Cache-Control"),
-			).To(ContainSubstring("max-age="))
+			Expect(rec.Header().Get("Cache-Control")).To(Equal("no-cache"))
+			Expect(rec.Header().Get("Last-Modified")).ToNot(BeEmpty())
 			body, _ := io.ReadAll(rec.Body)
 			Expect(body).To(Equal(payload))
+		})
+
+		It("answers a poster unchanged since the browser's copy with 304", func() {
+			Expect(
+				svc.Fetch(context.Background(), "movies", 7, src.URL),
+			).To(Succeed())
+			first := httptest.NewRecorder()
+			svc.Serve(
+				first,
+				httptest.NewRequest(
+					http.MethodGet,
+					"/posters/movies/7/poster.jpg",
+					nil,
+				),
+				"movies",
+				7,
+			)
+			req := httptest.NewRequest(
+				http.MethodGet,
+				"/posters/movies/7/poster.jpg",
+				nil,
+			)
+			req.Header.Set("If-Modified-Since", first.Header().Get("Last-Modified"))
+			rec := httptest.NewRecorder()
+			svc.Serve(rec, req, "movies", 7)
+			Expect(rec.Code).To(Equal(http.StatusNotModified))
 		})
 
 		It("serves the sniffed type of a PNG body", func() {

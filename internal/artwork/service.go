@@ -305,7 +305,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, path string) {
 		return
 	}
 	w.Header().Set("Content-Type", "image/jpeg")
-	w.Header().Set("Cache-Control", "public, max-age=86400")
+	w.Header().Set("Cache-Control", "no-cache")
 	http.ServeContent(w, r, "poster.jpg", st.ModTime(), f)
 }
 

@@ -513,7 +513,7 @@ func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string)
 	// against w780's ~360 KB, and the cards only ever needed ~400px.
 	src := metadata.PosterURL(posterPath, "w780")
 	go func() {
-		if err := s.posters.Fetch(bg, "movies", id, src); err != nil {
+		if err := s.posters.Follow(bg, "movies", id, src); err != nil {
 			slog.WarnContext(bg, "poster fetch failed",
 				"movie.id", id, "error", err)
 		}

@@ -99,7 +99,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Once()
 
 		done := make(chan struct{})
-		postMk.Fetch(mock.Anything, "tvshows", uint32(7), "https://artworks.thetvdb.com/p.jpg").
+		postMk.Follow(mock.Anything, "tvshows", uint32(7), "https://artworks.thetvdb.com/p.jpg").
 			RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error { close(done); return nil }).
 			Once()
 

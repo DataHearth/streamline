@@ -117,6 +117,75 @@ func (_c *MockManager_Fetch_Call) RunAndReturn(run func(ctx context.Context, kin
 	return _c
 }
 
+// Follow provides a mock function for the type MockManager
+func (_mock *MockManager) Follow(ctx context.Context, kind string, id uint32, src string) error {
+	ret := _mock.Called(ctx, kind, id, src)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Follow")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, string) error); ok {
+		r0 = returnFunc(ctx, kind, id, src)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_Follow_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Follow'
+type MockManager_Follow_Call struct {
+	*mock.Call
+}
+
+// Follow is a helper method to define mock.On call
+//   - ctx context.Context
+//   - kind string
+//   - id uint32
+//   - src string
+func (_e *MockManager_Expecter) Follow(ctx any, kind any, id any, src any) *MockManager_Follow_Call {
+	return &MockManager_Follow_Call{Call: _e.mock.On("Follow", ctx, kind, id, src)}
+}
+
+func (_c *MockManager_Follow_Call) Run(run func(ctx context.Context, kind string, id uint32, src string)) *MockManager_Follow_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_Follow_Call) Return(err error) *MockManager_Follow_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_Follow_Call) RunAndReturn(run func(ctx context.Context, kind string, id uint32, src string) error) *MockManager_Follow_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Path provides a mock function for the type MockManager
 func (_mock *MockManager) Path(kind string, id uint32) string {
 	ret := _mock.Called(kind, id)

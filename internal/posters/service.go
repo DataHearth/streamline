@@ -67,6 +67,9 @@ var validKinds = map[string]struct{}{
 // movie add, serve on HTTP request, resolve cache paths.
 type Manager interface {
 	Fetch(ctx context.Context, kind string, id uint32, src string) error
+	// Follow keeps the cached poster on src: it fetches when there is none or
+	// when src differs from the address the cached one came from.
+	Follow(ctx context.Context, kind string, id uint32, src string) error
 	// Put stores bytes the caller already holds, replacing any cached poster.
 	Put(ctx context.Context, kind string, id uint32, r io.Reader) error
 	Serve(w http.ResponseWriter, r *http.Request, kind string, id uint32)
@@ -118,6 +121,32 @@ func (p *posters) Fetch(
 	id uint32,
 	src string,
 ) error {
+	return p.fetch(ctx, kind, id, src, false)
+}
+
+// Follow records the address next to the poster, not in the database. A
+// poster cached before addresses were kept is taken as src's: comparing
+// would refetch the whole library at once.
+func (p *posters) Follow(
+	ctx context.Context,
+	kind string,
+	id uint32,
+	src string,
+) error {
+	return p.fetch(ctx, kind, id, src, true)
+}
+
+func (p *posters) sourcePath(kind string, id uint32) string {
+	return filepath.Join(filepath.Dir(p.Path(kind, id)), "source")
+}
+
+func (p *posters) fetch(
+	ctx context.Context,
+	kind string,
+	id uint32,
+	src string,
+	follow bool,
+) error {
 	if _, ok := validKinds[kind]; !ok {
 		return fmt.Errorf("posters: invalid kind %q", kind)
 	}
@@ -142,8 +171,24 @@ func (p *posters) Fetch(
 
 	dst := p.Path(kind, id)
 	if st, err := os.Stat(dst); err == nil && st.Size() > 0 {
-		outcome = "cached"
-		return nil
+		if !follow {
+			outcome = "cached"
+			return nil
+		}
+		known, err := os.ReadFile(p.sourcePath(kind, id))
+		switch {
+		case err == nil && string(known) == src:
+			outcome = "cached"
+			return nil
+		case errors.Is(err, os.ErrNotExist):
+			outcome = "cached"
+			return otelx.RecordSpanError(
+				span,
+				os.WriteFile(p.sourcePath(kind, id), []byte(src), 0o600),
+			)
+		case err != nil:
+			return otelx.RecordSpanError(span, err)
+		}
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
@@ -172,11 +217,17 @@ func (p *posters) Fetch(
 		)
 	}
 
-	if err := store(dst, resp.Body, false); err != nil {
+	if err := store(dst, resp.Body, follow); err != nil {
 		if errors.Is(err, errTooLarge) {
 			outcome = "too_large"
 		}
 		return otelx.RecordSpanError(span, err)
+	}
+	if follow {
+		err := os.WriteFile(p.sourcePath(kind, id), []byte(src), 0o600)
+		if err != nil {
+			return otelx.RecordSpanError(span, err)
+		}
 	}
 	slog.InfoContext(
 		ctx,
@@ -309,6 +360,8 @@ func (p *posters) Serve(
 	}
 	record("hit")
 	w.Header().Set("Content-Type", sniffImageType(f))
-	w.Header().Set("Cache-Control", "public, max-age=86400")
+	// One URL holds another picture after a refresh or once a deleted title's
+	// id is reused, so the browser revalidates every time (a 304 when unchanged).
+	w.Header().Set("Cache-Control", "no-cache")
 	http.ServeContent(w, r, "poster.jpg", st.ModTime(), f)
 }

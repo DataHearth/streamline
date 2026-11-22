@@ -45,6 +45,15 @@ func (p *fakePosters) Fetch(
 	return nil
 }
 
+func (p *fakePosters) Follow(
+	context.Context,
+	string,
+	uint32,
+	string,
+) error {
+	return nil
+}
+
 func (p *fakePosters) Put(
 	context.Context,
 	string,
