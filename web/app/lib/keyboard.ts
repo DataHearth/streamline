@@ -63,9 +63,11 @@ const remember = (map: Map<number, number>, width: number, value: number) => {
 //
 // The height without the keyboard is kept per width, so a rotation finds the
 // one the new width had, and only a resize moves it (the first reading counts
-// as one). With a field focused it can only grow. Without one, the page
-// shrinking is the page's own (a split screen, the browser's bars) and lowers
-// it, while the page growing is the keyboard closing and raises it.
+// as one). With a field focused it can only grow, and so it can while the
+// keyboard is up (focus on a button beside a keyboard that grows a suggestion
+// strip). Otherwise the page shrinking is the page's own (a split screen, the
+// browser's bars) and lowers it, while the page growing is the keyboard
+// closing and raises it.
 //
 // A width met while the keyboard is up (a rotation to a side never seen) has
 // nothing to count from: the keyboard stays up through focus moving between
@@ -102,7 +104,7 @@ export function keyboardWatch(): (reading: KeyboardReading) => KeyboardState {
 		let page = known;
 		if (kind === "resize") {
 			const last = lastAt.get(width) ?? height;
-			page = !typing && height < last ? height : Math.max(known, height);
+			page = !typing && !up && height < last ? height : Math.max(known, height);
 			remember(lastAt, width, height);
 		}
 		remember(pageAt, width, page);
