@@ -49,7 +49,10 @@
 	});
 </script>
 
-<div class="flex h-dvh overflow-hidden text-fg">
+<!-- Where the layout viewport keeps its height under the on-screen keyboard
+     (iOS Safari), --keyboard-inset (lib/keyboard.svelte.ts) is the part the
+     keyboard covers, and the shell stops above it. Elsewhere it is 0. -->
+<div class="flex h-[calc(100dvh_-_var(--keyboard-inset,0px))] overflow-hidden text-fg">
 	<a
 		href="#main"
 		class="skip-link sr-only focus:not-sr-only rounded-md bg-accent px-3 py-2 text-sm font-semibold text-fg-on-accent shadow-lg"

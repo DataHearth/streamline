@@ -7,9 +7,10 @@ import { createSubscriber } from "svelte/reactivity";
 
 // Whether the on-screen keyboard is up, for the phone shell's fixed bottom
 // layers (BottomNav, the add pill, the bulk bars, #main's clearance for them),
-// which index.html's `interactive-widget=resizes-content` would otherwise lift
-// above it. No browser says so directly: lib/keyboard.ts tells it from the
-// page's size.
+// which the page shrinking above the keyboard (index.html's
+// `interactive-widget=resizes-content`, `--keyboard-inset` where it does not
+// apply) would otherwise lift above it. No browser says so directly:
+// lib/keyboard.ts tells it from the page's size.
 
 const watch = keyboardWatch();
 let up = false;
@@ -39,6 +40,22 @@ function measure(kind: KeyboardReading["kind"]): boolean {
 	return touch && reading.up;
 }
 
+// Where the layout viewport does not shrink for the keyboard (iOS Safari has
+// no `interactive-widget`), the part of it the keyboard covers, for AppShell
+// and the search page to stop above. Elsewhere the layout viewport ends at the
+// keyboard already, and it is 0.
+function inset(keyboard: boolean) {
+	const vv = window.visualViewport;
+	const px =
+		keyboard && vv
+			? Math.max(0, window.innerHeight - (vv.offsetTop + vv.height))
+			: 0;
+	document.documentElement.style.setProperty(
+		"--keyboard-inset",
+		`${Math.round(px)}px`,
+	);
+}
+
 // Read at once on every resize and focus change: a focus change never closes
 // the keyboard (lib/keyboard.ts), so nothing waits for focus to settle. Focus
 // leaving every field with the keyboard up starts the idle wait; focus
@@ -49,11 +66,15 @@ const subscribe = createSubscriber((update) => {
 	let idle: ReturnType<typeof setTimeout> | undefined;
 	const read = (kind: KeyboardReading["kind"]) => {
 		const next = measure(kind);
+		inset(next);
 		if (next === up) return;
 		up = next;
 		update();
 	};
 	const resized = () => read("resize");
+	// iOS moves the visual viewport over the page under the keyboard: only the
+	// inset follows.
+	const moved = () => inset(up);
 	const focused = () => {
 		clearTimeout(idle);
 		read("focus");
@@ -64,14 +85,18 @@ const subscribe = createSubscriber((update) => {
 	// Read on subscribing too, as a fresh size: with no reader left the
 	// listeners stop, and the value would be whatever they last saw.
 	up = measure("resize");
+	inset(up);
 	vv?.addEventListener("resize", resized);
+	vv?.addEventListener("scroll", moved);
 	window.addEventListener("resize", resized);
 	pointer.addEventListener("change", resized);
 	document.addEventListener("focusin", focused);
 	document.addEventListener("focusout", focused);
 	return () => {
 		clearTimeout(idle);
+		document.documentElement.style.removeProperty("--keyboard-inset");
 		vv?.removeEventListener("resize", resized);
+		vv?.removeEventListener("scroll", moved);
 		window.removeEventListener("resize", resized);
 		pointer.removeEventListener("change", resized);
 		document.removeEventListener("focusin", focused);

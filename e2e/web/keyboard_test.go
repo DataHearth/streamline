@@ -61,6 +61,9 @@ var _ = Describe("On-screen keyboard", Label("e2e"), func() {
 
 		page.MustSetViewport(width, height-keyboard, 1, true)
 		settle(page, false)
+		// Chrome shrinks the layout viewport itself: no inset on top of it.
+		Expect(page.MustEval(`() => getComputedStyle(document.documentElement)
+			.getPropertyValue("--keyboard-inset")`).Str()).To(Equal("0px"))
 
 		// Back closes the keyboard and leaves the field focused.
 		page.MustSetViewport(width, height, 1, true)
