@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import type { Snippet } from "svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { fade } from "svelte/transition";
 	import { config } from "@lib/config.svelte";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
@@ -150,7 +150,7 @@
 						type="submit"
 						form={formId}
 						disabled={submitDisabled}
-						class={cn(
+						class={twMerge(
 							"min-h-11 shrink-0 rounded-md px-2 py-2 text-sm font-semibold transition active:bg-bg-hover disabled:opacity-40",
 							submitTone === "danger" ? "text-status-failed" : "text-accent-text",
 						)}

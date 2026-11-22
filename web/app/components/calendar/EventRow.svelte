@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { BookOpen, Film, Music, Tv } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import Poster from "@components/shared/Poster.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import EventDot from "./EventDot.svelte";
@@ -21,7 +21,7 @@
 
 <a
 	href={event.href}
-	class={cn(
+	class={twMerge(
 		"grid items-center gap-3 rounded-md px-3 transition hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 		size === "md"
 			? "grid-cols-[46px_1fr_auto] gap-3.5 py-2.5"
@@ -29,7 +29,7 @@
 	)}
 >
 	<span
-		class={cn(
+		class={twMerge(
 			"relative grid w-full place-items-center overflow-hidden rounded border border-border bg-bg-card text-fg-subtle",
 			event.square ? "aspect-square" : "aspect-[2/3]",
 		)}

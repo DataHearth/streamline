@@ -28,7 +28,7 @@
 	import { auth } from "@lib/auth.svelte";
 	import DetailCast from "@components/shared/DetailCast.svelte";
 	import { Search, Trash2 } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { episodeStatus, episodeTitle } from "@lib/status";
 	import Modal from "@components/modals/Modal.svelte";
 	import { formatDateTime, formatRelative } from "@lib/dates";
@@ -156,7 +156,7 @@
 				style:--c={`var(--status-${meta.token})`}
 			>
 				<span
-					class={cn(
+					class={twMerge(
 						"dot h-1.5 w-1.5 shrink-0 rounded-full",
 						meta.live && "motion-safe:animate-pulse",
 					)}
@@ -170,7 +170,7 @@
 			{/if}
 			{#if episode.file_score !== undefined}
 				<span
-					class={cn(
+					class={twMerge(
 						"shrink-0 rounded-full border px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.1em]",
 						episode.file_score > 0
 							? "border-status-available/30 bg-status-available/10 text-status-available"

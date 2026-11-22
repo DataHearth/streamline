@@ -11,7 +11,7 @@
 
 <script lang="ts">
 	import { Bookmark } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// The one bookmark: whether a movie, a show, a season, an episode, an
@@ -80,7 +80,7 @@
 	aria-busy={pending || undefined}
 	aria-label={label}
 	title={label}
-	class={cn(
+	class={twMerge(
 		"grid shrink-0 place-items-center transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-50",
 		variant === "overlay" ? "h-10 w-10 lg:h-7 lg:w-7" : SIZE[size],
 		variant === "box" && [

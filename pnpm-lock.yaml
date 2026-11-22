@@ -202,9 +202,6 @@ importers:
       '@tanstack/svelte-query':
         specifier: ^6.1.29
         version: 6.4.1(svelte@5.57.3)
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
       esbuild:
         specifier: ^0.28.0
         version: 0.28.2

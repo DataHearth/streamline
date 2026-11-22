@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m as i18n } from "@lib/paraglide/messages.js";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import {
 		buildMonthGrid,
 		dayLabel,
@@ -62,13 +62,13 @@
 					aria-label="{dayLabel(cell.date)}, {evs.length === 1
 						? i18n.calendar_release_count_one({ count: evs.length })
 						: i18n.calendar_release_count_other({ count: evs.length })}"
-					class={cn(
+					class={twMerge(
 						"relative flex min-h-[46px] flex-col items-center gap-1.5 rounded-md py-[7px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 						isSelected ? "bg-accent-soft" : "hover:bg-surface",
 					)}
 				>
 					<span
-						class={cn(
+						class={twMerge(
 							"font-mono text-[13px] font-semibold leading-none tabular",
 							// By weight, not opacity: fg-subtle at 60% is 2.7:1.
 							!cell.inMonth
@@ -92,7 +92,7 @@
 					</span>
 					{#if isCurrent || isSelected}
 						<span
-							class={cn(
+							class={twMerge(
 								"pointer-events-none absolute inset-0 rounded-md border",
 								isSelected ? "border-accent" : "border-accent-line",
 							)}

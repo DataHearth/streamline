@@ -6,7 +6,7 @@
 	import { api, errorText } from "@lib/api";
 	import { BOOKS, createAction, monitorToast, searchFailed, updateFailed } from "@lib/actions";
 	import { auth } from "@lib/auth.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatBytes } from "@lib/format";
 	import { formatRelative } from "@lib/dates";
 	import { bookPosterUrl } from "@lib/posters";
@@ -328,7 +328,7 @@
 					type="button"
 					onclick={() => (tab = t.key)}
 					aria-current={active ? "page" : undefined}
-					class={cn("relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4", active ? "text-fg" : "text-fg-subtle hover:text-fg")}
+					class={twMerge("relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4", active ? "text-fg" : "text-fg-subtle hover:text-fg")}
 				>
 					<span>{t.label}</span>
 					{#if active}<span aria-hidden="true" class="absolute inset-x-3 -bottom-px h-0.5 rounded-t-sm bg-accent"></span>{/if}
@@ -339,11 +339,11 @@
 
 	<div use:swipeTabs={{ keys: TABS, current: tab, onChange: (k) => (tab = k), track: tabTrack }} class="min-h-[60dvh]">
 	{#if tab === "history"}
-		<div class={cn("w-full px-4 py-6 md:px-8", canEdit && "pb-24 md:pb-6")}>
+		<div class={twMerge("w-full px-4 py-6 md:px-8", canEdit && "pb-24 md:pb-6")}>
 			<DetailHistory bookId={book.id} />
 		</div>
 	{:else}
-	<div class={cn("w-full px-4 pt-6 md:px-8 md:pb-8", canEdit ? "pb-24" : "pb-8")}>
+	<div class={twMerge("w-full px-4 pt-6 md:px-8 md:pb-8", canEdit ? "pb-24" : "pb-8")}>
 		<div class="grid gap-3 md:grid-cols-2 md:gap-4">
 			{#each slots as slot (slot.format)}
 				{@const edition = editionOf(slot.edition_id)}

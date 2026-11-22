@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { countFuture } from "@lib/nouns";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { missingEpisodes, seasonHeadline, seasonTallies } from "@lib/status";
 	import SeasonProgress from "./SeasonProgress.svelte";
 	import type { Season } from "@lib/types";
@@ -40,7 +40,7 @@
 			type="button"
 			onclick={() => onSelect(s.number)}
 			aria-current={active ? "true" : undefined}
-			class={cn(
+			class={twMerge(
 				"flex flex-col gap-1.5 rounded-lg border p-3 text-left transition",
 				vertical ? "w-full" : "w-48 shrink-0",
 				active

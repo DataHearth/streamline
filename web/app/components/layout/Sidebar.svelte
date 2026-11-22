@@ -22,7 +22,7 @@
 	import { api } from "@lib/api";
 	import { NAV_POLL_MS, SILENT } from "@lib/query";
 	import { auth } from "@lib/auth.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import {
 		activityFeatures,
 		torrentCountsQuery,
@@ -307,13 +307,13 @@
 					<a
 						href={item.href}
 						aria-current={active ? "page" : undefined}
-						class={cn(itemBase, active ? itemActive : itemInactive)}
+						class={twMerge(itemBase, active ? itemActive : itemInactive)}
 					>
 						<item.icon size={18} class="shrink-0" />
 						<span class="flex-1 truncate">{item.label}</span>
 						{#if item.href === "/movies" && moviesCount !== null}
 							<span
-								class={cn(
+								class={twMerge(
 									"shrink-0 font-mono text-[10.5px] tabular-nums",
 									active ? "text-accent-text opacity-70" : "text-fg-subtle",
 								)}
@@ -322,7 +322,7 @@
 							</span>
 						{:else if item.href === "/series" && seriesCount !== null}
 							<span
-								class={cn(
+								class={twMerge(
 									"shrink-0 font-mono text-[10.5px] tabular-nums",
 									active ? "text-accent-text opacity-70" : "text-fg-subtle",
 								)}
@@ -331,7 +331,7 @@
 							</span>
 						{:else if (item.href === "/music" && musicCount !== null) || (item.href === "/books" && booksCount !== null)}
 							<span
-								class={cn(
+								class={twMerge(
 									"shrink-0 font-mono text-[10.5px] tabular-nums",
 									active ? "text-accent-text opacity-70" : "text-fg-subtle",
 								)}
@@ -356,7 +356,7 @@
 					<a
 						href={link.href}
 						aria-current={current ? "page" : undefined}
-						class={cn(itemBase, current ? itemActive : itemInactive)}
+						class={twMerge(itemBase, current ? itemActive : itemInactive)}
 					>
 						<link.icon size={18} class="shrink-0" />
 						<span class="min-w-0 flex-1 truncate">{link.label}</span>
@@ -386,7 +386,7 @@
 					<a
 						href={item.href}
 						aria-current={active ? "page" : undefined}
-						class={cn(itemBase, active ? itemActive : itemInactive)}
+						class={twMerge(itemBase, active ? itemActive : itemInactive)}
 					>
 						<item.icon size={18} class="shrink-0" />
 						<span class="flex-1 truncate">{item.label}</span>
@@ -411,7 +411,7 @@
 			<a
 				href="/settings"
 				aria-current={isActiveFn("/settings") ? "page" : undefined}
-				class={cn(itemBase, isActiveFn("/settings") ? itemActive : itemInactive)}
+				class={twMerge(itemBase, isActiveFn("/settings") ? itemActive : itemInactive)}
 			>
 				<Settings size={18} class="shrink-0" />
 				<span class="flex-1 truncate">{i18n.nav_settings()}</span>
@@ -425,7 +425,7 @@
 					href="/account"
 					aria-current={accountActive ? "page" : undefined}
 					aria-label={i18n.nav_account_settings()}
-					class={cn(
+					class={twMerge(
 						"flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors",
 						accountActive
 							? "bg-accent-soft text-accent-text"

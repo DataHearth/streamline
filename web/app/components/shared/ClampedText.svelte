@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick } from "svelte";
 	import { heroHold } from "@lib/hero-hold.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Text clamped to three lines, ending on "Read more" when the clamp hides
@@ -140,7 +140,7 @@
      end of the last one. Expanded, the toggle follows the text instead; the
      text moves, not the button, so keyboard focus survives the switch.
      min-w-0: a long URL must not widen the paragraph past its column. -->
-<div class={cn("flex max-w-[680px]", klass)}>
+<div class={twMerge("flex max-w-[680px]", klass)}>
 	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
 	<!-- biome-ignore lint/a11y/useKeyWithClickEvents: a tap on the text opens it for a thumb; the toggle is the keyboard's way -->
 	<p
@@ -148,7 +148,7 @@
 		tabindex={onReadMore ? -1 : undefined}
 		style:--toggle={toggleWidth ? `${toggleWidth}px` : undefined}
 		onclick={openFromText}
-		class={cn(
+		class={twMerge(
 			"clamp min-w-0 break-words text-fg-muted outline-none [text-wrap:pretty]",
 			textClass,
 			!expanded && "clamped",

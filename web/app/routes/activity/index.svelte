@@ -18,7 +18,7 @@
 	import { pullRefresh } from "@lib/pull-refresh";
 	import { formatEta, formatSpeed } from "@lib/format";
 	import { fold } from "@lib/text";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { Selection } from "@lib/selection.svelte";
 	import { NOUN_DOWNLOAD } from "@lib/nouns";
 	import type {
@@ -507,7 +507,7 @@
      the floating bulk bar, which otherwise sat over the last rows of the list. -->
 <div
 	use:pullRefresh={{ onRefresh: refreshAll }}
-	class={cn(
+	class={twMerge(
 		"group relative flex flex-col px-4 py-6 md:max-h-[calc(100dvh-4rem)] md:min-h-0 md:overflow-y-auto md:px-6",
 		auth.isAdmin && selection.size > 0 && "md:pb-24",
 	)}

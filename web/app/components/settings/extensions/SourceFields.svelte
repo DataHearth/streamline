@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import FieldLock from "@components/forms/FieldLock.svelte";
 	import { isUrlSource, shaProblem, sourceProblem } from "@lib/extensions";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -60,9 +60,9 @@
 			onblur={() => (touched.source = true)}
 			aria-invalid={srcError ? true : undefined}
 			aria-describedby="{idPrefix}-source-help"
-			class={cn(input, srcError ? "border-status-failed" : "border-border")}
+			class={twMerge(input, srcError ? "border-status-failed" : "border-border")}
 		/>
-		<p id="{idPrefix}-source-help" class={cn("mt-1 text-xs", srcError ? "text-status-failed" : "text-fg-muted")}>
+		<p id="{idPrefix}-source-help" class={twMerge("mt-1 text-xs", srcError ? "text-status-failed" : "text-fg-muted")}>
 			{srcError ?? i18n.extensions_source_help()}
 		</p>
 	</div>
@@ -86,9 +86,9 @@
 			onblur={() => (touched.sha256 = true)}
 			aria-invalid={shaError ? true : undefined}
 			aria-describedby="{idPrefix}-sha-help"
-			class={cn(input, shaError ? "border-status-failed" : "border-border")}
+			class={twMerge(input, shaError ? "border-status-failed" : "border-border")}
 		/>
-		<p id="{idPrefix}-sha-help" class={cn("mt-1 text-xs", shaError ? "text-status-failed" : "text-fg-muted")}>
+		<p id="{idPrefix}-sha-help" class={twMerge("mt-1 text-xs", shaError ? "text-status-failed" : "text-fg-muted")}>
 			{shaError ?? i18n.extensions_sha256_help()}
 		</p>
 	</div>

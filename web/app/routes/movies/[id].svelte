@@ -7,7 +7,7 @@
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { createAction, deleteFailed, monitorToast, MOVIES, refreshFailed, searchFailed, updateFailed } from "@lib/actions";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import type { Movie, QualityProfile } from "@lib/types";
 	import MovieDetailHero from "@components/movies/MovieDetailHero.svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
@@ -205,7 +205,7 @@
 					type="button"
 					onclick={() => (tab = t.key)}
 					aria-current={active ? "page" : undefined}
-					class={cn(
+					class={twMerge(
 						"relative -mb-px shrink-0 px-4 py-3.5 text-[13px] font-medium transition",
 						active ? "text-fg" : "text-fg-subtle hover:text-fg",
 					)}
@@ -224,7 +224,7 @@
 
 	<div
 		use:swipeTabs={{ keys: TABS.map((t) => t.key), current: tab, onChange: (k) => (tab = k), track: tabTrack }}
-		class={cn(
+		class={twMerge(
 			"min-h-[60dvh] w-full px-4 pt-6 md:px-8 md:pb-6",
 			auth.canAddDirectly ? "pb-24" : "pb-6",
 		)}

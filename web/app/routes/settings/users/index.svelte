@@ -13,7 +13,7 @@
 	import { auth } from "@lib/auth.svelte";
 	import { toast } from "@lib/toast";
 	import { requireAdmin } from "@lib/guards";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { email, password, displayName, userRole } from "@lib/schemas";
 	import type { User, UserList, UserRole } from "@lib/types";
 	import UserRow from "@components/users/UserRow.svelte";
@@ -419,7 +419,7 @@
 		<button
 			type="button"
 			onclick={() => toggleSort(key)}
-			class={cn(
+			class={twMerge(
 				"inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider transition-colors",
 				active ? "text-fg" : "hover:text-fg",
 			)}

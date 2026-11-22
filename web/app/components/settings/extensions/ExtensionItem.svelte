@@ -2,7 +2,7 @@
 	import { ChevronDown, CircleAlert, Pencil, Puzzle, ShieldCheck, Trash2 } from "@lucide/svelte";
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { config, READONLY_HINT } from "@lib/config.svelte";
 	import {
 		AUTH_LABEL,
@@ -97,14 +97,14 @@
 				class="grid h-11 w-11 place-items-center rounded-md transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
 			>
 				<span
-					class={cn(
+					class={twMerge(
 						"relative h-[18px] w-[30px] rounded-full border transition",
 						ext.enabled ? "border-status-available/50 bg-status-available/20" : "border-border-strong bg-surface-2",
 					)}
 					aria-hidden="true"
 				>
 					<span
-						class={cn(
+						class={twMerge(
 							"absolute top-[2px] h-3 w-3 rounded-full transition-all",
 							ext.enabled ? "left-[14px] bg-status-available" : "left-[2px] bg-fg-subtle",
 						)}
@@ -173,7 +173,7 @@
 				{/if}
 				{permissionSummary(perms)}
 			</span>
-			<ChevronDown size={14} class={cn("shrink-0 text-fg-faint transition-transform", open && "rotate-180")} aria-hidden="true" />
+			<ChevronDown size={14} class={twMerge("shrink-0 text-fg-faint transition-transform", open && "rotate-180")} aria-hidden="true" />
 		</button>
 		{#if open}
 			<div class="px-4 pb-4 pt-1 md:px-5" transition:slide={{ duration: 200, easing: cubicOut }}>

@@ -3,7 +3,7 @@
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { X, ArrowUp, ArrowDown } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
 	import type { UserRole } from "@lib/types";
@@ -129,7 +129,7 @@
 							type="button"
 							aria-pressed={on}
 							onclick={() => onRoleChange(r.key)}
-							class={cn(chip, on ? chipOn : chipOff)}
+							class={twMerge(chip, on ? chipOn : chipOff)}
 						>
 							{r.label}
 						</button>
@@ -145,7 +145,7 @@
 								type="button"
 								aria-pressed={on}
 								onclick={() => onSortChange(s.key)}
-								class={cn(chip, on ? chipOn : chipOff)}
+								class={twMerge(chip, on ? chipOn : chipOff)}
 							>
 								{s.label}
 								{#if on}

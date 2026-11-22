@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Img from "@components/shared/Img.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { heroHold } from "@lib/hero-hold.svelte";
 
 	// The blurred art behind a detail hero, object-cover over the section. While
@@ -39,7 +39,7 @@
 		bind:this={layer}
 		data-hero-backdrop
 		style:height={held === null ? undefined : `${held}px`}
-		class={cn("absolute inset-x-0 top-0 h-full overflow-hidden", held !== null && "max-h-full", klass)}
+		class={twMerge("absolute inset-x-0 top-0 h-full overflow-hidden", held !== null && "max-h-full", klass)}
 	>
 		{#if src}
 			<Img

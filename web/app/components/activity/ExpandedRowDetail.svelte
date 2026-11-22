@@ -12,7 +12,7 @@
 		ExternalLink,
 	} from "@lucide/svelte";
 	import Dialog from "@components/modals/Dialog.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatBytes } from "@lib/format";
 	import { formatDateTime } from "@lib/dates";
 	import { entryHref } from "@lib/activity-touch";
@@ -154,7 +154,7 @@
 				{#if itemHref}
 					<a
 						href={itemHref}
-						class={cn(btn, "bg-bg-subtle text-fg hover:bg-surface")}
+						class={twMerge(btn, "bg-bg-subtle text-fg hover:bg-surface")}
 					>
 						<ExternalLink size={13} aria-hidden="true" />
 						{i18n.activity_open_item()}
@@ -163,7 +163,7 @@
 				{#if torrentHref}
 					<a
 						href={torrentHref}
-						class={cn(btn, "bg-bg-subtle text-fg hover:bg-surface")}
+						class={twMerge(btn, "bg-bg-subtle text-fg hover:bg-surface")}
 					>
 						<ArrowUpRight size={13} aria-hidden="true" />
 						{i18n.activity_open_torrent()}
@@ -175,7 +175,7 @@
 							type="button"
 							disabled={busy}
 							onclick={() => onResume(item.id)}
-							class={cn(btn, "bg-bg-subtle text-fg hover:bg-surface")}
+							class={twMerge(btn, "bg-bg-subtle text-fg hover:bg-surface")}
 						>
 							{#if busy}
 								<LoaderCircle
@@ -193,7 +193,7 @@
 							type="button"
 							disabled={busy}
 							onclick={() => onPause(item.id)}
-							class={cn(btn, "bg-bg-subtle text-fg hover:bg-surface")}
+							class={twMerge(btn, "bg-bg-subtle text-fg hover:bg-surface")}
 						>
 							{#if busy}
 								<LoaderCircle
@@ -211,7 +211,7 @@
 						type="button"
 						disabled={busy}
 						onclick={() => (confirmCancel = true)}
-						class={cn(
+						class={twMerge(
 							btn,
 							"bg-status-failed/15 text-status-failed hover:bg-status-failed/25",
 						)}
@@ -225,7 +225,7 @@
 							type="button"
 							disabled={busy}
 							onclick={() => (confirmRetry = true)}
-							class={cn(
+							class={twMerge(
 								btn,
 								"bg-accent/15 text-accent hover:bg-accent/25",
 							)}
@@ -238,7 +238,7 @@
 						type="button"
 						disabled={busy}
 						onclick={() => (confirmRemove = true)}
-						class={cn(
+						class={twMerge(
 							btn,
 							"bg-status-failed/15 text-status-failed hover:bg-status-failed/25",
 						)}

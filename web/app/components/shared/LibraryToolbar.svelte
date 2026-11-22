@@ -26,7 +26,7 @@
 
 <script lang="ts">
 	import { CheckCheck, ChevronDown, LayoutGrid, List, ListChecks, Plus, Search, SlidersHorizontal, X } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { dragScroll } from "@lib/drag-scroll";
 	import DropdownMenu from "@components/shared/DropdownMenu.svelte";
 	import DropdownOption from "@components/shared/DropdownOption.svelte";
@@ -111,7 +111,7 @@
 						type="button"
 						aria-pressed={f.value === o.key}
 						onclick={() => f.onChange(o.key)}
-						class={cn(phoneChip, f.value === o.key ? chipOn : chipOff)}
+						class={twMerge(phoneChip, f.value === o.key ? chipOn : chipOff)}
 					>
 						{o.label}
 						{#if o.count != null}
@@ -134,7 +134,7 @@
 		aria-label="{statusLabel}: {current?.label}"
 		onclick={() => toggle("status")}
 	>
-		<span class={cn("h-2 w-2 rounded-full", current?.dot ?? "bg-fg-subtle")} aria-hidden="true"></span>
+		<span class={twMerge("h-2 w-2 rounded-full", current?.dot ?? "bg-fg-subtle")} aria-hidden="true"></span>
 		{current?.label}
 		{#if current?.count != null}
 			<span class="font-mono text-[10.5px] font-normal tabular text-fg-subtle">{current.count}</span>
@@ -161,7 +161,7 @@
 		<button
 			bind:this={anchors[f.key]}
 			type="button"
-			class={cn(
+			class={twMerge(
 				trigger,
 				f.value !== f.options[0]?.key && "border-accent-line text-accent-text",
 				foldFacets && "hidden lg:inline-flex",
@@ -199,7 +199,7 @@
 			aria-haspopup="dialog"
 			aria-expanded={sheetOpen}
 			aria-label={i18n.filter_and_sort()}
-			class={cn(
+			class={twMerge(
 				"relative grid h-9 w-9 shrink-0 place-items-center rounded-lg border transition lg:hidden",
 				facetCount > 0 ? chipOn : "border-border-strong bg-bg-elevated text-fg-muted hover:text-fg",
 			)}
@@ -216,7 +216,7 @@
 	{/if}
 
 	<label
-		class={cn(
+		class={twMerge(
 			"flex h-9 flex-1 items-center gap-2 rounded-lg border border-border bg-bg-elevated px-3 transition focus-within:border-accent-line",
 			foldFacets ? "min-w-[140px] basis-[140px] lg:min-w-[160px] lg:basis-[180px]" : "min-w-[180px] basis-[220px]",
 		)}
@@ -277,7 +277,7 @@
 				onclick={() => onViewChange("grid")}
 				title={i18n.common_grid_view()}
 				aria-pressed={view === "grid"}
-				class={cn(
+				class={twMerge(
 					"grid h-10 w-10 place-items-center rounded-sm transition lg:h-7 lg:w-7",
 					view === "grid" ? "bg-bg-card text-fg" : "text-fg-subtle hover:text-fg",
 				)}
@@ -290,7 +290,7 @@
 				onclick={() => onViewChange("list")}
 				title={i18n.common_list_view()}
 				aria-pressed={view === "list"}
-				class={cn(
+				class={twMerge(
 					"grid h-10 w-10 place-items-center rounded-sm transition lg:h-7 lg:w-7",
 					view === "list" ? "bg-bg-card text-fg" : "text-fg-subtle hover:text-fg",
 				)}
@@ -321,7 +321,7 @@
 			aria-pressed={selection.mode}
 			aria-label={i18n.common_select()}
 			title={i18n.common_select()}
-			class={cn(
+			class={twMerge(
 				"grid h-9 w-9 shrink-0 place-items-center rounded-md border transition",
 				selection.mode ? chipOn : "border-border bg-bg-elevated text-fg-muted hover:border-border-strong hover:text-fg",
 			)}
@@ -362,7 +362,7 @@
 			class="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 		>
 			{#if query}
-				<span class={cn(phoneChip, chipOn)}>
+				<span class={twMerge(phoneChip, chipOn)}>
 					“{query}”
 					<button
 						type="button"
@@ -379,10 +379,10 @@
 					type="button"
 					onclick={() => onTabChange(t.key)}
 					aria-current={t.key === tab ? "page" : undefined}
-					class={cn(phoneChip, t.key === tab ? chipOn : chipOff)}
+					class={twMerge(phoneChip, t.key === tab ? chipOn : chipOff)}
 				>
 					{#if t.dot}
-						<span class={cn("h-1.5 w-1.5 rounded-full", t.dot)} aria-hidden="true"></span>
+						<span class={twMerge("h-1.5 w-1.5 rounded-full", t.dot)} aria-hidden="true"></span>
 					{/if}
 					{t.label}
 					{#if t.count != null}
@@ -397,7 +397,7 @@
 			aria-haspopup="dialog"
 			aria-expanded={sheetOpen}
 			aria-label={i18n.filter_and_sort()}
-			class={cn(
+			class={twMerge(
 				"relative grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition",
 				activeCount > 0 ? chipOn : "border-border-strong bg-bg-elevated text-fg-muted",
 			)}

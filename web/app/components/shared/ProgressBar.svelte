@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import type { StatusKind } from "./StatusPill.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -40,7 +40,7 @@
 		></div>
 	{:else}
 		<div
-			class={cn(
+			class={twMerge(
 				"fill h-full rounded-full",
 				shimmer && "relative overflow-hidden",
 			)}

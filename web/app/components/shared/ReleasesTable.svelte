@@ -18,7 +18,7 @@
 		FileText,
 	} from "@lucide/svelte";
 	import { formatLabel, languageName, releaseFormat, releaseLanguage, releaseTier, tierLabel, type BookFormat } from "@lib/music-books";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { toast } from "@lib/toast";
@@ -454,7 +454,7 @@
 
 {#snippet langStatic(k: LangKind)}
 	<span
-		class={cn(
+		class={twMerge(
 			"inline-flex h-6 whitespace-nowrap items-center rounded-sm px-2 text-[12px] font-semibold",
 			LANG_CHIP[k],
 		)}
@@ -471,7 +471,7 @@
 			onclick={() => (langOpen = langOpen === r.download_url ? null : r.download_url)}
 			aria-expanded={langOpen === r.download_url}
 			aria-label={`${langLabel(k)} — ${langHelp(k)}`}
-			class={cn(
+			class={twMerge(
 				"inline-flex h-6 whitespace-nowrap cursor-help items-center rounded-sm px-2 text-[12px] font-semibold",
 				LANG_CHIP[k],
 			)}
@@ -527,7 +527,7 @@
 		type="button"
 		onclick={() => onSelect(r)}
 		disabled={pending || grab.isPending}
-		class={cn(
+		class={twMerge(
 			"inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md bg-accent px-3 text-[12.5px] font-semibold text-fg-on-accent transition hover:bg-accent-hover active:bg-accent-pressed disabled:cursor-not-allowed disabled:opacity-60 lg:h-9 lg:min-h-0",
 			extra,
 		)}
@@ -548,7 +548,7 @@
 	<!-- One button, two placements: beside the facts from md, at the end of the
 	     meta line below it. Grid areas move it rather than a second copy. -->
 	<li
-		class={cn(
+		class={twMerge(
 			"grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2.5 rounded-lg border p-3 [grid-template-areas:'info_info''meta_act'] md:px-3.5 md:[grid-template-areas:'info_act''meta_act']",
 			isRec
 				? "border-accent-line bg-accent-soft/40"
@@ -635,10 +635,10 @@
 		>
 			<span class="font-medium text-fg-muted">{formatBytes(r.size)}</span>
 			<span
-				class={cn("inline-flex items-center gap-1.5", SPEED_CLASS[speed])}
+				class={twMerge("inline-flex items-center gap-1.5", SPEED_CLASS[speed])}
 				title={i18n.releases_speed_help({ count: r.seeders })}
 			>
-				<span class={cn("h-[7px] w-[7px] rounded-full", SPEED_DOT[speed])} aria-hidden="true"
+				<span class={twMerge("h-[7px] w-[7px] rounded-full", SPEED_DOT[speed])} aria-hidden="true"
 				></span>
 				{speedLabel(speed)}
 			</span>
@@ -727,7 +727,7 @@
 							type="button"
 							aria-pressed={fmtFilter === seg.key}
 							onclick={() => (fmtFilter = seg.key)}
-							class={cn(
+							class={twMerge(
 								"inline-flex min-h-11 items-center rounded-md px-3 text-[12.5px] font-medium transition lg:min-h-0 lg:py-1.5",
 								fmtFilter === seg.key ? "bg-surface-2 text-fg" : "text-fg-subtle hover:text-fg",
 							)}
@@ -766,7 +766,7 @@
 			>
 				{i18n.releases_view_technical()}
 				<span
-					class={cn(
+					class={twMerge(
 						"relative h-[18px] w-[30px] shrink-0 rounded-full border transition",
 						technical
 							? "border-accent-line bg-accent-soft"
@@ -775,7 +775,7 @@
 					aria-hidden="true"
 				>
 					<span
-						class={cn(
+						class={twMerge(
 							"absolute top-[2px] h-3 w-3 rounded-full transition-all",
 							technical ? "left-[14px] bg-accent" : "left-[2px] bg-fg-subtle",
 						)}
@@ -842,7 +842,7 @@
 		>
 			{#each rows as r (r.download_url)}
 				<li
-					class={cn(
+					class={twMerge(
 						"rounded-lg border border-border bg-bg-elevated p-3",
 						r.rejected && "opacity-60",
 					)}
@@ -869,7 +869,7 @@
 						</span>
 						{#if r.score !== undefined}
 							<span
-								class={cn(
+								class={twMerge(
 									"rounded-sm bg-bg-card px-1.5 py-px font-mono text-[10px] tabular font-semibold",
 									scoreClass(r.score),
 								)}
@@ -909,7 +909,7 @@
 					</div>
 					<div class="mt-2.5 flex items-center gap-3">
 						<span
-							class={cn(
+							class={twMerge(
 								"shrink-0 font-mono text-[11.5px] tabular font-medium",
 								seederClass(r.seeders),
 							)}
@@ -940,7 +940,7 @@
 			class="hidden max-h-[60vh] overflow-auto rounded-lg border border-border bg-bg-elevated md:block"
 		>
 			<table
-				class={cn(
+				class={twMerge(
 					"w-full table-fixed text-sm",
 					scored ? "min-w-[840px]" : "min-w-[760px]",
 				)}
@@ -1065,7 +1065,7 @@
 					{#each rows as r (r.download_url)}
 						{@const pending = pendingId === r.download_url}
 						<tr
-							class={cn(
+							class={twMerge(
 								"border-b border-border last:border-b-0 transition hover:bg-surface",
 								r.rejected && "opacity-60",
 							)}
@@ -1148,7 +1148,7 @@
 							</td>
 							{#if scored}
 								<td
-									class={cn(
+									class={twMerge(
 										"whitespace-nowrap px-3 py-2.5 text-right font-mono text-[11.5px] tabular font-medium",
 										scoreClass(r.score ?? 0),
 									)}
@@ -1162,7 +1162,7 @@
 								{formatBytes(r.size)}
 							</td>
 							<td
-								class={cn(
+								class={twMerge(
 									"whitespace-nowrap px-3 py-2.5 text-right font-mono text-[11.5px] tabular font-medium",
 									seederClass(r.seeders),
 								)}

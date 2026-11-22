@@ -3,7 +3,7 @@
 	import { createMutation } from "@tanstack/svelte-query";
 	import { Plug, CircleCheck, CircleX, TriangleAlert } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { toast } from "@lib/toast";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -70,7 +70,7 @@
 			</button>
 			{#if test.isSuccess || test.isError}
 				<span
-					class={cn(
+					class={twMerge(
 						"inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
 						test.isSuccess
 							? "bg-status-available/10 text-status-available"

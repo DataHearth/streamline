@@ -2,7 +2,7 @@
 	import { parts } from "@lib/message-parts";
 	import { Magnet, Upload, Info, FileText } from "@lucide/svelte";
 	import Modal from "@components/modals/Modal.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { isMagnet, readTorrentFile } from "@lib/torrent-file";
 	import type { AddTorrentRequest } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -71,7 +71,7 @@
 		<button
 			type="button"
 			onclick={() => (source = "magnet")}
-			class={cn(
+			class={twMerge(
 				"inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition",
 				source === "magnet" ? "bg-accent-soft text-accent-text" : "text-fg-muted hover:text-fg",
 			)}
@@ -82,7 +82,7 @@
 		<button
 			type="button"
 			onclick={() => (source = "file")}
-			class={cn(
+			class={twMerge(
 				"inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition",
 				source === "file" ? "bg-accent-soft text-accent-text" : "text-fg-muted hover:text-fg",
 			)}

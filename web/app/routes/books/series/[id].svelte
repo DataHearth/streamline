@@ -5,7 +5,7 @@
 	import { api, errorText } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { BOOKS, createAction, monitorToast, searchFailed, updateFailed } from "@lib/actions";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatDate, formatDateShort, formatRelative } from "@lib/dates";
 	import { bookPosterUrl } from "@lib/posters";
 	import Dialog from "@components/modals/Dialog.svelte";
@@ -199,7 +199,7 @@
 		</div>
 	</div>
 {:else}
-	<div class={cn(canEdit && wanted > 0 && "pb-24 md:pb-0")}>
+	<div class={twMerge(canEdit && wanted > 0 && "pb-24 md:pb-0")}>
 		<MediaHero
 			backdrop={cover}
 			backHref="/books"
@@ -304,7 +304,7 @@
 						type="button"
 						onclick={() => (tab = t.key)}
 						aria-current={active ? "page" : undefined}
-						class={cn("relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4", active ? "text-fg" : "text-fg-subtle hover:text-fg")}
+						class={twMerge("relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4", active ? "text-fg" : "text-fg-subtle hover:text-fg")}
 					>
 						<span>{t.label}</span>
 						{#if t.n}<span class="ml-1.5 font-mono text-[11px] text-fg-subtle">{t.n}</span>{/if}
@@ -329,7 +329,7 @@
 								<span class="absolute bottom-1.5 left-1.5"><LabelPill token="wanted" label={i18n.status_wanted()} /></span>
 							{/if}
 						</div>
-						<p class={cn("mt-1.5 font-mono text-[11px]", missing ? "text-status-wanted" : up ? "text-fg-subtle" : "text-fg-muted")}>
+						<p class={twMerge("mt-1.5 font-mono text-[11px]", missing ? "text-status-wanted" : up ? "text-fg-subtle" : "text-fg-muted")}>
 							{volumeLabel(v.number)}
 						</p>
 					</li>

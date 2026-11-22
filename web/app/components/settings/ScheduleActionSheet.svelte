@@ -3,7 +3,7 @@
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { X, Zap, Pause, Play, Pencil, TriangleAlert } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
 	import { config, READONLY_HINT } from "@lib/config.svelte";
@@ -106,7 +106,7 @@
 					{job.name}
 				</h2>
 				{#if state}
-					<span class={cn("shrink-0 text-[12px] font-semibold", state.tone)}>
+					<span class={twMerge("shrink-0 text-[12px] font-semibold", state.tone)}>
 						{state.label}
 					</span>
 				{/if}

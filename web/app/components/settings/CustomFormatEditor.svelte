@@ -217,7 +217,7 @@
 	import * as v from "valibot";
 	import { Check, Plus, Trash2, X, Ban, Asterisk } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { config } from "@lib/config.svelte";
 	import { customFormatCondition } from "@lib/schemas";
 	import type { CustomFormatTestResult, Resolution } from "@lib/types";
@@ -500,7 +500,7 @@
 				{@const err = rowErrors[i]}
 				{@const passed = results?.[i]?.passed}
 				<div
-					class={cn(
+					class={twMerge(
 						"rounded-lg border bg-bg-deep/40 p-3",
 						err ? "border-status-failed/50" : "border-border",
 					)}
@@ -518,7 +518,7 @@
 						{#if c.type === "release_group" && !c.groupRaw}
 							{@const chips = groupChips(c)}
 							<div
-								class={cn(
+								class={twMerge(
 									"flex min-w-48 flex-1 flex-wrap items-center gap-1.5 rounded-md border border-border bg-bg px-2 py-1.5 focus-within:ring-2 focus-within:ring-accent",
 									locked && "cursor-not-allowed opacity-70",
 								)}
@@ -676,7 +676,7 @@
 						<div class="ml-auto flex shrink-0 items-center gap-1">
 							{#if passed !== undefined}
 								<span
-									class={cn(
+									class={twMerge(
 										"inline-flex h-9 items-center gap-1 rounded-md px-2 text-[11px] font-semibold uppercase tracking-wide",
 										passed
 											? "bg-status-available/10 text-status-available"
@@ -772,7 +772,7 @@
 				<span class="text-xs text-status-failed">{errorText(test.error)}</span>
 			{:else if results}
 				<span
-					class={cn(
+					class={twMerge(
 						"inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide",
 						test.data?.matched
 							? "bg-status-available text-bg-deep"
@@ -879,7 +879,7 @@
 	Icon: typeof Check,
 )}
 	<label
-		class={cn(
+		class={twMerge(
 			"inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-medium transition",
 			on
 				? "border-accent-line bg-accent-soft text-accent-text"

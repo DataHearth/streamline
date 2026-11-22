@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import { Check } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { readOnlyLock } from "@lib/config.svelte";
 	import FieldLock from "./FieldLock.svelte";
 
@@ -39,7 +39,7 @@
 
 <!-- biome-ignore lint/a11y/noLabelWithoutControl: its text is inside an {#if}, which Biome does not read -->
 <label
-	class={cn(
+	class={twMerge(
 		"flex cursor-pointer items-start gap-2.5",
 		off && "cursor-not-allowed opacity-60",
 		className,
@@ -57,7 +57,7 @@
 	     so draw the check ourselves (same visual as the toolbar filter menu). -->
 	<span
 		aria-hidden="true"
-		class={cn(
+		class={twMerge(
 			"mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded border transition",
 			"peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-bg-card",
 			checked

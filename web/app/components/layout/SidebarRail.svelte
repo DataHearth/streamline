@@ -26,7 +26,7 @@
 	import { SILENT } from "@lib/query";
 	import type { RequestCounts } from "@lib/types";
 	import { auth } from "@lib/auth.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import {
 		TORRENT_PILLS,
 		activityFeatures,
@@ -178,7 +178,7 @@
 		<a
 			href="/"
 			aria-current={dashActive ? "page" : undefined}
-			class={cn(itemBase, dashActive ? itemActive : itemInactive)}
+			class={twMerge(itemBase, dashActive ? itemActive : itemInactive)}
 		>
 			<LayoutDashboard size={20} strokeWidth={dashActive ? 2 : 1.6} />
 			<span>{i18n.nav_dashboard()}</span>
@@ -192,7 +192,7 @@
 					onclick={() => (flyout = flyout === group.key ? "" : group.key)}
 					aria-haspopup="menu"
 					aria-expanded={flyout === group.key}
-					class={cn(itemBase, on ? itemActive : itemInactive)}
+					class={twMerge(itemBase, on ? itemActive : itemInactive)}
 				>
 					<group.icon size={20} strokeWidth={on ? 2 : 1.6} />
 					<span>{group.label}</span>
@@ -226,7 +226,7 @@
 								href={link.href}
 								role="menuitem"
 								aria-current={current ? "page" : undefined}
-								class={cn(
+								class={twMerge(
 									menuRow,
 									current
 										? "bg-accent-soft text-accent-text"
@@ -237,7 +237,7 @@
 								<span class="min-w-0 flex-1 truncate">{link.label}</span>
 								{#if link.href === "/movies" && counts.moviesTotal !== null}
 									<span
-										class={cn(
+										class={twMerge(
 											"shrink-0 font-mono text-[11px] tabular-nums",
 											current ? "text-accent-text opacity-70" : "text-fg-subtle",
 										)}
@@ -246,7 +246,7 @@
 									</span>
 								{:else if link.href === "/series" && counts.seriesTotal !== null}
 									<span
-										class={cn(
+										class={twMerge(
 											"shrink-0 font-mono text-[11px] tabular-nums",
 											current ? "text-accent-text opacity-70" : "text-fg-subtle",
 										)}
@@ -285,7 +285,7 @@
 			<a
 				href={item.href}
 				aria-current={active ? "page" : undefined}
-				class={cn(itemBase, active ? itemActive : itemInactive)}
+				class={twMerge(itemBase, active ? itemActive : itemInactive)}
 			>
 				<span class="relative">
 					<item.icon size={20} strokeWidth={active ? 2 : 1.6} />
@@ -312,7 +312,7 @@
 				aria-current={accountActive ? "page" : undefined}
 				aria-label={i18n.nav_account_settings()}
 				title={auth.user.display_name || auth.user.email}
-				class={cn(
+				class={twMerge(
 					"grid h-12 w-12 place-items-center rounded-xl transition-colors",
 					accountActive ? "bg-accent-soft" : "hover:bg-surface",
 				)}

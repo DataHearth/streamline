@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Key, Trash2 } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatDate, formatDateTime, formatRelative } from "@lib/dates";
 	import type { ApiKey } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -41,7 +41,7 @@
 	<div class="min-w-0 flex-1">
 		<div class="flex min-w-0 items-center gap-2">
 			<p
-				class={cn(
+				class={twMerge(
 					"truncate text-sm font-semibold text-fg",
 					expired && "text-fg-muted line-through",
 				)}
@@ -49,7 +49,7 @@
 				{apiKey.name}
 			</p>
 			<span
-				class={cn(
+				class={twMerge(
 					"shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium",
 					apiKey.scope === "read"
 						? "bg-bg-card text-fg-muted"

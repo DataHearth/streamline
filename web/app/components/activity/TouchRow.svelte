@@ -14,7 +14,7 @@
 <script lang="ts">
 	import { Check, ChevronRight } from "@lucide/svelte";
 	import ProgressRing from "./ProgressRing.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { longPress } from "@lib/long-press";
 	import { swipeRow } from "@lib/swipe-row";
 	import type { MetaLine } from "@lib/activity-touch";
@@ -96,7 +96,7 @@
 	<span class="min-w-0 flex-1">
 		<span class="flex min-w-0 items-center gap-1.5">
 			<span
-				class={cn(
+				class={twMerge(
 					"truncate text-sm font-semibold tracking-[-0.01em]",
 					placeholderTitle ? "italic text-fg-muted" : "text-fg",
 				)}
@@ -128,7 +128,7 @@
 	{@render lead()}
 	{#if selecting}
 		<span
-			class={cn(
+			class={twMerge(
 				"grid h-[18px] w-[18px] shrink-0 place-items-center rounded border",
 				selected
 					? "border-accent bg-accent text-fg-on-accent"
@@ -149,7 +149,7 @@
 		type="button"
 		onclick={onOpen}
 		aria-pressed={selected}
-		class={cn(cls, selected && "bg-accent-soft")}
+		class={twMerge(cls, selected && "bg-accent-soft")}
 	>
 		{@render body()}
 	</button>
@@ -191,11 +191,11 @@
 {#if swipeable}
 	<!-- The divider moves to the wrapper: `last:` has to see the list's own
 	     children, and the row inside is always its wrapper's last. -->
-	<div class={cn("relative overflow-hidden", divider)}>
+	<div class={twMerge("relative overflow-hidden", divider)}>
 		{#if revealed}
 			<div
 				aria-hidden="true"
-				class={cn(
+				class={twMerge(
 					"absolute inset-0 flex items-center gap-2 px-5 text-[13px] font-semibold",
 					side === "start" ? "justify-start" : "justify-end",
 				)}
@@ -206,7 +206,7 @@
 			>
 				<revealed.icon
 					size={20}
-					class={cn("shrink-0 transition-transform duration-150", armed && "scale-110")}
+					class={twMerge("shrink-0 transition-transform duration-150", armed && "scale-110")}
 				/>
 				{revealed.label}
 			</div>
@@ -236,7 +236,7 @@
 		</div>
 	</div>
 {:else}
-	{@render row(cn(rowClass, divider))}
+	{@render row(twMerge(rowClass, divider))}
 {/if}
 
 <style>

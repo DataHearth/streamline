@@ -10,7 +10,7 @@
 
 <script lang="ts">
 	import { ExternalLink } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 
 	// The aside card of the movie and series overviews (Library, File), for
 	// pages that build their rows from data. A row whose label is a link is a
@@ -45,10 +45,10 @@
 					<span class="h-px flex-1 bg-border" aria-hidden="true"></span>
 				</div>
 			{:else}
-				<dt class={cn("min-w-0", typeof r.label === "string" ? "text-fg-subtle" : "truncate text-fg")}>
+				<dt class={twMerge("min-w-0", typeof r.label === "string" ? "text-fg-subtle" : "truncate text-fg")}>
 					{#if typeof r.label === "string"}{r.label}{:else}{@render link(r.label)}{/if}
 				</dt>
-				<dd class={cn("m-0 min-w-0 text-right [text-wrap:pretty]", r.tone ?? "text-fg", (typeof r.value === "string" ? r.mono !== false : r.mono === true) && "font-mono")}>
+				<dd class={twMerge("m-0 min-w-0 text-right [text-wrap:pretty]", r.tone ?? "text-fg", (typeof r.value === "string" ? r.mono !== false : r.mono === true) && "font-mono")}>
 					{#if typeof r.value === "string"}
 						{r.value}
 					{:else}

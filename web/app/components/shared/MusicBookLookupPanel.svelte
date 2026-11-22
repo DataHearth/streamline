@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { BookOpen, Check, ChevronLeft, ExternalLink, Music } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import Img from "./Img.svelte";
 	import SeriesCover from "@components/books/SeriesCover.svelte";
 	import { lookupPosterUrl } from "@lib/posters";
@@ -173,10 +173,10 @@
 							<span class={chip}>{c}</span>
 						{/each}
 						{#if hit.book?.type === "series" && hit.book.ongoing}
-							<span class={cn(chip, "border-status-downloading/30 text-status-downloading")}>{i18n.books_ongoing()}</span>
+							<span class={twMerge(chip, "border-status-downloading/30 text-status-downloading")}>{i18n.books_ongoing()}</span>
 						{/if}
 						{#if loading}
-							<span class={cn(chip, "text-fg-subtle")}>{i18n.lc_loading()}</span>
+							<span class={twMerge(chip, "text-fg-subtle")}>{i18n.lc_loading()}</span>
 						{/if}
 					</div>
 				</div>
@@ -299,7 +299,7 @@
 
 {#snippet tile(r: LookupRelease, on: boolean)}
 	<div
-		class={cn(
+		class={twMerge(
 			"relative aspect-square overflow-hidden rounded-md border bg-bg-card",
 			on ? "border-accent ring-2 ring-accent" : "border-white/[0.06]",
 		)}
@@ -311,7 +311,7 @@
 			</span>
 		{/if}
 	</div>
-	<p class={cn("mt-1.5 truncate text-[12px] font-medium", on ? "text-accent-text" : "text-fg")}>{r.title}</p>
+	<p class={twMerge("mt-1.5 truncate text-[12px] font-medium", on ? "text-accent-text" : "text-fg")}>{r.title}</p>
 	<p class="truncate font-mono text-[10.5px] text-fg-subtle">
 		{[r.year, releaseTypeLabel(r.type)].filter(Boolean).join(" · ")}
 	</p>

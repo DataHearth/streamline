@@ -3,7 +3,7 @@
 	import { BookOpen, Film, FolderInput, Music, Plus, Tv } from "@lucide/svelte";
 	import { activeRoute } from "@roxi/routify";
 	import { auth } from "@lib/auth.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { bulkMode } from "@lib/bulk-mode.svelte";
 	import { openAdd } from "@lib/add-flow";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -163,7 +163,7 @@
 			aria-haspopup="menu"
 			aria-expanded={open}
 			aria-label={open ? i18n.common_close() : heading}
-			class={cn(
+			class={twMerge(
 				"pill grid h-[52px] w-[52px] place-items-center rounded-full shadow-4",
 				open ? "bg-surface-2 text-fg-muted" : "bg-accent text-fg-on-accent",
 			)}

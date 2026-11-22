@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Check, Minus } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 
 	let {
 		checked,
@@ -30,7 +30,7 @@
 	}
 </script>
 
-<span class={cn("grid shrink-0 place-items-center", on ? "text-fg-on-accent" : "text-transparent")}>
+<span class={twMerge("grid shrink-0 place-items-center", on ? "text-fg-on-accent" : "text-transparent")}>
 	<!-- The rows and cards it sits on open something on click. -->
 	<input
 		type="checkbox"
@@ -40,7 +40,7 @@
 		title={label}
 		onclick={(e) => e.stopPropagation()}
 		onchange={change}
-		class={cn(
+		class={twMerge(
 			"native col-start-1 row-start-1 m-0 cursor-pointer appearance-none border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 			variant === "card"
 				? "h-10 w-10 rounded-md backdrop-blur-sm lg:h-6 lg:w-6"

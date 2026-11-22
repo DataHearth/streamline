@@ -7,7 +7,7 @@
 	} from "@tanstack/svelte-query";
 	import { ArrowUpRight, LoaderCircle, Radar, TriangleAlert } from "@lucide/svelte";
 	import { api, errorText, ApiError } from "@lib/api";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { config, markConfigForm } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
 	import type {
@@ -339,7 +339,7 @@
 				>
 					<span class="text-xs text-fg-subtle">{i18n.transcode_hw_status()}</span>
 					<span
-						class={cn(
+						class={twMerge(
 							"text-xs",
 							transcoding.data.hw_status === "ready" ? "text-status-available" : "text-fg-muted",
 						)}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 
 	let {
 		w = "100%",
@@ -21,7 +21,7 @@
 -->
 <div
 	aria-hidden="true"
-	class={cn(
+	class={twMerge(
 		"shrink-0 animate-pulse bg-white/[0.06] motion-reduce:animate-none",
 		round === "full" ? "rounded-full" : round === "md" ? "rounded-md" : "rounded",
 		klass,

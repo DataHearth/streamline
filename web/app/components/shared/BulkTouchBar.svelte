@@ -21,7 +21,7 @@
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Ellipsis, X } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { NOUN_TITLE, type Noun } from "@lib/nouns";
 	import { bulkMode } from "@lib/bulk-mode.svelte";
 	import { sheetSwipe } from "@lib/sheet-swipe";
@@ -80,7 +80,7 @@
 	aria-label={i18n.bulk_actions()}
 	aria-busy={busy}
 	transition:fly={{ y: 64, duration: 200, easing: cubicOut }}
-	class={cn(
+	class={twMerge(
 		"fixed inset-x-0 bottom-0 z-40 grid border-t border-border-strong bg-bg-elevated/96 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden",
 		busy && "pointer-events-none opacity-60",
 	)}
@@ -91,7 +91,7 @@
 			type="button"
 			disabled={busy || a.disabled}
 			onclick={() => run(a)}
-			class={cn(cell, a.danger ? "text-status-failed" : "text-fg-muted")}
+			class={twMerge(cell, a.danger ? "text-status-failed" : "text-fg-muted")}
 		>
 			<a.icon size={22} aria-hidden="true" />
 			{a.label}
@@ -103,7 +103,7 @@
 		onclick={() => (sheet = true)}
 		aria-haspopup="dialog"
 		aria-expanded={sheet}
-		class={cn(cell, "text-fg-muted")}
+		class={twMerge(cell, "text-fg-muted")}
 	>
 		<Ellipsis size={22} aria-hidden="true" />
 		{i18n.common_more()}
@@ -163,7 +163,7 @@
 						type="button"
 						disabled={busy || row.disabled}
 						onclick={() => run(row)}
-						class={cn(
+						class={twMerge(
 							"flex w-full items-center gap-3.5 rounded-xl px-2.5 py-3 text-left transition active:bg-surface disabled:opacity-40",
 							row.danger ? "text-status-failed" : "text-fg",
 						)}

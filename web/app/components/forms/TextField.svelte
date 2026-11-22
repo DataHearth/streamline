@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { AnyFieldApi } from "@tanstack/form-core";
 	import type { HTMLInputAttributes } from "svelte/elements";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { fieldErrorMessages } from "@lib/fieldErrors";
 	import { readOnlyLock } from "@lib/config.svelte";
 	import FieldLock from "./FieldLock.svelte";
@@ -44,7 +44,7 @@
 	let locked = $derived(readonly || configLocked);
 </script>
 
-<label class={cn("block", floatError && "relative")}>
+<label class={twMerge("block", floatError && "relative")}>
 	<span class="mb-1 flex items-center gap-1.5 text-sm font-medium text-fg"
 		>{label}<FieldLock locked={configLocked} /></span
 	>
@@ -79,7 +79,7 @@
 	{/if}
 	{#each errorMessages as msg}
 		<p
-			class={cn(
+			class={twMerge(
 				"mt-1 text-xs text-status-failed",
 				floatError && "absolute left-0 top-full",
 			)}

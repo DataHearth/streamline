@@ -3,7 +3,7 @@
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import { auth } from "@lib/auth.svelte";
 	import { Info, Search, Trash2 } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { dragScroll } from "@lib/drag-scroll";
 	import { episodeStatus, episodeTitle } from "@lib/status";
 	import EpisodeDetailModal, {
@@ -92,7 +92,7 @@
 				{@const meta = STATUS_META[episodeStatus(ep, showMonitored)]}
 				{@const monitorDisabled = ep.status === "unaired" && !seasonMonitored}
 				<tr
-					class={cn(
+					class={twMerge(
 						"group border-b border-border last:border-b-0 transition hover:bg-surface",
 						ep.status === "unaired" && "opacity-70",
 					)}

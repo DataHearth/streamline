@@ -7,7 +7,7 @@
 	import EpisodeDetailModal from "./EpisodeDetailModal.svelte";
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import {
 		episodeStatus,
 		episodeTitle,
@@ -188,7 +188,7 @@
 		{@const headline = seasonHeadline(seasonTallies(s, showMonitored), missing)}
 		<section class="border-b border-border last:border-b-0">
 			<div
-				class={cn(
+				class={twMerge(
 					"flex items-center gap-3 px-3 py-3 transition",
 					open && "bg-surface",
 				)}
@@ -201,7 +201,7 @@
 				>
 					<span class="min-w-0 flex-1">
 						<span
-							class={cn(
+							class={twMerge(
 								"block font-mono text-[13px] font-semibold tracking-tight",
 								open ? "text-accent-text" : "text-fg",
 							)}
@@ -266,7 +266,7 @@
 				>
 					<ChevronRight
 						size={18}
-						class={cn(
+						class={twMerge(
 							"transition",
 							open ? "rotate-90 text-accent-text" : "text-fg-faint",
 						)}
@@ -299,7 +299,7 @@
 							</span>
 							<span class="min-w-0 flex-1">
 								<span
-									class={cn(
+									class={twMerge(
 										"block truncate text-[13.5px] font-medium",
 										st === "unaired" ? "text-fg-subtle" : "text-fg",
 									)}
@@ -307,7 +307,7 @@
 									{episodeTitle(ep)}
 								</span>
 								<span
-									class={cn(
+									class={twMerge(
 										"mt-0.5 block truncate font-mono text-[10.5px]",
 										st === "wanted"
 											? "text-status-wanted"
@@ -320,7 +320,7 @@
 								</span>
 							</span>
 							<span
-								class={cn("h-1.5 w-1.5 shrink-0 rounded-full", DOT[st])}
+								class={twMerge("h-1.5 w-1.5 shrink-0 rounded-full", DOT[st])}
 								aria-hidden="true"
 							></span>
 							<span class="shrink-0 [&_button]:h-9 [&_button]:w-9">

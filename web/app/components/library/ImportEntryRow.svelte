@@ -9,7 +9,7 @@
 		Pencil,
 		TriangleAlert,
 	} from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { IMPORT_KIND } from "@lib/imports";
 	import { unitText, type TouchEntry } from "@lib/imports-touch";
 	import type { ImportScanKind } from "@lib/types";
@@ -52,7 +52,7 @@
 		onclick={() => onSkipToggle(entry)}
 		aria-pressed={skipped}
 		title={skipped ? text.restore : text.exclude}
-		class={cn(
+		class={twMerge(
 			pill,
 			skipped
 				? "bg-surface-2 text-fg"
@@ -137,7 +137,7 @@
 					type="button"
 					onclick={() => onChooseMatch(entry)}
 					title={i18n.imports_search_source({ source })}
-					class={cn(
+					class={twMerge(
 						pill,
 						"max-w-[13rem]",
 						chosen

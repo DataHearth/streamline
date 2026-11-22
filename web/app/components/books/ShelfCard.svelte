@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { BookOpen, Headphones } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { auth } from "@lib/auth.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import BookCover from "./BookCover.svelte";
@@ -57,7 +57,7 @@
 	title={item.title}
 >
 	<div
-		class={cn(
+		class={twMerge(
 			"relative overflow-hidden rounded-lg transition group-hover:shadow-[var(--shadow-card-hover)] group-has-[:focus-visible]:shadow-[var(--shadow-card-hover)]",
 			isSeries && "bg-bg-deep",
 			selected && "shadow-[0_0_0_2px_var(--accent)]",
@@ -86,7 +86,7 @@
 					<span>{item.year}</span>
 					{#each formats as f (f.format)}
 						<span class="text-white/50" aria-hidden="true">·</span>
-						<span class={cn("inline-flex", tone(f.state))} title="{formatLabel(f.format)} · {stateText(f.state)}">
+						<span class={twMerge("inline-flex", tone(f.state))} title="{formatLabel(f.format)} · {stateText(f.state)}">
 							{#if f.format === "ebook"}
 								<BookOpen size={12} aria-hidden="true" />
 							{:else}
@@ -99,7 +99,7 @@
 			</p>
 		</div>
 		<div
-			class={cn(
+			class={twMerge(
 				"absolute left-2 top-2 transition",
 				onSelect && (selectionActive ? "opacity-0" : "group-hover:opacity-0 group-has-[:focus-visible]:opacity-0"),
 			)}
@@ -115,7 +115,7 @@
 </a>
 {#if onSelect}
 	<div
-		class={cn(
+		class={twMerge(
 			"absolute left-2 top-2 z-10 transition",
 			selectionActive
 				? "opacity-100"

@@ -2,7 +2,7 @@
 	import type { Snippet } from "svelte";
 	import { Film, Search } from "@lucide/svelte";
 	import MonitorToggle from "./MonitorToggle.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { posterUrl } from "@lib/posters";
 	import Poster from "./Poster.svelte";
 	import StatusPill from "./StatusPill.svelte";
@@ -149,7 +149,7 @@
 
 <div
 	id="poster-card-{movie.id}"
-	class={cn(
+	class={twMerge(
 		"group relative rounded-lg transition duration-200",
 		"hover:scale-[1.02] hover:shadow-[var(--shadow-card-hover)]",
 		"has-[:focus-visible]:scale-[1.02] has-[:focus-visible]:shadow-[var(--shadow-card-hover)]",
@@ -222,7 +222,7 @@
 		</div>
 
 		<div
-			class={cn(
+			class={twMerge(
 				"absolute left-2 top-2 transition",
 				onSelect &&
 					(selectionActive
@@ -254,7 +254,7 @@
 
 	{#if onSelect}
 		<div
-			class={cn(
+			class={twMerge(
 				"absolute left-2 top-2 z-10 transition",
 				selectionActive
 					? "opacity-100"

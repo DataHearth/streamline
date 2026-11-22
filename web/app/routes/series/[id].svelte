@@ -28,7 +28,7 @@
 	import { createAction, deleteFailed, monitorToast, refreshFailed, searchFailed, SERIES, updateFailed } from "@lib/actions";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import MonitorSplitButton from "@components/shared/MonitorSplitButton.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { missingEpisodes, seasonTallies, sumTallies } from "@lib/status";
 	import { tvPosterUrl } from "@lib/posters";
 	import { listHref, SERIES_SEARCH } from "@lib/prefs";
@@ -625,7 +625,7 @@
 							<div class="-ml-5 flex flex-wrap gap-y-1">
 								{#each heroFacts as fact, i (i)}
 									<span
-										class={cn(
+										class={twMerge(
 											"relative pl-5 before:absolute before:left-0 before:w-5 before:text-center before:text-fg-faint before:content-['·']",
 											i === 0 && show.series_status && "uppercase tracking-wide",
 										)}>{fact}</span
@@ -635,7 +635,7 @@
 						</div>
 					{/if}
 					<span
-						class={cn(
+						class={twMerge(
 							"rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
 							show.type === "anime"
 								? "bg-accent-soft text-accent-text"
@@ -819,7 +819,7 @@
 					type="button"
 					onclick={() => (tab = t.key)}
 					aria-current={active ? "page" : undefined}
-					class={cn(
+					class={twMerge(
 						"relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4",
 						active ? "text-fg" : "text-fg-subtle hover:text-fg",
 					)}

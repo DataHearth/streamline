@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ChevronDown, ChevronUp, Users } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatSpeed } from "@lib/format";
 	import type { TorrentPeer, TorrentStatus } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -81,7 +81,7 @@
 								? "ascending"
 								: "descending"
 							: undefined}
-						class={cn(
+						class={twMerge(
 							"py-2 font-medium first:pr-2 last:pl-2 [&:not(:first-child):not(:last-child)]:px-2",
 							c.right ? "text-right" : "text-left",
 							c.grow ? "w-full max-w-0" : "w-px whitespace-nowrap",
@@ -91,7 +91,7 @@
 						<button
 							type="button"
 							onclick={() => toggle(c.key, c.numeric ?? false)}
-							class={cn(
+							class={twMerge(
 								"-mx-1 inline-flex items-center gap-1 whitespace-nowrap rounded px-1 py-0.5 uppercase tracking-[0.12em] transition hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 								sort === c.key && "text-accent-text",
 							)}

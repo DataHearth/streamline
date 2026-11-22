@@ -3,7 +3,7 @@
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
 	import SelectBox from "@components/shared/SelectBox.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import {
 		formatBytes,
 		formatSpeed,
@@ -45,7 +45,7 @@
 </script>
 
 <tr
-	class={cn(
+	class={twMerge(
 		"group cursor-pointer border-b border-border text-sm transition hover:bg-surface",
 		selected && "bg-bg-card",
 		checked && "bg-accent-soft",
@@ -53,7 +53,7 @@
 	onclick={() => onOpen(torrent.hash)}
 >
 	{#if checked !== undefined}
-		<td class={cn("pl-4 pr-1", pad)}>
+		<td class={twMerge("pl-4 pr-1", pad)}>
 			<SelectBox
 				{checked}
 				onChange={(v) => onCheck?.(torrent.hash, v)}
@@ -63,7 +63,7 @@
 			/>
 		</td>
 	{/if}
-	<td class={cn(checked === undefined ? "pl-4 pr-2" : "px-2", pad)}>
+	<td class={twMerge(checked === undefined ? "pl-4 pr-2" : "px-2", pad)}>
 		<StatusPill status={torrent.status} size="sm" live={active} />
 	</td>
 
@@ -102,7 +102,7 @@
 		{/if}
 	</td>
 
-	<td class={cn("px-2", pad)}>
+	<td class={twMerge("px-2", pad)}>
 		<div class="flex items-center gap-2">
 			<div class="w-14 sm:w-20">
 				<ProgressBar
@@ -127,7 +127,7 @@
 
 	<!-- Narrow containers get one stacked cell instead of two columns; the
 	     separate Down and Up columns come back at @3xl. -->
-	<td class={cn("px-2 leading-tight @3xl:hidden", num, pad)}>
+	<td class={twMerge("px-2 leading-tight @3xl:hidden", num, pad)}>
 		<div class={torrent.download_speed > 0 ? "text-status-downloading" : "text-fg-subtle"}>
 			{formatSpeed(torrent.download_speed) || "—"}
 		</div>
@@ -136,23 +136,23 @@
 		</div>
 	</td>
 
-	<td class={cn("hidden px-2 @3xl:table-cell", num, pad)}>
+	<td class={twMerge("hidden px-2 @3xl:table-cell", num, pad)}>
 		<span class={torrent.download_speed > 0 ? "text-status-downloading" : "text-fg-subtle"}>
 			{formatSpeed(torrent.download_speed) || "—"}
 		</span>
 	</td>
-	<td class={cn("hidden px-2 @3xl:table-cell", num, pad)}>
+	<td class={twMerge("hidden px-2 @3xl:table-cell", num, pad)}>
 		<span class={torrent.upload_speed > 0 ? "text-status-seeding" : "text-fg-subtle"}>
 			{formatSpeed(torrent.upload_speed) || "—"}
 		</span>
 	</td>
-	<td class={cn("hidden px-2 text-fg-muted @3xl:table-cell", num, pad)}>
+	<td class={twMerge("hidden px-2 text-fg-muted @3xl:table-cell", num, pad)}>
 		{formatBytes(torrent.size)}
 	</td>
-	<td class={cn("hidden px-2 text-fg-muted @4xl:table-cell", num, pad)}>
+	<td class={twMerge("hidden px-2 text-fg-muted @4xl:table-cell", num, pad)}>
 		{fetching ? "—" : formatRatio(torrent.ratio)}
 	</td>
-	<td class={cn("hidden px-2 text-fg-muted @4xl:table-cell", num, pad)}>
+	<td class={twMerge("hidden px-2 text-fg-muted @4xl:table-cell", num, pad)}>
 		<!-- seeds/peers are connections, so an idle swarm and an unreachable
 		     engine both read 0/0. known_peers is what separates them, shown as
 		     a third figure only when there is nobody connected to talk about. -->
@@ -170,13 +170,13 @@
 		{/if}
 	</td>
 	<td
-		class={cn("hidden whitespace-nowrap px-2 text-xs text-fg-subtle @4xl:table-cell", pad)}
+		class={twMerge("hidden whitespace-nowrap px-2 text-xs text-fg-subtle @4xl:table-cell", pad)}
 		title={formatDateTime(torrent.added_at)}
 	>
 		{formatRelative(torrent.added_at)}
 	</td>
 
-	<td class={cn("pr-4 pl-2 text-right", pad)}>
+	<td class={twMerge("pr-4 pl-2 text-right", pad)}>
 		<span
 			class="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-faint transition group-hover:text-fg"
 			aria-hidden="true"

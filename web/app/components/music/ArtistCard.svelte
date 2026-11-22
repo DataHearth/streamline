@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ArrowDown, Search, UserRound } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { artistNow, artistPill, artistSegments, artistTally, releasesCount, type Artist } from "@lib/music-books";
 	import { artistPosterUrl } from "@lib/posters";
 	import Poster from "@components/shared/Poster.svelte";
@@ -93,7 +93,7 @@
 			{href}
 			aria-label={a.name}
 			onclickcapture={onCardClick}
-			class={cn(
+			class={twMerge(
 				"relative block aspect-square rounded-full transition duration-200 group-hover:scale-[1.03] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-deep",
 				selected && "ring-2 ring-accent ring-offset-2 ring-offset-bg-deep",
 			)}
@@ -123,7 +123,7 @@
 
 		{#if pill}
 			<span
-				class={cn(
+				class={twMerge(
 					"pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[40%] rounded-full transition",
 					canEdit && !selectionActive && "group-hover:opacity-0 group-has-[:focus-visible]:opacity-0",
 				)}
@@ -136,7 +136,7 @@
 		     focused, as PosterCard's status does for its checkbox. -->
 		{#if onSelect}
 			<div
-				class={cn(
+				class={twMerge(
 					"absolute left-0 top-0 z-10 transition",
 					selectionActive
 						? "opacity-100"

@@ -9,7 +9,7 @@
 		share,
 		type StatsMedia,
 	} from "@lib/stats";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// What each library holds and weighs. The bar under the size is the
@@ -25,10 +25,10 @@
 <div class="min-w-0">
 	<div class="media-grid hidden border-b border-border px-4 pb-2 md:grid md:px-5" aria-hidden="true">
 		<span class={head}></span>
-		<span class={cn(head, "text-right")}>{i18n.stats_titles()}</span>
-		<span class={cn(head, "text-right")}>{i18n.common_files()}</span>
+		<span class={twMerge(head, "text-right")}>{i18n.stats_titles()}</span>
+		<span class={twMerge(head, "text-right")}>{i18n.common_files()}</span>
 		<span class={head}>{i18n.stats_on_disk()}</span>
-		<span class={cn(head, "text-right")}>{i18n.status_wanted()}</span>
+		<span class={twMerge(head, "text-right")}>{i18n.status_wanted()}</span>
 		<span></span>
 	</div>
 	<ul>

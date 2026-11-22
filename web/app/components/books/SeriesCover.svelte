@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import BookCover from "./BookCover.svelte";
 
 	// A series has no art of its own: its first volumes fan out behind each
@@ -25,16 +25,16 @@
 	let sheets = $derived(front.map((src, depth) => ({ src, depth })).reverse());
 </script>
 
-<div class={cn("relative aspect-[2/3] w-full", klass)} data-series-cover>
+<div class={twMerge("relative aspect-[2/3] w-full", klass)} data-series-cover>
 	{#if front.length <= 1}
-		<div data-cover-sheet class={cn("shadow-[0_4px_14px_rgb(0_0_0_/0.45)]", rounded)}>
+		<div data-cover-sheet class={twMerge("shadow-[0_4px_14px_rgb(0_0_0_/0.45)]", rounded)}>
 			<BookCover src={front[0]} {alt} {loading} class={rounded} />
 		</div>
 	{:else}
 		{#each sheets as s (s.depth)}
 			<div
 				data-cover-sheet
-				class={cn("sheet shadow-[0_4px_14px_rgb(0_0_0_/0.45)]", rounded)}
+				class={twMerge("sheet shadow-[0_4px_14px_rgb(0_0_0_/0.45)]", rounded)}
 				style:--depth={s.depth}
 			>
 				<BookCover src={s.src} alt={s.depth === 0 ? alt : ""} {loading} class={rounded} />

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Pause, Play, Zap, Pencil, Lock, LoaderCircle } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { config, READONLY_HINT } from "@lib/config.svelte";
 	import { createScheduleActions } from "@lib/schedule-actions.svelte";
 	import { scheduleState } from "@lib/schedules-touch";
@@ -82,7 +82,7 @@
 	</td>
 	<td class="px-4 py-3 align-middle">
 		<div
-			class={cn("flex items-center gap-2 text-[13px] font-medium", st.tone)}
+			class={twMerge("flex items-center gap-2 text-[13px] font-medium", st.tone)}
 			title={startedTitle}
 		>
 			{#if st.key === "running"}
@@ -90,7 +90,7 @@
 			{:else}
 				<span
 					aria-hidden="true"
-					class={cn(
+					class={twMerge(
 						"size-1.5 shrink-0 rounded-full",
 						quiet ? "border border-current" : "bg-current",
 					)}
@@ -154,7 +154,7 @@
 					type="button"
 					disabled={toggle.pending}
 					onclick={toggle.mutate}
-					class={cn(
+					class={twMerge(
 						"inline-flex h-7 w-7 items-center justify-center rounded border transition disabled:cursor-not-allowed disabled:opacity-40",
 						toggle.cls,
 					)}

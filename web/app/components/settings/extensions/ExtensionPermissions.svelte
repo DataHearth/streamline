@@ -2,7 +2,7 @@
 	import { Check, ChevronDown, Minus, Plus, TriangleAlert } from "@lucide/svelte";
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import {
 		AUTH_LABEL,
 		BUNDLE_LABEL,
@@ -63,20 +63,20 @@
 	let openBundles = $state<Partial<Record<ExtensionBundle, boolean>>>({});
 </script>
 
-<div class={cn("flex flex-col gap-3.5", cls)}>
+<div class={twMerge("flex flex-col gap-3.5", cls)}>
 	{#if full}
 		<section
-			class={cn(
+			class={twMerge(
 				"rounded-md border p-3",
 				mark === "kept" || mark === "dropped" ? "border-border" : "border-status-failed/40 bg-status-failed/[0.08]",
 			)}
 		>
-			<h4 class={cn("flex items-center gap-2 text-[13px] font-semibold", mark === "kept" ? "text-fg-muted" : mark === "dropped" ? "text-fg-subtle line-through decoration-fg-faint" : "text-status-failed")}>
+			<h4 class={twMerge("flex items-center gap-2 text-[13px] font-semibold", mark === "kept" ? "text-fg-muted" : mark === "dropped" ? "text-fg-subtle line-through decoration-fg-faint" : "text-status-failed")}>
 				{@render marker()}
 				<TriangleAlert size={15} class="shrink-0" aria-hidden="true" />
 				{i18n.extensions_full_access_title()}
 			</h4>
-			<p class={cn("mt-1.5 text-[13px] leading-relaxed", mark === "kept" ? "text-fg-muted" : mark === "dropped" ? "text-fg-subtle line-through decoration-fg-faint" : "text-fg")}>
+			<p class={twMerge("mt-1.5 text-[13px] leading-relaxed", mark === "kept" ? "text-fg-muted" : mark === "dropped" ? "text-fg-subtle line-through decoration-fg-faint" : "text-fg")}>
 				{i18n.extensions_full_access_body()}
 			</p>
 		</section>
@@ -88,7 +88,7 @@
 				{#each permissions.mounts as m (m.path)}
 					<li class="flex min-w-0 items-baseline gap-2">
 						{@render marker()}
-						<code class={cn("shrink-0 font-mono text-[12.5px]", ink)}>{clientPath(base, m.path)}</code>
+						<code class={twMerge("shrink-0 font-mono text-[12.5px]", ink)}>{clientPath(base, m.path)}</code>
 						{#if m.auth}
 							<span class="min-w-0 text-[12.5px] text-fg-subtle">{AUTH_LABEL[m.auth]()}</span>
 						{/if}
@@ -110,11 +110,11 @@
 							class="touch-hit flex w-full min-w-0 items-baseline gap-2 text-left"
 						>
 							{@render marker()}
-							<span class={cn("min-w-0 flex-1 text-[13px] leading-snug", ink)}>{BUNDLE_LABEL[b.bundle]()}</span>
+							<span class={twMerge("min-w-0 flex-1 text-[13px] leading-snug", ink)}>{BUNDLE_LABEL[b.bundle]()}</span>
 							<span class="shrink-0 text-[12.5px] text-fg-subtle">
 								{(b.views.length === 1 ? i18n.extensions_bundle_kinds_one : i18n.extensions_bundle_kinds_other)({ count: b.views.length })}
 							</span>
-							<ChevronDown size={13} class={cn("relative top-[2px] shrink-0 text-fg-faint transition-transform", openBundles[b.bundle] && "rotate-180")} aria-hidden="true" />
+							<ChevronDown size={13} class={twMerge("relative top-[2px] shrink-0 text-fg-faint transition-transform", openBundles[b.bundle] && "rotate-180")} aria-hidden="true" />
 						</button>
 						{#if openBundles[b.bundle]}
 							<ul class="mb-1 ml-5 mt-1.5 flex flex-col gap-1" transition:slide={{ duration: 200, easing: cubicOut }}>
@@ -131,7 +131,7 @@
 				{#each loose as v (v.name)}
 					<li class="flex min-w-0 items-baseline gap-2">
 						{@render marker()}
-						<span class={cn("min-w-0 flex-1 text-[13px] leading-snug", ink)}>{v.description}</span>
+						<span class={twMerge("min-w-0 flex-1 text-[13px] leading-snug", ink)}>{v.description}</span>
 						<code class="hidden shrink-0 font-mono text-[11px] text-fg-faint sm:inline">{v.name}</code>
 					</li>
 				{/each}
@@ -145,7 +145,7 @@
 				{#each permissions.folders as f (f)}
 					<li class="flex min-w-0 items-baseline gap-2">
 						{@render marker()}
-						<span class={cn("shrink-0 text-[13px]", ink)}>{FOLDER_META[f].label()}</span>
+						<span class={twMerge("shrink-0 text-[13px]", ink)}>{FOLDER_META[f].label()}</span>
 						<span class="min-w-0 flex-1 text-[12.5px] text-fg-subtle">
 							· {FOLDER_META[f].access()}{#if FOLDER_META[f].help}&nbsp;({FOLDER_META[f].help?.()}){/if}
 						</span>
@@ -162,7 +162,7 @@
 				{#each services as s (s.id)}
 					<li class="flex min-w-0 items-baseline gap-2">
 						{@render marker()}
-						<span class={cn("text-[13px]", ink)}>{s.meta.label()}</span>
+						<span class={twMerge("text-[13px]", ink)}>{s.meta.label()}</span>
 						<span class="min-w-0 text-[12.5px] text-fg-subtle">{s.meta.help()}</span>
 					</li>
 				{/each}

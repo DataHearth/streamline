@@ -5,7 +5,7 @@
 	import { cubicOut } from "svelte/easing";
 	import { Check, LoaderCircle, Search, X } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
 	import { IMPORT_KIND } from "@lib/imports";
@@ -155,7 +155,7 @@
 
 {#if open}
 	<div
-		class={cn("fixed inset-0 z-50", !dialog && "md:hidden")}
+		class={twMerge("fixed inset-0 z-50", !dialog && "md:hidden")}
 		role="dialog"
 		aria-modal="true"
 		aria-label={i18n.imports_pick_match()}
@@ -172,7 +172,7 @@
 		<div
 			use:sheetSwipe={{ onDismiss: onClose }}
 			transition:fly={{ y: centred ? 16 : 420, duration: centred ? 180 : 280, easing: cubicOut }}
-			class={cn(
+			class={twMerge(
 				"absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col overflow-hidden rounded-t-2xl border-t border-border-strong bg-bg-elevated shadow-4",
 				dialog &&
 					"md:inset-x-auto md:bottom-auto md:left-[calc(50%-17.5rem)] md:top-[10dvh] md:max-h-[80dvh] md:w-[35rem] md:rounded-2xl md:border",
@@ -183,7 +183,7 @@
 			>
 				<span
 					aria-hidden="true"
-					class={cn("absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong", dialog && "md:hidden")}
+					class={twMerge("absolute left-1/2 top-2 h-1 w-9 -translate-x-1/2 rounded-full bg-border-strong", dialog && "md:hidden")}
 				></span>
 				<h2 class="text-[17px] font-semibold tracking-tight text-fg">
 					{i18n.imports_pick_match()}
@@ -274,7 +274,7 @@
 									type="button"
 									disabled={busy}
 									onclick={() => onPick(h.id)}
-									class={cn(
+									class={twMerge(
 										"flex w-full items-start gap-3 px-5 py-3 text-left transition active:bg-bg-card disabled:opacity-60",
 									)}
 								>

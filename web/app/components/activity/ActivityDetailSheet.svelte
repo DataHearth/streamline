@@ -18,7 +18,7 @@
 	} from "./DownloadConfirmDialog.svelte";
 	import ProgressRing from "./ProgressRing.svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
 	import { entryHeading, entryHref, entryRelease, historyMeta, queueMeta } from "@lib/activity-touch";
@@ -206,7 +206,7 @@
 				</div>
 
 				<div
-					class={cn(
+					class={twMerge(
 						"mt-3.5 grid gap-px overflow-hidden rounded-lg border border-border bg-border",
 						item.uploaded ? "grid-cols-1" : "grid-cols-2",
 					)}
@@ -312,7 +312,7 @@
 								type="button"
 								disabled={busy}
 								onclick={() => (confirm = "retry")}
-								class={cn(
+								class={twMerge(
 									"inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-accent/15 text-[14px] font-semibold text-accent transition active:bg-accent/25 disabled:opacity-50",
 								)}
 							>
@@ -324,7 +324,7 @@
 							type="button"
 							disabled={busy}
 							onclick={() => (confirm = "remove")}
-							class={cn(
+							class={twMerge(
 								"inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-status-failed/15 text-[14px] font-semibold text-status-failed transition active:bg-status-failed/25 disabled:opacity-50",
 							)}
 						>

@@ -5,7 +5,7 @@
 	import { requireAdmin } from "@lib/guards";
 	import { formatRelative } from "@lib/dates";
 	import { RANGE_LABEL, STATS_RANGES, type Stats, type StatsRange } from "@lib/stats";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import StatsReport from "@components/stats/StatsReport.svelte";
 	import StatsSkeleton from "@components/stats/StatsSkeleton.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -57,7 +57,7 @@
 				type="button"
 				aria-pressed={range === r}
 				onclick={() => (range = r)}
-				class={cn(
+				class={twMerge(
 					"h-[30px] rounded-sm px-3 text-[12.5px] font-medium transition-colors",
 					range === r ? "bg-accent-soft text-accent-text" : "text-fg-subtle hover:text-fg",
 				)}
@@ -93,7 +93,7 @@
 	{:else if !stats}
 		<StatsSkeleton />
 	{:else}
-		<div class={cn("transition-opacity duration-200", stale && "opacity-60")} aria-busy={stale}>
+		<div class={twMerge("transition-opacity duration-200", stale && "opacity-60")} aria-busy={stale}>
 			<StatsReport {stats} {rangeControl} />
 		</div>
 	{/if}

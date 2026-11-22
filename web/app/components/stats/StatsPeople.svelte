@@ -3,7 +3,7 @@
 	import { formatRelative } from "@lib/dates";
 	import { roleLabel } from "@lib/roles";
 	import { fmtCount, type StatsPerson } from "@lib/stats";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Who asks for what, and how it went: requests in the range by outcome,
@@ -19,11 +19,11 @@
 <div class="min-w-0">
 	<div class="ppl-grid hidden border-b border-border px-4 pb-2 md:grid md:px-5" aria-hidden="true">
 		<span class={head}>{i18n.common_person()}</span>
-		<span class={cn(head, "text-right")}>{i18n.requests_label()}</span>
-		<span class={cn(head, "text-right")}>{i18n.common_approved()}</span>
-		<span class={cn(head, "text-right")}>{i18n.stats_denied()}</span>
-		<span class={cn(head, "text-right")}>{i18n.status_available()}</span>
-		<span class={cn(head, "text-right")}>{i18n.stats_col_last_seen()}</span>
+		<span class={twMerge(head, "text-right")}>{i18n.requests_label()}</span>
+		<span class={twMerge(head, "text-right")}>{i18n.common_approved()}</span>
+		<span class={twMerge(head, "text-right")}>{i18n.stats_denied()}</span>
+		<span class={twMerge(head, "text-right")}>{i18n.status_available()}</span>
+		<span class={twMerge(head, "text-right")}>{i18n.stats_col_last_seen()}</span>
 	</div>
 	<ul>
 		{#each people as p, i (p.id)}
@@ -57,10 +57,10 @@
 								<span class="block truncate font-mono text-[10.5px] text-fg-subtle">{roleLabel(p.role)}</span>
 							</span>
 						</span>
-						<span class={cn("text-right font-mono text-[12.5px] tabular-nums", num(p.requests, "text-fg"))}>{fmtCount(p.requests)}</span>
-						<span class={cn("text-right font-mono text-[12.5px] tabular-nums", num(p.approved, "text-status-grabbing"))}>{fmtCount(p.approved)}</span>
-						<span class={cn("text-right font-mono text-[12.5px] tabular-nums", num(p.denied, "text-status-failed"))}>{fmtCount(p.denied)}</span>
-						<span class={cn("text-right font-mono text-[12.5px] tabular-nums", num(p.available, "text-status-available"))}>{fmtCount(p.available)}</span>
+						<span class={twMerge("text-right font-mono text-[12.5px] tabular-nums", num(p.requests, "text-fg"))}>{fmtCount(p.requests)}</span>
+						<span class={twMerge("text-right font-mono text-[12.5px] tabular-nums", num(p.approved, "text-status-grabbing"))}>{fmtCount(p.approved)}</span>
+						<span class={twMerge("text-right font-mono text-[12.5px] tabular-nums", num(p.denied, "text-status-failed"))}>{fmtCount(p.denied)}</span>
+						<span class={twMerge("text-right font-mono text-[12.5px] tabular-nums", num(p.available, "text-status-available"))}>{fmtCount(p.available)}</span>
 						<span class="truncate text-right font-mono text-[11.5px] text-fg-subtle">
 							{p.last_seen_at ? formatRelative(p.last_seen_at) : i18n.common_never()}
 						</span>

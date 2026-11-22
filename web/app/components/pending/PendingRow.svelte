@@ -5,7 +5,7 @@
 	import Checkbox from "@components/forms/Checkbox.svelte";
 	import IdentifyDialog from "./IdentifyDialog.svelte";
 	import { api } from "@lib/api";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import type { PendingItem, PendingPreview } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -265,7 +265,7 @@
 					type="button"
 					onclick={openReplace}
 					disabled={busy || settling}
-					class={cn(
+					class={twMerge(
 						"inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60",
 						showImport
 							? "border border-border text-fg-muted hover:bg-bg-elevated hover:text-fg"

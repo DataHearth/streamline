@@ -21,7 +21,7 @@
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Ellipsis, EllipsisVertical } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let {
@@ -149,7 +149,7 @@
 	aria-expanded={open}
 	aria-label={i18n.common_more_actions()}
 	onclick={toggle}
-	class={cn(
+	class={twMerge(
 		"grid place-items-center transition focus:outline-none focus:ring-2 focus:ring-accent-ring",
 		variant === "card"
 			? "h-10 w-10 lg:h-7 lg:w-7 rounded-full border border-white/10 bg-black/65 text-white backdrop-blur-sm hover:bg-black/80"
@@ -193,7 +193,7 @@
 				disabled={item.disabled}
 				title={item.title}
 				onclick={() => pick(item)}
-				class={cn(
+				class={twMerge(
 					"flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent",
 					item.danger
 						? "text-status-failed hover:bg-status-failed/10"
@@ -201,7 +201,7 @@
 				)}
 			>
 				<Icon
-					class={cn("h-4 w-4", !item.danger && "text-fg-muted")}
+					class={twMerge("h-4 w-4", !item.danger && "text-fg-muted")}
 					aria-hidden="true"
 				/>
 				{item.label}

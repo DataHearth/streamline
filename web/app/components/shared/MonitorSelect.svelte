@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ChevronDown } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import DropdownMenu from "@components/shared/DropdownMenu.svelte";
 	import DropdownOption from "@components/shared/DropdownOption.svelte";
 
@@ -37,7 +37,7 @@
 	aria-expanded={open}
 	aria-label="{label}: {current}"
 	onclick={() => (open = !open)}
-	class={cn(
+	class={twMerge(
 		"inline-flex h-11 min-w-0 items-center justify-between gap-3 rounded-lg border border-border bg-bg-elevated/80 px-3.5 text-left text-[14px] text-fg backdrop-blur-sm transition hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:opacity-60",
 		klass,
 	)}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { LETTERS } from "@lib/music-books";
 
 	// The phone's way through the letters, Android's fast scroller: the thumb
@@ -81,19 +81,19 @@
 	onpointermove={move}
 	onpointerup={up}
 	onpointercancel={up}
-	class={cn(
+	class={twMerge(
 		"fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-0 top-[calc(var(--top-bar-height)+72px)] z-30 w-6 touch-none select-none transition-opacity duration-200 md:hidden",
 		active || dragging ? "opacity-100" : "pointer-events-none opacity-0",
 	)}
 >
 	<div
-		class={cn(
+		class={twMerge(
 			"absolute bottom-0 right-1 top-0 w-1 rounded-full bg-white/[0.06] transition-opacity",
 			dragging ? "opacity-100" : "opacity-0",
 		)}
 	></div>
 	<div
-		class={cn(
+		class={twMerge(
 			"absolute right-[3px] h-11 w-1.5 -translate-y-1/2 rounded-full transition-colors",
 			dragging ? "bg-accent" : "bg-fg-subtle",
 		)}

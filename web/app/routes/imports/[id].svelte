@@ -18,7 +18,7 @@
 		X,
 	} from "@lucide/svelte";
 	import { api, apiAllPages, errorText, type Paginated } from "@lib/api";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatDateTime, formatRelative } from "@lib/dates";
 	import {
 		commitNote,
@@ -802,7 +802,7 @@
 						</p>
 					{/if}
 					{#if scan.failure_reason}
-						<p class={cn("break-words text-xs", keyIssue ? "mt-2 font-mono" : "mt-0.5")}>
+						<p class={twMerge("break-words text-xs", keyIssue ? "mt-2 font-mono" : "mt-0.5")}>
 							{scan.failure_reason}
 						</p>
 					{/if}
@@ -1190,7 +1190,7 @@
 {#snippet sortHeader(key: FileSortKey, label: string, phone = true)}
 	{@const active = sortKey === key}
 	<th
-		class={cn("px-4 py-2.5", !phone && "hidden md:table-cell")}
+		class={twMerge("px-4 py-2.5", !phone && "hidden md:table-cell")}
 		aria-sort={active
 			? sortDir === "asc"
 				? "ascending"
@@ -1200,7 +1200,7 @@
 		<button
 			type="button"
 			onclick={() => toggleSort(key)}
-			class={cn(
+			class={twMerge(
 				"touch-hit inline-flex items-center gap-1 font-semibold uppercase tracking-[0.14em] transition-colors",
 				active ? "text-fg-muted" : "hover:text-fg-muted",
 			)}

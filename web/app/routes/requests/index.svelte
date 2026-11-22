@@ -21,7 +21,7 @@
 	import { api, apiAllPages, errorText, type Paginated } from "@lib/api";
 	import { SILENT } from "@lib/query";
 	import { toast } from "@lib/toast";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatRelative } from "@lib/dates";
 	import { auth } from "@lib/auth.svelte";
 	import { profilesPath } from "@lib/music-books";
@@ -347,7 +347,7 @@
 	     four tiles is 96px of numbers the filter sheet's chips already carry. A
 	     requester gets neither: their grouped list counts its own sections. -->
 	<div
-		class={cn(
+		class={twMerge(
 			"mb-4 hidden grid-cols-4 gap-3 rounded-lg border border-border bg-bg-elevated p-4",
 			isReviewer ? "md:grid" : "lg:grid",
 		)}
@@ -355,7 +355,7 @@
 		{#each [{ n: counts.pending, l: i18n.requests_pending_review(), cls: "text-status-wanted" }, { n: counts.approved, l: i18n.common_approved(), cls: "text-status-grabbing" }, { n: counts.denied, l: i18n.common_rejected(), cls: "text-status-failed" }, { n: counts.available, l: i18n.status_available(), cls: "text-status-available" }] as s (s.l)}
 			<div>
 				<div
-					class={cn(
+					class={twMerge(
 						"font-mono text-2xl font-bold tabular",
 						s.n > 0 ? s.cls : "text-fg-subtle",
 					)}
@@ -391,7 +391,7 @@
 					type="button"
 					onclick={() => (tab = t.key)}
 					aria-current={active ? "page" : undefined}
-					class={cn(
+					class={twMerge(
 						"inline-flex items-center gap-2 rounded-sm px-3 py-1.5 text-[12.5px] font-medium transition",
 						active
 							? "bg-bg-card text-fg shadow-[var(--shadow-1)]"
@@ -401,7 +401,7 @@
 					{t.label}
 					{#if t.count !== undefined}
 						<span
-							class={cn(
+							class={twMerge(
 								"rounded-sm px-1.5 py-px font-mono text-[10px] tabular",
 								t.key === "pending" && t.count > 0
 									? "bg-status-wanted/20 text-status-wanted"
@@ -424,7 +424,7 @@
 					type="button"
 					onclick={() => (kind = opt.key)}
 					aria-pressed={kind === opt.key}
-					class={cn(
+					class={twMerge(
 						"rounded-sm px-2.5 py-1 text-[11.5px] font-medium transition",
 						kind === opt.key
 							? "bg-bg-card text-fg shadow-[var(--shadow-1)]"
@@ -509,7 +509,7 @@
 							</span>
 							<ChevronDown
 								size={16}
-								class={cn(
+								class={twMerge(
 									"shrink-0 text-fg-muted transition-transform",
 									expanded && "rotate-180",
 								)}

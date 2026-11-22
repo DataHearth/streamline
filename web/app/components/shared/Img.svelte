@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 
 	let {
 		src,
@@ -44,7 +44,7 @@ image settles back to whatever the caller asked for. -->
 <img
 	{src}
 	{alt}
-	class={cn(
+	class={twMerge(
 		"transition-opacity duration-200 motion-reduce:transition-none",
 		klass,
 		!loaded && "opacity-0",

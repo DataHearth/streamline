@@ -3,7 +3,7 @@
 	import Select from "@components/forms/Select.svelte";
 	import Checkbox from "@components/forms/Checkbox.svelte";
 	import FieldLock from "@components/forms/FieldLock.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { readOnlyLock } from "@lib/config.svelte";
 	import type { AppForm } from "@lib/form";
 	import {
@@ -40,7 +40,7 @@
 	}
 
 	const chip = (on: boolean) =>
-		cn(
+		twMerge(
 			"inline-flex h-11 lg:h-9 items-center rounded-full border px-4 font-mono text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 			on
 				? "border-accent-line bg-accent-soft text-accent-text"

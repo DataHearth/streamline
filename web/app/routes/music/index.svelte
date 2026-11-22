@@ -5,7 +5,7 @@
 	import { api, apiAllPages, errorText, PAGE_LIMIT, type Paginated } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import { createAction, monitorToast, MUSIC, searchFailed, updateFailed } from "@lib/actions";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatRelative } from "@lib/dates";
 	import { loadPref, savePref } from "@lib/prefs";
 	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
@@ -525,7 +525,7 @@
 	</div>
 
 	{#if listQuery.isLoading}
-		<div class={cn(GRID, "px-4 pt-4 md:px-6")}>
+		<div class={twMerge(GRID, "px-4 pt-4 md:px-6")}>
 			<SkeletonList variant="artist" count={14} />
 		</div>
 	{:else if listQuery.isError}
@@ -573,7 +573,7 @@
 				</div>
 			{:else}
 				{#each sections as s}
-					<section data-letter={s.letter ?? undefined} class={cn(s.letter && ANCHOR, "pt-2 md:pt-1")}>
+					<section data-letter={s.letter ?? undefined} class={twMerge(s.letter && ANCHOR, "pt-2 md:pt-1")}>
 						{#if s.letter}
 							<div
 								class="sticky top-[calc(var(--top-bar-height)+60px)] z-10 -mx-4 mb-3 flex items-center gap-3 bg-bg-deep/85 px-4 py-2.5 backdrop-blur-md md:top-(--top-bar-height) md:-mx-6 md:px-6"
@@ -585,7 +585,7 @@
 								<span class="h-px flex-1 bg-border" aria-hidden="true"></span>
 							</div>
 						{/if}
-						<div class={cn(GRID, "pb-6", !s.letter && "pt-3")}>
+						<div class={twMerge(GRID, "pb-6", !s.letter && "pt-3")}>
 							{#each s.items as a (a.id)}
 								<ArtistCard
 									artist={a}

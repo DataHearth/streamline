@@ -7,7 +7,7 @@
 		FileText,
 	} from "@lucide/svelte";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatBytes, percentDone } from "@lib/format";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import type {
@@ -229,7 +229,7 @@
 	<div class="relative" style:height={virtual ? `${rows.length * ROW_H}px` : "auto"}>
 		{#each visible as row, i (row.type === "folder" ? `d:${row.path}` : `f:${row.file.index}`)}
 			<div
-				class={cn(
+				class={twMerge(
 					"flex items-center gap-2 border-b border-border/50 px-3",
 					virtual ? "absolute inset-x-0" : "relative",
 				)}
@@ -246,7 +246,7 @@
 					>
 						<ChevronRight
 							size={14}
-							class={cn(
+							class={twMerge(
 								"shrink-0 text-fg-faint transition-transform motion-safe:duration-150",
 								!collapsed.has(row.path) && "rotate-90",
 							)}
@@ -292,13 +292,13 @@
 										name: row.name,
 									})}
 									onclick={() => setFolderPriority(row.path, p.key)}
-									class={cn(
+									class={twMerge(
 										"flex min-h-10 items-center gap-1.5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition lg:min-h-0",
 										sel ? p.on : "text-fg-subtle hover:bg-surface hover:text-fg",
 									)}
 								>
 									<span
-										class={cn(
+										class={twMerge(
 											"h-1.5 w-1.5 shrink-0 rounded-full",
 											p.dot,
 											!sel && "opacity-50",
@@ -318,11 +318,11 @@
 					{@const skip = f.priority === "skip"}
 					<FileText
 						size={14}
-						class={cn("shrink-0", skip ? "text-fg-faint" : "text-fg-subtle")}
+						class={twMerge("shrink-0", skip ? "text-fg-faint" : "text-fg-subtle")}
 						aria-hidden="true"
 					/>
 					<span
-						class={cn(
+						class={twMerge(
 							"min-w-0 flex-1 truncate text-xs",
 							skip ? "text-fg-subtle line-through" : "text-fg-muted",
 						)}
@@ -358,7 +358,7 @@
 					{/if}
 					{#if canControl}
 						<div
-							class={cn(
+							class={twMerge(
 								"inline-flex shrink-0 overflow-hidden rounded-md border border-border",
 								busyIndex === f.index && "opacity-50",
 							)}
@@ -374,13 +374,13 @@
 									title={p.label}
 									disabled={busyIndex === f.index}
 									onclick={() => onSetPriority(f.index, p.key)}
-									class={cn(
+									class={twMerge(
 										"flex min-h-10 items-center gap-1.5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide transition lg:min-h-0",
 										sel ? p.on : "text-fg-subtle hover:bg-surface hover:text-fg",
 									)}
 								>
 									<span
-										class={cn(
+										class={twMerge(
 											"h-1.5 w-1.5 shrink-0 rounded-full",
 											p.dot,
 											!sel && "opacity-50",
@@ -393,7 +393,7 @@
 						</div>
 					{:else}
 						<span
-							class={cn(
+							class={twMerge(
 								"shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
 								PRIO_TEXT[f.priority],
 							)}

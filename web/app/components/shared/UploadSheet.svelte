@@ -5,7 +5,7 @@
 	import Modal from "@components/modals/Modal.svelte";
 	import ReleaseFilesView from "@components/shared/ReleaseFilesView.svelte";
 	import { api, errorText } from "@lib/api";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatBytes } from "@lib/format";
 	import type { BookFormat, DiscographyFiles, ReleaseFiles } from "@lib/music-books";
 	import { toast } from "@lib/toast";
@@ -193,7 +193,7 @@
 				<span class="font-mono text-[10.5px] uppercase tracking-[0.1em] text-fg-subtle">{i18n.upload_slot()}</span>
 				{#each ["ebook", "audiobook"] as const as s (s)}
 					<label
-						class={cn(
+						class={twMerge(
 							"relative inline-flex h-9 cursor-pointer items-center rounded-lg border px-3 text-[13px] font-medium transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent-ring",
 							chosenSlot === s ? "border-accent bg-accent/15 text-fg" : "border-border text-fg-muted hover:text-fg",
 						)}
@@ -212,7 +212,7 @@
 			}}
 			ondragleave={() => (over = false)}
 			ondrop={onDrop}
-			class={cn(
+			class={twMerge(
 				"min-w-0 flex flex-col items-center gap-3 rounded-lg border border-dashed px-4 py-6 text-center transition",
 				over ? "border-accent bg-accent/10" : "border-border-strong",
 			)}
@@ -281,7 +281,7 @@
 							{#each book.files as f (f.path)}
 								<li class="flex items-baseline gap-3">
 									<span class="min-w-0 flex-1 break-all font-mono text-[11px] text-fg">{f.path}</span>
-									<span class={cn("shrink-0 text-[11px]", OUTCOME[f.outcome]?.tone)}>{OUTCOME[f.outcome]?.label()}</span>
+									<span class={twMerge("shrink-0 text-[11px]", OUTCOME[f.outcome]?.tone)}>{OUTCOME[f.outcome]?.label()}</span>
 									<span class="shrink-0 font-mono text-[10.5px] tabular text-fg-subtle">{formatBytes(f.size)}</span>
 								</li>
 							{/each}

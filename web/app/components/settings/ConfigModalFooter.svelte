@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { config } from "@lib/config.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -43,7 +43,7 @@
 		type="submit"
 		form={formId}
 		disabled={submitDisabled}
-		class={cn(
+		class={twMerge(
 			"inline-flex min-h-11 lg:h-9 lg:min-h-0 items-center rounded-md px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60",
 			submitTone === "danger"
 				? "bg-status-failed text-bg-deep hover:bg-status-failed/90"

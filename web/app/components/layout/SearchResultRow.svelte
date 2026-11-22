@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { BookOpen, ChevronRight, Film, Music, Tv } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { initials } from "@lib/people";
 	import { personPhotoUrl, posterUrl, tvPosterUrl } from "@lib/posters";
 	import Poster from "@components/shared/Poster.svelte";
@@ -58,7 +58,7 @@
 		</div>
 	{:else if item.kind === "artist" || item.kind === "album" || item.kind === "track" || item.kind === "book"}
 		<div
-			class={cn(
+			class={twMerge(
 				"relative shrink-0 overflow-hidden bg-surface-2 ring-1 ring-border",
 				item.kind === "artist" && "h-10 w-10 rounded-full",
 				(item.kind === "album" || item.kind === "track") && "h-10 w-10 rounded-md",

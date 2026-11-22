@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { UserRound } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatBytes } from "@lib/format";
 	import { artistNow, artistTally, monitorShort, releasesCount, type Artist } from "@lib/music-books";
 	import { artistPosterUrl } from "@lib/posters";
@@ -92,7 +92,7 @@
 					{@const t = artistTally(a)}
 					{@const failed = artistNow(a).failed}
 					{@const isSel = selected?.has(String(a.id)) ?? false}
-					<tr class={cn("group border-b border-border transition last:border-b-0 hover:bg-surface", isSel && "bg-accent-soft")}>
+					<tr class={twMerge("group border-b border-border transition last:border-b-0 hover:bg-surface", isSel && "bg-accent-soft")}>
 						{#if onToggle}
 							<td class="py-2 pl-3">
 								<SelectBox
@@ -127,7 +127,7 @@
 							{a.genre || "—"}
 						</td>
 						<td
-							class={cn(
+							class={twMerge(
 								"hidden whitespace-nowrap px-3 py-2 text-[12.5px] @4xl:table-cell",
 								a.monitor === "none" ? "text-fg-subtle" : "text-fg-muted",
 							)}

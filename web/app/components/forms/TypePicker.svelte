@@ -1,6 +1,6 @@
 <script lang="ts" generics="T extends string">
 	import type { Snippet } from "svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { readOnlyLock } from "@lib/config.svelte";
 
 	type Option = { value: T; label: string };
@@ -47,7 +47,7 @@
 		{@const disabled = allLocked && !active}
 		<label
 			title={o.label}
-			class={cn(
+			class={twMerge(
 				"grid h-11 w-11 lg:h-9 lg:w-9 place-items-center rounded-md border border-border bg-bg-card text-fg-muted transition hover:border-border-strong has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:text-fg has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent",
 				allLocked ? "cursor-not-allowed" : "cursor-pointer",
 				disabled && "opacity-40",

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { initials } from "@lib/people";
 	import type { CastMember } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -52,7 +52,7 @@
 
 {#if cast.length > 0}
 	<div
-		class={cn(
+		class={twMerge(
 			"cast-grid",
 			dense ? "cast-grid--dense" : "cast-grid--full",
 		)}
@@ -65,13 +65,13 @@
 				{href}
 				target={href && external ? "_blank" : undefined}
 				rel={href && external ? "noopener noreferrer" : undefined}
-				class={cn(
+				class={twMerge(
 					"group block min-w-0 text-center",
 					href && "transition hover:opacity-90",
 				)}
 			>
 				<div
-					class={cn(
+					class={twMerge(
 						"relative mb-2 aspect-square overflow-hidden rounded-md bg-bg-card",
 						href && "transition group-hover:ring-2 group-hover:ring-accent-ring",
 					)}

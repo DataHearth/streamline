@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Info, Search, Trash2, Upload } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import KebabMenu, { type KebabItem } from "@components/shared/KebabMenu.svelte";
 	import TrackDetailModal from "./TrackDetailModal.svelte";
@@ -86,14 +86,14 @@
 					: undefined}
 				ondragleave={() => (dropOver = -1)}
 				ondrop={(e) => dropFile(e, t)}
-				class={cn(
+				class={twMerge(
 					"flex min-h-11 items-center border-b border-border/60 last:border-b-0",
 					compact ? "gap-3 pl-3 pr-0.5" : "gap-4 pl-4 pr-1 lg:min-h-10 lg:pr-3",
 					dropOver === t.id && "bg-accent/10",
 				)}
 			>
 				<span
-					class={cn(
+					class={twMerge(
 						"shrink-0 text-right font-mono text-fg-subtle",
 						compact ? "text-[11px]" : "text-xs",
 						multiDisc ? (compact ? "w-8" : "w-9") : compact ? "w-5" : "w-6",
@@ -104,7 +104,7 @@
 				<button
 					type="button"
 					onclick={() => (detailId = t.id)}
-					class={cn(
+					class={twMerge(
 						"min-w-0 flex-1 truncate py-2.5 text-left transition hover:text-accent-text",
 						compact ? "text-[13.5px]" : "text-[14px]",
 						markMissing && !t.has_file ? "text-fg-muted" : "text-fg",
@@ -124,7 +124,7 @@
 				{#if t.missing_from_disk}
 					<LabelPill token="wanted" label={i18n.file_missing_from_disk()} variant="translucent" />
 				{/if}
-				<span class={cn("shrink-0 text-right font-mono text-fg-muted", compact ? "text-[11px]" : "w-10 text-xs")}>
+				<span class={twMerge("shrink-0 text-right font-mono text-fg-muted", compact ? "text-[11px]" : "w-10 text-xs")}>
 					{trackTime(t.duration)}
 				</span>
 				<div class="hidden w-[116px] shrink-0 items-center justify-end gap-0.5 lg:flex">
@@ -150,7 +150,7 @@
 							onclick={() => onDeleteFile?.(t)}
 							aria-label={i18n.music_track_delete_for({ title: t.title })}
 							title={i18n.action_delete_file()}
-							class={cn(iconBtn, "hover:bg-status-failed/10 hover:text-status-failed")}
+							class={twMerge(iconBtn, "hover:bg-status-failed/10 hover:text-status-failed")}
 						>
 							<Trash2 size={14} aria-hidden="true" />
 						</button>

@@ -124,7 +124,7 @@
 	import Select from "@components/forms/Select.svelte";
 	import Checkbox from "@components/forms/Checkbox.svelte";
 	import ScoreInput from "@components/forms/ScoreInput.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { api } from "@lib/api";
 	import { readOnlyLock } from "@lib/config.svelte";
 	import FieldLock from "@components/forms/FieldLock.svelte";
@@ -319,7 +319,7 @@
 							aria-pressed={on}
 							onclick={() =>
 								field.handleChange(toggleCodec(picked, codec.value))}
-							class={cn(
+							class={twMerge(
 								"inline-flex h-11 items-center rounded-full border px-4 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 								on
 									? "border-accent-line bg-accent-soft text-accent-text"
@@ -697,7 +697,7 @@
 					disabled={locked}
 					aria-pressed={on}
 					onclick={() => onToggle(opt.value)}
-					class={cn(
+					class={twMerge(
 						"inline-flex h-11 lg:h-9 items-center rounded-full border px-4 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 						on
 							? "border-accent-line bg-accent-soft text-accent-text"

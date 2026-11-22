@@ -14,7 +14,7 @@
 	import { api } from "@lib/api";
 	import { ACCOUNT_EXTENSIONS_KEY, ACCOUNT_EXTENSIONS_PATH, type ExtensionAccountCard } from "@lib/extensions";
 	import { auth } from "@lib/auth.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import type { ApiKey, Session } from "@lib/types";
 	import { getLocale, type locales } from "@lib/paraglide/runtime.js";
 	import FullScreenPanel from "@components/layout/FullScreenPanel.svelte";
@@ -184,7 +184,7 @@
 	{#each groups as g (g.name)}
 		<div class="flex items-center gap-2.5 pb-2 pt-5">
 			<h2
-				class={cn(
+				class={twMerge(
 					"font-mono text-[11px] font-semibold uppercase tracking-[0.14em]",
 					g.danger ? "text-status-failed" : "text-fg-muted",
 				)}
@@ -192,7 +192,7 @@
 				{g.name}
 			</h2>
 			<span
-				class={cn("h-px flex-1", g.danger ? "bg-status-failed/30" : "bg-border")}
+				class={twMerge("h-px flex-1", g.danger ? "bg-status-failed/30" : "bg-border")}
 				aria-hidden="true"
 			></span>
 		</div>
@@ -208,14 +208,14 @@
 					>
 						<r.Icon
 							size={18}
-							class={cn(
+							class={twMerge(
 								"shrink-0",
 								g.danger ? "text-status-failed" : "text-fg-muted",
 							)}
 							aria-hidden="true"
 						/>
 						<span
-							class={cn(
+							class={twMerge(
 								"min-w-0 flex-1 truncate text-[15px]",
 								g.danger ? "text-status-failed" : "text-fg",
 							)}

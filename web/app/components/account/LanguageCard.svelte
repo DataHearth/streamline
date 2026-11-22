@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { getLocale, locales, setLocale } from "@lib/paraglide/runtime.js";
 
@@ -43,7 +43,7 @@
 				onclick={() => pick(o.code)}
 				aria-pressed={current === o.code}
 				lang={o.code}
-				class={cn(
+				class={twMerge(
 					"h-[34px] cursor-pointer rounded-sm px-4 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1",
 					current === o.code
 						? "bg-surface-2 text-fg"

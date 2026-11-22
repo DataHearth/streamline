@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import type { CalendarKind } from "@lib/calendar";
 
 	// The dot encodes kind, never state — see dotToken. Its colours live in
@@ -11,7 +11,7 @@
 </script>
 
 <span
-	class={cn(
+	class={twMerge(
 		"dot inline-block shrink-0 rounded-full",
 		size === "md" ? "h-2 w-2" : "h-1.5 w-1.5",
 	)}

@@ -6,7 +6,7 @@
 	import { createAction, deleteFailed, monitorToast, MUSIC, searchFailed, updateFailed } from "@lib/actions";
 	import { auth } from "@lib/auth.svelte";
 	import { runBulk } from "@lib/bulk";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatBytes } from "@lib/format";
 	import { formatRelative } from "@lib/dates";
 	import { artistPosterUrl } from "@lib/posters";
@@ -351,7 +351,7 @@
 		</div>
 	</div>
 {:else}
-	<div class={cn(canEdit && "pb-24 md:pb-0")}>
+	<div class={twMerge(canEdit && "pb-24 md:pb-0")}>
 		<MediaHero
 			backdrop={artistPosterUrl(artist.id)}
 			backHref="/music"
@@ -442,7 +442,7 @@
 							onclick={() => openManual("artist")}
 							aria-label={i18n.action_manual_search()}
 							title={i18n.action_manual_search()}
-							class={cn(
+							class={twMerge(
 								"hidden h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.08] text-[14px] font-medium text-fg backdrop-blur-sm transition hover:bg-white/[0.14] md:inline-flex",
 								"px-3 @min-[700px]:px-4",
 							)}
@@ -456,7 +456,7 @@
 								onclick={() => (confirmingTags = true)}
 								aria-label={i18n.music_tags_panel_button()}
 								title={i18n.music_tags_panel_button()}
-								class={cn(
+								class={twMerge(
 									"inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.08] text-[14px] font-medium text-fg backdrop-blur-sm transition hover:bg-white/[0.14]",
 									"px-3 @min-[700px]:px-4",
 								)}
@@ -470,7 +470,7 @@
 							onclick={() => (uploading = { target: "artist", id: artist.id, hasFiles: artist.size > 0 })}
 							aria-label={i18n.upload_button()}
 							title={i18n.upload_button()}
-							class={cn(
+							class={twMerge(
 								"inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.08] text-[14px] font-medium text-fg backdrop-blur-sm transition hover:bg-white/[0.14]",
 								"px-3 @min-[700px]:px-4",
 							)}
@@ -503,7 +503,7 @@
 						type="button"
 						onclick={() => (tab = t.key)}
 						aria-current={active ? "page" : undefined}
-						class={cn("relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4", active ? "text-fg" : "text-fg-subtle hover:text-fg")}
+						class={twMerge("relative -mb-px shrink-0 px-3 py-3.5 text-[13px] font-medium transition md:px-4", active ? "text-fg" : "text-fg-subtle hover:text-fg")}
 					>
 						<span>{t.label}</span>
 						{#if t.n != null}<span class="ml-1.5 font-mono text-[11px] text-fg-subtle">{t.n}</span>{/if}

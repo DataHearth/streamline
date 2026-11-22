@@ -1,5 +1,5 @@
 <script lang="ts" generics="T extends string">
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { readOnlyLock } from "@lib/config.svelte";
 	import FieldLock from "./FieldLock.svelte";
 
@@ -40,10 +40,10 @@
 			>{legend}<FieldLock locked={configLocked} /></legend
 		>
 	{/if}
-	<div class={cn("grid gap-2.5", COLS[columns])}>
+	<div class={twMerge("grid gap-2.5", COLS[columns])}>
 		{#each options as o (o.value)}
 			<label
-				class={cn(
+				class={twMerge(
 					"relative flex flex-col gap-1.5 rounded-md border border-border bg-bg-elevated p-4 transition hover:border-border-strong has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent",
 					off ? "cursor-not-allowed opacity-60" : "cursor-pointer",
 				)}

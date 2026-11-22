@@ -3,7 +3,7 @@
 	import { fade, fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { Search, Trash2, X } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -142,7 +142,7 @@
 									type="button"
 									aria-pressed={active}
 									onclick={() => onSortChange?.(opt.key)}
-									class={cn(chip, active ? chipOn : chipOff)}
+									class={twMerge(chip, active ? chipOn : chipOff)}
 								>
 									{opt.label}
 								</button>
@@ -173,7 +173,7 @@
 					type="button"
 					disabled={activeCount === 0}
 					onclick={onReset}
-					class={cn(
+					class={twMerge(
 						"inline-flex h-11 items-center justify-center rounded-xl px-4 text-[14px] font-medium text-fg-muted transition active:bg-surface disabled:opacity-40",
 						!onClearCompleted && "flex-1 border border-border bg-surface",
 					)}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 
 	// StatusPill's drawing with a caller-given label — "11/12", "Downloading ·
 	// 64%", "Upcoming" — for the counts and states StatusKind's fixed labels do
@@ -21,14 +21,14 @@
 
 <span
 	data-variant={variant}
-	class={cn(
+	class={twMerge(
 		"pill inline-flex items-center whitespace-nowrap rounded-full border font-semibold tracking-[0.02em]",
 		size === "sm" ? "gap-1 px-1.5 py-[1px] text-[10px]" : "gap-1.5 px-2 py-0.5 text-[11px]",
 	)}
 	style:--c="var(--status-{token})"
 >
 	<span
-		class={cn(
+		class={twMerge(
 			"dot shrink-0 rounded-full",
 			size === "sm" ? "h-[5px] w-[5px]" : "h-1.5 w-1.5",
 			live && "motion-safe:animate-pulse",

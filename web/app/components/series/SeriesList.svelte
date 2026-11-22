@@ -3,7 +3,7 @@
 	import { auth } from "@lib/auth.svelte";
 	import { Tv } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { dragScroll } from "@lib/drag-scroll";
 	import { api } from "@lib/api";
 	import { createAction, monitorToast, SERIES, updateFailed } from "@lib/actions";
@@ -103,7 +103,7 @@
 				{@const avail = availability(show)}
 				{@const isSel = selected.has(show.id)}
 				<tr
-					class={cn(
+					class={twMerge(
 						"group border-b border-border last:border-b-0 transition",
 						isSel ? "bg-accent-soft" : "hover:bg-surface",
 					)}
@@ -156,7 +156,7 @@
 						{show.network ?? "—"}
 					</td>
 					<td
-						class={cn(
+						class={twMerge(
 							"hidden px-3 py-2.5 font-mono text-xs lowercase @3xl:table-cell",
 							show.type === "anime"
 								? "text-accent-text"

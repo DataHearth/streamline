@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from "svelte";
 	import { Search, Film, Tv, ArrowRight, Music, BookOpen, LoaderCircle } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { isPaletteShortcut } from "@lib/platform";
 	import { initials } from "@lib/people";
 	import { posterUrl, tvPosterUrl } from "@lib/posters";
@@ -250,7 +250,7 @@
 							onmouseenter={() => (cursor = flatIdx)}
 							onclick={() => activate(item)}
 							data-cmd-active={active ? "" : undefined}
-							class={cn(
+							class={twMerge(
 								"flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors",
 								active
 									? "bg-accent-soft text-fg"
@@ -282,7 +282,7 @@
 								</div>
 							{:else if item.kind === "artist" || item.kind === "album" || item.kind === "track" || item.kind === "book"}
 								<div
-									class={cn(
+									class={twMerge(
 										"relative shrink-0 overflow-hidden bg-surface-2",
 										item.kind === "artist" && "h-7 w-7 rounded-full",
 										(item.kind === "album" || item.kind === "track") && "h-8 w-8 rounded-md",
@@ -322,7 +322,7 @@
 							{:else}
 								{@const Icon = item.icon}
 								<div
-									class={cn(
+									class={twMerge(
 										"grid h-7 w-7 shrink-0 place-items-center rounded-md transition-colors",
 										active
 											? "bg-accent text-fg-on-accent"

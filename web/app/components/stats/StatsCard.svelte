@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 
 	// The one container every stats block sits in: the head inside the card,
 	// as on the dashboard's panels.
@@ -20,7 +20,7 @@
 	} = $props();
 </script>
 
-<section class={cn("min-w-0 overflow-hidden rounded-lg border border-border bg-bg-elevated", cls)}>
+<section class={twMerge("min-w-0 overflow-hidden rounded-lg border border-border bg-bg-elevated", cls)}>
 	<header class="flex min-w-0 items-baseline gap-3 px-4 pt-4 md:px-5 md:pt-5">
 		<h3 class="shrink-0 text-[14px] font-semibold text-fg">{title}</h3>
 		{#if caption}

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Component } from "svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { readOnlyLock } from "@lib/config.svelte";
 
 	type Props = {
@@ -37,7 +37,7 @@
 </script>
 
 <label
-	class={cn(
+	class={twMerge(
 		"inline-flex h-10 w-fit cursor-pointer items-center justify-center gap-1.5 rounded-md border border-border bg-bg-base px-3 text-xs font-medium transition hover:border-border-strong has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent",
 		TONE[tone],
 		off && "cursor-not-allowed opacity-50",

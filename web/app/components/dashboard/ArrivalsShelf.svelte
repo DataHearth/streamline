@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import { ChevronLeft, ChevronRight, Sparkles } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import Img from "@components/shared/Img.svelte";
 	import ArrivalCard from "./ArrivalCard.svelte";
 	import { arrivalArt, arrivalTally } from "@lib/dashboard";
@@ -162,7 +162,7 @@
 					<div
 						bind:this={scrollEl}
 						onscroll={updateBounds}
-						class={cn("shelf-row shelf-scroll relative mt-2 flex gap-4 px-4 pb-2 pt-4 md:gap-5 md:px-8", !atEnd && "fade-end")}
+						class={twMerge("shelf-row shelf-scroll relative mt-2 flex gap-4 px-4 pb-2 pt-4 md:gap-5 md:px-8", !atEnd && "fade-end")}
 					>
 						{#each shown as a (`${a.kind}:${a.id}:${a.at}`)}
 							<ArrivalCard arrival={a} />

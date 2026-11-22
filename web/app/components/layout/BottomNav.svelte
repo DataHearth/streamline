@@ -32,7 +32,7 @@
 	import { NAV_POLL_MS, SILENT } from "@lib/query";
 	import type { PendingList, RequestCounts, SystemInfo } from "@lib/types";
 	import { auth } from "@lib/auth.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import {
 		TORRENT_PILLS,
 		activityFeatures,
@@ -291,7 +291,7 @@
 </script>
 
 <nav
-	class={cn(
+	class={twMerge(
 		"fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 min-h-14 border-t border-border bg-bg-elevated/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md saturate-150 md:hidden",
 		// A phone bulk selection puts its action bar here rather than stacking a
 		// second bar on top of this one.
@@ -308,7 +308,7 @@
 				aria-haspopup="dialog"
 				aria-expanded={sheet === tab.section}
 				aria-label={tab.label}
-				class={cn(cellBase, on ? cellOn : cellOff)}
+				class={twMerge(cellBase, on ? cellOn : cellOff)}
 			>
 				<tab.icon size={20} strokeWidth={on ? 2 : 1.6} />
 				<span>{tab.label}</span>
@@ -321,7 +321,7 @@
 			<a
 				href={tab.href}
 				aria-current={active ? "page" : undefined}
-				class={cn(cellBase, active ? cellOn : cellOff)}
+				class={twMerge(cellBase, active ? cellOn : cellOff)}
 			>
 				<tab.icon size={20} strokeWidth={active ? 2 : 1.6} />
 				<span>{tab.label}</span>
@@ -335,7 +335,7 @@
 		aria-haspopup="dialog"
 		aria-expanded={sheet === "More"}
 		aria-label={i18n.nav_more_destinations()}
-		class={cn(cellBase, moreOn ? cellOn : cellOff)}
+		class={twMerge(cellBase, moreOn ? cellOn : cellOff)}
 	>
 		<div class="relative">
 			<Ellipsis size={20} strokeWidth={moreOn ? 2 : 1.6} />
@@ -404,7 +404,7 @@
 							<a
 								href={row.href}
 								aria-current={active ? "page" : undefined}
-								class={cn(rowBase, active ? rowActive : rowInactive)}
+								class={twMerge(rowBase, active ? rowActive : rowInactive)}
 							>
 								<row.icon size={22} class="shrink-0" />
 								<span class="min-w-0 flex-1">
@@ -445,7 +445,7 @@
 										</span>
 									{:else if row.line}
 										<span
-											class={cn(
+											class={twMerge(
 												"mt-1 block truncate font-mono text-[11px]",
 												active ? "text-accent-text opacity-80" : "text-fg-subtle",
 											)}
@@ -463,7 +463,7 @@
 								{:else}
 									<ChevronRight
 										size={18}
-										class={cn("shrink-0", active ? "text-accent-text" : "text-fg-faint")}
+										class={twMerge("shrink-0", active ? "text-accent-text" : "text-fg-faint")}
 										aria-hidden="true"
 									/>
 								{/if}
@@ -481,7 +481,7 @@
 								<a
 									href={row.href}
 									aria-current={active ? "page" : undefined}
-									class={cn(rowBase, active ? rowActive : rowInactive)}
+									class={twMerge(rowBase, active ? rowActive : rowInactive)}
 								>
 									<row.icon size={22} class="shrink-0" />
 									<span class="min-w-0 flex-1 text-[15px] font-medium tracking-tight">
@@ -489,7 +489,7 @@
 									</span>
 									<ChevronRight
 										size={18}
-										class={cn("shrink-0", active ? "text-accent-text" : "text-fg-faint")}
+										class={twMerge("shrink-0", active ? "text-accent-text" : "text-fg-faint")}
 										aria-hidden="true"
 									/>
 								</a>
@@ -503,7 +503,7 @@
 						<a
 							href="/account"
 							aria-current={isActiveFn("/account") ? "page" : undefined}
-							class={cn(
+							class={twMerge(
 								"flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1.5 py-2 transition-colors",
 								isActiveFn("/account")
 									? "bg-accent-soft text-accent-text"

@@ -23,7 +23,7 @@
 	import TorrentFilesTab from "./TorrentFilesTab.svelte";
 	import TorrentPeersTab from "./TorrentPeersTab.svelte";
 	import TorrentTrackersTab from "./TorrentTrackersTab.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { BELOW_MD } from "@lib/viewport.svelte";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
@@ -158,7 +158,7 @@
 			transition:fly={compact
 				? { y: 420, duration: 280, easing: cubicOut }
 				: { x: 540, duration: 240, easing: cubicOut }}
-			class={cn(
+			class={twMerge(
 				"absolute flex flex-col bg-bg-elevated shadow-4",
 				compact
 					? "inset-x-0 bottom-0 max-h-[88dvh] overflow-hidden rounded-t-2xl border-t border-border-strong"
@@ -169,7 +169,7 @@
 			aria-label={i18n.torrent_detail()}
 		>
 			<!-- Header -->
-			<header class={cn("relative shrink-0 border-b border-border p-5", !compact && "pt-[calc(1.25rem+env(safe-area-inset-top))]")}>
+			<header class={twMerge("relative shrink-0 border-b border-border p-5", !compact && "pt-[calc(1.25rem+env(safe-area-inset-top))]")}>
 				{#if compact}
 					<span
 						aria-hidden="true"
@@ -316,7 +316,7 @@
 						role="tab"
 						aria-selected={activeTab}
 						onclick={() => (tab = t.key)}
-						class={cn(
+						class={twMerge(
 							"relative flex items-center gap-1.5 px-3 py-2.5 text-[13px] font-medium transition",
 							activeTab
 								? "text-fg after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:bg-accent"

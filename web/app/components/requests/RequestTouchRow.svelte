@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ChevronRight } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatRelative } from "@lib/dates";
 	import {
 		STATUS_META,
@@ -74,7 +74,7 @@
 		{/if}
 
 		<span
-			class={cn(
+			class={twMerge(
 				"shrink-0 whitespace-nowrap text-[12.5px] font-semibold",
 				TONE_CLASS[word.tone],
 				// From md up a wide row states its status once, in the trailing column:
@@ -91,7 +91,7 @@
 		     explicit actions is one affordance too many. -->
 		<ChevronRight
 			size={14}
-			class={cn("shrink-0 text-fg-faint", wide && "md:hidden")}
+			class={twMerge("shrink-0 text-fg-faint", wide && "md:hidden")}
 			aria-hidden="true"
 		/>
 	</button>

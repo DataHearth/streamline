@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ChevronRight } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { outcomeWord, type TouchEntry } from "@lib/imports-touch";
 	import type { ImportScanKind } from "@lib/types";
 
@@ -47,7 +47,7 @@
 
 	<span class="min-w-0 flex-1">
 		<span
-			class={cn(
+			class={twMerge(
 				"block truncate text-[13.5px] font-semibold tracking-[-0.01em]",
 				entry.headingWeak ? "font-mono text-[12.5px] text-fg-muted" : "text-fg",
 			)}
@@ -84,7 +84,7 @@
 	{/if}
 
 	<span
-		class={cn(
+		class={twMerge(
 			"shrink-0 text-[12px] font-medium whitespace-nowrap",
 			TONE[word.tone],
 		)}

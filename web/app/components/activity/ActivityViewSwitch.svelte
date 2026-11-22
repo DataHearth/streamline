@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Queue, History and Events are three readings of one page, so this switches
@@ -44,11 +44,11 @@
 			type="button"
 			onclick={() => onViewChange(c.key)}
 			aria-pressed={view === c.key}
-			class={cn(cell, view === c.key ? on : off)}
+			class={twMerge(cell, view === c.key ? on : off)}
 		>
 			{c.label}
 			{#if c.count !== undefined}
-				<span class={cn(num, view === c.key ? "opacity-80" : "text-fg-subtle")}>
+				<span class={twMerge(num, view === c.key ? "opacity-80" : "text-fg-subtle")}>
 					{c.count}
 				</span>
 			{/if}

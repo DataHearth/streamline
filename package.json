@@ -14,7 +14,6 @@
     "@tanstack/form-core": "^1.33.5",
     "@tanstack/svelte-form": "^1.32.0",
     "@tanstack/svelte-query": "^6.1.29",
-    "clsx": "^2.1.1",
     "esbuild": "^0.28.0",
     "esbuild-svelte": "^0.9.5",
     "svelte": "^5.55.5",

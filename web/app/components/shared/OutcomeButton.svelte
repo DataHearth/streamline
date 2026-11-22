@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Component } from "svelte";
 	import { Check, LoaderCircle, X } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import type { OutcomePhase } from "@lib/outcome.svelte";
 
 	// A button that answers in place: a spinner while it runs, green with a
@@ -37,13 +37,13 @@
 	let iconSize = $derived(size === "lg" ? 17 : 15);
 </script>
 
-<div class={cn("relative", size === "lg" ? "w-full" : "inline-flex", className)}>
+<div class={twMerge("relative", size === "lg" ? "w-full" : "inline-flex", className)}>
 	<button
 		type="button"
 		disabled={phase === "pending" || phase === "done"}
 		aria-busy={phase === "pending"}
 		{onclick}
-		class={cn(
+		class={twMerge(
 			"inline-flex items-center justify-center gap-1.5 font-semibold text-fg-on-accent transition-colors duration-200",
 			size === "lg"
 				? "h-[50px] w-full gap-2 rounded-xl text-[16px] active:opacity-80"
@@ -72,7 +72,7 @@
 	</button>
 	{#if error && phase !== "pending"}
 		<p
-			class={cn(
+			class={twMerge(
 				"pointer-events-none absolute bottom-full z-10 mb-2.5 rounded-lg border border-status-failed/50 bg-bg-elevated px-3 py-2 text-[12.5px] leading-snug break-words text-status-failed shadow-lg shadow-black/40",
 				size === "lg" ? "inset-x-0 text-center" : "right-0 w-max max-w-[min(20rem,calc(100vw-4rem))]",
 			)}
@@ -80,7 +80,7 @@
 			{error}
 			<span
 				aria-hidden="true"
-				class={cn(
+				class={twMerge(
 					"absolute -bottom-[5px] size-2.5 rotate-45 border-r border-b border-status-failed/50 bg-bg-elevated",
 					size === "lg" ? "left-1/2 -translate-x-1/2" : "right-6",
 				)}

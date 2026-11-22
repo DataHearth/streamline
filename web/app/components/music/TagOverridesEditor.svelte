@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Plus, X } from "@lucide/svelte";
 	import { INPUT_CLASS } from "@lib/form";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { overrideRows, rowsToOverrides, type OverrideRow, type TagOverrides } from "@lib/music-tags";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -45,14 +45,14 @@
 	{#each rows as row, i (i)}
 		<div class="flex items-center gap-2">
 			<input
-				class={cn(INPUT_CLASS, "w-28 shrink-0 font-mono text-xs uppercase sm:w-40")}
+				class={twMerge(INPUT_CLASS, "w-28 shrink-0 font-mono text-xs uppercase sm:w-40")}
 				placeholder={i18n.music_tag_override_key()}
 				aria-label={i18n.music_tag_override_key()}
 				bind:value={row.key}
 				{disabled}
 			/>
 			<input
-				class={cn(INPUT_CLASS, "min-w-0 flex-1 text-xs")}
+				class={twMerge(INPUT_CLASS, "min-w-0 flex-1 text-xs")}
 				placeholder={i18n.music_tag_override_values()}
 				aria-label={i18n.music_tag_override_values()}
 				bind:value={row.values}

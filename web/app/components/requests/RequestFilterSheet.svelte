@@ -3,7 +3,7 @@
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import { X } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
 	import {
@@ -126,7 +126,7 @@
 							type="button"
 							aria-pressed={on}
 							onclick={() => onTabChange(c.key)}
-							class={cn(chip, on ? chipOn : chipOff)}
+							class={twMerge(chip, on ? chipOn : chipOff)}
 						>
 							{c.label}
 							{#if c.count !== undefined}
@@ -147,7 +147,7 @@
 								type="button"
 								aria-pressed={on}
 								onclick={() => onKindChange(k.key)}
-								class={cn(chip, on ? chipOn : chipOff)}
+								class={twMerge(chip, on ? chipOn : chipOff)}
 							>
 								{#if KIND_DOT[k.key]}
 									<span

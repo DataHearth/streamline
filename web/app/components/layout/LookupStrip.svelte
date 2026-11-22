@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { auth } from "@lib/auth.svelte";
 	import type { LookupItem } from "@lib/search-model.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -27,7 +27,7 @@
 </script>
 
 {#if items.length > 0}
-	<div class={cn("@container", klass)}>
+	<div class={twMerge("@container", klass)}>
 		<div class="flex items-center gap-2">
 			<p class="min-w-0 truncate text-xs text-fg-subtle md:text-[13px] lg:text-xs">
 				<span class="hidden @xl:inline">{i18n.search_lookup_section()}</span>
@@ -43,7 +43,7 @@
 						onclick={() => onpick(item)}
 						onmouseenter={() => onhover?.(i)}
 						data-cmd-active={i === active ? "" : undefined}
-						class={cn(
+						class={twMerge(
 							"inline-flex h-8 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition @md:px-2.5 md:text-[13px] lg:text-xs",
 							i === active
 								? "border-accent-line bg-accent-soft text-fg"

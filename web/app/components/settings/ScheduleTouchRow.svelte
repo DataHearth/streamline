@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Ellipsis, Lock } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatRelative, formatDateTime } from "@lib/dates";
 	import { scheduleState } from "@lib/schedules-touch";
 	import type { Schedule } from "@lib/types";
@@ -57,7 +57,7 @@
 	</div>
 
 	<span
-		class={cn("shrink-0 text-right text-[12.5px] font-semibold", state.tone)}
+		class={twMerge("shrink-0 text-right text-[12.5px] font-semibold", state.tone)}
 	>
 		{trailing}
 	</span>

@@ -9,7 +9,7 @@
 	import { auth } from "@lib/auth.svelte";
 	import { requireAdmin } from "@lib/guards";
 	import { toast } from "@lib/toast";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { fold } from "@lib/text";
 	import { pullRefresh } from "@lib/pull-refresh";
 	import { SILENT } from "@lib/query";
@@ -318,7 +318,7 @@
 			</div>
 			<div>
 				<div
-					class={cn(
+					class={twMerge(
 						"text-2xl font-bold tabular-nums",
 						failed ? "text-status-failed" : "text-fg",
 					)}

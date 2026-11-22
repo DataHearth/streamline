@@ -2,7 +2,7 @@
 	import { auth } from "@lib/auth.svelte";
 	import { Film, ChevronUp, ChevronDown } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { dragScroll } from "@lib/drag-scroll";
 	import { api } from "@lib/api";
 	import { createAction, monitorToast, MOVIES, updateFailed } from "@lib/actions";
@@ -158,7 +158,7 @@
 			{#each movies as movie (movie.id)}
 				{@const isSel = selected.has(movie.id)}
 				<tr
-					class={cn(
+					class={twMerge(
 						"group border-b border-border last:border-b-0 transition",
 						isSel ? "bg-accent-soft" : "hover:bg-surface",
 					)}
@@ -221,7 +221,7 @@
 						{quality(movie.file_summary)}
 					</td>
 					<td
-						class={cn(
+						class={twMerge(
 							"hidden px-3 py-2 text-right font-mono text-xs tabular @2xl:table-cell",
 							totalSize(movie.file_summary) === "—"
 								? "text-fg-subtle"

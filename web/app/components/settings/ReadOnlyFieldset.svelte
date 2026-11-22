@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { markConfigForm } from "@lib/config.svelte";
 
 	let {
@@ -11,6 +11,6 @@
 	markConfigForm();
 </script>
 
-<fieldset class={cn("min-w-0", className)}>
+<fieldset class={twMerge("min-w-0", className)}>
 	{@render children()}
 </fieldset>

@@ -1,7 +1,7 @@
 <script lang="ts" generics="T extends string">
 	import { tick } from "svelte";
 	import { ChevronDown, Search } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { fold } from "@lib/text";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { readOnlyLock } from "@lib/config.svelte";
@@ -129,7 +129,7 @@
 		aria-haspopup="listbox"
 		aria-expanded={open}
 		onclick={toggle}
-		class={cn(
+		class={twMerge(
 			row
 				? "flex h-[46px] w-full items-center gap-3 rounded-xl border border-border bg-surface px-3.5 text-left transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-accent active:opacity-80"
 				: "flex min-h-11 w-full items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 text-sm text-fg transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-accent lg:h-9 lg:min-h-0",
@@ -149,7 +149,7 @@
 		>
 		<ChevronDown
 			size={16}
-			class={cn(
+			class={twMerge(
 				"shrink-0 text-fg-muted transition-transform duration-150",
 				row && "-ml-1",
 				open && "rotate-180",

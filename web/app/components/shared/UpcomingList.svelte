@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Calendar } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { dotToken, kindLabel, statusPill, type CalendarEvent } from "@lib/calendar";
 	import StatusPill from "./StatusPill.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -59,7 +59,7 @@
 </script>
 
 <aside
-	class={cn(
+	class={twMerge(
 		"rounded-lg border border-border bg-bg-elevated p-4",
 		fill
 			? "flex h-full min-h-0 flex-col"
@@ -91,7 +91,7 @@
 		</div>
 	{:else}
 		<ul
-			class={cn(
+			class={twMerge(
 				"flex flex-col gap-1",
 				fill && "-mr-2 min-h-0 flex-1 overflow-y-auto pr-2",
 			)}

@@ -2,7 +2,7 @@
 	import ClampedText from "@components/shared/ClampedText.svelte";
 	import type { Snippet } from "svelte";
 	import { ArrowLeft } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import HeroBackdrop from "@components/shared/HeroBackdrop.svelte";
 	import { provideHeroHold } from "@lib/hero-hold.svelte";
 
@@ -49,7 +49,7 @@
      inside a clip: the part that starts a line has its dot clipped, so a wrap
      never leaves one hanging. -->
 {#snippet dotted(parts: string[], klass: string)}
-	<div class={cn("overflow-hidden", klass)}>
+	<div class={twMerge("overflow-hidden", klass)}>
 		<div class="-ml-5 flex flex-wrap gap-y-1">
 			{#each parts as part, i (i)}
 				<span class="relative pl-5 before:absolute before:left-0 before:w-5 before:text-center before:text-fg-faint before:content-['·']">{part}</span>
@@ -72,12 +72,12 @@
 	</div>
 
 	<div
-		class={cn(
+		class={twMerge(
 			"relative grid w-full items-center gap-5 px-4 pb-7 pt-6 md:gap-8 md:px-8 md:pb-14 md:pt-10 lg:gap-10 lg:pb-16",
 			cols,
 		)}
 	>
-		<div class={cn("relative mx-auto md:mx-0 md:w-auto", artWrap)}>
+		<div class={twMerge("relative mx-auto md:mx-0 md:w-auto", artWrap)}>
 			{@render art()}
 		</div>
 

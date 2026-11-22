@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ArrowRight, ChevronLeft, ChevronRight } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { dragScroll } from "@lib/drag-scroll";
 	import ShelfCard from "./ShelfCard.svelte";
 	import { shelfKey, type ShelfItem } from "@lib/music-books";
@@ -84,7 +84,7 @@
 		bind:this={scroller}
 		use:dragScroll
 		onscroll={sync}
-		class={cn(
+		class={twMerge(
 			"-mx-4 flex snap-x gap-3 overflow-x-auto scroll-px-4 px-4 pb-2 pt-3 [scrollbar-width:none] md:-mx-6 md:gap-4 md:scroll-px-6 md:px-6 [&::-webkit-scrollbar]:hidden",
 		)}
 	>

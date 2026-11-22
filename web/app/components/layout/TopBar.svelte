@@ -19,7 +19,7 @@
 	import { SETTINGS_TITLES } from "@lib/settings-nav.svelte";
 	import { pageTitle } from "@lib/page-title.svelte";
 	import { selectionHeader } from "@lib/selection-header.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import type { SystemInfo } from "@lib/types";
 	import { toast } from "@lib/toast";
 	import { isApple, modKey } from "@lib/platform";
@@ -323,12 +323,12 @@
 <!-- Near-opaque while it holds a selection: the count and select all are
      controls, and the rows scrolling under the usual 70% read through them. -->
 <header
-	class={cn(
+	class={twMerge(
 		"sticky top-0 z-30 flex min-h-(--top-bar-height) items-center gap-2 border-b border-border bg-bg-deep/70 pl-4 pr-2 pt-[env(safe-area-inset-top)] backdrop-blur-md saturate-150 md:gap-4 md:px-8",
 		selection && "max-md:bg-bg-deep/95",
 	)}
 >
-	<div class={cn("min-w-0 flex-1", hideForSelection)}>
+	<div class={twMerge("min-w-0 flex-1", hideForSelection)}>
 		<div class="flex h-[22px] min-w-0 items-center">
 			{#if crumbs.length > 1}
 				<nav
@@ -393,7 +393,7 @@
 
 	<!-- flex-none below lg: on a phone this group holds one 44px icon button, and
 	     a flex-1 here took half the header from the breadcrumbs. -->
-	<div class={cn("flex flex-none items-center justify-end gap-2 lg:flex-1", hideForSelection)}>
+	<div class={twMerge("flex flex-none items-center justify-end gap-2 lg:flex-1", hideForSelection)}>
 		<!-- A link, not the palette: below md search is a page of its own, so
 		     Back closes it (routes/search.svelte). -->
 		<a
@@ -442,7 +442,7 @@
 			>
 				<X size={20} aria-hidden="true" />
 			</button>
-			<span class={cn(titleClass, "min-w-0 flex-1 pl-1 tabular-nums")} aria-live="polite">
+			<span class={twMerge(titleClass, "min-w-0 flex-1 pl-1 tabular-nums")} aria-live="polite">
 				{selection.count === 0
 					? i18n.a11y_select_all_of({ items: selection.noun.items })
 					: (selection.count === 1

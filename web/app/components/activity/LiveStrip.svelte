@@ -2,7 +2,7 @@
 	import { untrack } from "svelte";
 	import type { QueueEntry } from "@lib/types";
 	import { formatSpeed, formatEta } from "@lib/format";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { items }: { items: QueueEntry[] } = $props();
@@ -81,7 +81,7 @@
      numbers collapse into TouchStatLine's single row: the sparkline needs width
      to say anything, and 390px isn't it. -->
 <div
-	class={cn(
+	class={twMerge(
 		"mb-4 hidden grid-cols-2 items-center gap-4 rounded-lg border border-border bg-bg-elevated px-5 py-4 sm:grid-cols-4 md:grid",
 		sparkPoints && "lg:grid-cols-[repeat(4,auto)_1fr]",
 	)}

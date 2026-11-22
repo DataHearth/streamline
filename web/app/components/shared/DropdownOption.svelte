@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Check, type LucideIcon } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 
 	// One row of the one dropdown surface: a label, and any of a leading status
 	// dot, a trailing count, a muted second line, and the check that marks the
@@ -45,7 +45,7 @@
 		aria-selected={selected}
 		{title}
 		onclick={onSelect}
-		class={cn(
+		class={twMerge(
 			"flex min-h-11 w-full gap-2.5 px-3 py-1.5 text-left text-sm transition-colors hover:bg-bg-hover focus:outline-none focus-visible:bg-bg-hover lg:min-h-0",
 			// One line centres in the 44px touch row; a hint makes it two, and the
 			// marks then sit on the first line.
@@ -55,12 +55,12 @@
 	>
 		{#if dot}
 			<span
-				class={cn("h-1.5 w-1.5 shrink-0 rounded-full", hint && "mt-[7px]", dot)}
+				class={twMerge("h-1.5 w-1.5 shrink-0 rounded-full", hint && "mt-[7px]", dot)}
 				aria-hidden="true"
 			></span>
 		{:else if Icon}
 			<Icon
-				class={cn(
+				class={twMerge(
 					"h-3.5 w-3.5 shrink-0",
 					hint && "mt-[3px]",
 					selected ? "text-accent" : "text-fg-subtle",
@@ -69,7 +69,7 @@
 			/>
 		{/if}
 		<span class="min-w-0 flex-1">
-			<span class={cn("block truncate", mono && "font-mono lowercase")}>
+			<span class={twMerge("block truncate", mono && "font-mono lowercase")}>
 				{label}
 			</span>
 			{#if hint}
@@ -82,7 +82,7 @@
 		</span>
 		{#if count != null}
 			<span
-				class={cn(
+				class={twMerge(
 					"shrink-0 font-mono text-[10.5px] tabular",
 					hint && "mt-[3px]",
 					selected ? "text-accent/70" : "text-fg-subtle",
@@ -92,7 +92,7 @@
 			</span>
 		{/if}
 		{#if selected}
-			<Check size={14} class={cn("shrink-0 text-accent", hint && "mt-0.5")} aria-hidden="true" />
+			<Check size={14} class={twMerge("shrink-0 text-accent", hint && "mt-0.5")} aria-hidden="true" />
 		{/if}
 	</button>
 </li>

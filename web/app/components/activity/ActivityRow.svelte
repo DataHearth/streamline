@@ -3,7 +3,7 @@
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
 	import SelectBox from "@components/shared/SelectBox.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { entryHeading, entryHref, entryRelease, holdSummary } from "@lib/activity-touch";
 	import { pillStatus, formatBytes, formatSpeed, formatEta } from "@lib/format";
 	import { formatRelative, formatDateTime } from "@lib/dates";
@@ -52,7 +52,7 @@
 </script>
 
 <tr
-	class={cn(
+	class={twMerge(
 		"group cursor-pointer border-b border-border text-sm transition hover:bg-surface",
 		expanded && "bg-bg-card",
 		checked && "bg-accent-soft",
@@ -61,7 +61,7 @@
 	onclick={() => onToggle(item.id)}
 >
 	{#if checked !== undefined}
-		<td class={cn("pl-4 pr-1", tight, pad)}>
+		<td class={twMerge("pl-4 pr-1", tight, pad)}>
 			<SelectBox
 				{checked}
 				onChange={(v) => onCheck?.(item.id, v)}
@@ -71,7 +71,7 @@
 			/>
 		</td>
 	{/if}
-	<td class={cn(checked === undefined ? "pl-4 pr-2" : "px-2", tight, pad)}>
+	<td class={twMerge(checked === undefined ? "pl-4 pr-2" : "px-2", tight, pad)}>
 		<StatusPill
 			status={pillStatus(item.status)}
 			size="sm"
@@ -79,7 +79,7 @@
 		/>
 	</td>
 
-	<td class={cn("w-full max-w-0 px-2", pad)}>
+	<td class={twMerge("w-full max-w-0 px-2", pad)}>
 		<div class="truncate font-medium text-fg">
 			{#if href}
 				<!-- The row toggles its detail; the title alone leaves for the page. -->
@@ -100,7 +100,7 @@
 	</td>
 
 	{#if view === "queue"}
-		<td class={cn("px-2", tight, pad)}>
+		<td class={twMerge("px-2", tight, pad)}>
 			{#if held}
 				<span
 					class="whitespace-nowrap font-mono text-xs"
@@ -131,34 +131,34 @@
 			{/if}
 			{/if}
 		</td>
-		<td class={cn("hidden px-2 tabular-nums text-xs text-fg-muted @3xl:table-cell", tight, pad)}>
+		<td class={twMerge("hidden px-2 tabular-nums text-xs text-fg-muted @3xl:table-cell", tight, pad)}>
 			{held ? "—" : speedEta || "—"}
 		</td>
-		<td class={cn("hidden px-2 text-xs text-fg-subtle @3xl:table-cell", tight, pad)}>
+		<td class={twMerge("hidden px-2 text-xs text-fg-subtle @3xl:table-cell", tight, pad)}>
 			{queue.uploaded ? i18n.activity_upload() : queue.download_client || "—"}
 		</td>
 		<td
-			class={cn("hidden whitespace-nowrap px-2 text-xs text-fg-subtle @4xl:table-cell", tight, pad)}
+			class={twMerge("hidden whitespace-nowrap px-2 text-xs text-fg-subtle @4xl:table-cell", tight, pad)}
 			title={formatDateTime(queue.created_at)}
 		>
 			{formatRelative(queue.created_at)}
 		</td>
 	{:else}
-		<td class={cn("hidden px-2 text-xs text-fg-subtle @3xl:table-cell", tight, pad)}>
+		<td class={twMerge("hidden px-2 text-xs text-fg-subtle @3xl:table-cell", tight, pad)}>
 			{history.uploaded ? i18n.activity_upload() : history.indexer || "—"}
 		</td>
-		<td class={cn("px-2 tabular-nums text-xs text-fg-muted", tight, pad)}>
+		<td class={twMerge("px-2 tabular-nums text-xs text-fg-muted", tight, pad)}>
 			{formatBytes(history.size)}
 		</td>
 		<td
-			class={cn("px-2 text-xs text-fg-subtle", tight, pad)}
+			class={twMerge("px-2 text-xs text-fg-subtle", tight, pad)}
 			title={formatDateTime(history.updated_at)}
 		>
 			{formatRelative(history.updated_at)}
 		</td>
 	{/if}
 
-	<td class={cn("pr-4 pl-2 text-right", tight, pad)}>
+	<td class={twMerge("pr-4 pl-2 text-right", tight, pad)}>
 		{#if held && onResolve}
 			<button
 				type="button"
@@ -184,7 +184,7 @@
 		>
 			<ChevronRight
 				size={15}
-				class={cn(
+				class={twMerge(
 					"transition-transform motion-safe:duration-200",
 					expanded && "rotate-90",
 				)}

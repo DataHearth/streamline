@@ -23,7 +23,7 @@
 	import ReadOnlyFieldset from "@components/settings/ReadOnlyFieldset.svelte";
 	import MediaProfilesPanel from "@components/settings/MediaProfilesPanel.svelte";
 	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { profilesPath, type ProfileMedia } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -200,7 +200,7 @@
 					role="tab"
 					aria-selected={active}
 					onclick={() => (media = t.key === "music" || t.key === "books" ? t.key : "video")}
-					class={cn(
+					class={twMerge(
 						"inline-flex h-10 items-center justify-center gap-2 rounded-sm px-3 text-[13px] font-medium transition lg:h-8 lg:text-[12.5px]",
 						active ? "bg-bg-card text-fg shadow-[var(--shadow-1)]" : "text-fg-muted hover:text-fg",
 					)}

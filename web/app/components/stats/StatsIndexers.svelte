@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { fmtCount, fmtPct, share, type StatsIndexer } from "@lib/stats";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Which indexers the grabs came from and how they turned out, busiest
@@ -19,14 +19,14 @@
 <div class="min-w-0">
 	<div class="idx-grid hidden border-b border-border px-4 pb-2 md:grid md:px-5" aria-hidden="true">
 		<span class={head}>{i18n.settings_indexers()}</span>
-		<span class={cn(head, "text-right")}>{i18n.stats_col_grabs()}</span>
-		<span class={cn(head, "text-right")}>{i18n.stats_imported()}</span>
-		<span class={cn(head, "whitespace-nowrap text-right")}>{i18n.stats_col_fail_rate()}</span>
+		<span class={twMerge(head, "text-right")}>{i18n.stats_col_grabs()}</span>
+		<span class={twMerge(head, "text-right")}>{i18n.stats_imported()}</span>
+		<span class={twMerge(head, "whitespace-nowrap text-right")}>{i18n.stats_col_fail_rate()}</span>
 		<span class={head}>{i18n.stats_col_share()}</span>
 	</div>
 	<ul>
 		{#each indexers as x, i (x.name)}
-			<li class={cn("px-4 py-2.5 md:px-5", i > 0 && "border-t border-border")}>
+			<li class={twMerge("px-4 py-2.5 md:px-5", i > 0 && "border-t border-border")}>
 				<!-- Phone -->
 				<div class="md:hidden">
 					<div class="flex items-baseline gap-3">
@@ -35,7 +35,7 @@
 					</div>
 					<div class="mt-1 flex gap-3 font-mono text-[11px] text-fg-subtle">
 						<span><span class="tabular-nums text-fg-muted">{fmtCount(x.imported)}</span> {i18n.stats_imported_lc()}</span>
-						<span><span class={cn("tabular-nums", rateTone(x))}>{fmtPct(x.failed, x.grabs)}</span> {i18n.stats_failed_lc()}</span>
+						<span><span class={twMerge("tabular-nums", rateTone(x))}>{fmtPct(x.failed, x.grabs)}</span> {i18n.stats_failed_lc()}</span>
 					</div>
 				</div>
 				<!-- md and up -->
@@ -43,7 +43,7 @@
 					<span class="min-w-0 truncate text-[13px] font-medium text-fg">{x.name}</span>
 					<span class="text-right font-mono text-[12.5px] tabular-nums text-fg">{fmtCount(x.grabs)}</span>
 					<span class="text-right font-mono text-[12.5px] tabular-nums text-fg-muted">{fmtCount(x.imported)}</span>
-					<span class={cn("text-right font-mono text-[12.5px] tabular-nums", rateTone(x))}>{fmtPct(x.failed, x.grabs)}</span>
+					<span class={twMerge("text-right font-mono text-[12.5px] tabular-nums", rateTone(x))}>{fmtPct(x.failed, x.grabs)}</span>
 					<span class="h-[3px] overflow-hidden rounded-full bg-white/[0.06]" aria-hidden="true">
 						<span class="block h-full rounded-full bg-status-grabbing" style:width="{share(x.grabs, grabs)}%"></span>
 					</span>

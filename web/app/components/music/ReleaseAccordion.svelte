@@ -3,7 +3,7 @@
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { slide } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatDateShort } from "@lib/dates";
 	import LabelPill from "@components/shared/LabelPill.svelte";
 	import ReleaseCover from "./ReleaseCover.svelte";
@@ -63,7 +63,7 @@
 	{@const open = r.id === openId}
 	{@const up = r.status === "upcoming"}
 	{@const pill = releasePill(r)}
-	<div class={cn("border-b border-border", open && "bg-surface")}>
+	<div class={twMerge("border-b border-border", open && "bg-surface")}>
 		<button
 			type="button"
 			onclick={() => onToggle(r.id)}
@@ -90,7 +90,7 @@
 				</p>
 			</div>
 			<ReleaseMark release={r} />
-			<ChevronRight size={16} class={cn("shrink-0 text-fg-subtle transition", open && "rotate-90")} aria-hidden="true" />
+			<ChevronRight size={16} class={twMerge("shrink-0 text-fg-subtle transition", open && "rotate-90")} aria-hidden="true" />
 		</button>
 		{#if open}
 			<div class="px-4 pb-4" transition:slide={{ duration: 200, easing: cubicOut }}>

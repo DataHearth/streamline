@@ -4,7 +4,7 @@
 	import { onMount } from "svelte";
 	import { UserRound } from "@lucide/svelte";
 	import { api, ApiError, errorText } from "@lib/api";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatDate } from "@lib/dates";
 	import { formatBytes } from "@lib/format";
 	import { initials } from "@lib/people";
@@ -329,13 +329,13 @@
 								target="_blank"
 								rel="noopener noreferrer"
 								title={link.label}
-								class={cn(
+								class={twMerge(
 									"inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-black/40 text-fg-muted backdrop-blur-sm transition hover:border-accent/40 hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-ring",
 									link.slug === "imdb" && "border-transparent bg-transparent backdrop-blur-none hover:border-transparent",
 								)}
 							>
 								<span
-									class={cn("brand-mark", link.slug === "imdb" && "brand-mark-wide")}
+									class={twMerge("brand-mark", link.slug === "imdb" && "brand-mark-wide")}
 									style:--mark="url('/static/images/brand-logos/{link.slug}.svg')"
 									aria-hidden="true"
 								></span>
@@ -352,7 +352,7 @@
 						</h2>
 						<div
 							bind:this={bioEl}
-							class={cn("bio text-sm text-fg-muted", !bioExpanded && "bio-clamped")}
+							class={twMerge("bio text-sm text-fg-muted", !bioExpanded && "bio-clamped")}
 						>
 							{#each bioParagraphs as paragraph, i (i)}
 								<p class="mt-2 first:mt-0 [text-wrap:pretty]">{paragraph}</p>

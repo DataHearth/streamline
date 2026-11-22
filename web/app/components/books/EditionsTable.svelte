@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { BookOpen, Check, Headphones } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import LangChip from "./LangChip.svelte";
 	import { editionDetail, formatLabel, type BookFormat, type Edition } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -63,7 +63,7 @@
 				type="button"
 				aria-pressed={filter === s.key}
 				onclick={() => onFilterChange(s.key)}
-				class={cn(
+				class={twMerge(
 					"inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-[12.5px] font-medium transition lg:min-h-0 lg:py-1.5",
 					filter === s.key ? "bg-surface-2 text-fg" : "text-fg-subtle hover:text-fg",
 				)}

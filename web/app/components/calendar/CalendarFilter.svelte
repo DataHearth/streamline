@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ChevronDown } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import type { CalendarFilter } from "@lib/calendar";
 	import DropdownMenu from "@components/shared/DropdownMenu.svelte";
 	import DropdownOption from "@components/shared/DropdownOption.svelte";
@@ -48,7 +48,7 @@
 		aria-expanded={open}
 		aria-label="{i18n.calendar_filter_releases()}: {current.label}"
 		onclick={() => (open = !open)}
-		class={cn(
+		class={twMerge(
 			"inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-md border px-3 text-[12.5px] font-medium transition",
 			filter === "all"
 				? "border-border bg-bg-elevated text-fg"
@@ -91,7 +91,7 @@
 				type="button"
 				onclick={() => onChange(c.value)}
 				aria-pressed={filter === c.value}
-				class={cn(
+				class={twMerge(
 					cell,
 					filter === c.value
 						? "bg-accent-soft text-accent-text"

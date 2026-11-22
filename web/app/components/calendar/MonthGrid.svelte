@@ -2,7 +2,7 @@
 	import { onDestroy, tick } from "svelte";
 	import { fly } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import {
 		buildMonthGrid,
@@ -169,7 +169,7 @@
 				{@const isToday = isSameDay(cell.date, today)}
 				{@const key = cell.date.toDateString()}
 				<div
-					class={cn(
+					class={twMerge(
 						"flex min-h-[92px] flex-col gap-1 overflow-hidden rounded-md border border-border p-1.5 lg:min-h-0",
 						// 60% is the dimmest that keeps the cell's text above 4.5:1.
 						!cell.inMonth && "opacity-60",
@@ -178,7 +178,7 @@
 				>
 					<div class="flex flex-none items-center justify-between">
 						<span
-							class={cn(
+							class={twMerge(
 								"font-mono text-[11px] font-semibold tabular",
 								isToday ? "text-accent-text" : "text-fg-muted",
 							)}
@@ -220,7 +220,7 @@
 									longDate.format(cell.date),
 									ev.currentTarget,
 								)}
-							class={cn(
+							class={twMerge(
 								"flex-none rounded px-1.5 py-0.5 text-left font-mono text-[11px] min-h-11 lg:min-h-0 flex items-center transition-colors hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 								cell.inMonth ? "text-fg-subtle" : "text-fg-muted",
 							)}

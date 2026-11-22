@@ -4,7 +4,7 @@
 	import ActivityRow from "./ActivityRow.svelte";
 	import ExpandedRowDetail from "./ExpandedRowDetail.svelte";
 	import SelectBox from "@components/shared/SelectBox.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { entryHeading } from "@lib/activity-touch";
 	import type { QueueEntry, HistoryEntry } from "@lib/types";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -303,7 +303,7 @@
 						<th
 							scope="col"
 							aria-sort={h.sort ? ariaSort(h.sort) : undefined}
-							class={cn(
+							class={twMerge(
 								"border-b border-border bg-bg-elevated px-2 py-2.5 font-medium first:pl-4 last:pr-4",
 								h.grow ? "w-full max-w-0" : "w-px whitespace-nowrap",
 								h.hide,

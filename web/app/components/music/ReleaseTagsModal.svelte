@@ -8,7 +8,7 @@
 	import TagOverridesEditor from "./TagOverridesEditor.svelte";
 	import { api, errorText } from "@lib/api";
 	import { createAction, MUSIC, updateFailed } from "@lib/actions";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { differing, type AlbumTags, type TagFile, type TagFileState, type TagOverrides } from "@lib/music-tags";
 	import type { Release } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -176,7 +176,7 @@
 									{#each rows as k (k.key)}
 										<tr class="border-t border-border align-top">
 											<th scope="row" class="whitespace-nowrap px-3 py-2 font-mono text-[11.5px] font-normal text-fg-muted">{k.key}</th>
-											<td class={cn("px-3 py-2 break-words", k.status === "differs" ? "text-fg-subtle line-through decoration-fg-faint" : "text-fg")}>
+											<td class={twMerge("px-3 py-2 break-words", k.status === "differs" ? "text-fg-subtle line-through decoration-fg-faint" : "text-fg")}>
 												{values(k.current)}
 											</td>
 											<td class="px-3 py-2 break-words">

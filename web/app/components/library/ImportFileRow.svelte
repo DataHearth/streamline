@@ -12,7 +12,7 @@
 		TriangleAlert,
 	} from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatBytes } from "@lib/format";
 	import { toast } from "@lib/toast";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -96,7 +96,7 @@
 		title={skipped
 			? i18n.imports_restore_file()
 			: i18n.imports_exclude_file()}
-		class={cn(
+		class={twMerge(
 			"inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:opacity-60",
 			skipped
 				? "bg-surface-2 text-fg"

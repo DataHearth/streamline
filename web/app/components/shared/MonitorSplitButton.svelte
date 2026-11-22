@@ -1,7 +1,7 @@
 <script lang="ts" generics="K extends string">
 	import { tick } from "svelte";
 	import { ChevronDown } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import MonitorToggle, { boxTone } from "@components/shared/MonitorToggle.svelte";
 	import DropdownMenu from "@components/shared/DropdownMenu.svelte";
 
@@ -90,7 +90,7 @@
 		title={menuLabel}
 		aria-disabled={pending || undefined}
 		onclick={toggleMenu}
-		class={cn(
+		class={twMerge(
 			// 44px touch floor below lg.
 			"relative grid w-11 shrink-0 place-items-center border border-l-0 transition focus:outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-accent-ring aria-disabled:cursor-not-allowed aria-disabled:opacity-50 lg:w-7",
 			size === "md" ? "h-10 rounded-r-md" : "h-11 rounded-r-lg",
@@ -99,7 +99,7 @@
 	>
 		<ChevronDown
 			size={14}
-			class={cn("transition", open && "rotate-180")}
+			class={twMerge("transition", open && "rotate-180")}
 			aria-hidden="true"
 		/>
 	</button>

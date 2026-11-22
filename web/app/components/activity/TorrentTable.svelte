@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Magnet, ChevronUp, ChevronDown } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import TorrentRow from "./TorrentRow.svelte";
 	import SelectBox from "@components/shared/SelectBox.svelte";
 	import type { SortOrder, TorrentSortKey } from "@lib/activity-touch";
@@ -172,7 +172,7 @@
 									? "ascending"
 									: "descending"
 								: undefined}
-							class={cn(
+							class={twMerge(
 								"px-2 py-2.5 font-medium first:pl-4 last:pr-4",
 								// Every other column shrinks to its content so the
 								// name column keeps the remainder.
@@ -185,7 +185,7 @@
 								<button
 									type="button"
 									onclick={() => toggleSort(key, h.numeric ?? false)}
-									class={cn(
+									class={twMerge(
 										"touch-hit -mx-1 inline-flex min-w-11 justify-center items-center gap-1 whitespace-nowrap rounded px-1 py-0.5 uppercase tracking-[0.12em] transition hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring",
 										sort === h.key && "text-accent-text",
 									)}

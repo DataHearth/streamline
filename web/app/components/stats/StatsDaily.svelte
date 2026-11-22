@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { formatDateShort } from "@lib/dates";
 	import { fmtCount, sumDays, type StatsDay } from "@lib/stats";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// One column per day, its height the day's grabs. Inside it, from the
@@ -51,7 +51,7 @@
 	{/if}
 
 	<div
-		class={cn("flex items-end", days.length > 45 ? "gap-px" : "gap-[3px]")}
+		class={twMerge("flex items-end", days.length > 45 ? "gap-px" : "gap-[3px]")}
 		style:height="{height}px"
 		role="img"
 		aria-label={summary}

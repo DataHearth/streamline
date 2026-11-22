@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Check, CircleAlert, CircleCheck, CircleX, LoaderCircle, X } from "@lucide/svelte";
 	import { errorText } from "@lib/api";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatBytes } from "@lib/format";
 	import type { DiscographyFiles, ReleaseFiles } from "@lib/music-books";
 	import type { PackFiles } from "@lib/types";
@@ -204,7 +204,7 @@
 						{:else}
 							<X size={13} class="shrink-0 text-status-failed" aria-label={i18n.release_files_track_out()} />
 						{/if}
-						<span class={cn("min-w-0 flex-1 truncate", a.in ? "text-fg" : "text-fg-subtle")}>{a.title}</span>
+						<span class={twMerge("min-w-0 flex-1 truncate", a.in ? "text-fg" : "text-fg-subtle")}>{a.title}</span>
 						<span class="shrink-0 font-mono text-[10.5px] tabular text-fg-subtle">
 							{a.in
 								? a.missing > 0
@@ -254,7 +254,7 @@
 							<X size={13} class="shrink-0 text-status-failed" aria-label={i18n.release_files_track_out()} />
 						{/if}
 						<span class="shrink-0 font-mono text-[11px] tabular text-fg-subtle">{t.label}</span>
-						<span class={cn("min-w-0 truncate", t.in ? "text-fg" : "text-fg-subtle")}>{t.title}</span>
+						<span class={twMerge("min-w-0 truncate", t.in ? "text-fg" : "text-fg-subtle")}>{t.title}</span>
 					</li>
 				{/each}
 			</ul>
@@ -265,7 +265,7 @@
 </div>
 
 {#snippet headline(t: Tone, line: string)}
-	<p class={cn("flex items-center gap-2 font-medium", TONE[t])}>
+	<p class={twMerge("flex items-center gap-2 font-medium", TONE[t])}>
 		{#if t === "good"}
 			<CircleCheck size={14} class="shrink-0" aria-hidden="true" />
 		{:else if t === "part"}
@@ -285,7 +285,7 @@
 		<ul class="mt-1.5 flex max-h-56 flex-col gap-0.5 overflow-y-auto overscroll-contain">
 			{#each files as f (f.path)}
 				<li class="flex items-baseline gap-3">
-					<span class={cn("min-w-0 flex-1 break-all font-mono text-[11px]", f.matched ? "text-fg" : "text-fg-subtle")}>
+					<span class={twMerge("min-w-0 flex-1 break-all font-mono text-[11px]", f.matched ? "text-fg" : "text-fg-subtle")}>
 						{f.path}
 					</span>
 					<span class="shrink-0 font-mono text-[10.5px] tabular text-fg-subtle">{formatBytes(f.size)}</span>

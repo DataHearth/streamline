@@ -12,7 +12,7 @@
 </script>
 
 <script lang="ts">
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { initials } from "@lib/people";
 	import Img from "./Img.svelte";
 
@@ -38,7 +38,7 @@
 	{#if p.photo}
 		<Img src={p.photo} alt="" loading="lazy" class="h-full w-full object-cover" />
 	{:else}
-		<span class={cn("grid h-full w-full place-items-center font-mono font-bold text-fg-subtle", small ? "text-[12px]" : "text-2xl")}>
+		<span class={twMerge("grid h-full w-full place-items-center font-mono font-bold text-fg-subtle", small ? "text-[12px]" : "text-2xl")}>
 			{initials(p.name)}
 		</span>
 	{/if}
@@ -51,10 +51,10 @@
 				<svelte:element
 					this={p.href ? "a" : "div"}
 					href={p.href}
-					class={cn("group flex min-h-11 items-center gap-3 rounded-md py-1", p.href && "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring")}
+					class={twMerge("group flex min-h-11 items-center gap-3 rounded-md py-1", p.href && "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring")}
 				>
 					<span
-						class={cn(
+						class={twMerge(
 							"relative h-10 w-10 shrink-0 overflow-hidden bg-bg-card",
 							round ? "rounded-full" : "rounded-md",
 							p.href && "transition group-hover:ring-2 group-hover:ring-accent-ring",
@@ -63,7 +63,7 @@
 						{@render face(p, true)}
 					</span>
 					<span class="min-w-0">
-						<span class={cn("block truncate text-[13px] font-medium", p.href ? "text-accent-text group-hover:text-accent" : "text-fg")}>{p.name}</span>
+						<span class={twMerge("block truncate text-[13px] font-medium", p.href ? "text-accent-text group-hover:text-accent" : "text-fg")}>{p.name}</span>
 						{#if p.role || p.note}
 							<span class="flex min-w-0 items-baseline gap-1.5 text-[11.5px] text-fg-subtle">
 								{#if p.role}<span class="min-w-0 truncate">{p.role}</span>{/if}
@@ -77,16 +77,16 @@
 		{/each}
 	</ul>
 {:else}
-	<ul class={cn("people-grid", dense ? "people-grid--dense" : "people-grid--full")}>
+	<ul class={twMerge("people-grid", dense ? "people-grid--dense" : "people-grid--full")}>
 		{#each people as p (p.key)}
 			<li class="min-w-0">
 				<svelte:element
 					this={p.href ? "a" : "div"}
 					href={p.href}
-					class={cn("group block min-w-0 text-center", p.href && "rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring")}
+					class={twMerge("group block min-w-0 text-center", p.href && "rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring")}
 				>
 					<div
-						class={cn(
+						class={twMerge(
 							"relative mx-auto mb-2 aspect-square w-full max-w-[128px] overflow-hidden bg-bg-card",
 							round ? "rounded-full" : "rounded-md",
 							p.href && "transition group-hover:ring-2 group-hover:ring-accent-ring",
@@ -95,7 +95,7 @@
 					>
 						{@render face(p, false)}
 					</div>
-					<div class={cn("truncate text-[12.5px] font-medium", p.href ? "text-accent-text group-hover:text-accent" : "text-fg")}>
+					<div class={twMerge("truncate text-[12.5px] font-medium", p.href ? "text-accent-text group-hover:text-accent" : "text-fg")}>
 						{p.name}
 					</div>
 					{#if p.role}

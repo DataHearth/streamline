@@ -14,7 +14,7 @@
 		List,
 		ListChecks,
 	} from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { dragScroll } from "@lib/drag-scroll";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
@@ -162,7 +162,7 @@
 								type="button"
 								aria-pressed={on}
 								onclick={() => onSortChange(opt.key)}
-								class={cn(chip, on ? chipOn : chipOff)}
+								class={twMerge(chip, on ? chipOn : chipOff)}
 							>
 								{opt.label}
 							</button>
@@ -183,7 +183,7 @@
 							type="button"
 							aria-pressed={view === "grid"}
 							onclick={() => onViewChange("grid")}
-							class={cn(chip, view === "grid" ? chipOn : chipOff)}
+							class={twMerge(chip, view === "grid" ? chipOn : chipOff)}
 						>
 							<LayoutGrid size={14} aria-hidden="true" />
 							{i18n.filter_posters()}
@@ -192,7 +192,7 @@
 							type="button"
 							aria-pressed={view === "list"}
 							onclick={() => onViewChange("list")}
-							class={cn(chip, view === "list" ? chipOn : chipOff)}
+							class={twMerge(chip, view === "list" ? chipOn : chipOff)}
 						>
 							<List size={14} aria-hidden="true" />
 							{i18n.filter_list()}
@@ -223,7 +223,7 @@
 					type="button"
 					disabled={activeCount === 0}
 					onclick={onReset}
-					class={cn(
+					class={twMerge(
 						"inline-flex h-11 items-center justify-center rounded-xl px-4 text-[14px] font-medium text-fg-muted transition active:bg-surface disabled:opacity-40",
 						view === "list" && "flex-1 border border-border bg-surface",
 					)}

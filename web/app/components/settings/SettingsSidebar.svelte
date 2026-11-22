@@ -2,7 +2,7 @@
 	import { onMount } from "svelte";
 	import type { SlidersHorizontal } from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { createSettingsNav } from "@lib/settings-nav.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -66,7 +66,7 @@
 	<a
 		href={path}
 		aria-current={active ? "page" : undefined}
-		class={cn(
+		class={twMerge(
 			"group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors duration-150",
 			active
 				? "bg-accent-soft text-accent-text"
@@ -81,13 +81,13 @@
 		{/if}
 		<Icon
 			size={16}
-			class={cn("shrink-0", active && "text-accent-text")}
+			class={twMerge("shrink-0", active && "text-accent-text")}
 			aria-hidden="true"
 		/>
 		<span class="flex-1 truncate">{label}</span>
 		{#if count !== undefined}
 			<span
-				class={cn(
+				class={twMerge(
 					"inline-flex min-w-5 items-center justify-center rounded-full px-1.5 font-mono text-[10px] font-semibold",
 					active ? "text-accent-text/80" : "text-fg-subtle",
 				)}

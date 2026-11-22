@@ -40,7 +40,7 @@
 		SlidersHorizontal,
 		type LucideIcon,
 	} from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { dragScroll } from "@lib/drag-scroll";
 	import SelectionTopBar from "@components/shared/SelectionTopBar.svelte";
 	import MediaFilterSheet from "@components/shared/MediaFilterSheet.svelte";
@@ -258,7 +258,7 @@
 		>
 			{#if query}
 				<span
-					class={cn(phoneChip, "border-accent-line bg-accent-soft text-accent-text")}
+					class={twMerge(phoneChip, "border-accent-line bg-accent-soft text-accent-text")}
 				>
 					“{query}”
 					<button
@@ -273,7 +273,7 @@
 			{/if}
 			{#if mon !== "all"}
 				<span
-					class={cn(phoneChip, "border-accent-line bg-accent-soft text-accent-text")}
+					class={twMerge(phoneChip, "border-accent-line bg-accent-soft text-accent-text")}
 				>
 					{currentMon.label}
 					<button
@@ -292,7 +292,7 @@
 					type="button"
 					onclick={() => onTabChange(t.key)}
 					aria-current={active ? "page" : undefined}
-					class={cn(
+					class={twMerge(
 						phoneChip,
 						active
 							? "border-accent-line bg-accent-soft text-accent-text"
@@ -301,7 +301,7 @@
 				>
 					{#if t.dot}
 						<span
-							class={cn("h-1.5 w-1.5 rounded-full", t.dot)}
+							class={twMerge("h-1.5 w-1.5 rounded-full", t.dot)}
 							aria-hidden="true"
 						></span>
 					{/if}
@@ -319,7 +319,7 @@
 			aria-haspopup="dialog"
 			aria-expanded={sheetOpen}
 			aria-label={i18n.filter_and_sort()}
-			class={cn(
+			class={twMerge(
 				"relative grid h-11 w-11 shrink-0 place-items-center rounded-lg border transition lg:h-9 lg:w-9",
 				activeFilters > 0
 					? "border-accent-line bg-accent-soft text-accent-text"
@@ -367,7 +367,7 @@
 						type="button"
 						aria-pressed={on}
 						onclick={() => onTypeChange(t.key)}
-						class={cn(
+						class={twMerge(
 							"inline-flex min-h-11 shrink-0 items-center rounded-full border px-3.5 font-mono text-[12.5px] lowercase transition lg:h-9 lg:min-h-0",
 							on
 								? "border-accent-line bg-accent-soft text-accent-text"
@@ -392,7 +392,7 @@
 						type="button"
 						aria-pressed={on}
 						onclick={() => onMonChange(o.key)}
-						class={cn(
+						class={twMerge(
 							"inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-3.5 text-[13px] font-medium transition",
 							on
 								? "border-accent-line bg-accent-soft text-accent-text"
@@ -425,10 +425,10 @@
 			aria-haspopup="listbox"
 			aria-expanded={facet === "status"}
 			aria-label={i18n.series_status()}
-			class={cn(trigger, tab !== "all" ? triggerOn : triggerOff)}
+			class={twMerge(trigger, tab !== "all" ? triggerOn : triggerOff)}
 		>
 			<span
-				class={cn(
+				class={twMerge(
 					"h-2 w-2 rounded-full",
 					currentTab.dot || (tab === "all" ? "bg-fg-faint" : "bg-accent"),
 				)}
@@ -437,11 +437,11 @@
 			<span class="facet-key {tab !== 'all' ? 'text-accent-text/70' : 'text-fg-subtle'}">
 				{i18n.filter_status()}
 			</span>
-			<span class={cn(tab !== "all" ? "text-accent-text" : "text-fg")}>
+			<span class={twMerge(tab !== "all" ? "text-accent-text" : "text-fg")}>
 				{currentTab.label}
 			</span>
 			<span
-				class={cn(
+				class={twMerge(
 					"font-mono text-[10.5px] tabular",
 					tab !== "all" ? "text-accent-text/70" : "text-fg-subtle",
 				)}
@@ -449,7 +449,7 @@
 				{counts[tab]}
 			</span>
 			<ChevronDown
-				class={cn("h-3.5 w-3.5 transition", facet === "status" && "rotate-180")}
+				class={twMerge("h-3.5 w-3.5 transition", facet === "status" && "rotate-180")}
 				aria-hidden="true"
 			/>
 		</button>
@@ -483,7 +483,7 @@
 			aria-haspopup="listbox"
 			aria-expanded={facet === "type"}
 			aria-label={i18n.series_type()}
-			class={cn(trigger, typeFilter !== "all" ? triggerOn : triggerOff)}
+			class={twMerge(trigger, typeFilter !== "all" ? triggerOn : triggerOff)}
 		>
 			<Tv class="h-3.5 w-3.5" aria-hidden="true" />
 			<span
@@ -493,7 +493,7 @@
 			</span>
 			<!-- Type keeps the mono lowercase it has always been drawn in. -->
 			<span
-				class={cn(
+				class={twMerge(
 					"font-mono text-[11.5px] lowercase",
 					typeFilter !== "all" ? "text-accent-text" : "text-fg",
 				)}
@@ -501,7 +501,7 @@
 				{currentType.label}
 			</span>
 			<ChevronDown
-				class={cn("h-3.5 w-3.5 transition", facet === "type" && "rotate-180")}
+				class={twMerge("h-3.5 w-3.5 transition", facet === "type" && "rotate-180")}
 				aria-hidden="true"
 			/>
 		</button>
@@ -536,17 +536,17 @@
 			aria-haspopup="listbox"
 			aria-expanded={facet === "mon"}
 			aria-label={i18n.monitor_monitoring()}
-			class={cn(trigger, mon !== "all" ? triggerOn : triggerOff)}
+			class={twMerge(trigger, mon !== "all" ? triggerOn : triggerOff)}
 		>
 			<Eye class="h-3.5 w-3.5" aria-hidden="true" />
 			<span class="facet-key {mon !== 'all' ? 'text-accent-text/70' : 'text-fg-subtle'}">
 				{i18n.monitor_monitoring()}
 			</span>
-			<span class={cn(mon !== "all" ? "text-accent-text" : "text-fg")}>
+			<span class={twMerge(mon !== "all" ? "text-accent-text" : "text-fg")}>
 				{currentMon.label}
 			</span>
 			<ChevronDown
-				class={cn("h-3.5 w-3.5 transition", facet === "mon" && "rotate-180")}
+				class={twMerge("h-3.5 w-3.5 transition", facet === "mon" && "rotate-180")}
 				aria-hidden="true"
 			/>
 		</button>
@@ -618,7 +618,7 @@
 				     resize moved every control to its right on each pick. -->
 				<span class="text-left text-fg lg:w-[7.5rem]">{currentSortLabel}</span>
 				<ChevronDown
-					class={cn("h-3.5 w-3.5 transition", facet === "sort" && "rotate-180")}
+					class={twMerge("h-3.5 w-3.5 transition", facet === "sort" && "rotate-180")}
 					aria-hidden="true"
 				/>
 			</button>
@@ -648,7 +648,7 @@
 				type="button"
 				onclick={() => onViewChange("grid")}
 				title={i18n.common_grid_view()}
-				class={cn(
+				class={twMerge(
 					"grid h-10 w-10 place-items-center rounded-sm transition lg:h-7 lg:w-7",
 					view === "grid" ? "bg-bg-card text-fg" : "text-fg-subtle hover:text-fg",
 				)}
@@ -660,7 +660,7 @@
 				type="button"
 				onclick={() => onViewChange("list")}
 				title={i18n.common_list_view()}
-				class={cn(
+				class={twMerge(
 					"grid h-10 w-10 place-items-center rounded-sm transition lg:h-7 lg:w-7",
 					view === "list" ? "bg-bg-card text-fg" : "text-fg-subtle hover:text-fg",
 				)}
@@ -695,7 +695,7 @@
 				aria-pressed={selectMode}
 				aria-label={i18n.common_select()}
 				title={i18n.common_select()}
-				class={cn(
+				class={twMerge(
 					"grid h-11 w-11 shrink-0 place-items-center rounded-md border transition lg:h-9 lg:w-9",
 					selectMode ? triggerOn : triggerOff,
 				)}

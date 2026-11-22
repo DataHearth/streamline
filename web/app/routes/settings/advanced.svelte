@@ -18,7 +18,7 @@
 	import { api, errorText } from "@lib/api";
 	import { config, markConfigForm } from "@lib/config.svelte";
 	import { toast } from "@lib/toast";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import type {
 		MigrationRoot,
 		PathMigration,
@@ -530,7 +530,7 @@
 					aria-label={i18n.migration_progress()}
 				>
 					<div
-						class={cn(
+						class={twMerge(
 							"h-full rounded-full transition-[width] duration-300",
 							s.error ? "bg-status-failed" : "bg-accent",
 						)}

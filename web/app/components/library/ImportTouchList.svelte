@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Search, X } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { dragScroll } from "@lib/drag-scroll";
 	import {
 		CLASS_CHIPS,
@@ -89,7 +89,7 @@
 					type="button"
 					aria-pressed={on}
 					onclick={() => onClassificationChange(chip.key)}
-					class={cn(
+					class={twMerge(
 						"inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-medium transition",
 						on
 							? "border-accent-line bg-accent-soft text-accent-text"

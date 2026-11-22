@@ -3,7 +3,7 @@
 	import { ArrowUpRight, Ban, ChevronDown, LoaderCircle, RotateCcw } from "@lucide/svelte";
 	import StatusPill from "@components/shared/StatusPill.svelte";
 	import ProgressBar from "@components/shared/ProgressBar.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { formatBytes } from "@lib/format";
 	import { formatDateTime } from "@lib/dates";
 	import { basename, jobFigure, jobHref, transcodeKind } from "@lib/transcoding";
@@ -47,7 +47,7 @@
 </script>
 
 <div
-	class={cn(
+	class={twMerge(
 		"border-b border-border last:border-b-0",
 		job.status === "canceled" && "opacity-60",
 	)}
@@ -68,7 +68,7 @@
 				</span>
 				<ChevronDown
 					size={13}
-					class={cn(
+					class={twMerge(
 						"shrink-0 text-fg-faint transition-transform sm:hidden",
 						expanded && "rotate-180",
 					)}
@@ -122,7 +122,7 @@
 					type="button"
 					disabled={busy}
 					onclick={() => onCancel(job)}
-					class={cn(action, "bg-status-failed/15 text-status-failed hover:bg-status-failed/25")}
+					class={twMerge(action, "bg-status-failed/15 text-status-failed hover:bg-status-failed/25")}
 				>
 					{#if busy}
 						<LoaderCircle size={13} class="motion-safe:animate-spin" aria-hidden="true" />
@@ -136,7 +136,7 @@
 					type="button"
 					disabled={busy}
 					onclick={() => onRetry(job)}
-					class={cn(action, "bg-accent-soft text-accent-text hover:bg-accent-soft")}
+					class={twMerge(action, "bg-accent-soft text-accent-text hover:bg-accent-soft")}
 				>
 					{#if busy}
 						<LoaderCircle size={13} class="motion-safe:animate-spin" aria-hidden="true" />
@@ -161,7 +161,7 @@
 			>
 				<ChevronDown
 					size={13}
-					class={cn("transition-transform", expanded && "rotate-180")}
+					class={twMerge("transition-transform", expanded && "rotate-180")}
 					aria-hidden="true"
 				/>
 			</button>

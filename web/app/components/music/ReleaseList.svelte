@@ -5,7 +5,7 @@
 	import { cubicInOut, cubicOut } from "svelte/easing";
 	import { api } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import ReleaseCover from "./ReleaseCover.svelte";
 	import ReleaseMark from "./ReleaseMark.svelte";
@@ -53,7 +53,7 @@
 			type="button"
 			onclick={() => onSelect(r)}
 			aria-current={sel ? "true" : undefined}
-			class={cn(
+			class={twMerge(
 				"flex w-full items-center gap-3 rounded-lg border px-2.5 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-ring",
 				sel ? "border-accent/60 bg-accent-soft" : "border-transparent hover:bg-surface",
 			)}
@@ -67,7 +67,7 @@
 				/>
 			</div>
 			<div class="min-w-0 flex-1">
-				<p class={cn("truncate text-[13px] font-medium", sel ? "text-accent-text" : "text-fg")}>{r.title}</p>
+				<p class={twMerge("truncate text-[13px] font-medium", sel ? "text-accent-text" : "text-fg")}>{r.title}</p>
 				<p class="truncate font-mono text-[10.5px] text-fg-subtle">
 					{up ? releaseTypeLabel(r.type) : releaseLine(r)}
 				</p>
@@ -81,14 +81,14 @@
 	{#each groups as g, i (g.key)}
 		{@const open = toggled[g.key] ?? opensByDefault(g)}
 		{@const allMonitored = g.releases.every((r) => r.monitored)}
-		<div class={cn("flex items-center gap-1 pr-1", i > 0 && "mt-3")}>
+		<div class={twMerge("flex items-center gap-1 pr-1", i > 0 && "mt-3")}>
 			<button
 				type="button"
 				aria-expanded={open}
 				onclick={() => (toggled[g.key] = !open)}
 				class="flex min-h-11 min-w-0 flex-1 items-center gap-1.5 rounded-md px-2.5 text-left font-mono text-[10px] uppercase tracking-[0.12em] text-fg-subtle transition hover:text-fg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring lg:min-h-7"
 			>
-				<ChevronRight size={12} class={cn("shrink-0 transition-transform duration-150", open && "rotate-90")} aria-hidden="true" />
+				<ChevronRight size={12} class={twMerge("shrink-0 transition-transform duration-150", open && "rotate-90")} aria-hidden="true" />
 				<span class="truncate">{g.label} · {g.releases.length}</span>
 			</button>
 			{#if onMonitorGroup}

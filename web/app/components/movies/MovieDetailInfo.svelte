@@ -8,7 +8,7 @@
 	import { toast } from "@lib/toast";
 	import { formatBytes } from "@lib/format";
 	import { formatDate, formatRelative } from "@lib/dates";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import {
 		audioSummary,
 		audioLanguages,
@@ -160,7 +160,7 @@
 				</h4>
 				{#if primary}
 					<span
-						class={cn(
+						class={twMerge(
 							"shrink-0 rounded-full border px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.1em]",
 							probe
 								? "border-status-available/30 bg-status-available/10 text-status-available"
@@ -172,7 +172,7 @@
 				{/if}
 				{#if primary?.file_score !== undefined}
 					<span
-						class={cn(
+						class={twMerge(
 							"shrink-0 rounded-full border px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.1em]",
 							primary.file_score > 0
 								? "border-status-available/30 bg-status-available/10 text-status-available"

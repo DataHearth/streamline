@@ -5,7 +5,7 @@
 	import { fieldErrorMessages } from "@lib/fieldErrors";
 	import TogglePill from "@components/forms/TogglePill.svelte";
 	import BrandLogo from "@components/settings/BrandLogo.svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { readOnlyLock } from "@lib/config.svelte";
 	import { hostDestination } from "@lib/destination";
 	import type { AppForm } from "@lib/form";
@@ -121,7 +121,7 @@
 		title={i18n.indexer_prefill_from({ label: p.label })}
 		disabled={lock()}
 		onclick={() => applyPreset(p)}
-		class={cn(
+		class={twMerge(
 			"inline-flex min-h-11 lg:h-9 lg:min-h-0 cursor-pointer items-center gap-2 rounded-md border border-border bg-bg-card px-2.5 text-xs font-medium text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-not-allowed disabled:opacity-60",
 			aggregator && "border-accent/30",
 		)}

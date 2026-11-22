@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { LETTERS } from "@lib/music-books";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -99,7 +99,7 @@
 			onclick={() => onScrub(l, true)}
 			aria-label={i18n.music_jump_to({ letter: l })}
 			aria-current={l === current ? "true" : undefined}
-			class={cn(
+			class={twMerge(
 				"grid h-[22px] min-h-0 w-6 shrink place-items-center rounded-md font-mono text-[10.5px] leading-none transition",
 				l === current
 					? "bg-accent-soft font-semibold text-accent-text"

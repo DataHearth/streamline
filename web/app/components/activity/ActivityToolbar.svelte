@@ -46,7 +46,7 @@
 <script lang="ts">
 	import type { Snippet } from "svelte";
 	import { Magnet, Search, Trash2, X } from "@lucide/svelte";
-	import { cn } from "@lib/cn";
+	import { twMerge } from "tailwind-merge";
 	import { dragScroll } from "@lib/drag-scroll";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -102,7 +102,7 @@
      dot in an empty pill. Two lines are too tall to pin, so that toolbar scrolls
      away with the page on a phone; a selection's bar is what stays pinned. -->
 <div
-	class={cn(
+	class={twMerge(
 		"top-(--top-bar-height) z-20 -mx-4 mb-1 flex flex-wrap items-center gap-2 bg-bg-deep/85 px-4 pb-3 pt-3 backdrop-blur-md md:sticky md:-mx-6 md:gap-3 md:px-6",
 		!leading && "sticky flex-nowrap",
 	)}
@@ -129,7 +129,7 @@
 					type="button"
 					onclick={() => toggleChip(c.key)}
 					aria-pressed={on}
-					class={cn(
+					class={twMerge(
 						"inline-flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-sm px-2.5 font-mono text-[11px] lowercase transition lg:h-7",
 						on ? "bg-accent-soft text-accent-text" : "text-fg-subtle hover:text-fg",
 					)}
@@ -166,7 +166,7 @@
 			aria-haspopup="dialog"
 			aria-label={i18n.common_search_and_sort()}
 			title={i18n.common_search_and_sort()}
-			class={cn(
+			class={twMerge(
 				"relative ml-auto grid h-11 w-11 lg:h-9 lg:w-9 shrink-0 place-items-center rounded-md border transition lg:hidden",
 				activeFilters > 0
 					? "border-accent-line bg-accent-soft text-accent-text"
