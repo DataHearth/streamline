@@ -372,6 +372,29 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(AdoptionEpisode(parsed, show).ID).To(Equal(uint32(101)))
 		})
 
+		// "S01.Special.<title>" is one special, filed in season 0 by the
+		// library, never season 1's pack.
+		It("proposes a special named by title against the specials", func() {
+			show := buildShow(false, false)
+			show.Edges.Seasons = append(
+				[]*ent.Season{{
+					Number: 0,
+					Edges: ent.SeasonEdges{
+						Episodes: []*ent.Episode{{ID: 900, Number: 1}},
+					},
+				}},
+				show.Edges.Seasons...,
+			)
+			parsed := library.Parse(
+				"The.Bear.S01.Special.Behind.The.Line.1080p.WEB-X",
+			)
+			dec, ok := classifyEpisodeAdoption(parsed, 0, []*ent.TVShow{show})
+			Expect(ok).To(BeTrue())
+			Expect(dec.autoImport).To(BeFalse())
+			Expect(dec.reason).To(Equal("special named by title, review manually"))
+			Expect(dec.episodeID).To(Equal(uint32(900)))
+		})
+
 		// A pack is fetched for what the library is missing, so anchoring it on
 		// the season's first episode names one the operator already has.
 		It("anchors a pack on an episode whose file is missing from disk", func() {

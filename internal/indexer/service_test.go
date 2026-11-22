@@ -426,6 +426,36 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 		)
 	})
 
+	Describe("a special filed under a numbered season", func() {
+		const named = "Show.S05.Special.The.Lost.Night.1080p.WEB-GRP"
+
+		It("is neither season 5's pack nor a pack hiding its episodes", func() {
+			Expect(filterToSeason([]SearchResult{{Title: named}}, 5)).To(BeEmpty())
+
+			out, hidden := filterToEpisode([]SearchResult{{Title: named}}, 5, 1)
+			Expect(out).To(BeEmpty())
+			Expect(hidden).To(BeZero())
+		})
+
+		It("is found by its title, as an SxxE00 special is", func() {
+			in := []SearchResult{
+				{Title: named},
+				{Title: "Show.S11E00.The.Lost.Night.720p.HDTV-GRP"},
+			}
+			Expect(namedSpecials(in, []string{"Show"}, "The Lost Night")).
+				To(HaveLen(2))
+		})
+
+		It("leaves a numbered special matching its show", func() {
+			out := preferTitleMatches(
+				[]SearchResult{{Title: "Show.S00E01.1080p.WEB-GRP"}},
+				[]string{"Show"},
+			)
+			Expect(out).To(HaveLen(1))
+			Expect(out[0].TitleMismatch).To(BeFalse())
+		})
+	})
+
 	Describe("namedSpecials", func() {
 		It("keeps a release naming the special by title and by no number", func() {
 			in := []SearchResult{

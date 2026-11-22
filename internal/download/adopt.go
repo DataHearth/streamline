@@ -198,7 +198,7 @@ func classifyEpisodeAdoption(
 			episodeID:  ep.ID,
 			episodeIDs: claim,
 			quality:    parsed.Resolution,
-			reason:     "season pack, review manually",
+			reason:     packReason(parsed),
 		}, true
 	}
 	d := adoptDecision{
@@ -250,6 +250,11 @@ func adoptionScope(
 ) []*ent.Season {
 	if parsed.SeasonPack {
 		return seasonNumbered(show, parsed.Season)
+	}
+	// "Show.S05.Special.The.Title" is one special, which the library files
+	// in season 0 whatever season the name puts it under.
+	if parsed.Special {
+		return seasonNumbered(show, 0)
 	}
 	// A whole-series pack ("INTEGRALE", "COMPLETE") names no season, so
 	// parsed.Season is 0 — which is the *specials* season, not "unknown".
@@ -336,6 +341,15 @@ func specialsLast(season uint16) uint16 {
 		return ^uint16(0)
 	}
 	return season
+}
+
+// packReason is why a release that is not one numbered episode waits for a
+// person.
+func packReason(parsed library.ParseResult) string {
+	if parsed.Special {
+		return "special named by title, review manually"
+	}
+	return "season pack, review manually"
 }
 
 func singleEpisodeRelease(parsed library.ParseResult) bool {

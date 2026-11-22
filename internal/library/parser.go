@@ -9,11 +9,18 @@ import (
 )
 
 type ParseResult struct {
-	Title          string
-	Year           uint16
-	Season         uint16
-	Episode        uint16
-	SeasonPack     bool
+	Title      string
+	Year       uint16
+	Season     uint16
+	Episode    uint16
+	SeasonPack bool
+	// Special is a season token followed by the word "special"
+	// ("Show.S05.Special.The.Title", "Show.S00.Christmas.Special"): one
+	// special filed under that season, named by its title, which leaves
+	// SeasonPack unset. Sonarr reads the shape the same way. "Specials" is
+	// the specials season's pack and "Special Edition" an edition tag, so
+	// neither counts.
+	Special        bool
 	AbsoluteNumber uint16
 	AirDate        *time.Time
 	Resolution     string
@@ -60,6 +67,9 @@ var (
 	dotGroupRe = regexp.MustCompile(`\.([A-Za-z0-9]+)$`)
 
 	seasonPackRe = regexp.MustCompile(`(?i)\bS(\d{2})\b(?:[^E]|$)`)
+	// specialWordRe finds "special" after a season token, the edition tag
+	// captured so it can be told apart (RE2 has no lookahead).
+	specialWordRe = regexp.MustCompile(`(?i)\bspecial\b([._ -]+edition\b)?`)
 	// Non-scene releases spell the season out — French trackers in particular
 	// ("Breaking Bad Saison 04 Complète Multi …"). Without this the name carries
 	// no season token at all, which reads as "single episode of nothing" and
@@ -144,14 +154,20 @@ func Parse(filename string) ParseResult {
 	}
 	// Season pack: SXX (or a spelled-out season) present but no SXXEXX matched.
 	if r.Episode == 0 {
-		m := seasonPackRe.FindStringSubmatch(filename)
+		m := seasonPackRe.FindStringSubmatchIndex(filename)
 		if m == nil {
-			m = longSeasonRe.FindStringSubmatch(filename)
+			m = longSeasonRe.FindStringSubmatchIndex(filename)
 		}
 		if m != nil {
-			if s, err := strconv.ParseUint(m[1], 10, 16); err == nil {
+			if s, err := strconv.ParseUint(
+				filename[m[2]:m[3]], 10, 16,
+			); err == nil {
 				r.Season = uint16(s)
-				r.SeasonPack = true
+				if namesSpecial(filename[m[1]:]) {
+					r.Special = true
+				} else {
+					r.SeasonPack = true
+				}
 			}
 		}
 	}
@@ -441,6 +457,17 @@ func (s SeasonSpan) EpisodeCount(perSeason map[uint16]int) int {
 // byte offset of the year Parse settled on, or -1 for none — searching for the
 // year's *text* instead would find the title's own digits first ("Fantasia 2000
 // (2000)" would cut at the title).
+// namesSpecial reports whether what follows a season token carries the word
+// "special" other than as the "Special Edition" tag.
+func namesSpecial(rest string) bool {
+	for _, m := range specialWordRe.FindAllStringSubmatch(rest, -1) {
+		if m[1] == "" {
+			return true
+		}
+	}
+	return false
+}
+
 func extractTitle(filename string, r ParseResult, yearIdx int) string {
 	// Find the position of the first technical token
 	cutPos := len(filename)
@@ -449,7 +476,10 @@ func extractTitle(filename string, r ParseResult, yearIdx int) string {
 	}
 
 	markers := []string{}
-	if r.Season > 0 {
+	// Season 0 is a season token too: S00E01, an S00 pack and an S00 special
+	// all name the specials, and a test on Season alone would leave the token
+	// in the title ("Show S00E01"), which no show's title equals.
+	if r.Season > 0 || r.Episode > 0 || r.SeasonPack || r.Special {
 		// A pack has no SxxExx to cut at, so fall back to the bare season
 		// token. Without it the cut lands on the resolution instead and the
 		// season plus every language/edition tag between them is glued into

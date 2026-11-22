@@ -403,6 +403,47 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 			Expect(r.AirDate.Year()).To(Equal(2026))
 		})
 
+		It("reads a season token followed by Special as one special", func() {
+			for _, name := range []string{
+				"Show.S05.Special.The.Title.1080p.WEB-GRP",
+				"Show.S02.Special-Inside.Chesters.Mill.HDTV.x264-BAJSKORV",
+				"Show.S05.Christmas.Special.720p.HDTV-GRP",
+			} {
+				r := Parse(name)
+				Expect(r.Special).To(BeTrue(), name)
+				Expect(r.SeasonPack).To(BeFalse(), name)
+				Expect(r.Title).To(Equal("Show"), name)
+				Expect(ParseSeasonSpan(name)).To(Equal(SeasonSpan{}), name)
+			}
+		})
+
+		It("keeps Specials and Special Edition packs as packs", func() {
+			for name, season := range map[string]uint16{
+				"The.Big.Bang.Theory.S00.Specials.1080p.WEB-GRP": 0,
+				"Show.S01.Special.Edition.1080p.BluRay.x264-GRP": 1,
+				"Big.Special.Show.S05.1080p.HDTV.x264-GRP":       5,
+			} {
+				r := Parse(name)
+				Expect(r.SeasonPack).To(BeTrue(), name)
+				Expect(r.Special).To(BeFalse(), name)
+				Expect(r.Season).To(Equal(season), name)
+			}
+		})
+
+		// The season token is cut from the title for season 0 as for any
+		// other: left in, no special's title ever equals the show's.
+		DescribeTable("cuts the title at a season 0 token",
+			func(name, title string) {
+				Expect(Parse(name).Title).To(Equal(title))
+			},
+			Entry("a numbered special", "Show.S00E01.1080p.WEB-GRP", "Show"),
+			Entry("the specials pack",
+				"The.Big.Bang.Theory.S00.Specials.1080p.WEB-GRP",
+				"The Big Bang Theory"),
+			Entry("a spelled-out season 0", "Show Saison 0 MULTI 1080p", "Show"),
+			Entry("an S00 special", "Show.S00.Christmas.Special.1080p-GRP", "Show"),
+		)
+
 		It("still parses standard SxxExx", func() {
 			r := Parse("Show.S01E05.1080p.WEB-DL-GRP")
 			Expect(r.Season).To(Equal(uint16(1)))
