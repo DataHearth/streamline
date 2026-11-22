@@ -1,7 +1,7 @@
 <script lang="ts">
+	import { BELOW_MD, createMediaQuery } from "@lib/viewport.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { onMount } from "svelte";
 	import { Inbox } from "@lucide/svelte";
 	import { api, errorText } from "@lib/api";
 	import type { ImportScanList } from "@lib/types";
@@ -15,14 +15,8 @@
 	// Which container the form gets. Rendered as an either/or rather than two
 	// breakpoint-hidden copies, so only one NewImportForm — and one createForm —
 	// is ever mounted.
-	let isTouch = $state(false);
-	onMount(() => {
-		const mq = window.matchMedia("(max-width: 767px)");
-		const sync = () => (isTouch = mq.matches);
-		sync();
-		mq.addEventListener("change", sync);
-		return () => mq.removeEventListener("change", sync);
-	});
+	const belowMd = createMediaQuery(BELOW_MD);
+	let isTouch = $derived(belowMd());
 
 	const LIMIT = 20;
 	let page = $state(1);

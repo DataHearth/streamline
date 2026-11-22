@@ -2,7 +2,6 @@
 	import Button from "@components/shared/Button.svelte";
 	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
-	import { onMount } from "svelte";
 	import { fly, fade } from "svelte/transition";
 	import { cubicOut } from "svelte/easing";
 	import {
@@ -25,7 +24,7 @@
 	import TorrentPeersTab from "./TorrentPeersTab.svelte";
 	import TorrentTrackersTab from "./TorrentTrackersTab.svelte";
 	import { twMerge } from "tailwind-merge";
-	import { BELOW_MD } from "@lib/viewport.svelte";
+	import { BELOW_MD, createMediaQuery } from "@lib/viewport.svelte";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
 	import {
@@ -81,14 +80,8 @@
 	// than by finding a close target in a far corner. Same content either way — only
 	// the container and the axis it travels on change, and the axis can't be a CSS
 	// class, so the breakpoint is read here.
-	let compact = $state(false);
-	onMount(() => {
-		const mql = window.matchMedia(BELOW_MD);
-		const sync = () => (compact = mql.matches);
-		sync();
-		mql.addEventListener("change", sync);
-		return () => mql.removeEventListener("change", sync);
-	});
+	const belowMd = createMediaQuery(BELOW_MD);
+	let compact = $derived(belowMd());
 
 	// Reset to Files + clear transient UI whenever a different torrent opens.
 	let lastHash = "";

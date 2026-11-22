@@ -12,7 +12,7 @@
 	import AddMusicBookModal from "@components/shared/AddMusicBookModal.svelte";
 	import MusicBookLookupScreen from "@components/shared/MusicBookLookupScreen.svelte";
 	import { restoreScrollOnBack } from "@lib/scroll-restore";
-	import { BELOW_MD } from "@lib/viewport.svelte";
+	import { BELOW_MD, createMediaQuery } from "@lib/viewport.svelte";
 	import { onOpenAdd } from "@lib/add-flow";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
@@ -29,7 +29,8 @@
 	// palette — different components, not something CSS can pick. From md the
 	// palette is mounted for a mouse's search bar and for Ctrl/⌘+K on any
 	// pointer; a touch screen's search bar is a link to /search (TopBar).
-	let compact = $state(false);
+	const belowMd = createMediaQuery(BELOW_MD);
+	let compact = $derived(belowMd());
 	let main = $state<HTMLElement | null>(null);
 
 	onMount(() => (main ? restoreScrollOnBack(main) : undefined));
@@ -42,14 +43,7 @@
 			else if (kind === "artist") addArtistOpen = true;
 			else addBookOpen = true;
 		});
-		const mql = window.matchMedia(BELOW_MD);
-		const syncCompact = () => (compact = mql.matches);
-		syncCompact();
-		mql.addEventListener("change", syncCompact);
-		return () => {
-			offAdd();
-			mql.removeEventListener("change", syncCompact);
-		};
+		return offAdd;
 	});
 </script>
 

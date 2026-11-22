@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Button from "@components/shared/Button.svelte";
+	import { BELOW_MD, createMediaQuery } from "@lib/viewport.svelte";
 	import {
 		createMutation,
 		createQuery,
@@ -639,14 +640,8 @@
 	// Which picker surface. Below md the modal is replaced by ImportMatchSheet —
 	// picking a match only PATCHes the scan row, so it has no business opening the
 	// add-to-library modal.
-	let isTouch = $state(false);
-	onMount(() => {
-		const mq = window.matchMedia("(max-width: 767px)");
-		const sync = () => (isTouch = mq.matches);
-		sync();
-		mq.addEventListener("change", sync);
-		return () => mq.removeEventListener("change", sync);
-	});
+	const belowMd = createMediaQuery(BELOW_MD);
+	let isTouch = $derived(belowMd());
 
 	let pickerOpen = $derived(pickerFile !== null || pickerShow !== null);
 	let pickerContext = $derived(
