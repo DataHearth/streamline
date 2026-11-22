@@ -92,6 +92,28 @@ var _ = Describe("On-screen keyboard", Label("e2e"), func() {
 			Should(BeFalse())
 	})
 
+	It("brings the bottom nav back only once the keyboard is down", func() {
+		page := phone("/settings/general", true)
+		page.MustElement(field).MustFocus()
+		page.MustSetViewport(width, height-keyboard, 1, true)
+		settle(page, false)
+
+		// A tap on nothing: focus leaves the field, the keyboard starts down.
+		page.MustEval(`() => document.activeElement.blur()`)
+		Consistently(navShown(page)).
+			WithTimeout(300 * time.Millisecond).
+			WithPolling(25 * time.Millisecond).
+			Should(BeFalse())
+		page.MustSetViewport(width, height-keyboard/2, 1, true)
+		Consistently(navShown(page)).
+			WithTimeout(300 * time.Millisecond).
+			WithPolling(25 * time.Millisecond).
+			Should(BeFalse())
+
+		page.MustSetViewport(width, height, 1, true)
+		settle(page, true)
+	})
+
 	It("keeps the bottom nav when a mouse-driven window is made shorter", func() {
 		page := phone("/settings/general", false)
 		page.MustElement(field).MustFocus()

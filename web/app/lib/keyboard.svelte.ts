@@ -25,48 +25,33 @@ function measure(resized: boolean): boolean {
 		height: vv ? vv.height * vv.scale : window.innerHeight,
 		typing: typesText(document.activeElement),
 		resized,
-	});
+	}).up;
 }
 
+// Read at once on every resize and focus change: a focus change never closes
+// the keyboard (lib/keyboard.ts), so nothing waits for focus to settle.
 const subscribe = createSubscriber((update) => {
 	const vv = window.visualViewport;
-	let frame = 0;
-	const set = (next: boolean) => {
+	const read = (resized: boolean) => {
+		const next = measure(resized);
 		if (next === up) return;
 		up = next;
 		update();
 	};
-	// A resize is read at once, before anything that lays out by the page's
-	// size reads it, and so is focus reaching a text field. Focus leaving one
-	// waits a frame, whether it leaves for nothing or for a button: moving to
-	// another field, or a Select focusing its own search field, passes through
-	// both.
-	const resized = () => {
-		cancelAnimationFrame(frame);
-		set(measure(true));
-	};
-	const later = () => {
-		cancelAnimationFrame(frame);
-		frame = requestAnimationFrame(() => set(measure(false)));
-	};
-	const focused = (event: FocusEvent) => {
-		if (!typesText(event.target)) return later();
-		cancelAnimationFrame(frame);
-		set(measure(false));
-	};
+	const resized = () => read(true);
+	const focused = () => read(false);
 	// Read on subscribing too, as a fresh size: with no reader left the
 	// listeners stop, and the value would be whatever they last saw.
 	up = measure(true);
 	vv?.addEventListener("resize", resized);
 	window.addEventListener("resize", resized);
 	document.addEventListener("focusin", focused);
-	document.addEventListener("focusout", later);
+	document.addEventListener("focusout", focused);
 	return () => {
-		cancelAnimationFrame(frame);
 		vv?.removeEventListener("resize", resized);
 		window.removeEventListener("resize", resized);
 		document.removeEventListener("focusin", focused);
-		document.removeEventListener("focusout", later);
+		document.removeEventListener("focusout", focused);
 	};
 });
 
