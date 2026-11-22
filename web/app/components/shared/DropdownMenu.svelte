@@ -101,7 +101,16 @@
 		}
 	});
 
+	// A scroll, or the menu settling to its size: an anchor gone from view
+	// closes the menu.
 	function recompute() {
+		place(false);
+	}
+	// A resize: see place.
+	function onResize() {
+		place(true);
+	}
+	function place(resized: boolean) {
 		if (!anchor) return;
 		const offScreen = (box: DOMRect) =>
 			box.bottom < 0 ||
@@ -111,11 +120,12 @@
 		let r = anchor.getBoundingClientRect();
 		if (offScreen(r)) {
 			// Scrolled out of view: the anchor is gone, so the menu goes with it.
-			// Unless focus is in the menu: on a phone the on-screen keyboard its own
-			// search field raises shortens the page under a low anchor, and closing
-			// would drop the field and the keyboard under the person typing. The
-			// anchor is brought back above the keyboard instead.
-			if (!menuEl?.contains(document.activeElement)) {
+			// Unless the page shrank under it with focus in the menu: on a phone
+			// the on-screen keyboard its own search field raises leaves a low
+			// anchor below the page, and closing would drop the field and the
+			// keyboard under the person typing. The anchor is brought back above
+			// the keyboard instead. A scroll still closes it.
+			if (!resized || !menuEl?.contains(document.activeElement)) {
 				onClose();
 				return;
 			}
@@ -156,7 +166,7 @@
 		observer?.disconnect();
 		observer = null;
 		window.removeEventListener("scroll", recompute, true);
-		window.removeEventListener("resize", recompute);
+		window.removeEventListener("resize", onResize);
 	}
 	$effect(() => {
 		if (!open) return;
@@ -175,7 +185,7 @@
 			}
 		});
 		window.addEventListener("scroll", recompute, true);
-		window.addEventListener("resize", recompute);
+		window.addEventListener("resize", onResize);
 		const onDown = (e: MouseEvent) => {
 			const t = e.target as Node;
 			if (menuEl?.contains(t)) return;

@@ -25,13 +25,14 @@ export const typesText = (el: EventTarget | null): boolean =>
 	(el instanceof HTMLInputElement && !NOT_TYPED.has(el.type)) ||
 	(el instanceof HTMLElement && el.isContentEditable);
 
-// One reading of the page: its size, whether a text field has focus, and
-// whether it was resized.
+// One reading of the page: its size, whether a text field has focus, and what
+// prompted it: the page resized, focus moved, or focus has been out of every
+// field for a while (`idle`).
 export type KeyboardReading = {
 	width: number;
 	height: number;
 	typing: boolean;
-	resized: boolean;
+	kind: "resize" | "focus" | "idle";
 };
 
 // What a reading tells: whether the keyboard is up, and the page's height
@@ -51,7 +52,10 @@ const remember = (map: Map<number, number>, width: number, value: number) => {
 // KEYBOARD_MIN_PX shorter than its height without the keyboard, and it stays up
 // until the page grows back: focus leaving the field (a tap on a button, on
 // nothing) does not close it, the page growing does, so nothing comes back
-// above a keyboard on its way down.
+// above a keyboard on its way down. Focus out of every field for a while with
+// the page not grown back (`idle`) means the shrink was no keyboard (a split
+// screen made while typing): the page's height is the one it has, and the
+// keyboard is down.
 //
 // The height without the keyboard is kept per width, so a rotation finds the
 // one the new width had, and only a resize moves it (the first reading counts
@@ -59,9 +63,10 @@ const remember = (map: Map<number, number>, width: number, value: number) => {
 // shrinking is the page's own (a split screen, the browser's bars) and lowers
 // it, while the page growing is the keyboard closing and raises it.
 //
-// A width first met with the keyboard up (a rotation to a side never seen) has
-// nothing to count from: the keyboard stays up and the height stays unknown
-// until the page grows there by KEYBOARD_MIN_PX, which is the keyboard closing.
+// A width met while the keyboard is up (a rotation to a side never seen) has
+// nothing to count from: the keyboard stays up, whatever focus does, and the
+// height stays unknown until the page grows there by KEYBOARD_MIN_PX, the
+// keyboard closing, or focus goes idle.
 //
 // The player (streamline-player, src/lib/platform/keyboard.ts) runs the same
 // rules; a change here goes there too.
@@ -70,30 +75,33 @@ export function keyboardWatch(): (reading: KeyboardReading) => KeyboardState {
 	const lastAt = new Map<number, number>();
 	const lowAt = new Map<number, number>();
 	let up = false;
-	return ({ width, height, typing, resized }) => {
+	const settle = (width: number, height: number): KeyboardState => {
+		remember(pageAt, width, height);
+		remember(lastAt, width, height);
+		lowAt.delete(width);
+		up = false;
+		return { up, page: height };
+	};
+	return ({ width, height, typing, kind }) => {
 		const known = pageAt.get(width);
 		if (known === undefined) {
-			if (up && typing) {
+			if (up && kind !== "idle") {
 				const low = Math.min(lowAt.get(width) ?? height, height);
 				remember(lowAt, width, low);
 				if (height - low < KEYBOARD_MIN_PX) return { up, page: undefined };
-			} else if (!resized) {
-				up = false;
-				return { up, page: undefined };
+				return settle(width, height);
 			}
-			remember(pageAt, width, height);
-			remember(lastAt, width, height);
-			lowAt.delete(width);
-			up = false;
-			return { up, page: height };
+			if (kind === "focus") return { up, page: undefined };
+			return settle(width, height);
 		}
+		if (kind === "idle" && !typing) return settle(width, height);
 		let page = known;
-		if (resized) {
+		if (kind === "resize") {
 			const last = lastAt.get(width) ?? height;
 			page = !typing && height < last ? height : Math.max(known, height);
-			remember(pageAt, width, page);
 			remember(lastAt, width, height);
 		}
+		remember(pageAt, width, page);
 		up = page - height >= KEYBOARD_MIN_PX && (typing || up);
 		return { up, page };
 	};

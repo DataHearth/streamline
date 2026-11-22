@@ -114,6 +114,25 @@ var _ = Describe("On-screen keyboard", Label("e2e"), func() {
 		settle(page, true)
 	})
 
+	It(
+		"brings the bottom nav back when a shrink made while typing was no keyboard",
+		func() {
+			page := phone("/settings/general", true)
+			page.MustElement(field).MustFocus()
+			// A split screen made while typing reads as the keyboard at first.
+			page.MustSetViewport(width, height-keyboard, 1, true)
+			settle(page, false)
+
+			// Focus leaves every field and the page never grows back.
+			page.MustEval(`() => document.activeElement.blur()`)
+			Consistently(navShown(page)).
+				WithTimeout(500 * time.Millisecond).
+				WithPolling(50 * time.Millisecond).
+				Should(BeFalse())
+			settle(page, true)
+		},
+	)
+
 	It("keeps the bottom nav when a mouse-driven window is made shorter", func() {
 		page := phone("/settings/general", false)
 		page.MustElement(field).MustFocus()
@@ -157,5 +176,31 @@ var _ = Describe("On-screen keyboard", Label("e2e"), func() {
 			const r = this.getBoundingClientRect();
 			return r.top >= 0 && r.bottom <= window.innerHeight;
 		}`).Bool()).To(BeTrue(), "the trigger is back above the keyboard")
+	})
+
+	It("still closes a menu with focus inside it when the page scrolls", func() {
+		page := newSessionPage("/settings/library")
+		page.MustElement("main input")
+		trigger := page.MustElementByJS(`() => {
+			const label = [...document.querySelectorAll("main *")].find((el) =>
+				el.childElementCount === 0 &&
+				el.textContent.trim() === "Preferred book language");
+			return label.closest("div.max-w-xs")
+				.querySelector("button[aria-haspopup=listbox]");
+		}`)
+		trigger.MustClick()
+		page.MustElement(`input[type=search]`)
+
+		page.MustEval(`() => {
+			const main = document.getElementById("main");
+			main.scrollTop = 0;
+			main.scrollTop = main.scrollHeight;
+		}`)
+		Eventually(func() bool {
+			return page.MustHas(`input[type=search]`)
+		}).
+			WithTimeout(3 * time.Second).
+			WithPolling(50 * time.Millisecond).
+			Should(BeFalse())
 	})
 })
