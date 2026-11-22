@@ -909,11 +909,13 @@ func filterToEpisode(
 
 // packCoversSeason reports whether a pack release holds the season, which
 // decides the hidden-packs count only: filterToEpisode drops a complete pack
-// whatever this answers. A complete pack is read as holding the numbered
-// seasons and never the specials — the way the show-level counts leave
-// season 0 out — so season 0 is covered only by a pack of the specials season
-// itself, which ParseSeasonSpan cannot name (From 0 is its "no season"), hence
-// the parse's SeasonPack flag.
+// whatever this answers. Whether an integral ships its specials is nowhere in
+// its name, so a complete pack is taken to hold the numbered seasons only, as
+// the show-level counts leave season 0 out: the hint then never sends anyone
+// to a whole-series pack for a special it most likely lacks, at the cost of
+// staying silent about one that has it. Season 0 is covered only by a pack of
+// the specials season itself, which ParseSeasonSpan cannot name (From 0 is its
+// "no season"), hence the parse's SeasonPack flag.
 func packCoversSeason(
 	sp library.SeasonSpan,
 	p library.ParseResult,
