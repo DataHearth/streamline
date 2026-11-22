@@ -289,7 +289,34 @@ func (p *posters) Serve(
 		http.NotFound(w, r)
 		return
 	}
-	f, err := os.Open(p.Path(kind, id))
+	width, err := variantWidth(r.URL.Query())
+	if err != nil {
+		record("invalid_width")
+		http.Error(w, "unsupported width", http.StatusBadRequest)
+		return
+	}
+	path := p.Path(kind, id)
+	if width > 0 {
+		// A variant that cannot be made costs sharpness, never the poster.
+		switch scaled, err := variant(ctx, path, width); {
+		case err == nil && scaled != "":
+			path = scaled
+		case err != nil && !errors.Is(err, os.ErrNotExist) && ctx.Err() == nil:
+			slog.WarnContext(
+				ctx,
+				"poster variant failed",
+				"poster.kind",
+				kind,
+				"poster.id",
+				id,
+				"poster.width",
+				width,
+				"error",
+				err,
+			)
+		}
+	}
+	f, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			record("miss")
