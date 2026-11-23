@@ -6,6 +6,10 @@ description: Extract a version's CHANGELOG section and rewrite it as readable re
 # (release.yaml) and the chart on chart-v* tags (chart.yaml) — so the extraction,
 # the prompt and the fallback live here once. Only the changelog, the subject
 # and the footer differ.
+#
+# The CLI signs in by workload identity federation, as issue-triage.yaml does:
+# the calling job grants `id-token: write` and sets the ANTHROPIC_* variables
+# in its env, and no API secret is stored.
 
 inputs:
   changelog:
@@ -19,10 +23,6 @@ inputs:
     required: true
   footer:
     description: Markdown appended verbatim below the notes (install and verify lines).
-    required: false
-    default: ""
-  claude_code_oauth_token:
-    description: Token for the Claude CLI. Omit it and the raw changelog section ships unchanged.
     required: false
     default: ""
 
@@ -63,20 +63,28 @@ runs:
     # that action rejects `push` outright ("Unsupported event type: push") and both
     # release lines are tag-push triggered, so the step can never run under it.
     #
-    # continue-on-error, and the token is optional: a release must never be
+    # continue-on-error, and federation is optional: a release must never be
     # blocked by the model being unreachable. assemble falls back to the raw
     # section, a complete release body on its own.
     - id: claude
-      if: inputs.claude_code_oauth_token != ''
+      if: env.ANTHROPIC_FEDERATION_RULE_ID != ''
       continue-on-error: true
       shell: bash
       working-directory: ${{ runner.temp }}
       env:
-        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
         SUBJECT: ${{ inputs.subject }}
+        CLAUDE_CODE_VERSION: 2.1.323
+        ANTHROPIC_IDENTITY_TOKEN_FILE: ${{ runner.temp }}/anthropic/identity-token
       run: |
-        curl -fsSL https://claude.ai/install.sh | bash
+        curl -fsSL https://claude.ai/install.sh | bash -s "$CLAUDE_CODE_VERSION"
         export PATH="$HOME/.local/bin:$PATH"
+        # One GitHub token is enough: a single short prompt ends well inside
+        # the five minutes it lasts, unlike triage's backfill.
+        mkdir -m 700 "$(dirname "$ANTHROPIC_IDENTITY_TOKEN_FILE")"
+        trap 'rm -rf "$(dirname "$ANTHROPIC_IDENTITY_TOKEN_FILE")"' EXIT
+        (umask 077; curl -fsS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+          "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" |
+          jq -er .value >"$ANTHROPIC_IDENTITY_TOKEN_FILE")
         # Run from RUNNER_TEMP with no tool granted and the section piped in
         # whole: the model has nothing to read and no checkout to wander into.
         #

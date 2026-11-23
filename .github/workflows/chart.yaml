@@ -11,12 +11,18 @@ on:
 permissions: {}
 
 jobs:
-  # Its own job, holding nothing, for the reason release.yaml gives: the notes
+  # Its own job, for the reason release.yaml gives: the notes
   # step pipes an unpinned installer into bash.
   notes:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
+    env:
+      ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+      ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -33,7 +39,6 @@ jobs:
           changelog: deploy/helm/streamline/CHANGELOG.md
           version: ${{ env.version }}
           subject: the Streamline Helm chart
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           footer: |
 
             ---

@@ -8,15 +8,22 @@ on:
 permissions: {}
 
 jobs:
-  # Its own job, holding nothing: the notes step installs the Claude CLI by
-  # piping an unpinned script into bash, and in the signing job that script
-  # would run beside the checkout's persisted token, the OIDC token cosign
-  # signs with, and the workspace GoReleaser builds from. Here the worst it
-  # can reach is a read-only token and the release notes text.
+  # Its own job: the notes step installs the Claude CLI by piping a script
+  # into bash, and in the signing job that script would run beside the
+  # checkout's persisted token, the OIDC token cosign signs with, and the
+  # workspace GoReleaser builds from. Here the worst it can reach is a
+  # read-only token, the notes text, and an OIDC token that signs nothing:
+  # it is only traded for the Claude API (workload identity federation).
   notes:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
+    env:
+      ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+      ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -34,7 +41,6 @@ jobs:
           changelog: CHANGELOG.md
           version: ${{ steps.v.outputs.v }}
           subject: Streamline
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           footer: |
 
             ---
