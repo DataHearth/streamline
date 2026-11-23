@@ -8,9 +8,9 @@ require (
 	github.com/DeRuina/timberjack v1.4.10
 	github.com/PuerkitoBio/goquery v1.14.0
 	github.com/XSAM/otelsql v0.44.0
-	github.com/anacrolix/generics v0.2.0
+	github.com/anacrolix/generics v0.2.1-0.20261118011427-05a545e5bbda
 	github.com/anacrolix/log v0.17.1-0.20260908045853-8c4d2cc1c9e2
-	github.com/anacrolix/torrent v1.63.0
+	github.com/anacrolix/torrent v1.63.1-0.20261118035556-1457fd6e7a2f
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/dlclark/regexp2/v2 v2.13.2
 	github.com/extism/go-sdk v1.7.1
@@ -111,7 +111,7 @@ require (
 	github.com/anacrolix/missinggo/perf v1.0.0 // indirect
 	github.com/anacrolix/missinggo/v2 v2.12.0 // indirect
 	github.com/anacrolix/mmsg v1.0.1 // indirect
-	github.com/anacrolix/multiless v0.4.0 // indirect
+	github.com/anacrolix/multiless v0.4.1-0.20261117234141-fbc4e053da19 // indirect
 	github.com/anacrolix/stm v0.5.0 // indirect
 	github.com/anacrolix/sync v0.5.5-0.20251119100342-d78dd1f686f1 // indirect
 	github.com/anacrolix/upnp v0.1.4 // indirect
@@ -439,10 +439,3 @@ tool (
 	github.com/vektra/mockery/v3
 	golang.org/x/vuln/cmd/govulncheck
 )
-
-// anacrolix v1.63.0 fsyncs a checkpoint's fallback file through a write handle, which a file
-// promoted off its ".part" name (made read-only) refuses, so every checkpoint after a torrent's
-// first finished file fails and completions persist only on Close. The fork's
-// fsync-read-only-promoted branch opens it read-only; drop this once a release includes
-// https://github.com/anacrolix/torrent/pull/1232.
-replace github.com/anacrolix/torrent => github.com/DataHearth/torrent v0.0.0-20261117102504-876900f38c65
