@@ -17,7 +17,7 @@ WORKDIR /app
 # renovate-pins.yaml fails a branch where they differ. Its install script swaps
 # the Node.js entry points for the native binary, which npm runs only when
 # allowed.
-ARG PNPM_VERSION=12.20.0
+ARG PNPM_VERSION=12.21.0
 RUN npm install -g --allow-scripts=pnpm pnpm@${PNPM_VERSION}
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
