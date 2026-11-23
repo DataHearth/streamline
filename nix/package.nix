@@ -144,7 +144,7 @@ in
   pname = "streamline";
   inherit version src;
 
-  vendorHash = "sha256-ttw+4QGYd1bUebeVGO815zl2nTJXru3OZQeXrD3hROs=";
+  vendorHash = "sha256-QCtSGlrdsmF2nE5TMVCVvId/jngCbidmfdsAgoaXKuY=";
   # Named by what decides the vendored set rather than by the app version, for
   # the reason inputsId gives. Fixed rather than derived from pname, so the lint
   # check's overrideAttrs shares this fetch instead of repeating it.
