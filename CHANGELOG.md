@@ -5,6 +5,162 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-11-23
+
+### Added
+
+- web: Fold the series monitoring presets into the bookmark (#195)
+- web: Full-screen search on phones and tablets, command palette on desktop (#101)
+- web: Look up titles outside the library from global search (#95)
+- indexer: Add built-in indexers run from Prowlarr's definitions (#81)
+- indexer: Read a built-in indexer's settings from *_file
+- indexer: Keep file-sourced built-in indexer settings out of the API
+- web: Show a built-in indexer as YAML on a read-only instance
+- activity: Held filter chip and held rows first in the queue
+- web: Shared URL-state helper for list filters, first on /movies
+- web: Move every URL-synced page onto syncRouteQuery
+- web: Deep-link activity, transcoding, requests, users and calendar
+- e2e: Demo screenshot generator for the README
+- auth: Let an OIDC provider request extra scopes
+- indexer: Automatic picks skip a release reported with no seeders
+- torrents: The drawer names the indexer a torrent was grabbed from
+- bittorrent: A resolved magnet's session keeps its metainfo
+- bittorrent: List a magnet's files before grabbing it
+- torrents: Remove a torrent and blocklist its release
+- torrents: Show how many pieces failed their hash check
+- bittorrent: Report a torrent re-hashing its data as checking
+- music: Refresh every stale artist in one metadata run
+- download: Rotate the builtin engine's torrents at its cap
+- bittorrent: Retry deleting a removed torrent's files and show what is pending
+- music: Match a release on the artist's sort name and the album's aliases
+- music: Keep MusicBrainz aliases for artists and tracks
+- music: Quality, bit depth and sample rate naming tokens, with the music and book templates on Settings → Library
+- music: Write Picard's TOTALTRACKS and TOTALDISCS beside the Vorbis totals
+- music,books: Bulk selection on the artist list and the book shelves
+- config: Library.convert_wav and the WAV conversion gate
+- ffmpeg: Convert an audio file to FLAC
+- importer: Convert WAV tracks to FLAC on import
+- music: Count WAV files in release previews and uploads when they convert
+- settings: WAV conversion switch, with docs
+- music: Name the bit depth and sample rate units in the default track template
+- **BREAKING** Extensions, with OPDS and Subsonic leaving core (#269)
+- **BREAKING** extension: Serve every extension under /extensions/<name>, its mounts relative
+- metadata: Crew, episode credits, certification and local people photos for extensions
+- web: Show certification and serve people photos from the local cache
+- extension: Hand guests the client's address behind the trusted proxies
+- Crew on title pages and an episode's guests and crew
+- web: Generate every app icon from one logo SVG (#280)
+- web: Centre the logo on its weight in every icon (#297)
+- bittorrent: Smooth transfer speed and ETA (#279)
+- extension: Tell a module when the library changes
+- extension: Give a module settings and secrets from the config file
+- extension: Give a module a store folder for files it keeps
+- web: Animate the extension permission folds
+- web: Show a poster's full title on hover and focus (#313)
+- settings: Show a job's status as a dot and a word, with its error in view
+
+### Changed
+
+- server: Read boot files into the page cache before opening (#176)
+- test: Build the frontend before task test
+- Merge branch 'main' into claude/affectionate-noether-dw7t5p
+- images: Pull linuxserver images from ghcr.io (#304)
+- web: Drop cn() and clsx for tailwind-merge's twMerge
+- web: Shared Button and eyebrow label style, drop dead CSS
+- web: Secondary and icon buttons through Button
+- web: Shared BottomSheet for the phone sheets
+- web: BottomNav, bulk bar and Play on menu through BottomSheet
+
+### Fixed
+
+- web: Draw the lookup sheet's quality profile picker as one row (#197)
+- web: Mask-safe PWA icons, a monochrome icon and in-app contrast (#163)
+- web: Make a released bottom sheet settle from the finger's final speed and slide off instead of fading (#170)
+- web: Let a clamped overview be read in full (#191)
+- web: Offer every season in the series search scope (#159)
+- web: Show a season's in-flight episodes as downloading, not wanted (#168)
+- web: Answer an add on its button, not with a toast over the add sheet's footer (#106)
+- web: Keep manual search state honest on failure and cancel/retry (#107)
+- web: Let a toast be swiped away to the left (#204)
+- web: Resolve biome findings across the SPA
+- web: Keep a detail hero's backdrop still when the overview expands (#206)
+- web: Keep a bottom gap on settings pages and clear the nav's safe-area inset
+- indexer: Retry a refused id-narrowed query on a wider one
+- bulkimport: Fail a series show when none of its files could be imported
+- download: Locate a completed grab's payload before importing it
+- download: Wait for qBittorrent to finish moving a torrent
+- rss: Key TV feed matches by Unicode-folded name, resolved per show
+- rss: Match year-suffixed show titles, tell namesakes apart by year
+- bulkimport: Keep an episode's file until its replacement lands
+- bulkimport: Keep a movie's file until its replacement lands
+- task: Run both test passes when the e2e pass fails
+- indexer: Report a search no indexer answered instead of an empty result
+- web: Abort release searches nothing waits on and open on the right scope
+- web: No text in --fg-faint, the grey below 4.5:1
+- web: Translucent iOS status bar, sticky layers below the top bar
+- web: Calendar agenda day headers stick below the top bar
+- e2e: Demoshots reads the users list as an object
+- e2e: Demoshots reads a series volume's title from its book
+- e2e: Demoshots waits on queued hashes, scans its library import in rename mode
+- e2e: Demoshots waits for imports in the history and for the scan to reach review
+- e2e: Demoshots stages disk and public URL, picks clearer pages
+- e2e: Demoshots opens season 1 on the episodes page
+- e2e: Demoshots shoots past a release group MusicBrainz keeps refusing
+- music: Report an unanswering MusicBrainz as unavailable, not rate limited
+- dashboard: An album arrival says how many tracks landed
+- indexer: One row for a release two indexer entries both reach
+- download: An automatic grab leaves a title with a download in flight alone
+- indexer: A login that leaves no cookie still counts as a session
+- indexer: A search fetches a pinned definition that is not kept yet
+- torrents: Say when a removal could not delete the files
+- indexer: A movie search leaves out a release dated another year
+- bittorrent: Drop the storage's flush warnings for a file already finalised
+- library: Match an untagged file's title to its track past punctuation
+- music: Make change edition read as an action
+- music: Derive an artist's path from the current music root
+- library: Flag a root when only part of its files sit outside it
+- config: Default the music and book roots to /media, off the data volume
+- music: Compare non-Latin album titles and read FLAC_16bits as FLAC
+- bittorrent: Say a torrent's name is taken instead of unsafe
+- music: Find non-Latin albums under their Latin names and judge manual and automatic searches alike
+- settings: Show the music and book roots on Settings → Library
+- music: Reject a WAV release that cannot be converted
+- web: Stop closed detail sheets from swallowing the phone's Back (#275)
+- web: Air dates on wanted episodes and short dates without their year (#273)
+- bittorrent: Keep private torrents off the DHT after a listen port move (#276)
+- bittorrent: Close connections to seeders once every wanted file is held (#277)
+- tvdb: Ask for a season's translated name only when TVDB lists one (#278)
+- web: One edge on the in-app logo (#288)
+- web: Show each torrent file's progress on a phone, and 100% only when complete (#272)
+- web: Size the 404 card to the space below the top bar (#285)
+- deps: Update module go.yaml.in/yaml/v3 to v4 (#296)
+- web: Keep the open season across Back on a series page (#298)
+- deps: Update go modules (#289)
+- bittorrent: Measure each peer's rates on demand (#306)
+- web: Reset the sort from the torrents and transcoding filter sheet (#307)
+- bittorrent: Bound the peer-request data a seeding connection buffers (#177)
+- auth: Refuse an empty or too-short session signing secret (#212)
+- indexer: Keep request URLs out of built-in indexer timeout errors and solver failures (#211)
+- demoshots: Fail fast on a dead instance, drop the keys on exit, check the calendar seed (#260)
+- extension: Hand genres to a module as JSON text
+- web: Keep the settings sidebar in place at the end of a scroll
+- web: Lock the extension edit fields on a read-only instance and open the source at its start
+- bittorrent: Hash a finished file's stale pieces instead of downloading over it
+- bittorrent: Stop rewriting every stored piece completion at shutdown
+- bittorrent: Forget the piece completion of removed torrents
+- deps: Build anacrolix/torrent v1.63.0 from a fork that checkpoints read-only files
+- web: Label upcoming rows by calendar day, and say "tomorrow" (#314)
+- web: Draw the selected release's outline inside its row (#310)
+- web: Open the torrent drawer when clicking a torrent's name (#309)
+- web: Text contrast the fg-faint sweep left behind (#261)
+- bittorrent: Restore torrent sessions after boot instead of before it listens
+- extension: Give the SQL duration histogram second-scale buckets
+- books: Land the jump to editions below the tab strip (#317)
+- bulkimport: Import movies from a flat folder in rename mode (#265)
+- tvshow: Remove a deleted series' source torrents with its files
+- web: Version the shells' stylesheets and scripts, and revalidate every other static file
+- posters: Revalidate served posters, and refetch a movie or series poster whose source changed
+
 ## [3.4.0] - 2026-11-06
 
 ### Added
@@ -1012,6 +1168,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - sysinfo: Make disk-usage probe cross-platform for releases (#1)
 
+[4.0.0]: https://github.com/datahearth/streamline/compare/v3.4.0..v4.0.0
 [3.4.0]: https://github.com/datahearth/streamline/compare/v3.3.0..v3.4.0
 [3.3.0]: https://github.com/datahearth/streamline/compare/v3.2.0..v3.3.0
 [3.2.0]: https://github.com/datahearth/streamline/compare/v3.1.0..v3.2.0

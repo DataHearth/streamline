@@ -6,7 +6,7 @@
   fetchPnpmDeps,
   pnpmConfigHook,
   nix-update-script,
-  version ? "3.4.0",
+  version ? "4.0.0",
 }:
 let
   go = callPackage ./go.nix { };
