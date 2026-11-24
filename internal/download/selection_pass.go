@@ -11,7 +11,6 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
-	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -124,9 +123,7 @@ func (d *download) resolvePendingSelection(
 		files[i] = metaFile{Index: f.Index, Path: f.Path, Size: f.Size}
 	}
 	wanted := db.RecordEpisodeIDs(rec)
-	keep, keptBytes, matched := computeKeepSet(
-		files, show.Edges.Seasons, show.Type == tvshow.TypeAnime, wanted,
-	)
+	keep, keptBytes, matched := computeKeepSet(files, show, wanted)
 
 	if matched == 0 {
 		// Nothing in this torrent serves any wanted episode, and nothing in

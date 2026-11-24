@@ -445,7 +445,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 
 			results, _, err := New(nil).
 				SearchEpisode(context.Background(), []string{"Show"},
-					nil, 111, "", 2, 3)
+					nil, 111, "", 2, 3, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 
@@ -462,6 +462,264 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 			// the pass keyword-searches every indexer's whole catalogue.
 			Expect(queries[1].Get("query")).To(Equal("Show"))
 			Expect(queries[1].Get("categories")).To(Equal("5000"))
+		})
+
+		It("searches a special by its title too and keeps it", func() {
+			// The numbered search sees the series' releases (Prowlarr is sent
+			// no season 0); the title query adds the special named by title.
+			rec := newProwlarrRecorder(`[
+				{"title":"Show.S00E01.1080p.WEB-GRP","downloadUrl":"http://x/a.torrent",
+				 "protocol":"torrent","seeders":5},
+				{"title":"Show.S02E01.1080p.WEB-GRP","downloadUrl":"http://x/b.torrent",
+				 "protocol":"torrent","seeders":50}
+			]`, `[
+				{"title":"Show.The.Christmas.Invasion.1080p.WEB-GRP",
+				 "downloadUrl":"http://x/c.torrent","protocol":"torrent","seeders":20},
+				{"title":"Show.Christmas.Recap.1080p.WEB-GRP",
+				 "downloadUrl":"http://x/d.torrent","protocol":"torrent","seeders":90}
+			]`)
+			DeferCleanup(rec.Close)
+			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
+
+			results, hidden, err := New(nil).SearchEpisode(
+				context.Background(), []string{"Show"}, nil, 111, "",
+				0, 1, []string{"The Christmas Invasion"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hidden).To(BeZero())
+			titles := make([]string, 0, len(results))
+			for _, r := range results {
+				titles = append(titles, r.Title)
+			}
+			// Best seeded first across both queries.
+			Expect(titles).To(Equal([]string{
+				"Show.The.Christmas.Invasion.1080p.WEB-GRP",
+				"Show.S00E01.1080p.WEB-GRP",
+			}))
+
+			queries := rec.Queries()
+			Expect(queries).To(HaveLen(2))
+			Expect(queries[0].Get("query")).To(Equal("Show"))
+			Expect(queries[1].Get("query")).To(Equal("Show The Christmas Invasion"))
+			Expect(queries[1].Get("type")).To(Equal("tvsearch"))
+		})
+
+		It("keeps the numbered results when the title query fails", func() {
+			rec := newProwlarrRecorder(`[
+				{"title":"Show.S00E01.1080p.WEB-GRP","downloadUrl":"http://x/a.torrent",
+				 "protocol":"torrent","seeders":5}
+			]`, `not json`)
+			DeferCleanup(rec.Close)
+			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
+
+			results, _, err := New(nil).SearchEpisode(
+				context.Background(), []string{"Show"}, nil, 111, "",
+				0, 1, []string{"The Christmas Invasion"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(1))
+		})
+
+		It("fails a special's search left empty by a failed title query", func() {
+			// Nothing numbered and the title question unanswered: "no
+			// release" would stamp a cooldown for a search that never ran.
+			rec := newProwlarrRecorder(`[
+				{"title":"Show.S02E01.1080p.WEB-GRP","downloadUrl":"http://x/b.torrent",
+				 "protocol":"torrent","seeders":50}
+			]`, `not json`)
+			DeferCleanup(rec.Close)
+			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
+
+			results, _, err := New(nil).SearchEpisode(
+				context.Background(), []string{"Show"}, nil, 111, "",
+				0, 1, []string{"The Christmas Invasion"},
+			)
+			Expect(Unavailable(err)).To(BeTrue())
+			Expect(results).To(BeEmpty())
+		})
+
+		It("fails a special's search left with flagged results only", func() {
+			// The automatic searches drop a flagged result, so for them this
+			// list is as empty as none: the title question went unanswered.
+			rec := newProwlarrRecorder(`[
+				{"title":"Other.Thing.S00E01.1080p.WEB-GRP",
+				 "downloadUrl":"http://x/b.torrent","protocol":"torrent","seeders":50}
+			]`, `not json`)
+			DeferCleanup(rec.Close)
+			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
+
+			_, _, err := New(nil).SearchEpisode(
+				context.Background(), []string{"Show"}, nil, 111, "",
+				0, 1, []string{"The Christmas Invasion"},
+			)
+			Expect(Unavailable(err)).To(BeTrue())
+		})
+
+		It("asks one title question per queried title and none per alias", func() {
+			rec := newProwlarrRecorder(`[]`, `[]`, `[
+				{"title":"Das.Show.The.Christmas.Invasion.1080p.WEB-GRP",
+				 "downloadUrl":"http://x/c.torrent","protocol":"torrent","seeders":20}
+			]`)
+			DeferCleanup(rec.Close)
+			configtest.Setup(prowlarrIndexerConfig(rec.URL()))
+
+			results, _, err := New(nil).SearchEpisode(
+				context.Background(), []string{"Show", "Le Show"},
+				[]string{"Das Show"}, 111, "",
+				0, 1, []string{"The Christmas Invasion"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(results).To(HaveLen(1), "named under an alias")
+			Expect(results[0].TitleMismatch).To(BeFalse())
+
+			asked := make([]string, 0, 4)
+			for _, q := range rec.Queries() {
+				asked = append(asked, q.Get("query"))
+			}
+			Expect(asked).To(Equal([]string{
+				"Show", "Le Show",
+				"Show The Christmas Invasion", "Le Show The Christmas Invasion",
+			}))
+		})
+
+		It("reports a search cancelled during the title query as cancelled", func() {
+			ctx, cancel := context.WithCancel(context.Background())
+			DeferCleanup(cancel)
+			var (
+				mu    sync.Mutex
+				calls int
+			)
+			srv := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, _ *http.Request) {
+					mu.Lock()
+					calls++
+					second := calls == 2
+					mu.Unlock()
+					if second {
+						cancel()
+					}
+					_, _ = w.Write([]byte(`[
+						{"title":"Show.S00E01.1080p.WEB-GRP",
+						 "downloadUrl":"http://x/a.torrent","protocol":"torrent"}
+					]`))
+				}))
+			DeferCleanup(srv.Close)
+			configtest.Setup(prowlarrEntries([]string{"Prowlarr"}, srv.URL))
+
+			_, _, err := New(nil).SearchEpisode(
+				ctx, []string{"Show"}, nil, 111, "", 0, 1, []string{"The Christmas Invasion"},
+			)
+			Expect(err).To(MatchError(context.Canceled))
+			Expect(Unavailable(err)).To(BeFalse())
+		})
+
+		DescribeTable("asks no title question",
+			func(season uint16, specials ...string) {
+				rec := newProwlarrRecorder(`[
+					{"title":"Show.S00E01.1080p.WEB-GRP",
+					 "downloadUrl":"http://x/a.torrent","protocol":"torrent"},
+					{"title":"Show.S02E01.1080p.WEB-GRP",
+					 "downloadUrl":"http://x/b.torrent","protocol":"torrent"}
+				]`)
+				DeferCleanup(rec.Close)
+				configtest.Setup(prowlarrIndexerConfig(rec.URL()))
+
+				results, _, err := New(nil).SearchEpisode(
+					context.Background(), []string{"Show"}, nil, 111, "",
+					season, 1, specials,
+				)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(results).To(HaveLen(1))
+				Expect(rec.Queries()).To(HaveLen(1))
+			},
+			Entry("for a regular episode", uint16(2), "The Christmas Invasion"),
+			Entry("for a special with a generic title", uint16(0), "Episode 1"),
+			Entry("for a special with a short title", uint16(0), "Pie"),
+			Entry("for a special with no title", uint16(0), ""),
+			Entry("for a special with no titles at all", uint16(0)),
+			Entry("for a sibling's title",
+				uint16(0), "Episode 1", "The Christmas Invasion"),
+		)
+
+		It("asks for a special's title with no id and checks the ids after", func() {
+			// A tracker searching by id ignores the text, so the title is
+			// asked alone; the ids then judge what came back.
+			item := func(title, attr, id string) testRSSItem {
+				u := "https://idx.com/dl/" + title
+				return testRSSItem{
+					Title: title, GUID: u, Link: u, Size: 1000,
+					Enclosure: testEnclosure{
+						URL: u, Length: 1000, Type: "application/x-bittorrent",
+					},
+					ExtraXML: torznabAttrs(map[string]string{attr: id}),
+				}
+			}
+			var (
+				mu       sync.Mutex
+				requests []url.Values
+			)
+			ts := httptest.NewServer(http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					q := r.URL.Query()
+					mu.Lock()
+					requests = append(requests, q)
+					mu.Unlock()
+					items := []testRSSItem{
+						item("Show.S00E01.1080p.WEB-GRP", "tvdbid", "111"),
+					}
+					if q.Get("tvdbid") == "" {
+						items = []testRSSItem{
+							item(
+								"Show.The.Christmas.Invasion.1080p.WEB-GRP",
+								"tvdbid",
+								"111",
+							),
+							item(
+								"Show.The.Christmas.Invasion.720p.HDTV-GRP",
+								"tvdbid",
+								"999",
+							),
+							item(
+								"Show.The.Christmas.Invasion.480p.HDTV-GRP",
+								"imdbid",
+								"tt0000001",
+							),
+						}
+					}
+					w.Header().Set("Content-Type", "application/xml")
+					_, _ = w.Write(torznabXML(items))
+				}))
+			DeferCleanup(ts.Close)
+			host, port := splitHostPort(ts.URL)
+			configtest.Setup(map[string]any{
+				"indexers": []map[string]any{{
+					"name": "Idx", "host": host, "port": int(port),
+					"api_key": "k", "protocol": "torznab", "enabled": true,
+				}},
+			})
+
+			results, _, err := New(nil).SearchEpisode(
+				context.Background(), []string{"Show (2010)"}, nil, 111, "tt0436992",
+				0, 1, []string{"The Christmas Invasion! (2005)"},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			titles := make([]string, 0, len(results))
+			for _, r := range results {
+				titles = append(titles, r.Title)
+			}
+			Expect(titles).To(ConsistOf(
+				"Show.S00E01.1080p.WEB-GRP",
+				"Show.The.Christmas.Invasion.1080p.WEB-GRP",
+			))
+
+			mu.Lock()
+			defer mu.Unlock()
+			Expect(requests).To(HaveLen(2), "one request per query, no fallback")
+			titled := requests[1]
+			Expect(titled.Get("q")).To(Equal("Show The Christmas Invasion"))
+			for _, param := range []string{"tvdbid", "imdbid", "season", "ep"} {
+				Expect(titled.Has(param)).To(BeFalse(), param)
+			}
 		})
 
 		It("does not re-send a movie search it sent no id with", func() {
@@ -509,7 +767,7 @@ var _ = Describe("Service", Label("integration", "indexers"), func() {
 
 			results, _, err := New(nil).
 				SearchEpisode(context.Background(), []string{"Show"},
-					nil, 111, "", 2, 3)
+					nil, 111, "", 2, 3, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(results).To(HaveLen(1))
 			// The wrong show has 900 seeders and would win on score.
@@ -809,7 +1067,7 @@ var _ = Describe("a search no indexer answers", Label("integration", "indexers")
 			configtest.Setup(prowlarrEntries([]string{"Prowlarr"}, srv.URL))
 
 			_, _, err := New(nil).SearchEpisode(context.Background(),
-				[]string{"Show"}, nil, 111, "", 2, 3)
+				[]string{"Show"}, nil, 111, "", 2, 3, nil)
 			Expect(Unavailable(err)).To(BeTrue())
 			mu.Lock()
 			defer mu.Unlock()

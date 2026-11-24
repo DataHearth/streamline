@@ -244,8 +244,8 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 		It("auto-imports a fileless episode at OK resolution", func() {
 			shows := []*ent.TVShow{buildShow(false, false)}
-			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
-			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			name := "The.Bear.S01E02.1080p.WEB-X"
+			dec, ok := classifyEpisodeAdoption(name, 0, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.autoImport).To(BeTrue())
 			Expect(dec.episodeID).To(Equal(uint32(102)))
@@ -254,9 +254,9 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 		It(
 			"never adopts an anime special as the episode of that absolute number",
 			func() {
-				parsed := library.Parse("The.Bear.S00E02.1080p.WEB-X")
+				name := "The.Bear.S00E02.1080p.WEB-X"
 				_, ok := classifyEpisodeAdoption(
-					parsed, 0, []*ent.TVShow{buildShow(true, false)},
+					name, 0, []*ent.TVShow{buildShow(true, false)},
 				)
 				Expect(ok).To(BeFalse())
 			},
@@ -270,8 +270,12 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 				eps[1].Edges.MediaFiles = []*ent.MediaFile{
 					{ID: 9, Size: 4096, MissingSince: new(time.Now())},
 				}
-				parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
-				dec, ok := classifyEpisodeAdoption(parsed, 4096, []*ent.TVShow{show})
+				name := "The.Bear.S01E02.1080p.WEB-X"
+				dec, ok := classifyEpisodeAdoption(
+					name,
+					4096,
+					[]*ent.TVShow{show},
+				)
 				Expect(ok).To(BeTrue())
 				Expect(dec.completed).To(BeFalse())
 				Expect(dec.autoImport).To(BeTrue())
@@ -280,8 +284,8 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 		It("claims only the matched episode for a single-episode release", func() {
 			shows := []*ent.TVShow{buildShow(false, false)}
-			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
-			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			name := "The.Bear.S01E02.1080p.WEB-X"
+			dec, ok := classifyEpisodeAdoption(name, 0, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.episodeIDs).To(Equal([]uint32{102}))
 		})
@@ -291,8 +295,8 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			// write scoped to "this record's episodes" — the pause mirror, the
 			// move to importing — reaches only that one.
 			shows := []*ent.TVShow{buildShow(false, false)}
-			parsed := library.Parse("The.Bear.S01.1080p.WEB-X")
-			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			name := "The.Bear.S01.1080p.WEB-X"
+			dec, ok := classifyEpisodeAdoption(name, 0, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.episodeID).To(Equal(uint32(101)))
 			Expect(dec.episodeIDs).To(ConsistOf(uint32(101), uint32(102)))
@@ -300,8 +304,8 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 		It("keeps an episode that already has a file in a pack's claim", func() {
 			shows := []*ent.TVShow{buildShow(false, true)}
-			parsed := library.Parse("The.Bear.S01.1080p.WEB-X")
-			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			name := "The.Bear.S01.1080p.WEB-X"
+			dec, ok := classifyEpisodeAdoption(name, 0, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.episodeIDs).To(ConsistOf(uint32(101), uint32(102)))
 		})
@@ -310,16 +314,16 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			show := buildShow(false, false)
 			show.Title = "L'Ours"
 			show.Aliases = []string{"The Bear", "Der Bär"}
-			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
-			dec, ok := classifyEpisodeAdoption(parsed, 0, []*ent.TVShow{show})
+			name := "The.Bear.S01E02.1080p.WEB-X"
+			dec, ok := classifyEpisodeAdoption(name, 0, []*ent.TVShow{show})
 			Expect(ok).To(BeTrue())
 			Expect(dec.episodeID).To(Equal(uint32(102)))
 		})
 
 		It("proposes when the matched episode already has a different file", func() {
 			shows := []*ent.TVShow{buildShow(false, true)}
-			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
-			dec, ok := classifyEpisodeAdoption(parsed, 4096+2<<20, shows)
+			name := "The.Bear.S01E02.1080p.WEB-X"
+			dec, ok := classifyEpisodeAdoption(name, 4096+2<<20, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.autoImport).To(BeFalse())
 			Expect(dec.completed).To(BeFalse())
@@ -328,8 +332,8 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 		It("adopts as completed when the torrent is the episode's own file", func() {
 			shows := []*ent.TVShow{buildShow(false, true)}
-			parsed := library.Parse("The.Bear.S01E02.1080p.WEB-X")
-			dec, ok := classifyEpisodeAdoption(parsed, 4096, shows)
+			name := "The.Bear.S01E02.1080p.WEB-X"
+			dec, ok := classifyEpisodeAdoption(name, 4096, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.completed).To(BeTrue())
 			Expect(dec.autoImport).To(BeFalse())
@@ -339,24 +343,19 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 		It("proposes a season pack linked to the season's first episode", func() {
 			shows := []*ent.TVShow{buildShow(false, false)}
-			parsed := library.ParseResult{
-				Title: "The Bear", Season: 1, SeasonPack: true, Resolution: "1080p",
-			}
-			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			dec, ok := classifyEpisodeAdoption("The.Bear.S01.1080p.WEB-X", 0, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.autoImport).To(BeFalse())
 			Expect(dec.reason).To(Equal("season pack, review manually"))
 			Expect(dec.episodeID).To(Equal(uint32(101)))
 		})
 
-		// The spec above hands classifyEpisodeAdoption a ParseResult it built
-		// itself, so it never exercises the title extraction a real pack name
-		// goes through — which is where the language tags between the season
-		// and the resolution could end up glued onto the title.
+		// The language tags between the season and the resolution must not end
+		// up glued onto the title.
 		It("proposes a pack whose name carries language tags", func() {
 			shows := []*ent.TVShow{buildShow(false, false)}
-			parsed := library.Parse("The.Bear.S01.MULTi.VF2.1080p.WEB.H264-FW")
-			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			name := "The.Bear.S01.MULTi.VF2.1080p.WEB.H264-FW"
+			dec, ok := classifyEpisodeAdoption(name, 0, shows)
 			Expect(ok).To(BeTrue())
 			Expect(dec.reason).To(Equal("season pack, review manually"))
 			Expect(dec.episodeID).To(Equal(uint32(101)))
@@ -376,11 +375,172 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 				}},
 				show.Edges.Seasons...,
 			)
-			parsed := library.Parse(
-				"Kaamelott Integrale (Livres I a VI + Bonus) FRENCH " +
-					"[1080p] BDRIP HEVC-H265 10bits - Themouche",
+			name := "Kaamelott Integrale (Livres I a VI + Bonus) FRENCH " +
+				"[1080p] BDRIP HEVC-H265 10bits - Themouche"
+			Expect(AdoptionEpisode(name, show).ID).To(Equal(uint32(101)))
+		})
+
+		Describe("a special named under a season token", func() {
+			const name = "The.Bear.S01.Special.Behind.The.Line.1080p.WEB-X"
+
+			withSpecials := func(specials ...*ent.Episode) *ent.TVShow {
+				show := buildShow(false, false)
+				show.Edges.Seasons = append(
+					[]*ent.Season{{
+						Number: 0,
+						Edges:  ent.SeasonEdges{Episodes: specials},
+					}},
+					show.Edges.Seasons...,
+				)
+				return show
+			}
+
+			It("is proposed against the special whose title it names", func() {
+				show := withSpecials(
+					&ent.Episode{ID: 900, Number: 1, Title: "Gag Reel"},
+					&ent.Episode{ID: 901, Number: 2, Title: "Behind the Line"},
+				)
+				dec, ok := classifyEpisodeAdoption(
+					name, 0, []*ent.TVShow{show},
+				)
+				Expect(ok).To(BeTrue())
+				Expect(dec.autoImport).To(BeFalse())
+				Expect(
+					dec.reason,
+				).To(Equal("special named by title, review manually"))
+				Expect(dec.episodeID).To(Equal(uint32(901)))
+				Expect(dec.episodeIDs).To(Equal([]uint32{901}),
+					"one special, never the whole specials season")
+			})
+
+			It("falls back to the first special when no title matches", func() {
+				show := withSpecials(
+					&ent.Episode{ID: 900, Number: 1, Title: "Gag Reel"},
+					&ent.Episode{ID: 901, Number: 2, Title: "Table Read"},
+				)
+				dec, ok := classifyEpisodeAdoption(
+					name, 0, []*ent.TVShow{show},
+				)
+				Expect(ok).To(BeTrue())
+				Expect(dec.episodeID).To(Equal(uint32(900)))
+				Expect(dec.episodeIDs).To(Equal([]uint32{900}))
+				Expect(dec.reason).To(Equal(
+					"special named by title, but no single special of The Bear " +
+						"carries that title: review manually",
+				))
+			})
+
+			It("falls back the same way when two specials carry the title", func() {
+				show := withSpecials(
+					&ent.Episode{ID: 900, Number: 1, Title: "Behind the Line"},
+					&ent.Episode{ID: 901, Number: 2, Title: "Behind the Line"},
+				)
+				dec, ok := classifyEpisodeAdoption(name, 0, []*ent.TVShow{show})
+				Expect(ok).To(BeTrue())
+				Expect(dec.episodeID).To(Equal(uint32(900)))
+				Expect(dec.reason).To(ContainSubstring("no single special"))
+			})
+
+			It("anchors the special carrying the release's year", func() {
+				const dated = "The.Bear.S00.Christmas.Special.2012.1080p.WEB-X"
+				show := withSpecials(
+					&ent.Episode{ID: 900, Number: 1, Title: "Christmas Special"},
+					&ent.Episode{
+						ID:     901,
+						Number: 2,
+						Title:  "Christmas Special 2012",
+					},
+				)
+				dec, ok := classifyEpisodeAdoption(dated, 0, []*ent.TVShow{show})
+				Expect(ok).To(BeTrue())
+				Expect(dec.episodeID).To(Equal(uint32(901)))
+				Expect(
+					dec.reason,
+				).To(Equal("special named by title, review manually"))
+			})
+
+			It("says season pack for a name that also spans seasons", func() {
+				const ranged = "The.Bear.S01.Special.Behind.The.Line.1080p.S01-S02.WEB-X"
+				dec, ok := classifyEpisodeAdoption(
+					ranged, 0, []*ent.TVShow{buildShow(false, false)},
+				)
+				Expect(ok).To(BeTrue())
+				Expect(dec.reason).To(Equal("season pack, review manually"))
+			})
+
+			// A tracker numbers its specials its own way: the number alone
+			// does not say which special a release is.
+			It("proposes a numbered special titled as another one", func() {
+				show := withSpecials(
+					&ent.Episode{ID: 900, Number: 1, Title: "Gag Reel"},
+					&ent.Episode{ID: 901, Number: 2, Title: "Behind the Line"},
+				)
+				dec, ok := classifyEpisodeAdoption(
+					"The.Bear.S00E01.Behind.The.Line.1080p.WEB-X", 0,
+					[]*ent.TVShow{show},
+				)
+				Expect(ok).To(BeTrue())
+				Expect(dec.autoImport).To(BeFalse())
+				Expect(dec.episodeID).To(Equal(uint32(900)))
+				Expect(dec.reason).To(Equal(
+					"numbered as one special and titled as another, review manually",
+				))
+
+				dec, ok = classifyEpisodeAdoption(
+					"The.Bear.S00E02.Behind.The.Line.1080p.WEB-X", 0,
+					[]*ent.TVShow{show},
+				)
+				Expect(ok).To(BeTrue())
+				Expect(dec.autoImport).To(BeTrue())
+				Expect(dec.episodeID).To(Equal(uint32(901)))
+			})
+
+			It(
+				"is filed under the named season when the show has no specials",
+				func() {
+					for _, show := range []*ent.TVShow{
+						buildShow(false, false), withSpecials(),
+					} {
+						dec, ok := classifyEpisodeAdoption(
+							name, 0, []*ent.TVShow{show},
+						)
+						Expect(ok).To(BeTrue())
+						Expect(dec.autoImport).To(BeFalse())
+						Expect(dec.episodeID).To(Equal(uint32(101)))
+						Expect(dec.episodeIDs).To(Equal([]uint32{101, 102}))
+						Expect(dec.reason).To(ContainSubstring("no specials"))
+					}
+				},
 			)
-			Expect(AdoptionEpisode(parsed, show).ID).To(Equal(uint32(101)))
+
+			It("reads a range past the special's title before the special", func() {
+				const ranged = "The.Bear.S01.Special.Behind.The.Line.1080p.S01-S02.WEB-X"
+				show := withSpecials(
+					&ent.Episode{ID: 901, Number: 2, Title: "Behind the Line"},
+				)
+				Expect(AdoptionEpisode(ranged, show).ID).
+					To(Equal(uint32(101)))
+			})
+
+			It(
+				"never auto-imports a numbered special as an absolute episode",
+				func() {
+					const numbered = "The Bear S00 Christmas Special 02 [1080p]"
+					show := buildShow(true, false)
+					show.Edges.Seasons = append(show.Edges.Seasons, &ent.Season{
+						Number: 0,
+						Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+							{ID: 900, Number: 1, Title: "Christmas"},
+						}},
+					})
+					dec, ok := classifyEpisodeAdoption(
+						numbered, 0, []*ent.TVShow{show},
+					)
+					Expect(ok).To(BeTrue())
+					Expect(dec.autoImport).To(BeFalse())
+					Expect(dec.episodeID).To(Equal(uint32(900)))
+				},
+			)
 		})
 
 		// A pack is fetched for what the library is missing, so anchoring it on
@@ -391,24 +551,25 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			eps[0].Edges.MediaFiles = []*ent.MediaFile{
 				{ID: 9, MissingSince: new(time.Now())},
 			}
-			parsed := library.Parse("The.Bear.S01.MULTi.1080p.WEB.H264-FW")
-			Expect(AdoptionEpisode(parsed, show).ID).To(Equal(uint32(101)))
+			name := "The.Bear.S01.MULTi.1080p.WEB.H264-FW"
+			Expect(AdoptionEpisode(name, show).ID).To(Equal(uint32(101)))
 		})
 
 		It("anchors a pack on the first episode with no file", func() {
 			show := buildShow(false, false)
 			eps := show.Edges.Seasons[0].Edges.Episodes
 			eps[0].Edges.MediaFiles = []*ent.MediaFile{{ID: 9}}
-			parsed := library.Parse("The.Bear.S01.MULTi.1080p.WEB.H264-FW")
-			Expect(AdoptionEpisode(parsed, show).ID).To(Equal(uint32(102)))
+			name := "The.Bear.S01.MULTi.1080p.WEB.H264-FW"
+			Expect(AdoptionEpisode(name, show).ID).To(Equal(uint32(102)))
 		})
 
 		It("matches an anime release on its absolute number", func() {
 			shows := []*ent.TVShow{buildShow(true, false)}
-			parsed := library.ParseResult{
-				Title: "The Bear", AbsoluteNumber: 2, Resolution: "1080p",
-			}
-			dec, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			dec, ok := classifyEpisodeAdoption(
+				"The Bear (2022) - 02 [1080p]",
+				0,
+				shows,
+			)
 			Expect(ok).To(BeTrue())
 			Expect(dec.episodeID).To(Equal(uint32(102)))
 			Expect(dec.autoImport).To(BeTrue())
@@ -416,8 +577,8 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 
 		It("skips when no show title matches", func() {
 			shows := []*ent.TVShow{buildShow(false, false)}
-			parsed := library.Parse("Other.Show.S01E01.1080p-X")
-			_, ok := classifyEpisodeAdoption(parsed, 0, shows)
+			name := "Other.Show.S01E01.1080p-X"
+			_, ok := classifyEpisodeAdoption(name, 0, shows)
 			Expect(ok).To(BeFalse())
 		})
 	})
@@ -609,6 +770,62 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 				Expect(got.FailureReason).To(Equal(reasonUnidentified))
 			},
 		)
+
+		It("proposes a titled special against the special it names", func() {
+			const name = "The.Bear.S01.Special.Behind.The.Line.1080p.WEB-X"
+			root := adoptRoot(name)
+			configtest.Setup(map[string]any{
+				"library": map[string]any{"download_path": root},
+				"download_clients": []map[string]any{{
+					"name": "embedded", "client_type": "builtin",
+					"download_dir": root, "enabled": true,
+				}},
+			})
+			client := &adoptClient{torrents: []Torrent{{
+				Hash: adoptHash, Name: name, Status: StatusSeeding, Size: 100,
+			}}}
+			mgr = New(store, client).(Adopter)
+
+			store.EXPECT().AllDownloadRecordHashes(mock.Anything).
+				Return(map[string]struct{}{}, nil).Once()
+			store.EXPECT().
+				DeleteStalePendingAdoptions(mock.Anything, "embedded", []string{adoptHash}).
+				Return(0, nil).Once()
+			store.EXPECT().
+				DeleteOrphanedPendingAdoptions(mock.Anything, []string{"embedded"}).
+				Return(0, nil).Once()
+			store.EXPECT().ListMoviesForAdoption(mock.Anything).
+				Return(nil, nil).Once()
+			store.EXPECT().ListTvShowsForAdoption(mock.Anything).
+				Return([]*ent.TVShow{{
+					ID: 1, Title: "The Bear",
+					Edges: ent.TVShowEdges{Seasons: []*ent.Season{{
+						Number: 0,
+						Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+							{ID: 900, Number: 1, Title: "Gag Reel"},
+							{ID: 901, Number: 2, Title: "Behind the Line"},
+						}},
+					}}},
+				}}, nil).Once()
+
+			var got db.CreateDownloadRecordParams
+			store.EXPECT().CreateDownloadRecord(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, p db.CreateDownloadRecordParams) {
+					got = p
+				}).
+				Return(&ent.DownloadRecord{ID: 7}, nil).Once()
+
+			ids, err := mgr.AdoptManualTorrents(ctx)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ids).To(BeEmpty())
+			Expect(got.Status).To(Equal(downloadrecord.StatusPending))
+			Expect(got.EpisodeID).To(Equal(uint32(901)))
+			Expect(got.EpisodeIDs).To(Equal([]uint32{901}))
+			Expect(
+				got.FailureReason,
+			).To(Equal("special named by title, review manually"))
+		})
 
 		It(
 			"proposes rather than imports a match whose files are missing",

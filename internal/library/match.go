@@ -2,11 +2,14 @@ package library
 
 import (
 	"regexp"
+	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/tvshow"
 )
 
 var (
@@ -221,6 +224,349 @@ func TitleNamesSameWork(release, title string) bool {
 	}
 	rest, found := strings.CutPrefix(nr, nt)
 	return found && titleTagSuffix.MatchString(rest)
+}
+
+// minSpecialTitleChars is the shortest special title a release is matched
+// by, counted in characters on its compared words: the alias harvest's floor
+// (internal/metadata/aliases.go) for the same reason, a short common word
+// matching most of a show's releases.
+const minSpecialTitleChars = 4
+
+var (
+	// squareTagRe is a bracketed tag, which in a release name is never part
+	// of a title: a fansub group, a resolution, a checksum.
+	squareTagRe = regexp.MustCompile(`\[[^\]]*\]`)
+	yearWordRe  = regexp.MustCompile(`^(?:19|20)\d{2}$`)
+	digitsRe    = regexp.MustCompile(`^\d+$`)
+	// seasonWordRe is a season token as titleWords leaves it, with or without
+	// its episode.
+	seasonWordRe = regexp.MustCompile(`^s\d{2}(?:e\d{2,3})?$`)
+	// wordGlue closes an apostrophe up, as release names do ("Chesters"), and
+	// spells the ampersand out.
+	wordGlue = strings.NewReplacer("'", "", "’", "", "&", " and ")
+
+	numberWords = map[string]string{
+		"one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+		"six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10",
+	}
+	// specialMarkers are the words a release may put between the show and a
+	// special's title, with or without a number after them ("OAD 01 - Title").
+	specialMarkers = map[string]bool{
+		"special": true, "ova": true, "oav": true, "oad": true,
+	}
+	// genericSpecialWords name no special in particular: a title made of
+	// them, numbers and release tags ("Episode 3", "Pilot", "Extras") is
+	// carried by too many releases to match on.
+	genericSpecialWords = map[string]bool{
+		"episode": true, "part": true, "chapter": true, "ova": true,
+		"oav": true, "oad": true, "pilot": true, "extra": true,
+		"extras": true, "bonus": true, "trailer": true,
+	}
+)
+
+// titleWords splits a title into the words it is compared by: lowercased,
+// accents and apostrophes dropped, "&" read as "and", a number as its digits
+// whether spelled out or zero-padded, and "part" dropped before a number, so
+// "Part One", "Part 01" and "(1)" are the same word.
+func titleWords(s string) []string {
+	s = unaccentable.Replace(strings.ToLower(norm.NFD.String(s)))
+	words := splitWords(wordGlue.Replace(titleAccent.ReplaceAllString(s, "$1")))
+	for i, w := range words {
+		if n, ok := numberWords[w]; ok {
+			words[i] = n
+		} else if digitsRe.MatchString(w) && len(w) > 1 {
+			words[i] = strings.TrimLeft(w[:len(w)-1], "0") + w[len(w)-1:]
+		}
+	}
+	out := make([]string, 0, len(words))
+	for i, w := range words {
+		if (w == "part" || w == "pt") && i+1 < len(words) &&
+			digitsRe.MatchString(words[i+1]) {
+			continue
+		}
+		out = append(out, w)
+	}
+	return out
+}
+
+// sansArticle drops a leading article, a whole word: "Abba" keeps its A.
+func sansArticle(words []string) []string {
+	if len(words) > 1 &&
+		(words[0] == "the" || words[0] == "a" || words[0] == "an") {
+		return words[1:]
+	}
+	return words
+}
+
+// titleCore drops what a release and the library add to the end of a
+// special's title independently of each other: the word "special", the tags
+// titleTagSuffix knows and one year ("Polar" / "Polar Special", "The
+// Reunion" / "The Reunion Extended 2012"). The first word always stays.
+func titleCore(words []string) []string {
+	year := false
+	for n := len(words); n > 1; n-- {
+		switch last := words[n-1]; {
+		case last == "special" || titleTagSuffix.MatchString(last):
+		case !year && yearWordRe.MatchString(last):
+			year = true
+		default:
+			return words[:n]
+		}
+	}
+	return words[:min(len(words), 1)]
+}
+
+// trailingYear is the year titleCore drops, empty without one.
+func trailingYear(words []string) string {
+	for _, w := range words[len(titleCore(words)):] {
+		if yearWordRe.MatchString(w) {
+			return w
+		}
+	}
+	return ""
+}
+
+// cutWords returns words past prefix, false when they do not start with it.
+func cutWords(words, prefix []string) ([]string, bool) {
+	if len(words) < len(prefix) || !slices.Equal(words[:len(prefix)], prefix) {
+		return nil, false
+	}
+	return words[len(prefix):], true
+}
+
+// showWords is a show's name as a release spells it: no year suffix, no
+// leading article.
+func showWords(show string) []string {
+	return sansArticle(titleWords(titleYearSuffix.ReplaceAllString(show, "")))
+}
+
+// specialWords is a special's title as a release spells it: less a repeat of
+// the show's name ("Top Gear: Polar Special") and a leading article. nil for
+// a title that names nothing: the show's own name, or a titleCore under
+// minSpecialTitleChars or made of generic words, numbers and release tags
+// only, in one word ("Extended") or two ("Blu-ray").
+func specialWords(special string, show []string) []string {
+	w := sansArticle(titleWords(special))
+	if rest, ok := cutWords(w, show); ok {
+		w = sansArticle(rest)
+	}
+	core := titleCore(w)
+	joined := strings.Join(core, "")
+	if utf8.RuneCountInString(joined) < minSpecialTitleChars ||
+		isNonGroupTag(joined) ||
+		!slices.ContainsFunc(core, func(t string) bool {
+			return !genericSpecialWords[t] && !isNonGroupTag(t)
+		}) {
+		return nil
+	}
+	return w
+}
+
+// releaseWords is a release name's words up to its first technical tag, the
+// container extension and every bracketed tag left out. The release group is
+// not cut: with no technical tag before it, it reads as one more word.
+func releaseWords(release string) []string {
+	if i := strings.LastIndex(release, "."); i > 0 &&
+		mediaExtensions[strings.ToLower(release[i+1:])] {
+		release = release[:i]
+	}
+	release = squareTagRe.ReplaceAllString(release, " ")
+	return titleWords(release[:techIndex(release)])
+}
+
+// NamesSpecial returns which of titles, the titles of a show's specials, a
+// release names: "Doctor.Who.2005.The.Day.of.the.Doctor.1080p", the way most
+// specials are released. -1 when it names none, or no single one. Unattended
+// grabs trust the answer, so titles are compared word for word, never by
+// prefix or substring.
+//
+// The name must open with one of shows (the library's titles and aliases),
+// then may carry a year, a season token and specialMarkers. A release that
+// numbers a regular episode or reads as a pack never passes, so the season
+// token left is a special's: S00Exx under whatever number the tracker gave
+// it, SxxE00, or the season a titled special is filed under. What follows, up
+// to the first technical tag, is the title (pickTitle): a word after it
+// ("Trailer", "Part 2") or before it ("Confidential") is another release.
+func NamesSpecial(release string, shows, titles []string) int {
+	if p := Parse(release); (p.Season > 0 && p.Episode > 0) ||
+		ParseSeasonSpan(release) != (SeasonSpan{}) {
+		return -1
+	}
+	words := sansArticle(releaseWords(release))
+	for _, show := range shows {
+		sw := showWords(show)
+		tail, ok := cutWords(words, sw)
+		if len(sw) == 0 || !ok {
+			continue
+		}
+		if len(tail) > 0 && yearWordRe.MatchString(tail[0]) {
+			tail = tail[1:]
+		}
+		if len(tail) > 0 && seasonWordRe.MatchString(tail[0]) {
+			tail = tail[1:]
+		}
+		if i := pastMarkers(tail, titles, sw); i >= 0 {
+			return i
+		}
+	}
+	return -1
+}
+
+// pastMarkers picks the title tail spells (pickTitle), as it stands or past
+// leading specialMarkers: a title is free to open with one itself ("Special
+// Delivery"), so the tail is tried before each is dropped.
+func pastMarkers(tail, titles, show []string) int {
+	for marker := false; ; tail = tail[1:] {
+		if i, found := pickTitle(sansArticle(tail), titles, show); found {
+			return i
+		}
+		switch {
+		case len(tail) > 0 && specialMarkers[tail[0]]:
+			marker = true
+		case marker && len(tail) > 0 && digitsRe.MatchString(tail[0]):
+			marker = false
+		default:
+			return -1
+		}
+	}
+}
+
+// pickTitle picks the title that words spell. Titles sharing words' titleCore
+// are the candidates, and the season's other specials decide between them:
+// the one equal to words word for word wins ("Christmas Special 2012" over
+// "Christmas Special"), else a candidate standing alone and dated no other year.
+// Two exact titles, or several candidates and none exact
+// ("…Christmas.Special.2011" against those two), name no single special: found
+// with -1, so no shorter reading is tried.
+func pickTitle(words, titles, show []string) (index int, found bool) {
+	core := titleCore(words)
+	year := trailingYear(words)
+	var exact, candidates []int
+	otherYear := false
+	for i, t := range titles {
+		tw := specialWords(t, show)
+		if tw == nil || !slices.Equal(titleCore(tw), core) {
+			continue
+		}
+		candidates = append(candidates, i)
+		if y := trailingYear(tw); y != "" && year != "" && y != year {
+			otherYear = true
+		}
+		if slices.Equal(tw, words) {
+			exact = append(exact, i)
+		}
+	}
+	switch {
+	case len(candidates) == 0:
+		return -1, false
+	case len(exact) == 1:
+		return exact[0], true
+	case len(exact) == 0 && len(candidates) == 1 && !otherYear:
+		return candidates[0], true
+	}
+	return -1, true
+}
+
+// SpecialQuery is the text asked of an indexer for a special by its title:
+// the show's name then the special's, each without its "(year)" suffix and
+// its punctuation, the show's name said once. Empty when the title names
+// nothing (specialWords), which would ask for the show alone.
+func SpecialQuery(show, special string) string {
+	plain := func(s string) []string {
+		return splitWords(apostrophes.Replace(
+			titleYearSuffix.ReplaceAllString(s, ""),
+		))
+	}
+	sw, tw := plain(show), plain(special)
+	if len(sw) == 0 || specialWords(special, showWords(show)) == nil {
+		return ""
+	}
+	if len(tw) > len(sw) && slices.EqualFunc(tw[:len(sw)], sw, strings.EqualFold) {
+		tw = tw[len(sw):]
+	}
+	return strings.Join(append(sw, tw...), " ")
+}
+
+var apostrophes = strings.NewReplacer("'", "", "’", "")
+
+// ShowNames is every name a release may carry for the show.
+func ShowNames(show *ent.TVShow) []string {
+	return append([]string{show.Title, show.OriginalTitle}, show.Aliases...)
+}
+
+// Specials is the show's season 0 episodes.
+func Specials(show *ent.TVShow) []*ent.Episode {
+	for _, se := range show.Edges.Seasons {
+		if se.Number == 0 {
+			return se.Edges.Episodes
+		}
+	}
+	return nil
+}
+
+// SpecialOf is the show's season 0 episode holding id, nil when id is none of
+// its specials.
+func SpecialOf(show *ent.TVShow, id uint32) *ent.Episode {
+	for _, e := range Specials(show) {
+		if e.ID == id {
+			return e
+		}
+	}
+	return nil
+}
+
+// SpecialTitles is what a search for the show's episode id hands
+// NamesSpecial: that special's title first, then the titles of the show's
+// other specials. nil when id is not one of its specials.
+func SpecialTitles(show *ent.TVShow, id uint32) []string {
+	special := SpecialOf(show, id)
+	if special == nil {
+		return nil
+	}
+	titles := []string{special.Title}
+	for _, other := range Specials(show) {
+		if other.ID != id {
+			titles = append(titles, other.Title)
+		}
+	}
+	return titles
+}
+
+// NamedSpecial is the special of the show a release names by its title
+// (NamesSpecial against every special's title), nil for none.
+func NamedSpecial(release string, show *ent.TVShow) *ent.Episode {
+	specials := Specials(show)
+	titles := make([]string, len(specials))
+	for i, e := range specials {
+		titles[i] = e.Title
+	}
+	if i := NamesSpecial(release, ShowNames(show), titles); i >= 0 {
+		return specials[i]
+	}
+	return nil
+}
+
+// MatchFileEpisode resolves one file of a release to an episode of the show.
+// special is the season 0 episode the release was taken for, nil for any
+// other release: a file naming it by title (NamedSpecial) is that episode,
+// whatever number it carries. Every other file goes by MatchEpisodeInSeason.
+func MatchFileEpisode(
+	name string,
+	show *ent.TVShow,
+	special *ent.Episode,
+) (uint16, *ent.Episode) {
+	if special != nil {
+		if named := NamedSpecial(
+			name,
+			show,
+		); named != nil &&
+			named.ID == special.ID {
+			return 0, special
+		}
+	}
+	return MatchEpisodeInSeason(
+		Parse(name), show.Edges.Seasons, show.Type == tvshow.TypeAnime,
+	)
 }
 
 // MatchEpisode resolves a parsed release to an episode within the show's

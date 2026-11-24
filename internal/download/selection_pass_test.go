@@ -258,6 +258,39 @@ var _ = Describe("RunSelectionPass", Label("unit", "downloads"), func() {
 		},
 	)
 
+	It("a special named by title: its file selected, the magnet kept", func() {
+		special := &ent.Episode{ID: 21, Number: 4, Title: "The Lost Night"}
+		season := &ent.Season{
+			Number: 0,
+			Edges:  ent.SeasonEdges{Episodes: []*ent.Episode{special}},
+		}
+		season.Edges.TvShow = &ent.TVShow{
+			ID: 1, Title: "Show", Type: tvshow.TypeStandard,
+			Edges: ent.TVShowEdges{Seasons: []*ent.Season{season}},
+		}
+		special.Edges.Season = season
+		rec := pendingRecord(special, time.Now())
+		store.EXPECT().
+			ListPendingSelectionRecords(mock.Anything).
+			Return([]*ent.DownloadRecord{rec}, nil).Once()
+		client.listFilesResult = []TorrentFile{
+			{Index: 0, Path: "Show.The.Lost.Night.Trailer.mkv", Size: aboveFloor},
+			{Index: 1, Path: "Show.The.Lost.Night.1080p.mkv", Size: aboveFloor},
+		}
+		store.EXPECT().
+			SetDownloadRecordSelection(
+				mock.Anything, uint32(42), downloadrecord.SelectionStateApplied,
+				[]int{1}, aboveFloor,
+			).
+			Return(nil).Once()
+
+		_, err := mgr.RunSelectionPass(ctx)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(client.setWantedFiles).To(Equal([]int{1}))
+		Expect(client.removeCalls).To(Equal(0))
+	})
+
 	It(
 		"zero matches: selection flipped to skipped, record failed with "+
 			"SxxExx labels, torrent removed with files, grab_failures bumped",

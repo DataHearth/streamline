@@ -1186,6 +1186,110 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		Expect(recorded).To(HaveKey(eps[1].ID))
 	})
 
+	// A special's release names its file by title; beside an extra, nothing
+	// in it carries a number to match on.
+	It("files a special's title-named file under its anchor", func() {
+		season, eps := buildShow()
+		season.Number = 0
+		eps[0].Title = "The Lost Night"
+		eps[1].Title = "Gag Reel"
+		src := filepath.Join(tmp, "special")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Show.The.Lost.Night.1080p.mkv")
+		seedMediaFile(src, "Show.The.Lost.Night.Deleted.Scenes.1080p.mkv")
+		rec := episodeRecord(6, src, season, eps[0])
+		rec.Edges.Episodes = []*ent.Episode{eps[0]}
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(6)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[0].ID).
+			Return(nil, &ent.NotFoundError{}).Once()
+		storeMk.EXPECT().
+			RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordEpisodeImportSuccessParams) bool {
+				return p.RecordID == 6 && p.EpisodeID == eps[0].ID
+			})).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 6)).To(Succeed())
+	})
+
+	// A pack of several specials goes by number: one of them carrying the
+	// anchor's title under its own number is not the anchor.
+	It("files a pack of specials by number, whatever title a file carries", func() {
+		season, eps := buildShow()
+		season.Number = 0
+		eps[0].Title = "The Lost Night"
+		eps[1].Title = "Gag Reel"
+		src := filepath.Join(tmp, "specials")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Show.S00E01.1080p.mkv")
+		seedMediaFile(src, "Show.S00E02.The.Lost.Night.1080p.mkv")
+		rec := episodeRecord(7, src, season, eps[0])
+		rec.Edges.Episodes = eps
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(7)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, mock.Anything).
+			Return(nil, &ent.NotFoundError{}).Twice()
+		recorded := map[uint32]bool{}
+		storeMk.EXPECT().
+			RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordEpisodeImportSuccessParams) bool {
+				recorded[p.EpisodeID] = true
+				return p.RecordID == 7
+			})).
+			Return(nil).Twice()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 7)).To(Succeed())
+		Expect(recorded).To(HaveKey(eps[0].ID))
+		Expect(recorded).To(HaveKey(eps[1].ID))
+	})
+
+	// Only a special is matched by title: a regular episode's title in a
+	// file name files nothing.
+	It("matches no file by title for a regular episode", func() {
+		season, eps := buildShow()
+		eps[0].Title = "The Lost Night"
+		src := filepath.Join(tmp, "regular")
+		Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+		seedMediaFile(src, "Show.The.Lost.Night.1080p.mkv")
+		seedMediaFile(src, "Show.S01E02.1080p.mkv")
+		rec := episodeRecord(8, src, season, eps[0])
+		rec.Edges.Episodes = []*ent.Episode{eps[0]}
+
+		storeMk.EXPECT().FindImportingDownloadRecordByID(mock.Anything, uint32(8)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().FindMediaFileByEpisodeID(mock.Anything, eps[1].ID).
+			Return(nil, &ent.NotFoundError{}).Once()
+		storeMk.EXPECT().
+			RecordEpisodeImportSuccess(mock.Anything, mock.MatchedBy(func(p db.RecordEpisodeImportSuccessParams) bool {
+				return p.RecordID == 8 && p.EpisodeID == eps[1].ID
+			})).
+			Return(nil).Once()
+		storeMk.EXPECT().
+			MarkRequestsAvailable(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Once()
+		msMk.EXPECT().
+			RefreshAll(mock.Anything, mock.Anything, libDir, mock.Anything).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 8)).To(Succeed())
+	})
+
 	It("multi-season pack imports a file from a season past its anchor's", func() {
 		season, eps := buildShow()
 		show := season.Edges.TvShow

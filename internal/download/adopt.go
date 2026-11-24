@@ -162,18 +162,21 @@ func classifyMovieAdoption(
 	return d, true
 }
 
-// classifyEpisodeAdoption decides the outcome for a parsed release of size
-// bytes against the candidate shows. A single-episode release (SxxExx, or an
+// classifyEpisodeAdoption decides the outcome for the release called name, of
+// size bytes, against the candidate shows. A single-episode release (SxxExx, or an
 // anime absolute number) matches an episode and applies the has-file/quality
 // rules using the show's profile; a season pack or otherwise-unresolvable
 // multi is proposed "review manually" linked to the first episode of the
-// parsed season. Returns false when no show matches (skip — create no row).
-// Pure: no I/O.
+// parsed season. A numbered special titled as another special is proposed
+// too: trackers number specials their own way, so the number alone does not
+// say which one it is. Returns false when no show matches (skip — create no
+// row). Pure: no I/O.
 func classifyEpisodeAdoption(
-	parsed library.ParseResult,
+	name string,
 	size int64,
 	shows []*ent.TVShow,
 ) (adoptDecision, bool) {
+	parsed := library.Parse(name)
 	var show *ent.TVShow
 	for _, s := range shows {
 		if library.TitleMatchesAny(
@@ -187,26 +190,29 @@ func classifyEpisodeAdoption(
 		return adoptDecision{}, false
 	}
 
-	ep := AdoptionEpisode(parsed, show)
+	ep := AdoptionEpisode(name, show)
 	if ep == nil {
 		return adoptDecision{}, false
 	}
-	claim := AdoptionEpisodes(parsed, show)
+	claim := AdoptionEpisodes(name, show)
 	if !singleEpisodeRelease(parsed) {
 		// Season pack / multi-file: propose, never auto-fan.
 		return adoptDecision{
 			episodeID:  ep.ID,
 			episodeIDs: claim,
 			quality:    parsed.Resolution,
-			reason:     "season pack, review manually",
+			reason:     packReason(name, parsed, show),
 		}, true
 	}
 	d := adoptDecision{
 		episodeID: ep.ID, episodeIDs: claim, quality: parsed.Resolution,
 	}
+	named := library.NamedSpecial(name, show)
 	switch {
 	case sameFile(parsed, size, db.PresentFiles(ep.Edges.MediaFiles)):
 		d.completed = true
+	case named != nil && named.ID != ep.ID:
+		d.reason = "numbered as one special and titled as another, review manually"
 	case episodeHasFile(ep):
 		d.reason = "already have a file"
 	case resolutionOK(parsed.Resolution, profileMin(config.MediaSeries, show.QualityProfile)):
@@ -226,12 +232,16 @@ func classifyEpisodeAdoption(
 // the show has no counterpart for what the name claims, which for a pack means
 // the season itself is missing or empty.
 //
+// A special named by its title under a season token
+// ("Show.S05.Special.The.Title") is filed against the special whose title the
+// release names (library.NamedSpecial), and against the first special it can
+// fill when no single one carries that title.
+//
 // Exported because identifying a proposal by hand (a title the library did not
 // have when the torrent was adopted) has to land on the same episode the
 // automatic path would have chosen.
-func AdoptionEpisode(
-	parsed library.ParseResult, show *ent.TVShow,
-) *ent.Episode {
+func AdoptionEpisode(name string, show *ent.TVShow) *ent.Episode {
+	parsed := library.Parse(name)
 	if singleEpisodeRelease(parsed) {
 		return library.MatchEpisode(
 			parsed,
@@ -239,16 +249,43 @@ func AdoptionEpisode(
 			show.Type == tvshow.TypeAnime,
 		)
 	}
-	return packAnchor(adoptionScope(parsed, show))
+	if specialScope(name, parsed, show) != nil {
+		if named := library.NamedSpecial(name, show); named != nil {
+			return named
+		}
+	}
+	return packAnchor(adoptionScope(name, parsed, show))
+}
+
+// specialScope is the specials season a special named by its title is filed
+// in: the library holds every special in season 0, whatever season the name
+// puts it under. nil for any other release, for a name that also spans
+// seasons ("…Special….S01-S03" is a pack, read first), and for a show holding
+// no special, whose release adoptionScope leaves on the season it names.
+func specialScope(
+	name string, parsed library.ParseResult, show *ent.TVShow,
+) []*ent.Season {
+	if !parsed.TitledSpecial || library.IsWholeSeriesPack(name) {
+		return nil
+	}
+	if specials := seasonNumbered(show, 0); packAnchor(specials) != nil {
+		return specials
+	}
+	return nil
 }
 
 // adoptionScope is the seasons a pack covers within one show — the set its
 // anchor is picked from, and the set its claim is drawn from, so the two can
 // never disagree about what the release is for.
 func adoptionScope(
-	parsed library.ParseResult, show *ent.TVShow,
+	name string, parsed library.ParseResult, show *ent.TVShow,
 ) []*ent.Season {
-	if parsed.SeasonPack || parsed.Specials {
+	if specials := specialScope(name, parsed, show); specials != nil {
+		return specials
+	}
+	// A special the library has no season 0 for stays on the season its
+	// name carries, for a person to place.
+	if parsed.SeasonPack || parsed.Specials || parsed.TitledSpecial {
 		return seasonNumbered(show, parsed.Season)
 	}
 	// A whole-series pack ("INTEGRALE", "COMPLETE") names no season, so
@@ -259,9 +296,11 @@ func adoptionScope(
 }
 
 // AdoptionEpisodes is every episode an adopted release is for: the one it
-// matches, or a pack's whole scope. It is what the record links as its
-// episodes — every state write scoped to "this record's episodes" reads that
-// set, and without it an adopted pack could only ever speak for its anchor.
+// matches, a pack's whole scope, or the one special a release named by title
+// is filed against, never the rest of the specials season. It is what the
+// record links as its episodes — every state write scoped to "this record's
+// episodes" reads that set, and without it an adopted pack could only ever
+// speak for its anchor.
 //
 // Episodes already holding a file stay in: the importer decides per file
 // whether a pack replaces one, and a set that dropped them would describe
@@ -270,9 +309,11 @@ func adoptionScope(
 //
 // Exported alongside AdoptionEpisode because identifying a proposal by hand
 // re-resolves both against the show the operator names.
-func AdoptionEpisodes(
-	parsed library.ParseResult, show *ent.TVShow,
-) []uint32 {
+func AdoptionEpisodes(name string, show *ent.TVShow) []uint32 {
+	parsed := library.Parse(name)
+	if specialScope(name, parsed, show) != nil {
+		return []uint32{AdoptionEpisode(name, show).ID}
+	}
 	if singleEpisodeRelease(parsed) {
 		ep := library.MatchEpisode(
 			parsed, show.Edges.Seasons, show.Type == tvshow.TypeAnime,
@@ -283,7 +324,7 @@ func AdoptionEpisodes(
 		return []uint32{ep.ID}
 	}
 	var ids []uint32
-	for _, se := range adoptionScope(parsed, show) {
+	for _, se := range adoptionScope(name, parsed, show) {
 		for _, e := range se.Edges.Episodes {
 			ids = append(ids, e.ID)
 		}
@@ -336,6 +377,30 @@ func specialsLast(season uint16) uint16 {
 		return ^uint16(0)
 	}
 	return season
+}
+
+// packReason is why a release that is not one numbered episode waits for a
+// person.
+func packReason(
+	name string, parsed library.ParseResult, show *ent.TVShow,
+) string {
+	switch {
+	case specialScope(name, parsed, show) != nil:
+		if library.NamedSpecial(name, show) == nil {
+			return fmt.Sprintf(
+				"special named by title, but no single special of %s "+
+					"carries that title: review manually",
+				show.Title,
+			)
+		}
+		return "special named by title, review manually"
+	case parsed.TitledSpecial && !library.IsWholeSeriesPack(name):
+		return fmt.Sprintf(
+			"special named by title, but %s has no specials: review manually",
+			show.Title,
+		)
+	}
+	return "season pack, review manually"
 }
 
 func singleEpisodeRelease(parsed library.ParseResult) bool {
@@ -495,7 +560,7 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 		parsed := library.Parse(u.t.Name)
 		dec, ok := classifyMovieAdoption(parsed, u.t.Size, movies)
 		if !ok {
-			dec, ok = classifyEpisodeAdoption(parsed, u.t.Size, shows)
+			dec, ok = classifyEpisodeAdoption(u.t.Name, u.t.Size, shows)
 		}
 		if !ok {
 			// Nothing in the library matches. Filing it unidentified is what

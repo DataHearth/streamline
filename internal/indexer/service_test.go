@@ -166,6 +166,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 						"",
 						3,
 						5,
+						nil,
 					)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(results).To(BeEmpty())
@@ -185,6 +186,7 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 					"",
 					0,
 					0,
+					nil,
 				)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(BeNil())
@@ -490,6 +492,118 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			Entry("a total count", "[Group] Bleach Complete 366 (BD 1080p)"),
 			Entry("a dated complete", "The Daily Show 2011.09.25 COMPLETE 720p"),
 		)
+	})
+
+	Describe("a special filed under a numbered season", func() {
+		const named = "Show.S05.Special.The.Lost.Night.1080p.WEB-GRP"
+
+		It("is neither season 5's pack nor a pack hiding its episodes", func() {
+			Expect(filterToSeason([]SearchResult{{Title: named}}, 5)).To(BeEmpty())
+
+			out, hidden := filterToEpisode([]SearchResult{{Title: named}}, 5, 1)
+			Expect(out).To(BeEmpty())
+			Expect(hidden).To(BeZero())
+		})
+
+		It("is found by its title, as an SxxE00 special is", func() {
+			in := []SearchResult{
+				{Title: named},
+				{Title: "Show.S11E00.The.Lost.Night.720p.HDTV-GRP"},
+			}
+			Expect(namedSpecials(in, []string{"Show"}, []string{"The Lost Night"})).
+				To(HaveLen(2))
+		})
+	})
+
+	Describe("namedSpecials", func() {
+		specials := []string{"The Day of the Doctor", "The Time of the Doctor"}
+
+		It("keeps the releases naming the special by title, unflagged", func() {
+			in := []SearchResult{
+				{Title: "Doctor.Who.2005.The.Day.of.the.Doctor.1080p.BluRay-GRP"},
+				{
+					Title:         "Doctor.Who.The.Day.of.the.Doctor.720p.HDTV-GRP",
+					TitleMismatch: true,
+				},
+				// A special numbered as the tracker numbers it.
+				{Title: "Doctor.Who.S00E77.The.Day.of.the.Doctor.1080p-GRP"},
+				// A regular episode and packs, whatever else they name.
+				{Title: "Doctor.Who.S07E05.The.Day.of.the.Doctor.1080p-GRP"},
+				{Title: "Doctor.Who.S07.The.Day.of.the.Doctor.1080p-GRP"},
+				{Title: "Doctor.Who.COMPLETE.The.Day.of.the.Doctor.1080p-GRP"},
+				// Another special, another work, another show.
+				{Title: "Doctor.Who.The.Time.of.the.Doctor.1080p-GRP"},
+				{Title: "Doctor.Who.Confidential.The.Day.of.the.Doctor.1080p-GRP"},
+				{Title: "Torchwood.The.Day.of.the.Doctor.1080p-GRP"},
+			}
+			out := namedSpecials(in, []string{"Doctor Who (2005)"}, specials)
+			Expect(out).To(HaveLen(3))
+			Expect(out[0].Title).To(HavePrefix("Doctor.Who.2005"))
+			Expect(out[1].Title).To(HaveSuffix("HDTV-GRP"))
+			Expect(out[1].TitleMismatch).To(BeFalse(),
+				"the show was confirmed, so the automatic searches may grab it")
+			Expect(out[2].Title).To(ContainSubstring("S00E77"))
+		})
+
+		It("keeps nothing a sibling's title claims as well", func() {
+			in := []SearchResult{
+				{Title: "Show.Christmas.Special.2011.720p.HDTV-GRP"},
+			}
+			Expect(namedSpecials(
+				in,
+				[]string{"Show"},
+				[]string{
+					"Christmas Special",
+					"Christmas Special 2012",
+				},
+			)).To(BeEmpty())
+			Expect(namedSpecials(in, []string{"Show"},
+				[]string{"Christmas Special"})).To(HaveLen(1))
+		})
+	})
+
+	// A tracker numbers its specials its own way, so the number alone does
+	// not say a release is the special searched for.
+	Describe("flagSiblings", func() {
+		It("flags a numbered release titled as another special", func() {
+			out := flagSiblings([]SearchResult{
+				{Title: "Doctor.Who.S00E05.The.Time.of.the.Doctor.1080p-GRP"},
+				{Title: "Doctor.Who.S00E05.The.Day.of.the.Doctor.1080p-GRP"},
+				{Title: "Doctor.Who.S00E05.1080p-GRP"},
+			}, []string{"Doctor Who"},
+				[]string{"The Day of the Doctor", "The Time of the Doctor"})
+			Expect(out).To(HaveLen(3), "still there to browse")
+			Expect(out[0].TitleMismatch).To(BeTrue())
+			Expect(out[1].TitleMismatch).To(BeFalse())
+			Expect(out[2].TitleMismatch).To(BeFalse())
+		})
+	})
+
+	Describe("mergeNamed", func() {
+		It("lists a release both named and numbered once, unflagged", func() {
+			r := SearchResult{
+				Title: "1.Piece.S00E01.The.Title.Here.720p-GRP",
+				Size:  9,
+			}
+			flagged := r
+			flagged.TitleMismatch = true
+			out := mergeNamed([]SearchResult{r}, []SearchResult{flagged})
+			Expect(out).To(HaveLen(1))
+			Expect(out[0].TitleMismatch).To(BeFalse())
+		})
+
+		It("orders the merged list by seeders", func() {
+			out := mergeNamed(
+				[]SearchResult{{Title: "named", Seeders: 5}},
+				[]SearchResult{
+					{Title: "numbered", Seeders: 50},
+					{Title: "numbered too", Seeders: 1},
+				},
+			)
+			Expect(out).To(HaveLen(3))
+			Expect(out[0].Title).To(Equal("numbered"))
+			Expect(out[1].Title).To(Equal("named"))
+		})
 	})
 
 	Describe("filterProviderIDs", func() {

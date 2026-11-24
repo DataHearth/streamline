@@ -6,17 +6,22 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 type ParseResult struct {
 	// Specials is set when the season read is season 0, which tells the name
 	// from one naming no season: Season is 0 for both.
-	Specials       bool
-	Title          string
-	Year           uint16
-	Season         uint16
-	Episode        uint16
-	SeasonPack     bool
+	Specials   bool
+	Title      string
+	Year       uint16
+	Season     uint16
+	Episode    uint16
+	SeasonPack bool
+	// TitledSpecial is one special named by its title under a season token
+	// ("Show.S05.Special.The.Title", "Show.S00.Christmas.Special"), which
+	// leaves SeasonPack and AbsoluteNumber unset. namesSpecial holds the rule.
+	TitledSpecial  bool
 	AbsoluteNumber uint16
 	AirDate        *time.Time
 	Resolution     string
@@ -71,6 +76,10 @@ var (
 		`(?i)\b(?:S00|(?:season|saison)[. ]00?)` +
 			`(?:[. ](?:-[. ])?E(?:p(?:isode[. ]?)?)?(\d{1,3})\b|\s+-\s+(\d{1,3})(?:v\d)?` +
 			`(?:\s*$|\s*[\[(]|\s+(?:-\s+)?(?:\pL|\d{3,4}p)))`,
+	)
+	// specialWordRe captures the word "special" standing on its own.
+	specialWordRe = regexp.MustCompile(
+		`(?i)(?:^|[^\pL\pN])(special)(?:[^\pL\pN]|$)`,
 	)
 	// Non-scene releases spell the season out — French trackers in particular
 	// ("Breaking Bad Saison 04 Complète Multi …"). Without this the name carries
@@ -169,22 +178,30 @@ func Parse(filename string) ParseResult {
 	}
 	// Season pack: SXX (or a spelled-out season) present but no SXXEXX matched.
 	if r.Episode == 0 {
-		m := seasonPackRe.FindStringSubmatch(filename)
+		m := seasonPackRe.FindStringSubmatchIndex(filename)
 		if m == nil {
-			m = longSeasonRe.FindStringSubmatch(filename)
+			m = longSeasonRe.FindStringSubmatchIndex(filename)
 		}
 		if m != nil {
-			if s, err := strconv.ParseUint(m[1], 10, 16); err == nil {
+			if s, err := strconv.ParseUint(
+				filename[m[2]:m[3]], 10, 16,
+			); err == nil {
 				r.Season = uint16(s)
 				r.Specials = s == 0
-				// A dated S00 is the special aired that day.
-				r.SeasonPack = s != 0 || r.AirDate == nil
+				if namesSpecial(filename[m[3]:]) {
+					r.TitledSpecial = true
+				} else {
+					// A dated S00 is the special aired that day.
+					r.SeasonPack = s != 0 || r.AirDate == nil
+				}
 			}
 		}
 	}
 	// Anime absolute: only when no season token and no daily date. The digits
-	// of an S00 pack are its tags or its range, never an absolute number.
-	if !r.SeasonPack && r.Season == 0 && r.Episode == 0 && r.AirDate == nil {
+	// of an S00 pack are its tags or its range, and a number beside a
+	// special's title counts nothing the library numbers.
+	if !r.SeasonPack && !r.TitledSpecial &&
+		r.Season == 0 && r.Episode == 0 && r.AirDate == nil {
 		if m := absoluteRe.FindStringSubmatch(filename); m != nil {
 			if n, err := strconv.Atoi(m[1]); err == nil && n > 0 && n < 2000 {
 				r.AbsoluteNumber = uint16(n)
@@ -255,7 +272,8 @@ var nonGroupTags = map[string]bool{
 	"sdr": true, "hlg": true, "imax": true, "remux": true, "proper": true,
 	"repack": true, "extended": true, "remastered": true, "uncut": true,
 	"complete": true, "integral": true, "integrale": true, "collection": true,
-	"series": true, "limited": true, "internal": true,
+	"series": true, "limited": true, "internal": true, "edition": true,
+	"special": true, "specials": true, "features": true,
 	// tails of hyphenated source tags ("Blu-Ray", "WEB-DL"), which groupRe
 	// captures when the name is space-separated.
 	"ray": true, "dl": true,
@@ -437,10 +455,13 @@ func ParseSeasonSpan(name string) SeasonSpan {
 	if namesSeriesAndSpecials(name) {
 		return SeasonSpan{Complete: true, Specials: true}
 	}
-	if p := Parse(name); p.SeasonPack {
-		if p.Season == 0 {
-			return SeasonSpan{Specials: true}
-		}
+	switch p := Parse(name); {
+	case p.TitledSpecial:
+		// One special, whatever tag follows its title.
+		return SeasonSpan{}
+	case p.SeasonPack && p.Season == 0:
+		return SeasonSpan{Specials: true}
+	case p.SeasonPack:
 		return SeasonSpan{From: p.Season, To: p.Season}
 	}
 	if completePackRe.MatchString(name) {
@@ -469,6 +490,71 @@ func (s SeasonSpan) EpisodeCount(perSeason map[uint16]int) int {
 		}
 	}
 	return total
+}
+
+// specialJoiners are the words that add a special to a pack ("S01 with
+// Special"), and specialExtras the ones that make "special" a tag of the pack
+// ("S01 Special Edition", "S01 Special Features", "S01 Special Included").
+var (
+	specialJoiners = map[string]bool{
+		"and": true, "with": true, "w": true, "inc": true, "incl": true,
+		"including": true, "included": true, "plus": true, "et": true,
+		"avec": true,
+	}
+	specialExtras = map[string]bool{
+		"edition": true, "ed": true, "features": true, "extras": true,
+		"bonus": true, "included": true,
+	}
+	// episodeRangeRe is a run of episodes written apart from its season
+	// ("S01.E01-E10").
+	episodeRangeRe = regexp.MustCompile(`(?i)\bE\d{2,3}\s*-\s*E?\d{2,3}\b`)
+)
+
+// namesSpecial reports whether what follows a season token names one special
+// by its title rather than a pack. Only the segment up to the first technical
+// tag is read: it must hold the word "special" and another title word. A pack
+// that ships its specials says so with a joiner or a bracket before the word
+// ("S01 + Special", "S02 [BD + Special]"), another season token, an episode
+// range or a complete tag, and a word after it can make it a tag ("Special
+// Edition").
+func namesSpecial(rest string) bool {
+	seg := rest[:techIndex(rest)]
+	m := specialWordRe.FindStringSubmatchIndex(seg)
+	if m == nil || seasonTokenRe.MatchString(seg) ||
+		completePackRe.MatchString(seg) || episodeRangeRe.MatchString(seg) ||
+		strings.ContainsAny(seg[:m[2]], "+&([{") {
+		return false
+	}
+	before := splitWords(strings.ToLower(seg[:m[2]]))
+	after := splitWords(strings.ToLower(seg[m[3]:]))
+	joiner := func(w string) bool { return specialJoiners[w] }
+	extra := func(w string) bool { return specialExtras[w] }
+	if slices.ContainsFunc(before, joiner) || slices.ContainsFunc(after, extra) {
+		return false
+	}
+	return slices.ContainsFunc(append(before, after...), func(w string) bool {
+		return !isNonGroupTag(w)
+	})
+}
+
+// splitWords splits s at everything but letters, digits and the marks that
+// belong to a letter.
+func splitWords(s string) []string {
+	return strings.FieldsFunc(s, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && !unicode.IsMark(r)
+	})
+}
+
+// techIndex is where the first resolution, source or codec tag starts in s,
+// len(s) when it holds none.
+func techIndex(s string) int {
+	cut := len(s)
+	for _, re := range []*regexp.Regexp{resolutionRe, sourceRe, codecRe} {
+		if m := re.FindStringIndex(s); m != nil && m[0] < cut {
+			cut = m[0]
+		}
+	}
+	return cut
 }
 
 // extractTitle returns the name up to its first technical token. yearIdx is the

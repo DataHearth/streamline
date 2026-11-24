@@ -321,6 +321,85 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 			Expect(body.Message).To(ContainSubstring("season 3"))
 		})
 
+		It("links a special named by title to that special alone", func() {
+			show := goodOmens()
+			show.Edges.Seasons = append(show.Edges.Seasons, &ent.Season{
+				Number: 0,
+				Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+					{ID: 601, Number: 1, Title: "Gag Reel"},
+					{ID: 602, Number: 2, Title: "The Lost Scene"},
+				}},
+			})
+			app.store.EXPECT().
+				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(&ent.DownloadRecord{
+					ID:    1,
+					Title: "Good.Omens.S03.Special.The.Lost.Scene.1080p.WEB-FW",
+				}, nil).Once()
+			app.store.EXPECT().
+				FindTVShowByTVDBID(mock.Anything, uint32(359569)).
+				Return(&ent.TVShow{ID: 40}, nil).Once()
+			app.tvshows.EXPECT().
+				Get(mock.Anything, uint32(40)).Return(show, nil).Once()
+			app.store.EXPECT().
+				IdentifyDownloadRecord(
+					mock.Anything, uint32(1), uint32(0), uint32(602),
+					[]uint32{602}, mock.AnythingOfType("string"),
+				).Return(nil).Once()
+
+			resp := identify(`{"kind":"series","provider_id":359569}`)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+		})
+
+		It("422s naming the specials for a special the series cannot place", func() {
+			app.store.EXPECT().
+				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(&ent.DownloadRecord{
+					ID:    1,
+					Title: "Good.Omens.S05.Special.The.Lost.Scene.1080p.WEB-FW",
+				}, nil).Once()
+			app.store.EXPECT().
+				FindTVShowByTVDBID(mock.Anything, uint32(359569)).
+				Return(&ent.TVShow{ID: 40}, nil).Once()
+			app.tvshows.EXPECT().
+				Get(mock.Anything, uint32(40)).Return(goodOmens(), nil).Once()
+
+			resp := identify(`{"kind":"series","provider_id":359569}`)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+			var body Error
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Message).To(Equal(
+				"Good Omens has no specials and no season 5 to file this release against",
+			))
+		})
+
+		It("422s naming the specials alone for a special under S00", func() {
+			app.store.EXPECT().
+				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(&ent.DownloadRecord{
+					ID:    1,
+					Title: "Good.Omens.S00.Special.The.Lost.Scene.1080p.WEB-FW",
+				}, nil).Once()
+			app.store.EXPECT().
+				FindTVShowByTVDBID(mock.Anything, uint32(359569)).
+				Return(&ent.TVShow{ID: 40}, nil).Once()
+			app.tvshows.EXPECT().
+				Get(mock.Anything, uint32(40)).Return(goodOmens(), nil).Once()
+
+			resp := identify(`{"kind":"series","provider_id":359569}`)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+
+			var body Error
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Message).To(Equal(
+				"Good Omens has no specials to file this release against",
+			))
+		})
+
 		It("403s for a non-admin", func() {
 			app.addMember("m@test.com")
 			req := app.req(
@@ -388,6 +467,98 @@ var _ = Describe("Handler: Pending", Label("unit", "server", "activity"), func()
 				Edges: ent.DownloadRecordEdges{AnchorEpisode: ep},
 			}
 		}
+
+		It("counts a file naming the proposal's special by title", func() {
+			s := show()
+			special := &ent.Episode{ID: 90, Number: 4, Title: "Behind the Line"}
+			s.Edges.Seasons = append(s.Edges.Seasons, &ent.Season{
+				Edges: ent.SeasonEdges{Episodes: []*ent.Episode{special}},
+			})
+			rec := pendingPack()
+			rec.Edges.AnchorEpisode = &ent.Episode{ID: 90, Number: 4}
+			rec.Edges.AnchorEpisode.Edges.Season = &ent.Season{
+				Edges: ent.SeasonEdges{TvShow: s},
+			}
+			rec.Edges.Episodes = []*ent.Episode{{ID: 90}}
+			app.store.EXPECT().
+				FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			app.store.EXPECT().
+				FindTVShowByID(mock.Anything, uint32(5)).
+				Return(s, nil).Once()
+			app.downloads.EXPECT().
+				ListTorrentFiles(mock.Anything, "qbit", "abc").
+				Return([]download.TorrentFile{
+					{
+						Path: "Bear/The.Bear.Behind.the.Line.1080p.mkv",
+						Size: 900 << 20,
+					},
+				}, nil).Once()
+
+			resp := app.do(app.req(
+				http.MethodGet, "/api/v1/activity/pending/1/preview",
+				app.adminKey, nil,
+			))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+			var body PendingPreview
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Unmatched).To(BeZero())
+			Expect(body.Imports).To(HaveLen(1))
+			Expect(body.Imports[0].Episode).To(BeEquivalentTo(4))
+		})
+
+		// A proposal for several specials goes by number, as its import will.
+		It(
+			"counts a pack of specials by number, whatever title a file carries",
+			func() {
+				s := show()
+				specials := []*ent.Episode{
+					{ID: 90, Number: 1, Title: "Christmas Special"},
+					{ID: 97, Number: 7, Title: "Christmas Special 2012"},
+					{ID: 99, Number: 9, Title: "New Year Special"},
+				}
+				s.Edges.Seasons = append(s.Edges.Seasons, &ent.Season{
+					Edges: ent.SeasonEdges{Episodes: specials},
+				})
+				rec := pendingPack()
+				rec.Edges.AnchorEpisode = &ent.Episode{ID: 90, Number: 1}
+				rec.Edges.AnchorEpisode.Edges.Season = &ent.Season{
+					Edges: ent.SeasonEdges{TvShow: s},
+				}
+				rec.Edges.Episodes = specials
+				app.store.EXPECT().
+					FindPendingDownloadRecordByID(mock.Anything, uint32(1)).
+					Return(rec, nil).Once()
+				app.store.EXPECT().
+					FindTVShowByID(mock.Anything, uint32(5)).
+					Return(s, nil).Once()
+				app.downloads.EXPECT().
+					ListTorrentFiles(mock.Anything, "qbit", "abc").
+					Return([]download.TorrentFile{
+						{
+							Path: "Bear/The.Bear.S00E07.Christmas.Special.2012.1080p.mkv",
+							Size: 900 << 20,
+						},
+						{
+							Path: "Bear/The.Bear.S00E09.Christmas.Special.1080p.mkv",
+							Size: 900 << 20,
+						},
+					}, nil).Once()
+
+				resp := app.do(app.req(
+					http.MethodGet, "/api/v1/activity/pending/1/preview",
+					app.adminKey, nil,
+				))
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+				var body PendingPreview
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Imports).To(HaveLen(2))
+				Expect(body.Imports[0].Episode).To(BeEquivalentTo(7))
+				Expect(body.Imports[1].Episode).To(BeEquivalentTo(9))
+			},
+		)
 
 		It("lists an episode whose file is missing from disk as an import", func() {
 			s := show()

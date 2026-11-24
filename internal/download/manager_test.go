@@ -1197,14 +1197,18 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 	// (21, 22). resolveTorrentSource has to actually fetch bytes for Flow A to
 	// engage (it gates on len(src.Bytes) > 0), which is why this fetches for
 	// real instead of stubbing TorrentSource directly.
-	twoEpisodeRelease := func(selectiveFiles bool) (indexer.SearchResult, *ent.TVShow) {
-		raw := buildTorrentBytes(metainfo.Info{
-			Name: "Show",
-			Files: []metainfo.FileInfo{
-				{Path: []string{"Show.S01E01.mkv"}, Length: aboveFloor},
-				{Path: []string{"Show.S01E02.mkv"}, Length: aboveFloor},
-			},
-		})
+	// serveRelease serves a torrent of files (each above the episode floor)
+	// the same way and returns the release naming it.
+	serveRelease := func(
+		selectiveFiles bool, title string, files ...string,
+	) indexer.SearchResult {
+		info := metainfo.Info{Name: "Show"}
+		for _, f := range files {
+			info.Files = append(info.Files, metainfo.FileInfo{
+				Path: []string{f}, Length: aboveFloor,
+			})
+		}
+		raw := buildTorrentBytes(info)
 		srv = httptest.NewServer(http.HandlerFunc(
 			func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write(raw) },
 		))
@@ -1224,6 +1228,9 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 				"download_dir": "/downloads", "enabled": true,
 			}},
 		})
+		return indexer.SearchResult{Title: title, Download: srv.URL + "/dl"}
+	}
+	twoEpisodeRelease := func(selectiveFiles bool) (indexer.SearchResult, *ent.TVShow) {
 		show := &ent.TVShow{
 			ID:   1,
 			Type: tvshow.TypeStandard,
@@ -1235,10 +1242,24 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 				}},
 			}}},
 		}
-		result := indexer.SearchResult{
-			Title: "Show S01", Download: srv.URL + "/dl",
-		}
+		result := serveRelease(
+			selectiveFiles, "Show S01", "Show.S01E01.mkv", "Show.S01E02.mkv",
+		)
 		return result, show
+	}
+	// A special (id 90, season 0) known by its title alone.
+	specialShow := func() *ent.TVShow {
+		return &ent.TVShow{
+			ID:    1,
+			Title: "Show",
+			Type:  tvshow.TypeStandard,
+			Edges: ent.TVShowEdges{Seasons: []*ent.Season{{
+				Number: 0,
+				Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+					{ID: 90, Number: 4, Title: "The Lost Night"},
+				}},
+			}}},
+		}
 	}
 
 	BeforeEach(func() {
@@ -1266,6 +1287,72 @@ var _ = Describe("GrabEpisode selective files", Label("unit", "downloads"), func
 			Return(show, nil).Once()
 
 		_, err := mgr.GrabEpisode(ctx, result, 21, []uint32{999})
+
+		Expect(errors.Is(err, ErrNoWantedFiles)).To(BeTrue())
+		Expect(client.addTorrentCalls).To(Equal(0))
+	})
+
+	It("a special named by title: its file is kept, the rest skipped", func() {
+		result := serveRelease(true, "Show.The.Lost.Night.1080p.WEB-GRP",
+			"Show.The.Lost.Night.1080p.mkv", "Show.The.Lost.Night.Trailer.mkv")
+		store.EXPECT().
+			TVShowForEpisode(mock.Anything, uint32(90)).
+			Return(specialShow(), nil).Once()
+		store.EXPECT().CreateDownloadRecord(mock.Anything, mock.MatchedBy(
+			func(p db.CreateDownloadRecordParams) bool {
+				return p.EpisodeID == 90 &&
+					p.SelectionState == downloadrecord.SelectionStateApplied &&
+					len(p.SelectedFiles) == 1 && p.SelectedFiles[0] == 0
+			},
+		)).Return(&ent.DownloadRecord{ID: 42}, nil).Once()
+		store.EXPECT().SetDownloadRecordSelection(
+			mock.Anything, uint32(42), downloadrecord.SelectionStateApplied,
+			[]int{0}, aboveFloor,
+		).Return(nil).Once()
+
+		_, err := mgr.GrabEpisode(ctx, result, 90, []uint32{90})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(client.addTorrentSrc.WantedFiles).To(Equal([]int{0}))
+	})
+
+	It("a special's lone unnamed video: grabbed whole, never refused", func() {
+		result := serveRelease(
+			true,
+			"Show.The.Lost.Night.1080p.WEB-GRP",
+			"feature.mkv",
+		)
+		store.EXPECT().
+			TVShowForEpisode(mock.Anything, uint32(90)).
+			Return(specialShow(), nil).Once()
+		store.EXPECT().CreateDownloadRecord(mock.Anything, mock.MatchedBy(
+			func(p db.CreateDownloadRecordParams) bool {
+				return p.EpisodeID == 90 && p.SelectionState == ""
+			},
+		)).Return(&ent.DownloadRecord{ID: 42}, nil).Once()
+
+		_, err := mgr.GrabEpisode(ctx, result, 90, []uint32{90})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(client.addTorrentCalls).To(Equal(1))
+		Expect(client.addTorrentSrc.Selective).To(BeFalse())
+	})
+
+	It("a special's release holding another episode: ErrNoWantedFiles", func() {
+		result := serveRelease(true, "Show.The.Lost.Night.1080p.WEB-GRP",
+			"Show.S03E02.1080p.mkv")
+		show := specialShow()
+		show.Edges.Seasons = append(show.Edges.Seasons, &ent.Season{
+			Number: 3,
+			Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+				{ID: 32, Number: 2},
+			}},
+		})
+		store.EXPECT().
+			TVShowForEpisode(mock.Anything, uint32(90)).
+			Return(show, nil).Once()
+
+		_, err := mgr.GrabEpisode(ctx, result, 90, []uint32{90})
 
 		Expect(errors.Is(err, ErrNoWantedFiles)).To(BeTrue())
 		Expect(client.addTorrentCalls).To(Equal(0))

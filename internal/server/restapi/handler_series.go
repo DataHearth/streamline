@@ -609,6 +609,7 @@ func (s *Server) BrowseEpisodeReleases(
 		show.ImdbID,
 		season,
 		episode,
+		library.SpecialTitles(show, request.EpisodeId),
 	)
 	if indexerSearchFailed(err) {
 		return nil, err

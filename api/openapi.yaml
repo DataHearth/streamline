@@ -1152,6 +1152,14 @@ paths:
         Interactive search across enabled indexers for a single episode
         (tvsearch keyed by tvdbid + season + episode). Returns ranked results
         to choose from; POST the chosen release to .../grab to download it.
+        A special (season 0) is also searched by its title, most being
+        released under it and no number: one more query per queried title per
+        indexer for the show's name followed by the special's title, sent with
+        no provider id, and only releases naming that title and no other
+        special's are kept. No such query is sent for a title that names
+        nothing (`Episode 3`, `Pilot`, fewer than four characters). A release
+        numbered as this special and titled as another one is still listed;
+        only the automatic search leaves it out.
         Answers 502 with `code: indexers_unavailable` when no enabled indexer
         answered (504 when every one of them timed out); an indexer that fails
         while another answers costs only its own results.
