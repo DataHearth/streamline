@@ -101,8 +101,6 @@ var _ = Describe(
 				nil,
 				nil,
 				nil,
-				tmpDir,
-				tmpDir,
 				nil,
 				nil,
 				bookmeta,

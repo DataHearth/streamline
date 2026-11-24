@@ -225,16 +225,13 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		movieSvc,
 		tvSvc,
 		dispatcher,
-		// No pinned roots: bulk import reads them from the live config.
-		"",
-		"",
 		mb,
 		musicSvc,
 		bookMeta,
 		bookSvc,
 		bulkimport.WithProber(prober),
 	)
-	hygieneSvc := hygiene.New(store, tmdb, tvdb, nil)
+	hygieneSvc := hygiene.New(store, tmdb, tvdb)
 	if n, err := bulkImportSvc.AbortInflight(ctx); err != nil {
 		slog.WarnContext(
 			ctx,

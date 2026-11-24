@@ -43,7 +43,6 @@ var _ = Describe("Service.RunMediaProbe", Label("unit", "hygiene"), func() {
 			store,
 			metamocks.NewMockProvider(GinkgoT()),
 			metamocks.NewMockTVProvider(GinkgoT()),
-			nil,
 		)
 		svc.Probe = prober
 

@@ -45,6 +45,10 @@ var _ = Describe(
 			metaProv = metadatamocks.NewMockProvider(GinkgoT())
 			tmpDir = GinkgoT().TempDir()
 			libRoot = tmpDir
+			configtest.Setup(map[string]any{"library": map[string]any{
+				"movie_path":  libRoot,
+				"series_path": libRoot,
+			}})
 			svc = NewService(
 				store,
 				metaProv,
@@ -53,8 +57,6 @@ var _ = Describe(
 				nil,
 				nil,
 				nil,
-				libRoot,
-				libRoot,
 				nil, nil, nil, nil,
 			)
 		})
@@ -92,11 +94,10 @@ var _ = Describe(
 		})
 
 		It("distinguishes a missing library root from a bad source path", func() {
-			svc = NewService(
-				store, metaProv, nil, nil, nil, nil, nil,
-				"/nonexistent/library/root", "/nonexistent/library/root",
-				nil, nil, nil, nil,
-			)
+			configtest.Setup(map[string]any{"library": map[string]any{
+				"movie_path":  "/nonexistent/library/root",
+				"series_path": "/nonexistent/library/root",
+			}})
 			_, err := svc.StartScan(
 				ctx,
 				StartScanParams{SourcePath: tmpDir, Mode: entimportscan.ModeInPlace},
@@ -107,11 +108,10 @@ var _ = Describe(
 
 		It("validates a series scan against series_path, not movie_path", func() {
 			seriesRoot := GinkgoT().TempDir()
-			svc = NewService(
-				store, metaProv, nil, nil, nil, nil, nil,
-				"/nonexistent/movie/root", seriesRoot,
-				nil, nil, nil, nil,
-			)
+			configtest.Setup(map[string]any{"library": map[string]any{
+				"movie_path":  "/nonexistent/movie/root",
+				"series_path": seriesRoot,
+			}})
 			store.EXPECT().
 				CountActiveImportScans(mock.Anything).
 				Return(1, nil).
@@ -130,11 +130,6 @@ var _ = Describe(
 					"movie_path": "/nonexistent/movie/root",
 				},
 			})
-			svc = NewService(
-				store, metaProv, nil, nil, nil, nil, nil,
-				"", "",
-				nil, nil, nil, nil,
-			)
 			scan := StartScanParams{
 				SourcePath: tmpDir, Mode: entimportscan.ModeInPlace,
 			}

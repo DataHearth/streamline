@@ -16,6 +16,7 @@ import (
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
@@ -32,15 +33,14 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 		tmpDir = GinkgoT().TempDir()
 		store = dbmocks.NewMockStore(GinkgoT())
 		meta = metamocks.NewMockProvider(GinkgoT())
+		configtest.Setup(map[string]any{"library": map[string]any{
+			"movie_path":  tmpDir,
+			"import_mode": "hardlink",
+		}})
 		svc = New(
 			store,
 			meta,
-			metamocks.NewMockTVProvider(GinkgoT()),
-			&config.LibraryConfig{
-				MoviePath:  tmpDir,
-				ImportMode: "hardlink",
-			},
-		)
+			metamocks.NewMockTVProvider(GinkgoT()))
 	})
 
 	placeOrphan := func(rel string) string {
@@ -168,16 +168,67 @@ var _ = Describe("Service.RunOrphanScan", Label("unit", "hygiene"), func() {
 		Expect(svc.RunOrphanScan(ctx)).To(Succeed())
 	})
 
+	It("scans the root the config holds now", func() {
+		configtest.SetupFile(map[string]any{"library": map[string]any{
+			"movie_path": filepath.Join(tmpDir, "gone"),
+		}})
+		// The configured root does not exist: nothing is read.
+		Expect(svc.RunOrphanScan(ctx)).To(Succeed())
+
+		// What a path migration does to the root, with no restart.
+		_, err := config.UpdateLibrary(
+			ctx, config.LibraryPatch{MoviePath: &tmpDir},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		store.EXPECT().ListAllMediaFilesWithOwners(mock.Anything).
+			Return(nil, nil).Once()
+		store.EXPECT().ListPendingImportScanFilePaths(mock.Anything).
+			Return(nil, nil).Once()
+
+		Expect(svc.RunOrphanScan(ctx)).To(Succeed())
+	})
+
+	It("queues a pass's orphans under the root it started with", func() {
+		configtest.SetupFile(map[string]any{"library": map[string]any{
+			"movie_path": tmpDir,
+		}})
+		placeOrphan("garbled.unknown.file.mkv")
+		// The root moves while the pass is running.
+		store.EXPECT().ListAllMediaFilesWithOwners(mock.Anything).
+			RunAndReturn(func(ctx context.Context) ([]*ent.MediaFile, error) {
+				moved := filepath.Join(tmpDir, "elsewhere")
+				_, err := config.UpdateLibrary(
+					ctx, config.LibraryPatch{MoviePath: &moved},
+				)
+				return nil, err
+			}).Once()
+		store.EXPECT().ListPendingImportScanFilePaths(mock.Anything).
+			Return(nil, nil).Once()
+		meta.EXPECT().SearchMovie(mock.Anything, mock.Anything, mock.Anything).
+			Return(nil, nil).Once()
+		store.EXPECT().FindOpenImportScanForSource(mock.Anything, tmpDir).
+			Return(nil, &ent.NotFoundError{}).Once()
+		store.EXPECT().CreateImportScan(mock.Anything, mock.MatchedBy(
+			func(p db.CreateImportScanParams) bool { return p.SourcePath == tmpDir },
+		)).Return(&ent.ImportScan{ID: 101}, nil).Once()
+		store.EXPECT().UpdateImportScanStatus(
+			mock.Anything, uint32(101), mock.Anything, mock.Anything,
+		).Return(nil).Once()
+		store.EXPECT().
+			BulkCreateImportScanFiles(mock.Anything, uint32(101), mock.Anything).
+			Return(nil).Once()
+
+		Expect(svc.RunOrphanScan(ctx)).To(Succeed())
+	})
+
 	It("skips cleanly when the configured library path does not exist", func() {
+		configtest.Setup(map[string]any{"library": map[string]any{
+			"movie_path": filepath.Join(tmpDir, "does-not-exist"),
+		}})
 		svc = New(
 			store,
 			meta,
-			metamocks.NewMockTVProvider(GinkgoT()),
-			&config.LibraryConfig{
-				MoviePath:  filepath.Join(tmpDir, "does-not-exist"),
-				ImportMode: "hardlink",
-			},
-		)
+			metamocks.NewMockTVProvider(GinkgoT()))
 		// No store/meta calls expected — early return before any DB I/O.
 
 		Expect(svc.RunOrphanScan(ctx)).To(Succeed())

@@ -34,10 +34,11 @@ var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func()
 		store = dbmocks.NewMockStore(GinkgoT())
 		meta = metamocks.NewMockProvider(GinkgoT())
 		tvmeta = metamocks.NewMockTVProvider(GinkgoT())
-		svc = New(store, meta, tvmeta, &config.LibraryConfig{
-			SeriesPath: tmpDir,
-			ImportMode: "hardlink",
-		})
+		configtest.Setup(map[string]any{"library": map[string]any{
+			"series_path": tmpDir,
+			"import_mode": "hardlink",
+		}})
+		svc = New(store, meta, tvmeta)
 	})
 
 	// placeShowFile writes a > MinMediaSize video file inside a show folder and
@@ -126,7 +127,7 @@ var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func()
 				"series_path": filepath.Join(tmpDir, "gone"),
 			},
 		})
-		svc = New(store, meta, tvmeta, nil)
+		svc = New(store, meta, tvmeta)
 		folder := filepath.Dir(
 			placeShowFile("Breaking Bad", "Breaking Bad S01E01.mkv"),
 		)
@@ -144,10 +145,10 @@ var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func()
 	})
 
 	It("skips cleanly when series_path does not exist", func() {
-		svc = New(store, meta, tvmeta, &config.LibraryConfig{
-			SeriesPath: filepath.Join(tmpDir, "nope"),
-			ImportMode: "hardlink",
-		})
+		configtest.Setup(map[string]any{"library": map[string]any{
+			"series_path": filepath.Join(tmpDir, "nope"),
+		}})
+		svc = New(store, meta, tvmeta)
 		// No store/meta calls — early return before any I/O.
 
 		Expect(svc.RunSeriesOrphanScan(ctx)).To(Succeed())

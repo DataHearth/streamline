@@ -44,8 +44,10 @@ var _ = Describe(
 			ctx = context.Background()
 			// Adoption goes through tvshow.Add, which rejects a show when no
 			// quality profile resolves.
-			configtest.Setup(map[string]any{})
 			tmpDir = GinkgoT().TempDir()
+			configtest.Setup(map[string]any{"library": map[string]any{
+				"series_path": tmpDir,
+			}})
 			client = dbtest.SetupTestDB(ctx)
 			events.Register(client)
 			DeferCleanup(client.Close)
@@ -62,8 +64,6 @@ var _ = Describe(
 				nil,
 				tvSvc,
 				ms,
-				tmpDir,
-				tmpDir,
 				nil,
 				nil,
 				nil,
@@ -321,7 +321,6 @@ var _ = Describe(
 				svc := NewService(
 					store, nil, tvmeta, importSvc, nil,
 					tvshow.NewService(store, tvmeta, nil, nil, nil), nil,
-					libDir, libDir,
 					nil, nil, nil, nil,
 				)
 
@@ -427,8 +426,6 @@ var _ = Describe(
 					nil,
 					tvSvc,
 					nil,
-					tmpDir,
-					tmpDir,
 					nil, nil, nil, nil,
 				)
 
@@ -560,7 +557,6 @@ var _ = Describe(
 			svc = NewService(
 				store, nil, tvmeta, library.NewImportService(), nil,
 				tvshow.NewService(store, tvmeta, nil, nil, nil), nil,
-				libDir, libDir,
 				nil, nil, nil, nil,
 			)
 			tvmeta.EXPECT().GetSeries(mock.Anything, tvdbID).

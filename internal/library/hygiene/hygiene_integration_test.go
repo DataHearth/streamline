@@ -20,7 +20,6 @@ import (
 	entmediaevent "github.com/datahearth/streamline/ent/mediaevent"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	entmovie "github.com/datahearth/streamline/ent/movie"
-	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
@@ -82,7 +81,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		tmpDir = GinkgoT().TempDir()
-		cfg := configtest.Setup(map[string]any{
+		configtest.Setup(map[string]any{
 			"library": map[string]any{
 				"movie_path":                    tmpDir,
 				"movie_naming":                  "{title} ({year})/{title}.{ext}",
@@ -102,9 +101,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 		svc = New(
 			store,
 			meta,
-			metamocks.NewMockTVProvider(GinkgoT()),
-			&cfg.Library,
-		)
+			metamocks.NewMockTVProvider(GinkgoT()))
 	})
 
 	It("adopts an orphan where it lies for a tracked movie", func() {
@@ -502,9 +499,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 						release: release,
 					},
 					meta,
-					metamocks.NewMockTVProvider(GinkgoT()),
-					&config.Get().Library,
-				)
+					metamocks.NewMockTVProvider(GinkgoT()))
 				done := make(chan struct{})
 				go func() {
 					defer GinkgoRecover()
@@ -673,9 +668,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			)
 			sweep := New(
 				&unmountingStore{Store: store, paths: paths},
-				meta, metamocks.NewMockTVProvider(GinkgoT()),
-				&config.Get().Library,
-			)
+				meta, metamocks.NewMockTVProvider(GinkgoT()))
 
 			Expect(sweep.RunDriftCheck(ctx, time.Millisecond)).To(Succeed())
 
@@ -708,9 +701,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			trackFile("02.flac", 2, nil)
 			sweep := New(
 				&unmountingStore{Store: store, paths: paths},
-				meta, metamocks.NewMockTVProvider(GinkgoT()),
-				&config.Get().Library,
-			)
+				meta, metamocks.NewMockTVProvider(GinkgoT()))
 
 			Expect(sweep.RunDriftCheck(ctx, time.Nanosecond)).To(Succeed())
 
@@ -755,7 +746,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 
 		It("skips the series orphan scan while series are offline", func() {
 			seriesDir := GinkgoT().TempDir()
-			cfg := configtest.Setup(map[string]any{"library": map[string]any{
+			configtest.Setup(map[string]any{"library": map[string]any{
 				"series_path": seriesDir,
 			}})
 			show := entClient.TVShow.Create().
@@ -787,9 +778,7 @@ var _ = Describe("hygiene end-to-end", Label("integration", "hygiene"), func() {
 			scan := New(
 				store,
 				meta,
-				metamocks.NewMockTVProvider(GinkgoT()),
-				&cfg.Library,
-			)
+				metamocks.NewMockTVProvider(GinkgoT()))
 
 			Expect(scan.RunSeriesOrphanScan(ctx)).To(Succeed())
 
@@ -1431,7 +1420,7 @@ var _ = Describe(
 		BeforeEach(func() {
 			ctx = context.Background()
 			tmpDir = GinkgoT().TempDir()
-			cfg := configtest.Setup(map[string]any{
+			configtest.Setup(map[string]any{
 				"library": map[string]any{
 					"series_path": tmpDir,
 					"import_mode": "copy",
@@ -1441,8 +1430,7 @@ var _ = Describe(
 			DeferCleanup(entClient.Close)
 			store = db.New(entClient)
 			tvmeta = metamocks.NewMockTVProvider(GinkgoT())
-			svc = New(store, metamocks.NewMockProvider(GinkgoT()), tvmeta,
-				&cfg.Library)
+			svc = New(store, metamocks.NewMockProvider(GinkgoT()), tvmeta)
 		})
 
 		placeShow := func(show, file string) {

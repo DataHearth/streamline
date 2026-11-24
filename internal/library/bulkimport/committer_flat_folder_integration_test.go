@@ -74,7 +74,6 @@ var _ = Describe(
 			svc = NewService(
 				store, meta, nil, library.NewImportService(),
 				movie.NewService(store, meta, nil, nil, nil), nil, nil,
-				libDir, libDir,
 				nil, nil, nil, nil,
 			)
 			scan = &ent.ImportScan{

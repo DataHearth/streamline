@@ -15,6 +15,7 @@ import (
 	entimportscanfile "github.com/datahearth/streamline/ent/importscanfile"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	entmovie "github.com/datahearth/streamline/ent/movie"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
@@ -34,7 +35,7 @@ func (s *Service) RunOrphanScan(ctx context.Context) error {
 
 	// Read once: a path migration can persist a new root mid-pass, and the
 	// orphans found under one root must not be queued against another.
-	root := s.lib().MoviePath
+	root := config.Get().Library.MoviePath
 	if _, err := os.Stat(root); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			slog.InfoContext(ctx, "library path missing; skipping orphan scan",

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
@@ -27,7 +28,7 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 	defer span.End()
 
 	// Read once, as the movie scan does: one pass, one root.
-	root := s.lib().SeriesPath
+	root := config.Get().Library.SeriesPath
 	if _, err := os.Stat(root); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			slog.InfoContext(ctx, "series path missing; skipping series orphan scan",

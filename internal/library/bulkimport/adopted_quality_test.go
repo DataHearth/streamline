@@ -42,7 +42,7 @@ var _ = Describe("adopted file quality", Label("unit", "bulkimport"), func() {
 			probe = mockffmpeg.NewMockProber(GinkgoT())
 			probe.EXPECT().Available().Return(true)
 			svc = NewService(
-				nil, nil, nil, nil, nil, nil, nil, "", "", nil, nil, nil, nil,
+				nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 				WithProber(probe),
 			)
 		})
