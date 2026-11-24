@@ -23,7 +23,7 @@
 		queryKey: readonly unknown[];
 		disabled?: boolean;
 		disabledTitle?: string;
-		// Icon-only trigger, for a bar that already has a wide primary action.
+		// Icon-only phone trigger, for a row that already has a wide primary action.
 		compact?: boolean;
 		// Wide accent trigger: the primary action of the phone action bar.
 		primary?: boolean;
@@ -38,7 +38,9 @@
 	}: Props = $props();
 
 	let open = $state(false);
-	closeOnBack(() => open && !primary, () => close());
+	// Both phone triggers open the sheet, which handles its own Back.
+	let sheet = $derived(primary || compact);
+	closeOnBack(() => open && !sheet, () => close());
 	let triggerEl = $state<HTMLButtonElement | null>(null);
 
 	const q = createQuery<PlayOnLinkList>(() => ({
@@ -76,7 +78,7 @@
 	// The phone sheet handles its own Escape and Back; these are the desktop
 	// popover's.
 	$effect(() => {
-		if (!open || primary) return;
+		if (!open || sheet) return;
 		document.addEventListener("keydown", onKey);
 		return () => document.removeEventListener("keydown", onKey);
 	});
@@ -204,7 +206,7 @@
 		<button
 			bind:this={triggerEl}
 			type="button"
-			aria-haspopup="menu"
+			aria-haspopup="dialog"
 			aria-expanded={open}
 			aria-label={i18n.action_play_on()}
 			{disabled}
@@ -223,7 +225,7 @@
 			{disabled}
 			title={disabled ? disabledTitle : undefined}
 			onclick={toggle}
-			class="inline-flex w-[220px] items-center justify-between gap-2 rounded-md border border-border-strong bg-bg-elevated px-3 py-2 text-sm font-medium text-fg hover:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:border-border disabled:text-fg-faint disabled:hover:border-border"
+			class="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-md border border-border-strong bg-bg-elevated px-4 text-sm font-medium max-lg:min-h-11 text-fg hover:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:border-border disabled:text-fg-faint disabled:hover:border-border"
 		>
 			<span class="inline-flex items-center gap-2">
 				<Play class="h-4 w-4 text-accent" aria-hidden="true" />
@@ -236,14 +238,12 @@
 		</button>
 	{/if}
 
-	{#if open && !primary}
+	{#if open && !sheet}
 		<div
 			role="menu"
 			aria-live="polite"
 			transition:fly={{ duration: 140, y: -4, easing: cubicOut }}
-			class="absolute right-0 z-30 w-[260px] overflow-hidden rounded-md border border-border bg-bg-elevated shadow-3 {compact
-				? 'bottom-full mb-2'
-				: 'mt-1'}"
+			class="absolute left-0 z-30 mt-1 w-[260px] overflow-hidden rounded-md border border-border bg-bg-elevated shadow-3"
 		>
 			{@render body(false)}
 		</div>
@@ -257,10 +257,10 @@
 	{/if}
 </div>
 
-<!-- Phone: the same links as a bottom sheet. A right-aligned popover anchored to
-     a full-width trigger ran off the left edge of a 390px viewport, and every
-     other list a phone opens in this app is a sheet. -->
-{#if open && primary}
+<!-- Phone: the same links as a bottom sheet, like every other list a phone opens
+     in this app; a popover anchored to either trigger would run off a 390px
+     viewport. -->
+{#if open && sheet}
 	<div use:portal>
 		<BottomSheet
 			title={i18n.action_play_on()}
