@@ -534,6 +534,18 @@ var _ = Describe("trackHoldReasons", Label("unit", "importer"), func() {
 		}))
 	})
 
+	It("sets aside the label every file of a live album carries", func() {
+		Expect(trackHoldReasons([]albumFile{
+			file("Des Millards", "Des milliards (Live)"),
+			file("Comme on vibre", "Comme on vibre (Live)"),
+			file("Fluidité", "Fluidité (Live)"),
+		}, true)).To(BeEmpty())
+		Expect(trackHoldReasons([]albumFile{
+			file("Des Millards", "Des milliards (Live)"),
+			file("Comme on vibre", "Comme on vibre"),
+		}, true)).To(HaveLen(1))
+	})
+
 	It("lists every title that differs when a person can answer", func() {
 		reasons := trackHoldReasons([]albumFile{
 			file("Regret", "Regret"),

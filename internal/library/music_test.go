@@ -268,6 +268,55 @@ var _ = Describe("TrackMatcher near titles", Label("unit", "library"), func() {
 		).To(Equal(uint32(3)))
 	})
 
+	It("sets aside the label every file of a live album carries", func() {
+		// In Bikini Dura Sidi: MusicBrainz titles the live tracks bare, and
+		// spells "Des milliards" as "Des Millards".
+		titles := []string{
+			"Retourner la France", "Back to Basics", "Spread It",
+			"A qui je nuis me pardonne", "Guerre à vendre", "Wall of Shame",
+			"I feel fine", "Dancefloor Bastards", "Frapper la terre", "Fluidité",
+			"Où il veut", "Comme on vibre", "La morale de la fable", "Des Millards",
+		}
+		tracks := make([]*ent.Track, 0, len(titles))
+		for i, title := range titles {
+			tracks = append(tracks, &ent.Track{
+				ID: uint32(i + 1), Disc: 1, Position: uint16(i + 1), Title: title,
+			})
+		}
+		files := make([]string, 0, 13)
+		for _, title := range []string{
+			"Back to Basics", "Comme on vibre", "Dancefloor Bastards",
+			"Des milliards", "Fluidité", "Frapper la terre", "I Feel Fine",
+			"La morale de la fable", "Où il veut", "Retourner la France",
+			"Spread It", "Wall of Shame", "À qui je nuis me pardonne",
+		} {
+			files = append(files, "Sidilarsen - "+title+" (Live).flac")
+		}
+		m := NewTrackMatcherByName(tracks, files)
+		got := map[uint32]bool{}
+		for _, f := range files {
+			t := m.MatchByName(f)
+			Expect(t).NotTo(BeNil(), f)
+			got[t.ID] = true
+		}
+		Expect(got).To(HaveLen(13))
+		Expect(got).NotTo(HaveKey(uint32(5)))
+		Expect(m.MatchByName("Sidilarsen - Des milliards (Live).flac").ID).
+			To(Equal(uint32(14)))
+	})
+
+	It("keeps a live bonus file apart from the studio track", func() {
+		tracks := []*ent.Track{
+			{ID: 1, Disc: 1, Position: 1, Title: "Spread It"},
+			{ID: 2, Disc: 1, Position: 2, Title: "Go Fast"},
+		}
+		m := NewTrackMatcherByName(tracks, []string{
+			"Go Fast.flac", "Spread It (Live).flac",
+		})
+		Expect(m.MatchByName("Go Fast.flac").ID).To(Equal(uint32(2)))
+		Expect(m.MatchByName("Spread It (Live).flac")).To(BeNil())
+	})
+
 	It("agrees with a track its number reaches under another spelling", func() {
 		t := &ent.Track{ID: 7, Disc: 1, Position: 7, Title: "Un élan du cœur"}
 		Expect(TrackTitleAgrees(t, "Un élan de cœur")).To(BeTrue())
@@ -286,6 +335,34 @@ var _ = Describe("TrackMatcher near titles", Label("unit", "library"), func() {
 		Expect(m.MatchByName("Bonus Song.flac")).To(BeNil())
 		Expect(m.MatchByName("Interlude 2.flac")).To(BeNil())
 		Expect(m.MatchByName("Fir.flac")).To(BeNil())
+	})
+})
+
+var _ = Describe("ReleaseTitleLabel", Label("unit", "library"), func() {
+	It("reads the label every titled file ends with", func() {
+		Expect(ReleaseTitleLabel([]string{
+			"Back to Basics (Live)", "Comme on vibre (live)", "", "Fluidité [Live]",
+		})).To(Equal("live"))
+		Expect(ReleaseTitleLabel([]string{
+			"Regret (Remastered 2011)", "New Land (Remastered  2011)",
+		})).To(Equal("remastered 2011"))
+	})
+
+	It("reads none when a file lacks it or carries another", func() {
+		Expect(ReleaseTitleLabel([]string{"Spread It (Live)", "Go Fast"})).
+			To(BeEmpty())
+		Expect(ReleaseTitleLabel([]string{"Spread It (Live)", "Go Fast (Demo)"})).
+			To(BeEmpty())
+		Expect(ReleaseTitleLabel([]string{"Spread It (Live)"})).To(BeEmpty())
+	})
+
+	It("strips only that label", func() {
+		Expect(StripTitleLabel("Où il veut (Live)", "live")).To(Equal("Où il veut"))
+		Expect(StripTitleLabel("Où il veut (Demo)", "live")).
+			To(Equal("Où il veut (Demo)"))
+		Expect(StripTitleLabel("(Live)", "live")).To(Equal("(Live)"))
+		Expect(StripTitleLabel("Où il veut (Live)", "")).
+			To(Equal("Où il veut (Live)"))
 	})
 })
 

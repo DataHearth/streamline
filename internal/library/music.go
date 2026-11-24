@@ -150,8 +150,11 @@ func trackAt(tracks []*ent.Track, info audiotags.Info) *ent.Track {
 type TrackMatcher struct {
 	tracks   []*ent.Track
 	byNumber bool
-	// near is the track each title no track carries is a misspelling of,
-	// keyed by the title normalized (nearTitles).
+	// label is the bracketed label every file's title ends with
+	// (ReleaseTitleLabel), "" when they share none.
+	label string
+	// near is the track each title no track carries is another spelling
+	// of, keyed by the title normalized, its label set aside (nearTitles).
 	near map[string]*ent.Track
 }
 
@@ -161,6 +164,11 @@ type TrackMatcher struct {
 // the album (a translation, a typo) says nothing about the order. Distrusted,
 // a file matches by title alone and an interlude matches nothing.
 func NewTrackMatcher(tracks []*ent.Track, infos []audiotags.Info) TrackMatcher {
+	titles := make([]string, 0, len(infos))
+	for _, info := range infos {
+		titles = append(titles, info.Title)
+	}
+	m := TrackMatcher{tracks: tracks, label: ReleaseTitleLabel(titles)}
 	agree, elsewhere := 0, 0
 	for _, info := range infos {
 		t := trackAt(tracks, info)
@@ -168,17 +176,16 @@ func NewTrackMatcher(tracks []*ent.Track, infos []audiotags.Info) TrackMatcher {
 			continue
 		}
 		switch {
-		case TrackTitleAgrees(t, info.Title):
+		case TrackTitleAgrees(t, info.Title) ||
+			TrackTitleAgrees(t, m.bare(info.Title)):
 			agree++
-		case matchTitle(tracks, info.Disc, info.Title) != nil:
+		case matchTitle(tracks, info.Disc, info.Title) != nil ||
+			matchTitle(tracks, info.Disc, m.bare(info.Title)) != nil:
 			elsewhere++
 		}
 	}
-	m := TrackMatcher{
-		tracks:   tracks,
-		byNumber: elsewhere < 2 || elsewhere <= agree,
-	}
-	m.near = nearTitles(tracks, infos, m.Match)
+	m.byNumber = elsewhere < 2 || elsewhere <= agree
+	m.near = nearTitles(tracks, infos, m.Match, m.bare)
 	return m
 }
 
@@ -198,26 +205,24 @@ func (m TrackMatcher) ByNumber() bool { return m.byNumber }
 // Match is MatchTrack when the numbers are trusted, else the track whose
 // title the file states, on the file's disc first.
 func (m TrackMatcher) Match(info audiotags.Info) *ent.Track {
-	var t *ent.Track
 	if m.byNumber {
-		t = MatchTrack(m.tracks, info)
-	} else {
-		t = matchTitle(m.tracks, info.Disc, info.Title)
+		return m.fallBack(MatchTrack(m.tracks, info), info)
 	}
-	if t == nil {
-		t = m.near[normalizeTitle(info.Title)]
-	}
-	return t
+	return m.fallBack(matchTitle(m.tracks, info.Disc, info.Title), info)
 }
 
 // Suggest is Match unless the file states the title of another track: the guess
 // offered to someone choosing a held file's track.
 func (m TrackMatcher) Suggest(info audiotags.Info) *ent.Track {
 	t := m.Match(info)
-	if t != nil && TrackTitleAgrees(t, info.Title) {
+	if t != nil && (TrackTitleAgrees(t, info.Title) ||
+		TrackTitleAgrees(t, m.bare(info.Title))) {
 		return t
 	}
 	if named := matchTitle(m.tracks, info.Disc, info.Title); named != nil {
+		return named
+	}
+	if named := matchTitle(m.tracks, info.Disc, m.bare(info.Title)); named != nil {
 		return named
 	}
 	return t
@@ -227,16 +232,82 @@ func (m TrackMatcher) Suggest(info audiotags.Info) *ent.Track {
 // track whose title the file name states, on its disc first.
 func (m TrackMatcher) MatchByName(p string) *ent.Track {
 	info := TrackInfoFromName(p)
-	var t *ent.Track
 	if m.byNumber {
-		t = MatchTrackByName(m.tracks, p)
-	} else {
-		t = matchTitle(m.tracks, info.Disc, info.Title)
+		return m.fallBack(MatchTrackByName(m.tracks, p), info)
 	}
-	if t == nil {
-		t = m.near[normalizeTitle(info.Title)]
+	return m.fallBack(matchTitle(m.tracks, info.Disc, info.Title), info)
+}
+
+// fallBack is t, else the track the file's title names once the release's
+// label is set aside, else the one nearTitles paired it with.
+func (m TrackMatcher) fallBack(t *ent.Track, info audiotags.Info) *ent.Track {
+	if t != nil {
+		return t
 	}
-	return t
+	bare := m.bare(info.Title)
+	if bare != info.Title {
+		if t := matchTitle(m.tracks, info.Disc, bare); t != nil {
+			return t
+		}
+	}
+	return m.near[normalizeTitle(bare)]
+}
+
+// bare is title without the release's label.
+func (m TrackMatcher) bare(title string) string {
+	return StripTitleLabel(title, m.label)
+}
+
+// titleLabel reads the bracketed label a title ends with: "(Live)",
+// "[Remastered 2011]".
+var titleLabel = regexp.MustCompile(`\s*[\[(]\s*([^\[\]()]+?)\s*[\])]\s*$`)
+
+// ReleaseTitleLabel is the bracketed label every titled file of a release
+// ends with, folded to lower case, or "" when they share none. Carried by
+// every file, a "(Live)" describes the release, not one recording: a live
+// album's files say it where its track titles do not. One file in a release
+// carrying it is a bonus version, and it then stays part of that title.
+func ReleaseTitleLabel(titles []string) string {
+	label, titled := "", 0
+	for _, title := range titles {
+		if strings.TrimSpace(title) == "" {
+			continue
+		}
+		m := titleLabel.FindStringSubmatch(title)
+		if m == nil {
+			return ""
+		}
+		l := strings.Join(strings.Fields(strings.ToLower(m[1])), " ")
+		if titled > 0 && l != label {
+			return ""
+		}
+		label = l
+		titled++
+	}
+	if titled < 2 {
+		return ""
+	}
+	return label
+}
+
+// StripTitleLabel is title without label, the ReleaseTitleLabel of its
+// release, when it ends with it; else title as it is.
+func StripTitleLabel(title, label string) string {
+	if label == "" {
+		return title
+	}
+	m := titleLabel.FindStringSubmatchIndex(title)
+	if m == nil ||
+		strings.Join(
+			strings.Fields(strings.ToLower(title[m[2]:m[3]])),
+			" ",
+		) != label {
+		return title
+	}
+	if bare := strings.TrimSpace(title[:m[0]]); bare != "" {
+		return bare
+	}
+	return title
 }
 
 // nearTitles pairs the files whose title names no track with the track that
@@ -249,6 +320,7 @@ func nearTitles(
 	tracks []*ent.Track,
 	infos []audiotags.Info,
 	match func(audiotags.Info) *ent.Track,
+	bare func(string) string,
 ) map[string]*ent.Track {
 	claimed := make(map[uint32]bool, len(tracks))
 	loose := map[string]string{}
@@ -257,9 +329,10 @@ func nearTitles(
 			claimed[t.ID] = true
 			continue
 		}
-		if n := normalizeTitle(info.Title); n != "" {
+		title := bare(info.Title)
+		if n := normalizeTitle(title); n != "" {
 			if _, seen := loose[n]; !seen {
-				loose[n] = info.Title
+				loose[n] = title
 			}
 		}
 	}
