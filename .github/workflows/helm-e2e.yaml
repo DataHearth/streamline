@@ -15,6 +15,12 @@ on:
 permissions:
   contents: read
 
+# "|" falls back to the module's origin on any proxy error, where the
+# default "," does so only on 404 and 410: a download the proxy cuts
+# mid-stream is fetched from the source, still checked against go.sum.
+env:
+  GOPROXY: "https://proxy.golang.org|direct"
+
 jobs:
   e2e:
     runs-on: ubuntu-latest

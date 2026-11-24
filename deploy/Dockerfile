@@ -55,6 +55,12 @@ RUN pnpm exec tailwindcss \
 FROM golang:1.27.4-alpine@sha256:70bd7ddea8b6cbe5d6943cde279d6b67feb10cc924fb9100d1d8757c1575b280 AS codegen
 WORKDIR /app
 
+# "|" falls back to a module's origin on any proxy error, where the default
+# "," does so only on 404 and 410. The fallback clones over git, which the
+# alpine image does not ship. A fetched module is still checked against go.sum.
+ENV GOPROXY="https://proxy.golang.org|direct"
+RUN apk add --no-cache git
+
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download
@@ -80,6 +86,11 @@ FROM docker.io/mwader/static-ffmpeg:9.0.2-1@sha256:f5d100184884eb3e82b0eb14bb5eb
 # --- Go binary ---
 FROM golang:1.27.4-alpine@sha256:70bd7ddea8b6cbe5d6943cde279d6b67feb10cc924fb9100d1d8757c1575b280 AS builder
 WORKDIR /app
+
+# Same fallback as the codegen stage: the module cache mount can start empty,
+# and this build then downloads what it needs.
+ENV GOPROXY="https://proxy.golang.org|direct"
+RUN apk add --no-cache git
 
 COPY --from=codegen /app /app
 COPY --from=frontend /app/web /app/web
