@@ -1916,18 +1916,36 @@ func (db *DB) ArtistMemberMBIDs(
 		Strings(ctx)
 }
 
+// albumLiveRecords matches the download records in flight for the album,
+// filed under it or linking it as part of a discography pack.
+func albumLiveRecords(albumID uint32) predicate.DownloadRecord {
+	return downloadrecord.And(
+		liveRecord(),
+		downloadrecord.Or(
+			downloadrecord.HasAlbumWith(album.ID(albumID)),
+			downloadrecord.HasAlbumsWith(album.ID(albumID)),
+		),
+	)
+}
+
 // AlbumHasLiveRecord reports whether a download for the album is in flight,
 // whether filed under the album or as part of a discography pack.
 func (db *DB) AlbumHasLiveRecord(ctx context.Context, albumID uint32) (bool, error) {
-	return db.client.Album.Query().
-		Where(
-			album.IDEQ(albumID),
-			album.Or(
-				album.HasDownloadRecordsWith(liveRecord()),
-				album.HasPackRecordsWith(liveRecord()),
-			),
-		).
+	return db.client.DownloadRecord.Query().
+		Where(albumLiveRecords(albumID)).
 		Exist(ctx)
+}
+
+// AlbumLiveRecord returns the oldest download record in flight for the album,
+// single or pack, or nil when there is none.
+func (db *DB) AlbumLiveRecord(
+	ctx context.Context,
+	albumID uint32,
+) (*ent.DownloadRecord, error) {
+	return firstOrNil(db.client.DownloadRecord.Query().
+		Where(albumLiveRecords(albumID)).
+		Order(ent.Asc(downloadrecord.FieldID)).
+		First(ctx))
 }
 
 // FindArtistRow returns the artist alone: no albums, members or credits.

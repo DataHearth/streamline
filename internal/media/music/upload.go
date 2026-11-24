@@ -308,16 +308,19 @@ func (s *Service) UploadArtist(
 }
 
 // checkAlbumsFree refuses with upload.ErrConflict when any of the albums has
-// a download in flight.
+// a download or an upload in flight.
 func (s *Service) checkAlbumsFree(ctx context.Context, ids ...uint32) error {
+	target := "this album"
+	if len(ids) > 1 {
+		target = "one of these albums"
+	}
 	for _, id := range ids {
-		live, err := s.db.AlbumHasLiveRecord(ctx, id)
+		rec, err := s.db.AlbumLiveRecord(ctx, id)
 		if err != nil {
 			return err
 		}
-		if live {
-			return fmt.Errorf(
-				"%w: cancel the download in progress first", upload.ErrConflict)
+		if rec != nil {
+			return upload.Busy(target, rec.Uploaded, string(rec.Status))
 		}
 	}
 	return nil

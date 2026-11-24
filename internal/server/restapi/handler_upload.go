@@ -69,9 +69,15 @@ func errNoSpace(msg string) UnprocessableEntityJSONResponse {
 	return UnprocessableEntityJSONResponse{Message: msg, Code: &code}
 }
 
-func errUploadConflict(msg string) ConflictJSONResponse {
+// errUploadConflict carries the reason of a busy target beside the code, which
+// is what the SPA translates.
+func errUploadConflict(err error) ConflictJSONResponse {
 	code := codeUploadConflict
-	return ConflictJSONResponse{Message: msg, Code: &code}
+	out := ConflictJSONResponse{Message: err.Error(), Code: &code}
+	if busy, ok := errors.AsType[*upload.BusyError](err); ok {
+		out.Reason = &busy.Reason
+	}
+	return out
 }
 
 // unprocessableUpload maps the failures that answer 422; ok is false for the
@@ -189,7 +195,7 @@ func (s *Server) UploadMusicAlbum(
 		}, nil
 	case failConflict:
 		return UploadMusicAlbum409JSONResponse{
-			ConflictJSONResponse: errUploadConflict(err.Error()),
+			ConflictJSONResponse: errUploadConflict(err),
 		}, nil
 	}
 	return UploadMusicAlbum500JSONResponse{
@@ -239,7 +245,7 @@ func (s *Server) UploadMusicTrack(
 		}, nil
 	case failConflict:
 		return UploadMusicTrack409JSONResponse{
-			ConflictJSONResponse: errUploadConflict(err.Error()),
+			ConflictJSONResponse: errUploadConflict(err),
 		}, nil
 	}
 	return UploadMusicTrack500JSONResponse{
@@ -293,7 +299,7 @@ func (s *Server) UploadMusicArtist(
 		}, nil
 	case failConflict:
 		return UploadMusicArtist409JSONResponse{
-			ConflictJSONResponse: errUploadConflict(err.Error()),
+			ConflictJSONResponse: errUploadConflict(err),
 		}, nil
 	}
 	return UploadMusicArtist500JSONResponse{
@@ -347,7 +353,7 @@ func (s *Server) UploadBook(
 		}, nil
 	case failConflict:
 		return UploadBook409JSONResponse{
-			ConflictJSONResponse: errUploadConflict(err.Error()),
+			ConflictJSONResponse: errUploadConflict(err),
 		}, nil
 	}
 	return UploadBook500JSONResponse{
@@ -386,7 +392,7 @@ func (s *Server) PreviewMusicAlbumUpload(
 		}, nil
 	case failConflict:
 		return PreviewMusicAlbumUpload409JSONResponse{
-			ConflictJSONResponse: errUploadConflict(err.Error()),
+			ConflictJSONResponse: errUploadConflict(err),
 		}, nil
 	}
 	return PreviewMusicAlbumUpload500JSONResponse{
@@ -421,7 +427,7 @@ func (s *Server) PreviewMusicArtistUpload(
 		}, nil
 	case failConflict:
 		return PreviewMusicArtistUpload409JSONResponse{
-			ConflictJSONResponse: errUploadConflict(err.Error()),
+			ConflictJSONResponse: errUploadConflict(err),
 		}, nil
 	}
 	return PreviewMusicArtistUpload500JSONResponse{
@@ -458,7 +464,7 @@ func (s *Server) PreviewBookUpload(
 		}, nil
 	case failConflict:
 		return PreviewBookUpload409JSONResponse{
-			ConflictJSONResponse: errUploadConflict(err.Error()),
+			ConflictJSONResponse: errUploadConflict(err),
 		}, nil
 	}
 	return PreviewBookUpload500JSONResponse{

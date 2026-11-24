@@ -394,3 +394,52 @@ var _ = Describe("Receive", Label("unit"), func() {
 		},
 	)
 })
+
+var _ = Describe("Busy", Label("unit"), func() {
+	DescribeTable("names what holds the target and the way out",
+		func(uploaded bool, status, reason, want string) {
+			err := upload.Busy("this book's ebook", uploaded, status)
+
+			Expect(err).To(MatchError(upload.ErrConflict))
+			var busy *upload.BusyError
+			Expect(errors.As(err, &busy)).To(BeTrue())
+			Expect(busy.Reason).To(Equal(reason))
+			Expect(err.Error()).To(Equal("upload target busy: " + want))
+		},
+		Entry(
+			"a download in progress",
+			false,
+			"downloading",
+			upload.ReasonDownloadInProgress,
+			"a download for this book's ebook is in progress, cancel it in Activity first",
+		),
+		Entry(
+			"a download importing",
+			false,
+			"importing",
+			upload.ReasonDownloadImporting,
+			"a download for this book's ebook is still being imported, wait for it to finish",
+		),
+		Entry(
+			"a download held",
+			false,
+			"held",
+			upload.ReasonDownloadHeld,
+			"a download for this book's ebook is waiting for a decision in Activity, resolve it first",
+		),
+		Entry(
+			"an upload importing",
+			true,
+			"importing",
+			upload.ReasonUploadImporting,
+			"an earlier upload for this book's ebook is still being imported, wait for it to finish",
+		),
+		Entry(
+			"an upload held",
+			true,
+			"held",
+			upload.ReasonUploadHeld,
+			"an earlier upload for this book's ebook is waiting for a decision in Activity, resolve it first",
+		),
+	)
+})

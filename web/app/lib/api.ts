@@ -2,7 +2,7 @@ import { m as i18n } from "./paraglide/messages.js";
 
 const BASE = "/api/v1";
 
-export type ApiErrorBody = { message?: string; code?: string } | null;
+export type ApiErrorBody = { message?: string; code?: string; reason?: string } | null;
 
 export class ApiError extends Error {
 	status: number;
@@ -117,6 +117,14 @@ function byStatus(status: number): string {
 	}
 }
 
+const UPLOAD_BUSY: Record<string, () => string> = {
+	download_in_progress: i18n.upload_busy_download_in_progress,
+	download_importing: i18n.upload_busy_download_importing,
+	download_held: i18n.upload_busy_download_held,
+	upload_importing: i18n.upload_busy_upload_importing,
+	upload_held: i18n.upload_busy_upload_held,
+};
+
 // errorText turns any thrown value into a translated, user-safe sentence.
 // `fallback` describes the attempted action (e.g. "Update failed") and is used
 // only for non-HTTP failures, where there is no status to explain the cause.
@@ -150,6 +158,9 @@ export function errorText(err: unknown, fallback?: string): string {
 		if (code === "provider_unavailable" && err.message) return err.message;
 		if ((code === "library_offline" || code === "library_online" || code === "library_accept_running") && err.message) return err.message;
 		if ((code === "assignment_rejected" || code === "edition_not_found") && err.message) return err.message;
+		// A busy upload target says what holds it; the reason is translated here.
+		const busy = code === "upload_conflict" && err.body?.reason ? UPLOAD_BUSY[err.body.reason] : undefined;
+		if (busy) return busy();
 		// An upload refused names the file or the target that was the problem:
 		// the generic 422 or 409 would hide which.
 		if ((code === "upload_rejected" || code === "upload_conflict" || code === "no_space") && err.message) return err.message;

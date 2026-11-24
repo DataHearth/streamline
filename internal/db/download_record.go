@@ -2103,6 +2103,14 @@ var inFlightRecordStatuses = []downloadrecord.Status{
 	downloadrecord.StatusHeld,
 }
 
+// firstOrNil turns a First that found no record into a nil one.
+func firstOrNil(rec *ent.DownloadRecord, err error) (*ent.DownloadRecord, error) {
+	if ent.IsNotFound(err) {
+		return nil, nil
+	}
+	return rec, err
+}
+
 func (db *DB) VideoHasLiveRecord(
 	ctx context.Context,
 	movieID uint32,

@@ -59,6 +59,50 @@ var (
 	ErrNoSpace  = errors.New("not enough free space for the upload")
 )
 
+// The reasons a BusyError carries: what holds the target, a download or an
+// earlier upload, and the state it is in.
+const (
+	ReasonDownloadInProgress = "download_in_progress"
+	ReasonDownloadImporting  = "download_importing"
+	ReasonDownloadHeld       = "download_held"
+	ReasonUploadImporting    = "upload_importing"
+	ReasonUploadHeld         = "upload_held"
+)
+
+// BusyError is the ErrConflict for a target a live record already holds.
+// Reason is what a client translates; the message is the same in English.
+type BusyError struct {
+	Reason string
+	msg    string
+}
+
+func (e *BusyError) Error() string { return e.msg }
+
+func (e *BusyError) Unwrap() error { return ErrConflict }
+
+// Busy names what holds the target and the way out, which differs by state: a
+// download can be cancelled, an import ends by itself, a held record waits for
+// an answer. target reads after "for", as in "this album".
+func Busy(target string, uploaded bool, status string) error {
+	what, held, importing := "a download", ReasonDownloadHeld, ReasonDownloadImporting
+	if uploaded {
+		what, held, importing = "an earlier upload", ReasonUploadHeld, ReasonUploadImporting
+	}
+	switch {
+	case status == "held":
+		return &BusyError{Reason: held, msg: fmt.Sprintf(
+			"%s: %s for %s is waiting for a decision in Activity, resolve it first",
+			ErrConflict, what, target)}
+	case status == "importing" || uploaded:
+		return &BusyError{Reason: importing, msg: fmt.Sprintf(
+			"%s: %s for %s is still being imported, wait for it to finish",
+			ErrConflict, what, target)}
+	}
+	return &BusyError{Reason: ReasonDownloadInProgress, msg: fmt.Sprintf(
+		"%s: %s for %s is in progress, cancel it in Activity first",
+		ErrConflict, what, target)}
+}
+
 var (
 	tracer = otel.Tracer("github.com/datahearth/streamline/internal/upload")
 	meter  = otel.Meter("github.com/datahearth/streamline/internal/upload")

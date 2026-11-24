@@ -82,8 +82,67 @@ var _ = Describe("uploads", Label("unit", "integration", "music"), func() {
 			recv, called, _ := stage("01.flac")
 			_, err = e.svc.UploadAlbum(e.ctx, al.ID, UploadOptions{}, recv)
 			Expect(err).To(MatchError(upload.ErrConflict))
+			Expect(err).To(MatchError(ContainSubstring(
+				"a download for this album is in progress, cancel it in Activity first",
+			)))
+			var busy *upload.BusyError
+			Expect(errors.As(err, &busy)).To(BeTrue())
+			Expect(busy.Reason).To(Equal(upload.ReasonDownloadInProgress))
 			Expect(*called).To(BeFalse())
 		})
+
+		DescribeTable("names what holds the album and the way out",
+			func(status downloadrecord.Status, uploaded bool, reason, want string) {
+				seedAlbum()
+				_, err := e.store.CreateDownloadRecord(
+					e.ctx,
+					db.CreateDownloadRecordParams{
+						Title:    "t",
+						Status:   status,
+						AlbumID:  al.ID,
+						Uploaded: uploaded,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				recv, called, _ := stage("01.flac")
+				_, err = e.svc.UploadAlbum(e.ctx, al.ID, UploadOptions{}, recv)
+				Expect(err).To(MatchError(upload.ErrConflict))
+				Expect(err).To(MatchError(ContainSubstring(want)))
+				var busy *upload.BusyError
+				Expect(errors.As(err, &busy)).To(BeTrue())
+				Expect(busy.Reason).To(Equal(reason))
+				Expect(*called).To(BeFalse())
+			},
+			Entry(
+				"an upload still importing",
+				downloadrecord.StatusImporting,
+				true,
+				upload.ReasonUploadImporting,
+				"an earlier upload for this album is still being imported, wait for it to finish",
+			),
+			Entry(
+				"an upload held",
+				downloadrecord.StatusHeld,
+				true,
+				upload.ReasonUploadHeld,
+				"an earlier upload for this album is waiting for a decision in Activity, resolve it first",
+			),
+			Entry(
+				"a download importing",
+				downloadrecord.StatusImporting,
+				false,
+				upload.ReasonDownloadImporting,
+				"a download for this album is still being imported, wait for it to finish",
+			),
+			Entry(
+				"a download held",
+				downloadrecord.StatusHeld,
+				false,
+				upload.ReasonDownloadHeld,
+				"a download for this album is waiting for a decision in Activity, resolve it first",
+			),
+		)
 
 		It("files an uploaded record and marks the album downloading", func() {
 			seedAlbum()

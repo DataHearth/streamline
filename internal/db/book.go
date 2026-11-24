@@ -1137,18 +1137,19 @@ func (db *DB) ListActiveBookRecords(
 	return out, nil
 }
 
-// BookSlotHasLiveRecord reports whether a download for one slot of the book is
-// in flight.
-func (db *DB) BookSlotHasLiveRecord(
+// BookSlotLiveRecord returns the oldest download record in flight for one slot
+// of the book, or nil when there is none.
+func (db *DB) BookSlotLiveRecord(
 	ctx context.Context,
 	bookID uint32,
 	kind downloadrecord.BookKind,
-) (bool, error) {
-	return db.client.DownloadRecord.Query().
+) (*ent.DownloadRecord, error) {
+	return firstOrNil(db.client.DownloadRecord.Query().
 		Where(
 			downloadrecord.HasBookWith(book.ID(bookID)),
 			downloadrecord.BookKindEQ(kind),
 			liveRecord(),
 		).
-		Exist(ctx)
+		Order(ent.Asc(downloadrecord.FieldID)).
+		First(ctx))
 }
