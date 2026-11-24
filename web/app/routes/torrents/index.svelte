@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Button from "@components/shared/Button.svelte";
-	import { onMount, untrack } from "svelte";
+	import { BELOW_MD, createMediaQuery } from "@lib/viewport.svelte";
+	import { untrack } from "svelte";
 	import {
 		createQuery,
 		createMutation,
@@ -133,14 +134,8 @@
 	// Below md the add form is a sheet rather than the centred modal — different
 	// components, not something CSS can pick. Same switch AppShell runs for the
 	// library's add flow.
-	let compact = $state(false);
-	onMount(() => {
-		const mql = window.matchMedia("(max-width: 767px)");
-		const sync = () => (compact = mql.matches);
-		sync();
-		mql.addEventListener("change", sync);
-		return () => mql.removeEventListener("change", sync);
-	});
+	const belowMd = createMediaQuery(BELOW_MD);
+	let compact = $derived(belowMd());
 
 	const torrents = createQuery<TorrentList>(() => ({
 		queryKey: ["activity", "torrents"],

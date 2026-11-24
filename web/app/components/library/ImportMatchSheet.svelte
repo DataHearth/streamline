@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { BELOW_MD, createMediaQuery } from "@lib/viewport.svelte";
 	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { fly, fade } from "svelte/transition";
@@ -142,14 +143,8 @@
 	let hits = $derived(results.data ?? []);
 	let source = $derived(IMPORT_KIND[kind].source);
 	// The touch floor only applies below lg, as everywhere else.
-	let wide = $state(false);
-	$effect(() => {
-		const mq = window.matchMedia("(min-width: 768px)");
-		const sync = () => (wide = mq.matches);
-		sync();
-		mq.addEventListener("change", sync);
-		return () => mq.removeEventListener("change", sync);
-	});
+	const belowMd = createMediaQuery(BELOW_MD);
+	let wide = $derived(!belowMd());
 	let centred = $derived(dialog && wide);
 </script>
 

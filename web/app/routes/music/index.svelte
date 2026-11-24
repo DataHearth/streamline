@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { BELOW_MD, createMediaQuery } from "@lib/viewport.svelte";
 	import { onMount, tick, untrack } from "svelte";
 	import { createInfiniteQuery, createQuery, keepPreviousData } from "@tanstack/svelte-query";
 	import { Eye, Tags } from "@lucide/svelte";
@@ -89,14 +90,8 @@
 
 	// A phone has no width for the table, so below md the library is the grid,
 	// whatever the URL says, as in Series.
-	let narrow = $state(false);
-	onMount(() => {
-		const mql = window.matchMedia("(max-width: 767px)");
-		const sync = () => (narrow = mql.matches);
-		sync();
-		mql.addEventListener("change", sync);
-		return () => mql.removeEventListener("change", sync);
-	});
+	const belowMd = createMediaQuery(BELOW_MD);
+	let narrow = $derived(belowMd());
 	let shownView = $derived<View>(narrow ? "grid" : view);
 
 	// A jump past what is loaded opens the list at the letter's page. It holds

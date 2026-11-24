@@ -7,6 +7,7 @@
 	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import { lockScroll, unlockScroll } from "@lib/scrollLock";
 	import { sheetSwipe } from "@lib/sheet-swipe";
+	import { createMediaQuery, FROM_LG, FROM_MD } from "@lib/viewport.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Mounted only while open: the caller's `{#if}` is what plays the transitions
@@ -43,6 +44,12 @@
 		bodyClass,
 	}: Props = $props();
 
+	// Read in JS because a CSS breakpoint follows a width the page only passes
+	// through in the background, which blinks the open sheet out on return.
+	const fromMd = createMediaQuery(FROM_MD);
+	const fromLg = createMediaQuery(FROM_LG);
+	let hidden = $derived(hideFrom === "md" ? fromMd() : fromLg());
+
 	closeOnBack(
 		() => true,
 		() => onClose(),
@@ -64,8 +71,8 @@
 <div
 	class={twMerge(
 		"fixed inset-0 z-50",
-		hideFrom === "md" ? "md:hidden" : "lg:hidden",
 		layerClass,
+		hidden && "hidden",
 	)}
 	role="dialog"
 	aria-modal="true"

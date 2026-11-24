@@ -1,9 +1,9 @@
 <script lang="ts">
+	import { BELOW_MD, createMediaQuery } from "@lib/viewport.svelte";
 	import SkeletonToolbar from "@components/shared/SkeletonToolbar.svelte";
 	import SkeletonList from "@components/shared/SkeletonList.svelte";
 	import Skeleton from "@components/shared/Skeleton.svelte";
 	import { untrack } from "svelte";
-	import { onMount } from "svelte";
 	import {
 		createInfiniteQuery,
 		createQuery,
@@ -96,14 +96,8 @@
 	});
 	// A phone has no width for the list table, so below md the library is posters
 	// only — whatever the URL or the last-used view says.
-	let narrow = $state(false);
-	onMount(() => {
-		const mql = window.matchMedia("(max-width: 767px)");
-		const sync = () => (narrow = mql.matches);
-		sync();
-		mql.addEventListener("change", sync);
-		return () => mql.removeEventListener("change", sync);
-	});
+	const belowMd = createMediaQuery(BELOW_MD);
+	let narrow = $derived(belowMd());
 	let shownView = $derived<View>(narrow ? "grid" : view);
 
 	syncRouteQuery(
