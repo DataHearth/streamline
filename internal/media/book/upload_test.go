@@ -66,6 +66,9 @@ var _ = Describe("uploads", Label("unit", "books"), func() {
 		_, err = f.svc.UploadBook(f.ctx, b.ID, "ebook", UploadOptions{}, recv)
 
 		Expect(err).To(MatchError(upload.ErrConflict))
+		Expect(err).To(MatchError(ContainSubstring(
+			"a download for this book's ebook is in progress, cancel it in Activity first",
+		)))
 		Expect(called).To(BeZero())
 	})
 
