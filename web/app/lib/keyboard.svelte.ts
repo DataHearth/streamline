@@ -6,7 +6,7 @@ import {
 import { createSubscriber } from "svelte/reactivity";
 
 // Whether the on-screen keyboard is up, for the phone shell's fixed bottom
-// layers (BottomNav, the add pill, the bulk bars, #main's clearance for them),
+// layers (BottomNav, the add pills, the bulk bars, #main's clearance for them),
 // which the page shrinking above the keyboard (index.html's
 // `interactive-widget=resizes-content`, `--keyboard-inset` where it does not
 // apply) would otherwise lift above it. No browser says so directly:

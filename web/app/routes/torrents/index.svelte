@@ -11,6 +11,7 @@
 	import { engineDisabled } from "@lib/activity-nav";
 	import { auth } from "@lib/auth.svelte";
 	import { requireAdmin } from "@lib/guards";
+	import { keyboardUp } from "@lib/keyboard.svelte";
 	import { toast } from "@lib/toast";
 	import { pullRefresh } from "@lib/pull-refresh";
 	import { fold } from "@lib/text";
@@ -341,8 +342,11 @@
 	// only this page knows whether the engine is on. It floats over the end of the
 	// list like any corner action: `main`'s pb-16 keeps content clear of the bar,
 	// and reserving a second band for the pill on top of that left a visibly empty
-	// strip at the bottom of every scroll.
-	let showAddPill = $derived(compact && !torrentsNotConfigured && !selecting);
+	// strip at the bottom of every scroll. The on-screen keyboard takes its place,
+	// as it does AddButton's.
+	let showAddPill = $derived(
+		compact && !torrentsNotConfigured && !selecting && !keyboardUp(),
+	);
 </script>
 
 <div

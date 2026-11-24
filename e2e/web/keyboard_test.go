@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/proto"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -145,6 +146,61 @@ var _ = Describe("On-screen keyboard", Label("e2e"), func() {
 			WithTimeout(500 * time.Millisecond).
 			WithPolling(50 * time.Millisecond).
 			Should(BeTrue())
+	})
+
+	It("hides the torrents page's add pill while the keyboard is up", func() {
+		page := newSessionPage("/")
+		// The app runs no builtin engine, and the page draws no pill without one.
+		router := page.HijackRequests()
+		router.MustAdd("*/api/v1/torrents", func(h *rod.Hijack) {
+			h.Response.SetHeader("Content-Type", "application/json")
+			h.Response.SetBody(`{
+				"items": [], "pending_removals": [],
+				"refreshed_at": "2026-01-01T00:00:00Z"
+			}`)
+		})
+		go router.Run()
+		DeferCleanup(func() { Expect(router.Stop()).To(Succeed()) })
+		points := 5
+		Expect(proto.EmulationSetTouchEmulationEnabled{
+			Enabled:        true,
+			MaxTouchPoints: &points,
+		}.Call(page)).To(Succeed())
+		page.MustSetViewport(width, height, 1, true)
+		page.MustNavigate(baseURL + "/torrents")
+
+		pillShown := func() bool {
+			return page.MustEval(`() => {
+				const pill = document.querySelector(".add-torrent-pill");
+				return pill !== null && getComputedStyle(pill).display !== "none";
+			}`).Bool()
+		}
+		pill := func(shown bool) {
+			GinkgoHelper()
+			Eventually(pillShown).
+				WithTimeout(3 * time.Second).
+				WithPolling(50 * time.Millisecond).
+				Should(Equal(shown))
+		}
+		pill(true)
+
+		// The drawer it opens holds the field, and outlives the pill.
+		page.MustElement(".add-torrent-pill").MustClick()
+		magnet := page.MustElement(`[role=dialog] input[type=text]`)
+		magnet.MustFocus()
+		page.MustSetViewport(width, height-keyboard, 1, true)
+		pill(false)
+		Expect(magnet.MustVisible()).To(BeTrue(), "the drawer stays open")
+
+		// Closed with the keyboard still up: nothing comes back above it.
+		page.Keyboard.MustType(input.Escape)
+		Consistently(pillShown).
+			WithTimeout(500 * time.Millisecond).
+			WithPolling(50 * time.Millisecond).
+			Should(BeFalse())
+
+		page.MustSetViewport(width, height, 1, true)
+		pill(true)
 	})
 
 	It("keeps a searchable Select open over the keyboard it raises", func() {
