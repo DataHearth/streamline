@@ -100,6 +100,8 @@ Then set `library.download_path: /srv/data/downloads` and configure your torrent
 
 Fix the mounts (one parent mount, per [the folder rule](Installation#before-you-start-the-folder-rule)), or change `library.import_mode` to `copy` or `move`.
 
+**`cannot remove the source of a cross-filesystem move`.** `import_mode: move` across two filesystems copies the file and then deletes the download, and Streamline can't delete it: the download folder is mounted read-only or its user has no write permission there. Make it writable, or set `library.import_mode` to `copy`.
+
 **`destination already exists`.** A file is already at the target path. Streamline won't silently overwrite. Either delete the old file, or re-grab it from manual search and confirm **Download and replace** when it asks.
 
 **`save_path not in allowed download roots`.** You've set `library.allowed_download_roots` and the torrent's save path isn't under any of them. This is a safety fence — it stops a compromised or misconfigured download client persuading Streamline to import from arbitrary paths. Add the correct root, or clear the list to disable the check.
