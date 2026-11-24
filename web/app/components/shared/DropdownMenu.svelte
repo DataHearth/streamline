@@ -101,18 +101,42 @@
 		}
 	});
 
+	// A scroll, or the menu settling to its size: an anchor gone from view
+	// closes the menu.
 	function recompute() {
+		place(false);
+	}
+	// A resize: see place.
+	function onResize() {
+		place(true);
+	}
+	function place(resized: boolean) {
 		if (!anchor) return;
-		const r = anchor.getBoundingClientRect();
-		// Scrolled out of view: the anchor is gone, so the menu goes with it.
-		if (
-			r.bottom < 0 ||
-			r.top > window.innerHeight ||
-			r.right < 0 ||
-			r.left > window.innerWidth
-		) {
-			onClose();
-			return;
+		const offScreen = (box: DOMRect) =>
+			box.bottom < 0 ||
+			box.top > window.innerHeight ||
+			box.right < 0 ||
+			box.left > window.innerWidth;
+		let r = anchor.getBoundingClientRect();
+		if (offScreen(r)) {
+			// Scrolled out of view: the anchor is gone, so the menu goes with it.
+			// Unless the page shrank under it with focus in the menu: on a phone
+			// the on-screen keyboard its own search field raises leaves a low
+			// anchor below the page, and closing would drop the field and the
+			// keyboard under the person typing. The anchor is brought back above
+			// the keyboard instead. A scroll still closes it.
+			if (!resized || !menuEl?.contains(document.activeElement)) {
+				onClose();
+				return;
+			}
+			anchor.scrollIntoView({ block: "nearest" });
+			r = anchor.getBoundingClientRect();
+			// No scroller could bring it back (a fixed container, a landscape
+			// phone too short): a menu placed from it would be off screen too.
+			if (offScreen(r)) {
+				onClose();
+				return;
+			}
 		}
 		menuWidth = r.width;
 		const w = matchAnchor ? r.width : (menuEl?.offsetWidth ?? 0);
@@ -148,7 +172,7 @@
 		observer?.disconnect();
 		observer = null;
 		window.removeEventListener("scroll", recompute, true);
-		window.removeEventListener("resize", recompute);
+		window.removeEventListener("resize", onResize);
 	}
 	$effect(() => {
 		if (!open) return;
@@ -167,7 +191,7 @@
 			}
 		});
 		window.addEventListener("scroll", recompute, true);
-		window.addEventListener("resize", recompute);
+		window.addEventListener("resize", onResize);
 		const onDown = (e: MouseEvent) => {
 			const t = e.target as Node;
 			if (menuEl?.contains(t)) return;

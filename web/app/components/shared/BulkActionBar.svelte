@@ -6,6 +6,8 @@
 	import { cubicOut } from "svelte/easing";
 	import { NOUN_TITLE, type Noun } from "@lib/nouns";
 	import { m as i18n } from "@lib/paraglide/messages.js";
+	import { twMerge } from "tailwind-merge";
+	import { keyboardUp } from "@lib/keyboard.svelte";
 
 	let {
 		count,
@@ -28,12 +30,16 @@
 
 <!-- md and up only: below md the phone touch bar (BulkTouchBar) takes the bottom
      bar's place instead. From md the rail owns navigation, so this can sit at
-     the bottom of the viewport. -->
+     the bottom of the viewport. On a touch tablet the on-screen keyboard takes
+     its place while it is up. -->
 <div
 	role="toolbar"
 	aria-label={i18n.bulk_actions()}
 	transition:fly={{ duration: 180, y: 12, easing: cubicOut }}
-	class="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4"
+	class={twMerge(
+		"pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4",
+		keyboardUp() && "hidden",
+	)}
 >
 	<div
 		class="pointer-events-auto flex max-w-full items-center gap-2 overflow-x-auto rounded-lg border border-border-strong bg-bg-elevated/95 p-2 shadow-4 backdrop-blur-md [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

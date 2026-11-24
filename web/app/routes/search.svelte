@@ -169,7 +169,7 @@
 	bind:this={rootEl}
 	aria-label={i18n.common_search()}
 	in:fly={{ y: 16, duration: 200, easing: cubicOut }}
-	class="fixed inset-0 z-50 flex flex-col bg-bg-deep md:pointer-fine:static md:pointer-fine:z-auto md:pointer-fine:min-h-[60dvh]"
+	class="fixed inset-0 bottom-[var(--keyboard-inset,0px)] z-50 flex flex-col bg-bg-deep md:pointer-fine:static md:pointer-fine:z-auto md:pointer-fine:min-h-[60dvh]"
 >
 	<form
 		onsubmit={onSubmit}

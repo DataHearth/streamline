@@ -22,6 +22,7 @@
 	import { cubicOut } from "svelte/easing";
 	import { Ellipsis } from "@lucide/svelte";
 	import { twMerge } from "tailwind-merge";
+	import { keyboardUp } from "@lib/keyboard.svelte";
 	import { NOUN_TITLE, type Noun } from "@lib/nouns";
 	import { bulkMode } from "@lib/bulk-mode.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
@@ -72,6 +73,9 @@
 	class={twMerge(
 		"fixed inset-x-0 bottom-0 z-40 grid border-t border-border-strong bg-bg-elevated/96 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden",
 		busy && "pointer-events-none opacity-60",
+		// The on-screen keyboard takes its place, as it does the bottom nav's:
+		// typing into the toolbar's filter keeps the room for the results.
+		keyboardUp() && "hidden",
 	)}
 	style:grid-template-columns="repeat({cells}, minmax(0, 1fr))"
 >
