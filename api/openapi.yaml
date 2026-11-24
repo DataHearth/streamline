@@ -14004,13 +14004,13 @@ components:
           type: integer
           minimum: 0
           description: >-
-            Torrents the engine holds at once; a grab past it is refused with
-            `422` `code: grab_rejected`. 0 or absent = the engine's default
-            (500). Lowering it below what the engine holds removes the excess
-            among the imported torrents, with their download copies, oldest
-            import first, once the restart applies it; torrents not imported
-            yet stay, and grabs are refused until the count is back under.
-            Restart required.
+            Torrents the engine holds at once. 0 or absent = the engine's
+            default (500). A grab at the limit removes one imported torrent
+            with its download copy, oldest import first, and is refused with
+            `422` `code: grab_rejected` when there is none. Lowering the limit
+            below what the engine holds removes the excess in that same order
+            once the restart applies it; torrents not imported yet stay, and
+            grabs are refused until the count is back under. Restart required.
         seed_ratio:
           type: number
           format: double
@@ -14091,13 +14091,13 @@ components:
           type: integer
           minimum: 0
           description: >-
-            Torrents the engine holds at once; a grab past it is refused with
-            `422` `code: grab_rejected`. 0 or absent = the engine's default
-            (500). Lowering it below what the engine holds removes the excess
-            among the imported torrents, with their download copies, oldest
-            import first, once the restart applies it; torrents not imported
-            yet stay, and grabs are refused until the count is back under.
-            Restart required.
+            Torrents the engine holds at once. 0 or absent = the engine's
+            default (500). A grab at the limit removes one imported torrent
+            with its download copy, oldest import first, and is refused with
+            `422` `code: grab_rejected` when there is none. Lowering the limit
+            below what the engine holds removes the excess in that same order
+            once the restart applies it; torrents not imported yet stay, and
+            grabs are refused until the count is back under. Restart required.
         seed_ratio:
           type: number
           format: double

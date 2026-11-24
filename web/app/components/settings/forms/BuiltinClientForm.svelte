@@ -221,7 +221,7 @@
 		<div class="flex items-center gap-2">
 			<Cpu size={13} class="text-fg-faint" aria-hidden="true" />
 			<span
-				class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted"
+				class="eyebrow text-[10px] text-fg-muted"
 				>{i18n.builtin_resource_limits()}</span
 			>
 		</div>

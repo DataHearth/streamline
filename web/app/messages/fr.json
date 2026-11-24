@@ -279,7 +279,7 @@
 	"builtin_max_peers": "Pairs par torrent",
 	"builtin_max_peers_help": "0 = par défaut (15). Chaque connexion coûte environ 160 Ko de mémoire, jusqu'à environ 420 Ko en partage.",
 	"builtin_max_torrents": "Torrents max",
-	"builtin_max_torrents_help": "0 = par défaut (500). Un téléchargement au-delà est refusé. L'abaisser sous ce que le moteur détient retire, après le redémarrage, les torrents importés les plus anciens et leurs copies de téléchargement.",
+	"builtin_max_torrents_help": "0 = par défaut (500). À la limite, un téléchargement retire le torrent importé le plus ancien et sa copie de téléchargement pour faire de la place, et il est refusé s'il n'y en a pas. L'abaisser sous ce que le moteur détient retire l'excédent de la même façon après le redémarrage.",
 	"builtin_max_unverified": "Données non vérifiées · Mio",
 	"builtin_max_unverified_help": "0 = par défaut (16). Pièces téléchargées pas encore vérifiées, par torrent. À augmenter pour les releases à grandes pièces ; cela coûte du cache disque, pas de la mémoire du processus.",
 	"builtin_max_upload": "Envoi max · Ko/s",

@@ -71,12 +71,13 @@ const (
 	// defaultMaxTorrents caps how many torrents the engine holds at once.
 	// Every grab is open to members and adds one, and nothing else ever
 	// counts them: each costs resident state, a goroutine until its metadata
-	// resolves, and a re-add on every boot, and only an admin can remove one.
-	// A re-add of a torrent already held is never refused, and neither is a
-	// boot restore: an engine started with a cap below what it holds drops
-	// nothing itself and refuses new hashes until the count is back under.
-	// Bringing it back under is the download manager's pass
-	// (TrimOverLimitTorrents), which knows what was imported.
+	// resolves, and a re-add on every boot. A re-add of a torrent already
+	// held is never refused, and neither is a boot restore: an engine started
+	// with a cap below what it holds drops nothing itself and refuses new
+	// hashes until the count is back under. Making room is the download
+	// manager's, which knows what was imported: one torrent per grab at the
+	// cap (addRotating), the excess of an engine over it
+	// (TrimOverLimitTorrents).
 	defaultMaxTorrents = 500
 )
 

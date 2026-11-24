@@ -50,6 +50,9 @@ var _ = Describe("Engine max_torrents", Label("integration", "bittorrent"), func
 		e, err := New(ctx, store)
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(func() { Expect(e.Close()).To(Succeed()) })
+		// The specs read the client directly, which the restore gate does not
+		// cover.
+		Expect(e.awaitRestore(ctx)).To(Succeed())
 		return e
 	}
 	magnet := func(hash string) download.TorrentSource {

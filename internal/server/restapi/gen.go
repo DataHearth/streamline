@@ -5783,7 +5783,7 @@ type DownloadClient struct {
 	// MaxPeersPerTorrent Established peer connections per torrent. 0 or absent = the engine's default (15). Each connection costs about 160 KB of memory, up to about 420 KB while seeding. Restart required.
 	MaxPeersPerTorrent *int `json:"max_peers_per_torrent,omitempty"`
 
-	// MaxTorrents Torrents the engine holds at once; a grab past it is refused with `422` `code: grab_rejected`. 0 or absent = the engine's default (500). Lowering it below what the engine holds removes the excess among the imported torrents, with their download copies, oldest import first, once the restart applies it; torrents not imported yet stay, and grabs are refused until the count is back under. Restart required.
+	// MaxTorrents Torrents the engine holds at once. 0 or absent = the engine's default (500). A grab at the limit removes one imported torrent with its download copy, oldest import first, and is refused with `422` `code: grab_rejected` when there is none. Lowering the limit below what the engine holds removes the excess in that same order once the restart applies it; torrents not imported yet stay, and grabs are refused until the count is back under. Restart required.
 	MaxTorrents *int `json:"max_torrents,omitempty"`
 
 	// MaxUnverifiedMb MiB of downloaded piece data not yet hash-checked, per torrent, counted in whole pieces. 0 or absent = the engine's default (16). Raise it for releases with large pieces: one 16 MiB piece fills the default alone, and that torrent then downloads one piece at a time. Costs page cache, not process memory. Restart required.
@@ -5829,7 +5829,7 @@ type DownloadClientCreate struct {
 	// MaxPeersPerTorrent Established peer connections per torrent. 0 or absent = the engine's default (15). Each connection costs about 160 KB of memory, up to about 420 KB while seeding. Restart required.
 	MaxPeersPerTorrent *int `json:"max_peers_per_torrent,omitempty"`
 
-	// MaxTorrents Torrents the engine holds at once; a grab past it is refused with `422` `code: grab_rejected`. 0 or absent = the engine's default (500). Lowering it below what the engine holds removes the excess among the imported torrents, with their download copies, oldest import first, once the restart applies it; torrents not imported yet stay, and grabs are refused until the count is back under. Restart required.
+	// MaxTorrents Torrents the engine holds at once. 0 or absent = the engine's default (500). A grab at the limit removes one imported torrent with its download copy, oldest import first, and is refused with `422` `code: grab_rejected` when there is none. Lowering the limit below what the engine holds removes the excess in that same order once the restart applies it; torrents not imported yet stay, and grabs are refused until the count is back under. Restart required.
 	MaxTorrents *int `json:"max_torrents,omitempty"`
 
 	// MaxUnverifiedMb MiB of downloaded piece data not yet hash-checked, per torrent, counted in whole pieces. 0 or absent = the engine's default (16). Raise it for releases with large pieces: one 16 MiB piece fills the default alone, and that torrent then downloads one piece at a time. Costs page cache, not process memory. Restart required.
