@@ -266,8 +266,10 @@ func MatchEpisodeInSeason(
 	// filled no matter how many acceptable releases exist.
 	//
 	// Only reached once the exact season+episode found nothing, so a season
-	// that genuinely holds that episode still wins.
-	if anime && parsed.AbsoluteNumber == 0 && parsed.Episode > 0 {
+	// that genuinely holds that episode still wins. Never for season 0: a
+	// special's number counts the specials, so S00E05 is not absolute 5.
+	if anime && parsed.AbsoluteNumber == 0 && parsed.Season > 0 &&
+		parsed.Episode > 0 {
 		for _, se := range seasons {
 			for _, e := range se.Edges.Episodes {
 				if e.AbsoluteNumber == parsed.Episode {

@@ -60,6 +60,17 @@ var _ = Describe("TitleNamesSameWork", Label("unit", "library"), func() {
 })
 
 var _ = Describe("MatchEpisode", Label("unit", "library"), func() {
+	It("never reads an anime special's number as an absolute one", func() {
+		seasons := []*ent.Season{{
+			Number: 1,
+			Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+				{ID: 105, Number: 5, AbsoluteNumber: 5},
+			}},
+		}}
+		Expect(MatchEpisode(Parse("Show.S00E05.1080p.WEB-GRP"), seasons, true)).
+			To(BeNil())
+	})
+
 	seasons := []*ent.Season{
 		{Number: 1, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
 			{Number: 1, AbsoluteNumber: 1},

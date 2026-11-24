@@ -9,6 +9,9 @@ import (
 )
 
 type ParseResult struct {
+	// Specials is set when the season read is season 0, which tells the name
+	// from one naming no season: Season is 0 for both.
+	Specials       bool
 	Title          string
 	Year           uint16
 	Season         uint16
@@ -60,6 +63,15 @@ var (
 	dotGroupRe = regexp.MustCompile(`\.([A-Za-z0-9]+)$`)
 
 	seasonPackRe = regexp.MustCompile(`(?i)\bS(\d{2})\b(?:[^E]|$)`)
+	// specialEpRe finds the number of one special written apart from its
+	// season ("S00 - 05 [1080p]", "S00.E05"). What follows the dashed number
+	// is a bracket, a word, a resolution or the end, so a range ("S00 - 01-10")
+	// and a tag's digits ("S00 - 10bit") are not one.
+	specialEpRe = regexp.MustCompile(
+		`(?i)\b(?:S00|(?:season|saison)[. ]00?)` +
+			`(?:[. ](?:-[. ])?E(?:p(?:isode[. ]?)?)?(\d{1,3})\b|\s+-\s+(\d{1,3})(?:v\d)?` +
+			`(?:\s*$|\s*[\[(]|\s+(?:-\s+)?(?:\pL|\d{3,4}p)))`,
+	)
 	// Non-scene releases spell the season out — French trackers in particular
 	// ("Breaking Bad Saison 04 Complète Multi …"). Without this the name carries
 	// no season token at all, which reads as "single episode of nothing" and
@@ -76,6 +88,10 @@ var (
 	// season it lands in a one-season search offering every season.
 	// completePackRe matches complete-series tags.
 	seasonRangeRe = regexp.MustCompile(`(?i)S\d{1,2}[-.,+& ]+S\d{1,2}`)
+	// specialsTokenRe finds the bare specials season.
+	specialsTokenRe = regexp.MustCompile(`(?i)\bS00\b`)
+	// specialsRangeRe matches a range opening at the specials ("S00-S12").
+	specialsRangeRe = regexp.MustCompile(`(?i)\bS00?[. ]*-[. ]*S\d`)
 	// seasonTokenRe finds every season token in a name, for bounding a chain
 	// whose pairwise matches cannot overlap.
 	seasonTokenRe = regexp.MustCompile(`(?i)\bS(\d{1,2})\b`)
@@ -126,9 +142,18 @@ func Parse(filename string) ParseResult {
 	if m := seasonEpRe.FindStringSubmatch(filename); m != nil {
 		if s, err := strconv.ParseUint(m[1], 10, 16); err == nil {
 			r.Season = uint16(s)
+			r.Specials = s == 0
 		}
 		if e, err := strconv.ParseUint(m[2], 10, 16); err == nil {
 			r.Episode = uint16(e)
+		}
+	}
+
+	if r.Season == 0 && r.Episode == 0 {
+		if m := specialEpRe.FindStringSubmatch(filename); m != nil {
+			if e, err := strconv.ParseUint(m[1]+m[2], 10, 16); err == nil {
+				r.Episode, r.Specials = uint16(e), true
+			}
 		}
 	}
 
@@ -151,12 +176,15 @@ func Parse(filename string) ParseResult {
 		if m != nil {
 			if s, err := strconv.ParseUint(m[1], 10, 16); err == nil {
 				r.Season = uint16(s)
-				r.SeasonPack = true
+				r.Specials = s == 0
+				// A dated S00 is the special aired that day.
+				r.SeasonPack = s != 0 || r.AirDate == nil
 			}
 		}
 	}
-	// Anime absolute: only when no SxxExx and no daily date.
-	if r.Season == 0 && r.Episode == 0 && r.AirDate == nil {
+	// Anime absolute: only when no season token and no daily date. The digits
+	// of an S00 pack are its tags or its range, never an absolute number.
+	if !r.SeasonPack && r.Season == 0 && r.Episode == 0 && r.AirDate == nil {
 		if m := absoluteRe.FindStringSubmatch(filename); m != nil {
 			if n, err := strconv.Atoi(m[1]); err == nil && n > 0 && n < 2000 {
 				r.AbsoluteNumber = uint16(n)
@@ -312,12 +340,24 @@ func looksLikeRelease(s string) bool {
 // Read as whole-series, those would be dropped from a search for exactly the
 // season they hold. So the tag only spans the series when no single season is
 // named — and a season *range* wins over both, since "COMPLETE S01-S05" spans
-// five.
+// five. The specials season after the tag is added to the series rather than
+// qualified by it ("INTEGRALE + S00").
 func IsWholeSeriesPack(name string) bool {
-	if seasonRangeRe.MatchString(name) {
+	if seasonRangeRe.MatchString(name) || namesSeriesAndSpecials(name) {
 		return true
 	}
 	return completePackRe.MatchString(name) && !namesOneSeason(name)
+}
+
+// namesSeriesAndSpecials reports a complete tag followed by the specials
+// season ("INTEGRALE + S00"): the tag covers the series and S00 is added to
+// it, where a tag after the season qualifies that season ("S00 COMPLETE").
+// A numbered season before the tag is the one it qualifies ("S05 COMPLETE S00").
+func namesSeriesAndSpecials(name string) bool {
+	tag := completePackRe.FindStringIndex(name)
+	s00 := specialsTokenRe.FindStringIndex(name)
+	return tag != nil && s00 != nil && tag[0] < s00[0] &&
+		!namesOneSeason(name[:tag[0]])
 }
 
 // namesOneSeason reports whether the name scopes itself to a single season, in
@@ -334,14 +374,22 @@ func namesOneSeason(name string) bool {
 // pairwise matches cannot overlap, so a chain ("S01 & S02 & S03") matches
 // "S01 & S02" and then resumes past it, leaving the tail unread and the pack
 // sized two seasons short.
-func seasonRangeBounds(name string) (uint16, uint16) {
-	var lo, hi uint16
+//
+// An S00 token is reported apart, as specials, since lo is 0 until a numbered
+// season is seen. A dash from it opens a range that runs on from season 1
+// ("S00-S12" is the specials plus seasons 1 to 12); listed any other way it
+// names the specials beside the rest ("S05+S00" is season 5 and the specials).
+func seasonRangeBounds(name string) (lo, hi uint16, specials bool) {
 	for _, m := range seasonTokenRe.FindAllStringSubmatch(name, -1) {
 		n, err := strconv.ParseUint(m[1], 10, 16)
 		if err != nil {
 			continue
 		}
 		s := uint16(n)
+		if s == 0 {
+			specials = true
+			continue
+		}
 		if lo == 0 || s < lo {
 			lo = s
 		}
@@ -349,7 +397,10 @@ func seasonRangeBounds(name string) (uint16, uint16) {
 			hi = s
 		}
 	}
-	return lo, hi
+	if lo > 0 && specialsRangeRe.MatchString(name) {
+		lo = 1
+	}
+	return lo, hi, specials
 }
 
 // SeasonSpan is which seasons a release covers. It exists to size a pack: the
@@ -357,27 +408,39 @@ func seasonRangeBounds(name string) (uint16, uint16) {
 // reports a torrent's file count either, so the episode total has to be looked
 // up per season against the library.
 type SeasonSpan struct {
-	// Complete spans every season the show has, from a "COMPLETE"/"INTEGRALE"
-	// tag. From and To are meaningless when it is set.
+	// Complete spans every numbered season the show has, from a
+	// "COMPLETE"/"INTEGRALE" tag. From and To are meaningless when it is set.
 	Complete bool
-	// From and To are inclusive and equal for a single-season pack. Both zero
-	// means the release covers no whole season — a single episode, or a name
-	// nothing could be read out of.
+	// From and To are inclusive and equal for a single-season pack, and name
+	// numbered seasons only. Both zero with Specials unset means the release
+	// covers no whole season — a single episode, or a name nothing could be
+	// read out of.
 	From, To uint16
+	// Specials is set when the name claims season 0 ("S00", "S00-S05"),
+	// alone or beside the numbered range. It is a field of its own because
+	// From 0 already means "no season".
+	Specials bool
 }
 
 // ParseSeasonSpan reads a release name's season scope. A season range wins over
-// a plain SXX, which wins over a bare complete/integral tag, which wins over
-// nothing: "S01-S03" is three seasons even though the first token alone would
-// parse as season 1, and "S05 Complete" is season 5 rather than the series
-// (same reasoning as IsWholeSeriesPack).
+// a complete tag followed by S00, which wins over a plain SXX, which wins over a
+// bare complete/integral tag, which wins over nothing: "S01-S03" is three
+// seasons even though the first token alone would parse as season 1, and "S05
+// Complete" is season 5 rather than the series (same reasoning as
+// IsWholeSeriesPack).
 func ParseSeasonSpan(name string) SeasonSpan {
 	if seasonRangeRe.MatchString(name) {
-		if from, to := seasonRangeBounds(name); from > 0 {
-			return SeasonSpan{From: from, To: to}
+		if from, to, specials := seasonRangeBounds(name); from > 0 {
+			return SeasonSpan{From: from, To: to, Specials: specials}
 		}
 	}
+	if namesSeriesAndSpecials(name) {
+		return SeasonSpan{Complete: true, Specials: true}
+	}
 	if p := Parse(name); p.SeasonPack {
+		if p.Season == 0 {
+			return SeasonSpan{Specials: true}
+		}
 		return SeasonSpan{From: p.Season, To: p.Season}
 	}
 	if completePackRe.MatchString(name) {
@@ -390,20 +453,20 @@ func ParseSeasonSpan(name string) SeasonSpan {
 // totals. Zero means "the library cannot say" — an untracked season, or a name
 // that named no season at all — and callers must read it as unknown rather than
 // as an empty pack.
+//
+// A complete pack totals the numbered seasons and leaves the specials out
+// unless it names them: a bare tag rarely says whether they ship. The episode
+// search reads one the same way (packCoversSeason in internal/indexer), so the
+// size bound and the hidden-packs hint agree on what an integral holds.
 func (s SeasonSpan) EpisodeCount(perSeason map[uint16]int) int {
-	if s.Complete {
-		total := 0
-		for _, n := range perSeason {
+	total := 0
+	for season, n := range perSeason {
+		switch {
+		case season == 0 && s.Specials,
+			season != 0 && s.Complete,
+			season != 0 && s.From <= season && season <= s.To:
 			total += n
 		}
-		return total
-	}
-	if s.From == 0 && s.To == 0 {
-		return 0
-	}
-	total := 0
-	for n := s.From; n <= s.To; n++ {
-		total += perSeason[n]
 	}
 	return total
 }
@@ -419,22 +482,20 @@ func extractTitle(filename string, r ParseResult, yearIdx int) string {
 		cutPos = yearIdx
 	}
 
-	markers := []string{}
-	if r.Season > 0 {
-		// A pack has no SxxExx to cut at, so fall back to the bare season
-		// token. Without it the cut lands on the resolution instead and the
-		// season plus every language/edition tag between them is glued into
-		// the title — "Good Omens S03 MULTi VF2", which TitleMatches can never
-		// equal the library's "Good Omens".
-		m := seasonEpRe.FindString(filename)
-		if m == "" {
-			m = seasonPackRe.FindString(filename)
-		}
-		if m == "" {
-			m = longSeasonRe.FindString(filename)
-		}
-		markers = append(markers, m)
+	// A pack has no SxxExx to cut at, so fall back to the bare season token.
+	// Without it the cut lands on the resolution instead and the season plus
+	// every language/edition tag between them is glued into the title — "Good
+	// Omens S03 MULTi VF2", which TitleMatches can never equal the library's
+	// "Good Omens". The token decides, not the season's value: S00 names the
+	// specials, and left in the title ("Show S00E01") it equals no show.
+	marker := seasonEpRe.FindString(filename)
+	if marker == "" {
+		marker = seasonPackRe.FindString(filename)
 	}
+	if marker == "" {
+		marker = longSeasonRe.FindString(filename)
+	}
+	markers := []string{marker}
 	if r.Resolution != "" {
 		// The stored value is normalised, so it need not appear in the name as
 		// written ("1080P", "4K"). Re-find the original text, like Source below.

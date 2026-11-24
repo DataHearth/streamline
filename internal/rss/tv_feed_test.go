@@ -226,6 +226,30 @@ var _ = Describe("TVFeedScanner.Run", Label("unit", "rss"), func() {
 		},
 	)
 
+	DescribeTable("grabs one special for a release naming one",
+		func(title string) {
+			configtest.Setup(indexerConfig("a"))
+			newScanner()
+			show := showWith(
+				&ent.Episode{ID: 11, Number: 1},
+				&ent.Episode{ID: 12, Number: 2},
+			)
+			show.Edges.Seasons[0].Number = 0
+			expectQueries([]*ent.TVShow{show}, nil)
+			feeder.EXPECT().Feed(mock.Anything, "a").
+				Return([]indexer.SearchResult{{Title: title}}, nil).Once()
+			grabber.EXPECT().
+				GrabEpisode(mock.Anything, mock.Anything, uint32(12), []uint32{12}).
+				Return(&ent.DownloadRecord{}, nil).Once()
+			store.EXPECT().ResetEpisodeGrabFailures(mock.Anything, uint32(12)).
+				Return(nil).Once()
+			expectDownloading(12)
+			Expect(scanner.Run(ctx)).To(Succeed())
+		},
+		Entry("as SxxExx", "The.Black.Sea.S00E02.1080p.WEB-DL.x265-GRP"),
+		Entry("apart from its season", "[Group] The Black Sea S00 - 02 [1080p]"),
+	)
+
 	It("skips whole-series packs", func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()

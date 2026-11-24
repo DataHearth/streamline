@@ -403,6 +403,75 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 			Expect(r.AirDate.Year()).To(Equal(2026))
 		})
 
+		// The season token is cut from the title for season 0 as for any
+		// other: left in, no special's title ever equals the show's.
+		DescribeTable("cuts the title at a season 0 token",
+			func(name, title string) {
+				Expect(Parse(name).Title).To(Equal(title))
+			},
+			Entry("a numbered special", "Show.S00E01.1080p.WEB-GRP", "Show"),
+			Entry("special number 0", "Show.S00E00.1080p.WEB-GRP", "Show"),
+			Entry("the specials pack",
+				"The.Big.Bang.Theory.S00.Specials.1080p.WEB-GRP",
+				"The Big Bang Theory"),
+			Entry("a range opening at the specials",
+				"Show.S00-S12.1080p.BluRay-GRP", "Show"),
+			Entry("a spelled-out season 0", "Show Saison 0 MULTI 1080p", "Show"),
+		)
+
+		DescribeTable(
+			"reads one special numbered apart from S00",
+			func(name string, episode int) {
+				r := Parse(name)
+				Expect(r.Season).To(BeZero())
+				Expect(r.Episode).To(BeEquivalentTo(episode))
+				Expect(r.SeasonPack).To(BeFalse())
+				Expect(r.AbsoluteNumber).To(BeZero())
+				Expect(ParseSeasonSpan(name)).To(Equal(SeasonSpan{}))
+			},
+			Entry("fansub dash", "[Group] Show S00 - 05 [1080p]", 5),
+			Entry("fansub dash and revision", "[Group] Show S00 - 05v2 (1080p)", 5),
+			Entry("dash ending the name", "Show - S00 - 18", 18),
+			Entry(
+				"dash and a title",
+				"[Group] Show S00 - 05 - The Movie [1080p]",
+				5,
+			),
+			Entry("dash and bare tags", "[Group] Show S00 - 05 1080p WEB", 5),
+			Entry("dash before the E", "Show S00 - E05 [1080p]", 5),
+			Entry("spelled-out season", "Show Season 00 - 05 [1080p]", 5),
+			Entry("spelled out", "Show Saison 0 Episode 5 1080p", 5),
+			Entry("EP prefix", "Show.S00.EP05.1080p.WEB-GRP", 5),
+			Entry("dotted", "Show.S00.E05.1080p.WEB-GRP", 5),
+			Entry("spaced", "Show S00 E05 1080p WEB-GRP", 5),
+		)
+
+		DescribeTable("reads no number off a specials pack",
+			func(name string) {
+				r := Parse(name)
+				Expect(r.SeasonPack).To(BeTrue())
+				Expect(r.Season).To(BeZero())
+				Expect(r.Episode).To(BeZero())
+				Expect(r.AbsoluteNumber).To(BeZero())
+				Expect(ParseSeasonSpan(name)).To(Equal(SeasonSpan{Specials: true}))
+			},
+			Entry("audio channels", "Show S00 1080p BluRay DDP5 1-GRP"),
+			Entry("a year", "Show S00 1999-GRP"),
+			Entry("a range", "[Group] Show S00 - 01-10 [1080p]"),
+			Entry("a spaced range", "Show S00 - 01 ~ 10 [1080p]"),
+			Entry("a tight range", "[Group] Show S00-12 [BD 1080p]"),
+			Entry("a resolution", "Show S00 - 1080p WEB"),
+			Entry("a bit depth", "Show S00 - 10bit 1080p"),
+			Entry("a later range", "[Group] Show S00 OVA 01-04 [1080p]"),
+		)
+
+		It("reads a dated S00 as one special", func() {
+			r := Parse("Daily.Show.S00.2011.09.25.720p.HDTV-GRP")
+			Expect(r.SeasonPack).To(BeFalse())
+			Expect(r.Specials).To(BeTrue())
+			Expect(r.AirDate).NotTo(BeNil())
+		})
+
 		It("still parses standard SxxExx", func() {
 			r := Parse("Show.S01E05.1080p.WEB-DL-GRP")
 			Expect(r.Season).To(Equal(uint16(1)))
@@ -413,7 +482,8 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 })
 
 var _ = Describe("season spans", Label("unit", "library"), func() {
-	DescribeTable("scope read from a release name",
+	DescribeTable(
+		"scope read from a release name",
 		func(input string, want SeasonSpan) {
 			Expect(ParseSeasonSpan(input)).To(Equal(want))
 		},
@@ -431,9 +501,41 @@ var _ = Describe("season spans", Label("unit", "library"), func() {
 			"Breaking.Bad.COMPLETE.MULTI.1080p-GRP", SeasonSpan{Complete: true}),
 		Entry("integrale is the same tag in French",
 			"Kaamelott.INTEGRALE.1080p-GRP", SeasonSpan{Complete: true}),
+		// S00 is the specials season: a span of its own, since From 0 is "no
+		// season", and never a bound of the numbered range.
+		Entry("specials pack", "The.Big.Bang.Theory.S00.Specials.1080p.WEB-GRP",
+			SeasonSpan{Specials: true}),
+		Entry("range opening at the specials", "Show.S00-S12.1080p.BluRay-GRP",
+			SeasonSpan{From: 1, To: 12, Specials: true}),
+		Entry("chain listing the specials", "Show.S00 & S01 & S02.1080p-GRP",
+			SeasonSpan{From: 1, To: 2, Specials: true}),
+		Entry("season listed with the specials", "Show.S05+S00.1080p-GRP",
+			SeasonSpan{From: 5, To: 5, Specials: true}),
+		Entry("specials listed with a season", "Show.S00 + S05.1080p-GRP",
+			SeasonSpan{From: 5, To: 5, Specials: true}),
+		Entry(
+			"season and specials joined by a dot",
+			"Show.S04.S00.Specials.1080p-GRP",
+			SeasonSpan{From: 4, To: 4, Specials: true},
+		),
+		Entry("range listed with the specials", "Show.S03-S05+S00.1080p-GRP",
+			SeasonSpan{From: 3, To: 5, Specials: true}),
+		Entry("specials listed with a range", "Show.S00+S03-S05.1080p-GRP",
+			SeasonSpan{From: 3, To: 5, Specials: true}),
+		Entry("spaced range opening at the specials", "Show S00 - S05 1080p-GRP",
+			SeasonSpan{From: 1, To: 5, Specials: true}),
+		Entry("complete tag adding the specials", "Show.Integrale + S00.1080p-GRP",
+			SeasonSpan{Complete: true, Specials: true}),
+		Entry("complete tag qualifying a season listed with the specials",
+			"Show.S05.COMPLETE.S00.1080p-GRP", SeasonSpan{From: 5, To: 5}),
+		Entry("complete tag qualifying the specials", "Show.S00.COMPLETE.1080p-GRP",
+			SeasonSpan{Specials: true}),
+		Entry("complete range opening at the specials",
+			"Show.COMPLETE.S00-S05.1080p-GRP",
+			SeasonSpan{From: 1, To: 5, Specials: true}),
 	)
 
-	counts := map[uint16]int{1: 7, 2: 13, 3: 13}
+	counts := map[uint16]int{0: 4, 1: 7, 2: 13, 3: 13}
 
 	DescribeTable("episodes totalled against the library's season lengths",
 		func(span SeasonSpan, want int) {
@@ -441,12 +543,24 @@ var _ = Describe("season spans", Label("unit", "library"), func() {
 		},
 		Entry("one season", SeasonSpan{From: 2, To: 2}, 13),
 		Entry("a range sums its seasons", SeasonSpan{From: 1, To: 3}, 33),
-		Entry("complete sums every season", SeasonSpan{Complete: true}, 33),
+		// An integral is taken to hold the numbered seasons only, as the episode
+		// search reads one: the four specials stay out of its size.
+		Entry("complete sums every numbered season", SeasonSpan{Complete: true}, 33),
 		// Zero is "the library cannot say", which callers read as unknown and
 		// degrade to an unscaled bound — never as an empty pack.
 		Entry("no season named", SeasonSpan{}, 0),
 		Entry("season the library does not track", SeasonSpan{From: 9, To: 9}, 0),
 		Entry("range partly tracked counts what it knows",
 			SeasonSpan{From: 3, To: 9}, 13),
+		Entry("complete with the specials",
+			SeasonSpan{Complete: true, Specials: true}, 37),
+		Entry("specials pack", SeasonSpan{Specials: true}, 4),
+		Entry("range with the specials",
+			SeasonSpan{From: 1, To: 3, Specials: true}, 37),
 	)
+
+	It("reads a complete pack of a show tracking only specials as unknown", func() {
+		Expect(SeasonSpan{Complete: true}.EpisodeCount(map[uint16]int{0: 4})).
+			To(BeZero())
+	})
 })
