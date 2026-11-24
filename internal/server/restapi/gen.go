@@ -5884,6 +5884,13 @@ type Error struct {
 
 	// Message Human-readable, safe-to-display error message.
 	Message string `json:"message"`
+
+	// Reason What a `code` leaves open, for a client that words the error itself.
+	// Sent with `upload_conflict`, naming what holds the target and its
+	// state: `download_in_progress` (cancel it), `download_importing` or
+	// `upload_importing` (wait for the import), `download_held` or
+	// `upload_held` (resolve it in Activity).
+	Reason *string `json:"reason,omitempty"`
 }
 
 // Extension defines model for Extension.

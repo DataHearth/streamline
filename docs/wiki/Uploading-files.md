@@ -25,7 +25,7 @@ An hourly job, `purge-uploads`, removes staging folders that nothing is receivin
 
 ## Refusals
 
-- `409 upload_conflict`: the album or book slot already has a download or an earlier upload in Activity. The message says which and what to do: cancel a download in progress, wait for an import to finish, or resolve a held one.
+- `409 upload_conflict`: the album or book slot already has a download or an earlier upload in Activity. The answer carries a `reason` saying which and what to do, which the web UI shows in your language: `download_in_progress` (cancel it), `download_importing` or `upload_importing` (wait for the import to finish), `download_held` or `upload_held` (resolve it in Activity). The `message` says the same in English.
 - `422 upload_rejected`: an unsafe file name, the wrong kind of media, no media at all, a book whose details have not loaded yet, or nothing in a discography matched. The message says which.
 - `422 no_space`: the declared size plus `download.space_reserve_gb` does not fit on the download volume, or the disk filled up during the upload. `download.space_check: false` turns the first check off, as it does for grabs.
 - `422 no_quality_profile`: the book has no usable quality profile.

@@ -59,6 +59,21 @@ var _ = Describe("Handler: uploads", Label("unit", "server"), func() {
 		Expect(*errorOf(resp).Code).To(Equal("upload_conflict"))
 	})
 
+	It("carries the reason of a busy target for the client to translate", func() {
+		app.music.EXPECT().
+			UploadAlbum(mock.Anything, uint32(7), mock.Anything, mock.Anything).
+			Return(nil, upload.Busy("this album", true, "held")).
+			Once()
+
+		resp := postUpload("/api/v1/music/albums/7/upload")
+
+		Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+		e := errorOf(resp)
+		Expect(*e.Code).To(Equal("upload_conflict"))
+		Expect(*e.Reason).To(Equal("upload_held"))
+		Expect(e.Message).To(ContainSubstring("an earlier upload for this album"))
+	})
+
 	It("answers a busy album from the preview with 409 upload_conflict", func() {
 		app.music.EXPECT().
 			AlbumUploadPreview(mock.Anything, uint32(7), mock.Anything).
