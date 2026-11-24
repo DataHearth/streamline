@@ -110,6 +110,10 @@
   group: area
   color: c5def5
   description: The REST API contract — OpenAPI spec, endpoints, status codes
+- name: area/extensions
+  group: area
+  color: c5def5
+  description: WebAssembly extensions — the contract and SDK, manifests, grants, mounts, hooks, views
 - name: area/subsonic
   group: area
   color: c5def5
