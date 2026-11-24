@@ -147,6 +147,9 @@ func trackAt(tracks []*ent.Track, info audiotags.Info) *ent.Track {
 type TrackMatcher struct {
 	tracks   []*ent.Track
 	byNumber bool
+	// near is the track each title no track carries is a misspelling of,
+	// keyed by the title normalized (nearTitles).
+	near map[string]*ent.Track
 }
 
 // NewTrackMatcher trusts the numbers unless the titles show the release
@@ -168,10 +171,12 @@ func NewTrackMatcher(tracks []*ent.Track, infos []audiotags.Info) TrackMatcher {
 			elsewhere++
 		}
 	}
-	return TrackMatcher{
+	m := TrackMatcher{
 		tracks:   tracks,
 		byNumber: elsewhere < 2 || elsewhere <= agree,
 	}
+	m.near = nearTitles(tracks, infos, m.Match)
+	return m
 }
 
 // NewTrackMatcherByName is NewTrackMatcher for files known by their paths
@@ -190,10 +195,16 @@ func (m TrackMatcher) ByNumber() bool { return m.byNumber }
 // Match is MatchTrack when the numbers are trusted, else the track whose
 // title the file states, on the file's disc first.
 func (m TrackMatcher) Match(info audiotags.Info) *ent.Track {
+	var t *ent.Track
 	if m.byNumber {
-		return MatchTrack(m.tracks, info)
+		t = MatchTrack(m.tracks, info)
+	} else {
+		t = matchTitle(m.tracks, info.Disc, info.Title)
 	}
-	return matchTitle(m.tracks, info.Disc, info.Title)
+	if t == nil {
+		t = m.near[normalizeTitle(info.Title)]
+	}
+	return t
 }
 
 // Suggest is Match unless the file states the title of another track: the guess
@@ -212,11 +223,111 @@ func (m TrackMatcher) Suggest(info audiotags.Info) *ent.Track {
 // MatchByName is MatchTrackByName when the numbers are trusted, else the
 // track whose title the file name states, on its disc first.
 func (m TrackMatcher) MatchByName(p string) *ent.Track {
-	if m.byNumber {
-		return MatchTrackByName(m.tracks, p)
-	}
 	info := TrackInfoFromName(p)
-	return matchTitle(m.tracks, info.Disc, info.Title)
+	var t *ent.Track
+	if m.byNumber {
+		t = MatchTrackByName(m.tracks, p)
+	} else {
+		t = matchTitle(m.tracks, info.Disc, info.Title)
+	}
+	if t == nil {
+		t = m.near[normalizeTitle(info.Title)]
+	}
+	return t
+}
+
+// nearTitles pairs the files whose title names no track with the track that
+// title is a misspelling of: "Un Élan De Coeur" is the album's "Un élan du
+// cœur". A file is paired only with a track no file matches outright, only
+// when one such track is nearest, and only when no other file is nearest to
+// it too, so a bonus song never takes the slot of a track the release lacks
+// unless its title is all but that track's.
+func nearTitles(
+	tracks []*ent.Track,
+	infos []audiotags.Info,
+	match func(audiotags.Info) *ent.Track,
+) map[string]*ent.Track {
+	claimed := make(map[uint32]bool, len(tracks))
+	var loose []string
+	for _, info := range infos {
+		if t := match(info); t != nil {
+			claimed[t.ID] = true
+			continue
+		}
+		if n := normalizeTitle(info.Title); n != "" && !slices.Contains(loose, n) {
+			loose = append(loose, n)
+		}
+	}
+	pick := map[string]*ent.Track{}
+	takers := map[uint32]int{}
+	for _, n := range loose {
+		var best *ent.Track
+		bestDist, tied := math.MaxInt, false
+		for _, t := range tracks {
+			if claimed[t.ID] {
+				continue
+			}
+			for _, own := range TrackTitles(t) {
+				d, ok := titleDistance(normalizeTitle(own), n)
+				if !ok || d > bestDist || (d == bestDist && best == t) {
+					continue
+				}
+				tied = d == bestDist
+				best, bestDist = t, d
+			}
+		}
+		if best != nil && !tied {
+			pick[n] = best
+			takers[best.ID]++
+		}
+	}
+	for n, t := range pick {
+		if takers[t.ID] > 1 {
+			delete(pick, n)
+		}
+	}
+	return pick
+}
+
+// titleDistance is the edit distance between two normalized titles, ok only
+// when it is small enough to be a misspelling: at most one edit in six
+// characters of the longer, the shorter at least five long, and the digits
+// equal, since "Part 1" and "Part 2" are two songs.
+func titleDistance(a, b string) (int, bool) {
+	ra, rb := []rune(a), []rune(b)
+	if min(len(ra), len(rb)) < 5 || digitsOf(a) != digitsOf(b) {
+		return 0, false
+	}
+	d := levenshtein(ra, rb)
+	return d, d > 0 && 6*d <= max(len(ra), len(rb))
+}
+
+func digitsOf(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return -1
+	}, s)
+}
+
+func levenshtein(a, b []rune) int {
+	row := make([]int, len(b)+1)
+	for j := range row {
+		row[j] = j
+	}
+	for i := 1; i <= len(a); i++ {
+		diag := row[0]
+		row[0] = i
+		for j := 1; j <= len(b); j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			diag, row[j] = row[j], min(row[j]+1, row[j-1]+1, diag+cost)
+		}
+	}
+	return row[len(b)]
 }
 
 // matchTitle is the track whose title equals title once normalized,

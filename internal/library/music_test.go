@@ -199,6 +199,68 @@ var _ = Describe("TrackMatcher", Label("unit", "library"), func() {
 	})
 })
 
+var _ = Describe("TrackMatcher near titles", Label("unit", "library"), func() {
+	// Sidilarsen's "Que la lumière soit": the release spells track 7 "Un
+	// Élan De Coeur" where MusicBrainz has "Un élan du cœur".
+	album := []*ent.Track{
+		{ID: 1, Disc: 1, Position: 1, Title: "Deuxième vie"},
+		{ID: 2, Disc: 1, Position: 2, Title: "Acide Occident"},
+		{ID: 7, Disc: 1, Position: 7, Title: "Un élan du cœur"},
+		{ID: 12, Disc: 1, Position: 12, Title: "Appel à résistance"},
+	}
+	files := []string{
+		"Sidilarsen - Deuxième Vie.flac",
+		"Sidilarsen - Acide Occident.flac",
+		"Sidilarsen - Un Élan De Coeur.flac",
+		"Sidilarsen - Appel À Résistance.flac",
+	}
+
+	It("pairs a misspelt title with the one track no file names", func() {
+		m := NewTrackMatcherByName(album, files)
+		Expect(m.MatchByName("Sidilarsen - Un Élan De Coeur.flac").ID).
+			To(Equal(uint32(7)))
+		Expect(m.Match(audiotags.Info{Title: "Un Élan De Coeur"}).ID).
+			To(Equal(uint32(7)))
+		Expect(m.MatchByName("Sidilarsen - Acide Occident.flac").ID).
+			To(Equal(uint32(2)))
+	})
+
+	It("leaves a track a file names outright to that file", func() {
+		m := NewTrackMatcherByName(album, append(
+			files[:2:2],
+			"Sidilarsen - Un élan du cœur.flac",
+			"Sidilarsen - Un Élan De Coeur.flac",
+		))
+		Expect(m.MatchByName("Sidilarsen - Un élan du cœur.flac").ID).
+			To(Equal(uint32(7)))
+		Expect(m.MatchByName("Sidilarsen - Un Élan De Coeur.flac")).To(BeNil())
+	})
+
+	It("pairs nothing when two files are nearest to one track", func() {
+		m := NewTrackMatcherByName(album, append(
+			files[:2:2],
+			"Sidilarsen - Un Élan De Coeur.flac",
+			"Sidilarsen - Un Élan Du Coeurs.flac",
+		))
+		Expect(m.MatchByName("Sidilarsen - Un Élan De Coeur.flac")).To(BeNil())
+		Expect(m.MatchByName("Sidilarsen - Un Élan Du Coeurs.flac")).To(BeNil())
+	})
+
+	It("does not read another title or number as a misspelling", func() {
+		tracks := []*ent.Track{
+			{ID: 1, Disc: 1, Position: 1, Title: "Fiddler's Day: Part One"},
+			{ID: 2, Disc: 1, Position: 2, Title: "Interlude 1"},
+			{ID: 3, Disc: 1, Position: 3, Title: "Fire"},
+		}
+		m := NewTrackMatcherByName(tracks, []string{
+			"Bonus Song.flac", "Interlude 2.flac", "Fir.flac",
+		})
+		Expect(m.MatchByName("Bonus Song.flac")).To(BeNil())
+		Expect(m.MatchByName("Interlude 2.flac")).To(BeNil())
+		Expect(m.MatchByName("Fir.flac")).To(BeNil())
+	})
+})
+
 var _ = Describe("MatchTrackByName", Label("unit", "library"), func() {
 	tracks := []*ent.Track{
 		{ID: 1, Disc: 1, Position: 1, Title: "Open Water"},
