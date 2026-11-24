@@ -294,6 +294,7 @@ func torrentInfoToAPI(v bittorrent.TorrentView) TorrentInfo {
 		ReleaseTitle:   releaseTitle,
 		Indexer:        optString(v.Record.Indexer),
 		Media:          torrentMedia(v.Record),
+		DownloadId:     optU32(v.Record.RecordID),
 	}
 }
 
