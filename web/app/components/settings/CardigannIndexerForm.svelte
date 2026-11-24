@@ -76,6 +76,10 @@
 	const valued = (type: string) =>
 		type === "text" || type === "password" || type === "checkbox" || type === "select";
 
+	// A setting draws a field when it holds a value, and a note when it is
+	// an info block with text; anything else draws nothing.
+	const shown = (s: CardigannSetting) => valued(s.type) || Boolean(s.default);
+
 	// A select's value must be one of its option keys, which a few upstream
 	// defaults are not (`DESC` beside `desc`, `t` beside nt/ts/sz/i): the
 	// engine's selectDefault takes a case-insensitive match, else the first
@@ -289,59 +293,61 @@
 						</form.Field>
 					{/if}
 
-					<div class="space-y-4 rounded-lg border border-border bg-bg-card p-5">
-						{#each d.settings as s (s.name)}
-							{#if valued(s.type) && fileOf(s.name)}
-								<div class="text-sm">
-									<div class="font-medium text-fg">{s.label}</div>
-									<div class="text-xs text-fg-muted">
-										{i18n.cardigann_setting_file({ path: fileOf(s.name) ?? "" })}
+					{#if d.settings.some(shown)}
+						<div class="space-y-4 rounded-lg border border-border bg-bg-card p-5">
+							{#each d.settings as s (s.name)}
+								{#if valued(s.type) && fileOf(s.name)}
+									<div class="text-sm">
+										<div class="font-medium text-fg">{s.label}</div>
+										<div class="text-xs text-fg-muted">
+											{i18n.cardigann_setting_file({ path: fileOf(s.name) ?? "" })}
+										</div>
 									</div>
-								</div>
-							{:else if s.type === "text" || s.type === "password"}
-								<form.Field name={`settings.${s.name}`}>
-									{#snippet children(field)}
-										<TextField
-											{field}
-											label={s.label}
-											type={s.secret ? "password" : "text"}
-											autocomplete="off"
-											help={s.secret && secretsSet.has(s.name)
-												? i18n.cardigann_secret_keep()
-												: undefined}
-										/>
-									{/snippet}
-								</form.Field>
-							{:else if s.type === "checkbox"}
-								<form.Field name={`settings.${s.name}`}>
-									{#snippet children(field)}
-										<TogglePill
-											label={s.label}
-											name={field.name}
-											checked={field.state.value === "true"}
-											onChange={(v) => field.handleChange(v ? "true" : "false")}
-										/>
-									{/snippet}
-								</form.Field>
-							{:else if s.type === "select"}
-								<form.Field name={`settings.${s.name}`}>
-									{#snippet children(field)}
-										<Select
-											label={s.label}
-											value={field.state.value ?? ""}
-											onChange={(v) => field.handleChange(v)}
-											options={(s.options ?? []).map((o) => ({ value: o.key, label: o.label }))}
-										/>
-									{/snippet}
-								</form.Field>
-							{:else if s.default}
-								<p class="flex gap-2 text-xs text-fg-muted">
-									<Info size={14} class="mt-0.5 shrink-0" aria-hidden="true" />
-									<span class="whitespace-pre-line">{s.default}</span>
-								</p>
-							{/if}
-						{/each}
-					</div>
+								{:else if s.type === "text" || s.type === "password"}
+									<form.Field name={`settings.${s.name}`}>
+										{#snippet children(field)}
+											<TextField
+												{field}
+												label={s.label}
+												type={s.secret ? "password" : "text"}
+												autocomplete="off"
+												help={s.secret && secretsSet.has(s.name)
+													? i18n.cardigann_secret_keep()
+													: undefined}
+											/>
+										{/snippet}
+									</form.Field>
+								{:else if s.type === "checkbox"}
+									<form.Field name={`settings.${s.name}`}>
+										{#snippet children(field)}
+											<TogglePill
+												label={s.label}
+												name={field.name}
+												checked={field.state.value === "true"}
+												onChange={(v) => field.handleChange(v ? "true" : "false")}
+											/>
+										{/snippet}
+									</form.Field>
+								{:else if s.type === "select"}
+									<form.Field name={`settings.${s.name}`}>
+										{#snippet children(field)}
+											<Select
+												label={s.label}
+												value={field.state.value ?? ""}
+												onChange={(v) => field.handleChange(v)}
+												options={(s.options ?? []).map((o) => ({ value: o.key, label: o.label }))}
+											/>
+										{/snippet}
+									</form.Field>
+								{:else if s.default}
+									<p class="flex gap-2 text-xs text-fg-muted">
+										<Info size={14} class="mt-0.5 shrink-0" aria-hidden="true" />
+										<span class="whitespace-pre-line">{s.default}</span>
+									</p>
+								{/if}
+							{/each}
+						</div>
+					{/if}
 
 					<form.Field name="proxy">
 						{#snippet children(field)}
