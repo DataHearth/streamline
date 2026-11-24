@@ -93,7 +93,7 @@
 		class={twMerge(
 			// 44px touch floor below lg.
 			"relative grid w-11 shrink-0 place-items-center border border-l-0 transition focus:outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-accent-ring aria-disabled:cursor-not-allowed aria-disabled:opacity-50 lg:w-7",
-			size === "md" ? "h-10 rounded-r-md" : "h-11 rounded-r-lg",
+			size === "md" ? "h-11 rounded-r-md lg:h-10" : "h-11 rounded-r-lg",
 			boxTone(monitored, backdrop),
 		)}
 	>

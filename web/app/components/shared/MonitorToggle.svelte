@@ -60,7 +60,7 @@
 
 	const SIZE = {
 		lg: "h-11 w-11",
-		md: "h-10 w-10",
+		md: "h-11 w-11 lg:h-10 lg:w-10",
 		sm: "h-11 w-11 lg:h-9 lg:w-9",
 		row: "h-11 w-11 lg:h-8 lg:w-8",
 		xs: "h-11 w-11 lg:h-7 lg:w-7",

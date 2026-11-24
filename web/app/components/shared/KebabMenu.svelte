@@ -161,7 +161,7 @@
 						? "h-11 w-11 shrink-0 rounded-md text-fg-subtle hover:bg-surface hover:text-fg"
 						: variant === "tile"
 							? "h-11 w-11 lg:h-7 lg:w-7 shrink-0 rounded-md border border-border bg-bg-elevated text-fg-muted hover:text-fg"
-						: "h-10 w-10 rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm hover:bg-white/[0.14]",
+						: "h-11 w-11 shrink-0 lg:h-10 lg:w-10 rounded-md border border-border-strong bg-white/[0.08] text-fg backdrop-blur-sm hover:bg-white/[0.14]",
 	)}
 >
 	{#if variant === "card" || variant === "tile"}
