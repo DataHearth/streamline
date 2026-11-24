@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { tick } from "svelte";
+	import { twMerge } from "tailwind-merge";
 	import BottomSheet from "@components/shared/BottomSheet.svelte";
+	import DropdownMenu from "@components/shared/DropdownMenu.svelte";
 	import { closeOnBack } from "@lib/close-on-back.svelte";
 	import {
 		Play,
@@ -9,8 +12,6 @@
 		TriangleAlert,
 	} from "@lucide/svelte";
 	import { createQuery } from "@tanstack/svelte-query";
-	import { fly } from "svelte/transition";
-	import { cubicOut } from "svelte/easing";
 	import { api } from "@lib/api";
 	import { auth } from "@lib/auth.svelte";
 	import BrandLogo from "@components/settings/BrandLogo.svelte";
@@ -23,7 +24,7 @@
 		queryKey: readonly unknown[];
 		disabled?: boolean;
 		disabledTitle?: string;
-		// Icon-only trigger, for a bar that already has a wide primary action.
+		// Icon-only phone trigger, for a row that already has a wide primary action.
 		compact?: boolean;
 		// Wide accent trigger: the primary action of the phone action bar.
 		primary?: boolean;
@@ -38,7 +39,9 @@
 	}: Props = $props();
 
 	let open = $state(false);
-	closeOnBack(() => open && !primary, () => close());
+	// Both phone triggers open the sheet, which handles its own Back.
+	let sheet = $derived(primary || compact);
+	closeOnBack(() => open && !sheet, () => close());
 	let triggerEl = $state<HTMLButtonElement | null>(null);
 
 	const q = createQuery<PlayOnLinkList>(() => ({
@@ -55,11 +58,36 @@
 		open = false;
 		triggerEl?.focus();
 	}
-	function onKey(e: KeyboardEvent) {
-		if (e.key === "Escape") close();
-	}
 
 	let links = $derived(q.data?.items ?? []);
+
+	// The dropdown is portalled to <body>, so focus has to be moved into it, once
+	// the links are there. A focus the user has moved elsewhere is left alone.
+	let items = $state<(HTMLElement | null)[]>([]);
+	$effect(() => {
+		if (!open || sheet || q.isLoading) return;
+		void tick().then(() => {
+			const at = document.activeElement;
+			if (at !== triggerEl && at !== document.body) return;
+			items[0]?.focus({ preventScroll: true });
+		});
+	});
+
+	function onItemKey(e: KeyboardEvent, i: number) {
+		const n = Math.max(1, links.length);
+		let next: number;
+		if (e.key === "ArrowDown") next = (i + 1) % n;
+		else if (e.key === "ArrowUp") next = (i - 1 + n) % n;
+		else if (e.key === "Home") next = 0;
+		else if (e.key === "End") next = n - 1;
+		else if (e.key === "Tab" && !sheet) {
+			e.preventDefault();
+			close();
+			return;
+		} else return;
+		e.preventDefault();
+		items[next]?.focus();
+	}
 
 	// The phone action bar carries backdrop-blur, which makes it a containing
 	// block for fixed positioning — a sheet declared inside it would anchor to
@@ -72,21 +100,13 @@
 			},
 		};
 	}
-
-	// The phone sheet handles its own Escape and Back; these are the desktop
-	// popover's.
-	$effect(() => {
-		if (!open || primary) return;
-		document.addEventListener("keydown", onKey);
-		return () => document.removeEventListener("keydown", onKey);
-	});
 </script>
 
 {#snippet row(l: PlayOnLink, big: boolean)}
 	<span class="flex min-w-0 items-center {big ? 'gap-3' : 'gap-2.5'}">
 		<BrandLogo name={l.server_type} size={big ? 22 : 18} />
 		<span class="flex min-w-0 flex-col">
-			<span class="truncate font-medium text-fg {big ? 'text-[15px]' : ''}">
+			<span class="truncate text-fg {big ? 'text-[15px] font-medium' : ''}">
 				{l.name}
 			</span>
 			{#if l.status === "fallback"}
@@ -98,26 +118,27 @@
 	</span>
 	{#if l.status !== "unavailable"}
 		<ExternalLink
-			class="{big ? 'h-[18px] w-[18px]' : 'h-4 w-4'} shrink-0 text-fg-muted"
+			class="{big ? 'h-[18px] w-[18px]' : 'h-3.5 w-3.5'} shrink-0 text-fg-muted"
 			aria-hidden="true"
 		/>
 	{/if}
 {/snippet}
 
+<!-- The rows of the menu, for the dropdown's list and the sheet's alike. -->
 {#snippet body(big: boolean)}
 	{#if q.isLoading}
-		<p class="text-fg-muted {big ? 'px-5 py-5 text-sm' : 'px-3 py-3 text-xs'}">
+		<li role="none" class="text-fg-muted {big ? 'px-5 py-5 text-sm' : 'px-3 py-2 text-xs'}">
 			{i18n.common_resolving()}
-		</p>
+		</li>
 	{:else if q.isError}
-		<div
-			role="alert"
+		<li
+			role="none"
 			title={q.error?.message}
 			class="flex flex-col gap-1.5 text-status-failed {big
 				? 'px-5 py-5 text-sm'
-				: 'px-3 py-3 text-xs'}"
+				: 'px-3 py-2 text-xs'}"
 		>
-			<span class="flex items-start gap-2">
+			<span role="alert" class="flex items-start gap-2">
 				<TriangleAlert
 					class="mt-px h-3.5 w-3.5 shrink-0"
 					aria-hidden="true"
@@ -125,15 +146,18 @@
 				{i18n.playback_load_failed()}
 			</span>
 			<button
+				bind:this={items[0]}
 				type="button"
+				role="menuitem"
 				onclick={() => q.refetch()}
+				onkeydown={(e) => onItemKey(e, 0)}
 				class="self-start rounded font-medium underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring"
 			>
 				{i18n.common_retry()}
 			</button>
-		</div>
+		</li>
 	{:else if links.length === 0}
-		<div class="grid place-items-center gap-1 {big ? 'px-5 py-9' : 'px-3 py-4'}">
+		<li role="none" class="grid place-items-center gap-1 {big ? 'px-5 py-9' : 'px-3 py-3'}">
 			<ServerOff
 				class="{big ? 'h-6 w-6' : 'h-5 w-5'} text-fg-faint"
 				aria-hidden="true"
@@ -143,49 +167,58 @@
 			</p>
 			{#if auth.isAdmin}
 				<a
+					bind:this={items[0]}
 					href="/settings/media-servers"
-					class="text-accent hover:underline {big ? 'text-sm' : 'text-xs'}"
+					role="menuitem"
+					onkeydown={(e) => onItemKey(e, 0)}
+					class="rounded text-accent hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring {big
+						? 'text-sm'
+						: 'text-xs'}"
 				>
 					{i18n.playon_configure_servers()}
 				</a>
 			{/if}
-		</div>
+		</li>
 	{:else}
-		<ul>
-			{#each links as l (l.name)}
-				<li class={big ? "border-b border-border last:border-0" : ""}>
-					{#if l.url}
-						<a
-							href={l.url}
-							target="_blank"
-							rel="noopener noreferrer"
-							role="menuitem"
-							onclick={close}
-							class="flex w-full items-center justify-between gap-2 text-left {big
-								? 'px-5 py-4 text-[15px] active:bg-bg-hover'
-								: 'px-3 py-2 text-sm hover:bg-bg-hover'}"
-						>
-							{@render row(l, big)}
-						</a>
-					{:else}
-						<div
-							role="menuitem"
-							aria-disabled="true"
-							tabindex="-1"
-							class="flex w-full items-center justify-between gap-2 text-left opacity-50 {big
-								? 'px-5 py-4 text-[15px]'
-								: 'px-3 py-2 text-sm'}"
-						>
-							{@render row(l, big)}
-						</div>
-					{/if}
-				</li>
-			{/each}
-		</ul>
+		{#each links as l, i (l.name)}
+			{@const rowClass = twMerge(
+				"flex w-full items-center justify-between text-left focus:outline-none focus-visible:bg-bg-hover",
+				big
+					? "gap-2 px-5 py-4 text-[15px]"
+					: "min-h-11 gap-4 px-3 py-1.5 text-sm transition-colors lg:min-h-9",
+			)}
+			<li role="none" class={big ? "border-b border-border last:border-0" : "max-w-72"}>
+				{#if l.url}
+					<a
+						bind:this={items[i]}
+						href={l.url}
+						target="_blank"
+						rel="noopener noreferrer"
+						role="menuitem"
+						onclick={close}
+						onkeydown={(e) => onItemKey(e, i)}
+						class={twMerge(rowClass, big ? "active:bg-bg-hover" : "hover:bg-bg-hover")}
+					>
+						{@render row(l, big)}
+					</a>
+				{:else}
+					<div
+						bind:this={items[i]}
+						role="menuitem"
+						aria-disabled="true"
+						tabindex="-1"
+						onkeydown={(e) => onItemKey(e, i)}
+						class={twMerge(rowClass, "opacity-50")}
+					>
+						{@render row(l, big)}
+					</div>
+				{/if}
+			</li>
+		{/each}
 	{/if}
 {/snippet}
 
-<div class={primary ? "relative flex min-w-0 flex-1" : "relative"}>
+<div class={primary ? "flex min-w-0 flex-1" : undefined}>
 	{#if primary}
 		<button
 			bind:this={triggerEl}
@@ -204,13 +237,13 @@
 		<button
 			bind:this={triggerEl}
 			type="button"
-			aria-haspopup="menu"
+			aria-haspopup="dialog"
 			aria-expanded={open}
 			aria-label={i18n.action_play_on()}
 			{disabled}
 			title={disabled ? disabledTitle : i18n.action_play_on()}
 			onclick={toggle}
-			class="grid h-11 w-11 place-items-center rounded-lg border border-border-strong bg-bg-elevated text-fg transition focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:border-border disabled:text-fg-faint"
+			class="grid h-11 w-11 place-items-center rounded-lg border border-border-strong bg-bg-elevated text-fg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:border-border disabled:text-fg-faint"
 		>
 			<Play class="h-[18px] w-[18px] text-accent" aria-hidden="true" />
 		</button>
@@ -223,44 +256,37 @@
 			{disabled}
 			title={disabled ? disabledTitle : undefined}
 			onclick={toggle}
-			class="inline-flex w-[220px] items-center justify-between gap-2 rounded-md border border-border-strong bg-bg-elevated px-3 py-2 text-sm font-medium text-fg hover:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/40 disabled:cursor-not-allowed disabled:border-border disabled:text-fg-faint disabled:hover:border-border"
+			class="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-md border border-border-strong bg-bg-elevated px-4 text-sm font-medium max-lg:min-h-11 text-fg hover:border-accent/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:border-border disabled:text-fg-faint disabled:hover:border-border"
 		>
 			<span class="inline-flex items-center gap-2">
 				<Play class="h-4 w-4 text-accent" aria-hidden="true" />
 				{i18n.action_play_on()}
 			</span>
 			<ChevronDown
-				class="h-4 w-4 text-fg-muted transition {open ? 'rotate-180' : ''}"
+				class={twMerge("h-3.5 w-3.5 text-fg-muted transition", open && "rotate-180")}
 				aria-hidden="true"
 			/>
 		</button>
 	{/if}
-
-	{#if open && !primary}
-		<div
-			role="menu"
-			aria-live="polite"
-			transition:fly={{ duration: 140, y: -4, easing: cubicOut }}
-			class="absolute right-0 z-30 w-[260px] overflow-hidden rounded-md border border-border bg-bg-elevated shadow-3 {compact
-				? 'bottom-full mb-2'
-				: 'mt-1'}"
-		>
-			{@render body(false)}
-		</div>
-		<button
-			type="button"
-			aria-hidden="true"
-			tabindex="-1"
-			class="fixed inset-0 z-20 cursor-default"
-			onclick={close}
-		></button>
-	{/if}
 </div>
 
-<!-- Phone: the same links as a bottom sheet. A right-aligned popover anchored to
-     a full-width trigger ran off the left edge of a 390px viewport, and every
-     other list a phone opens in this app is a sheet. -->
-{#if open && primary}
+{#if !sheet}
+	<DropdownMenu
+		{open}
+		anchor={triggerEl}
+		onClose={() => (open = false)}
+		minWidth="200px"
+		role="menu"
+		ariaLabel={i18n.action_play_on()}
+	>
+		{@render body(false)}
+	</DropdownMenu>
+{/if}
+
+<!-- Phone: the same links as a bottom sheet, like every other list a phone opens
+     in this app; a popover anchored to either trigger would run off a 390px
+     viewport. -->
+{#if open && sheet}
 	<div use:portal>
 		<BottomSheet
 			title={i18n.action_play_on()}
@@ -271,9 +297,9 @@
 			headerClass="pb-3"
 			bodyClass="border-t border-border px-0 pb-[max(env(safe-area-inset-bottom),8px)]"
 		>
-			<div aria-live="polite">
+			<ul aria-live="polite">
 				{@render body(true)}
-			</div>
+			</ul>
 		</BottomSheet>
 	</div>
 {/if}

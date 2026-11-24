@@ -739,7 +739,7 @@
 						<button
 							type="button"
 							onclick={() => openPackSearch("series")}
-							class="inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold leading-tight text-fg-on-accent transition active:bg-accent-pressed"
+							class="inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-2.5 text-sm font-semibold leading-tight text-fg-on-accent transition active:bg-accent-pressed"
 						>
 							<Search size={15} class="shrink-0" aria-hidden="true" />
 							{wantedEpisodes > 0
