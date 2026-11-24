@@ -1976,6 +1976,16 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				live, err = store.AlbumHasLiveRecord(ctx, eligible.ID)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(live).To(BeFalse())
+
+				rec, err := store.AlbumLiveRecord(ctx, inFly.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec).NotTo(BeNil())
+				rec, err = store.AlbumLiveRecord(ctx, inPack.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec).NotTo(BeNil())
+				rec, err = store.AlbumLiveRecord(ctx, eligible.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rec).To(BeNil())
 			},
 		)
 

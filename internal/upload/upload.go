@@ -59,6 +59,30 @@ var (
 	ErrNoSpace  = errors.New("not enough free space for the upload")
 )
 
+// Busy is the ErrConflict for a target a live record already holds. The message
+// names what holds it and the way out, which differs by state: a download can
+// be cancelled, an import ends by itself, a held record waits for an answer.
+// target reads after "for", as in "this album".
+func Busy(target string, uploaded bool, status string) error {
+	what := "a download"
+	if uploaded {
+		what = "an earlier upload"
+	}
+	switch status {
+	case "held":
+		return fmt.Errorf(
+			"%w: %s for %s is waiting for a decision in Activity, resolve it first",
+			ErrConflict, what, target)
+	case "importing":
+		return fmt.Errorf(
+			"%w: %s for %s is still being imported, wait for it to finish",
+			ErrConflict, what, target)
+	}
+	return fmt.Errorf(
+		"%w: %s for %s is in progress, cancel it in Activity first",
+		ErrConflict, what, target)
+}
+
 var (
 	tracer = otel.Tracer("github.com/datahearth/streamline/internal/upload")
 	meter  = otel.Meter("github.com/datahearth/streamline/internal/upload")

@@ -470,6 +470,74 @@ func (_c *MockTx_AlbumIDsByMBID_Call) RunAndReturn(run func(ctx context.Context,
 	return _c
 }
 
+// AlbumLiveRecord provides a mock function for the type MockTx
+func (_mock *MockTx) AlbumLiveRecord(ctx context.Context, albumID uint32) (*ent.DownloadRecord, error) {
+	ret := _mock.Called(ctx, albumID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AlbumLiveRecord")
+	}
+
+	var r0 *ent.DownloadRecord
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.DownloadRecord, error)); ok {
+		return returnFunc(ctx, albumID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.DownloadRecord); ok {
+		r0 = returnFunc(ctx, albumID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, albumID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_AlbumLiveRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AlbumLiveRecord'
+type MockTx_AlbumLiveRecord_Call struct {
+	*mock.Call
+}
+
+// AlbumLiveRecord is a helper method to define mock.On call
+//   - ctx context.Context
+//   - albumID uint32
+func (_e *MockTx_Expecter) AlbumLiveRecord(ctx any, albumID any) *MockTx_AlbumLiveRecord_Call {
+	return &MockTx_AlbumLiveRecord_Call{Call: _e.mock.On("AlbumLiveRecord", ctx, albumID)}
+}
+
+func (_c *MockTx_AlbumLiveRecord_Call) Run(run func(ctx context.Context, albumID uint32)) *MockTx_AlbumLiveRecord_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_AlbumLiveRecord_Call) Return(downloadRecord *ent.DownloadRecord, err error) *MockTx_AlbumLiveRecord_Call {
+	_c.Call.Return(downloadRecord, err)
+	return _c
+}
+
+func (_c *MockTx_AlbumLiveRecord_Call) RunAndReturn(run func(ctx context.Context, albumID uint32) (*ent.DownloadRecord, error)) *MockTx_AlbumLiveRecord_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // AlbumMBIDIndex provides a mock function for the type MockTx
 func (_mock *MockTx) AlbumMBIDIndex(ctx context.Context) (map[string]uint32, error) {
 	ret := _mock.Called(ctx)
@@ -1531,23 +1599,25 @@ func (_c *MockTx_BookSeriesFileRoots_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
-// BookSlotHasLiveRecord provides a mock function for the type MockTx
-func (_mock *MockTx) BookSlotHasLiveRecord(ctx context.Context, bookID uint32, kind downloadrecord.BookKind) (bool, error) {
+// BookSlotLiveRecord provides a mock function for the type MockTx
+func (_mock *MockTx) BookSlotLiveRecord(ctx context.Context, bookID uint32, kind downloadrecord.BookKind) (*ent.DownloadRecord, error) {
 	ret := _mock.Called(ctx, bookID, kind)
 
 	if len(ret) == 0 {
-		panic("no return value specified for BookSlotHasLiveRecord")
+		panic("no return value specified for BookSlotLiveRecord")
 	}
 
-	var r0 bool
+	var r0 *ent.DownloadRecord
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, downloadrecord.BookKind) (bool, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, downloadrecord.BookKind) (*ent.DownloadRecord, error)); ok {
 		return returnFunc(ctx, bookID, kind)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, downloadrecord.BookKind) bool); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, downloadrecord.BookKind) *ent.DownloadRecord); ok {
 		r0 = returnFunc(ctx, bookID, kind)
 	} else {
-		r0 = ret.Get(0).(bool)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.DownloadRecord)
+		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, downloadrecord.BookKind) error); ok {
 		r1 = returnFunc(ctx, bookID, kind)
@@ -1557,20 +1627,20 @@ func (_mock *MockTx) BookSlotHasLiveRecord(ctx context.Context, bookID uint32, k
 	return r0, r1
 }
 
-// MockTx_BookSlotHasLiveRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BookSlotHasLiveRecord'
-type MockTx_BookSlotHasLiveRecord_Call struct {
+// MockTx_BookSlotLiveRecord_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BookSlotLiveRecord'
+type MockTx_BookSlotLiveRecord_Call struct {
 	*mock.Call
 }
 
-// BookSlotHasLiveRecord is a helper method to define mock.On call
+// BookSlotLiveRecord is a helper method to define mock.On call
 //   - ctx context.Context
 //   - bookID uint32
 //   - kind downloadrecord.BookKind
-func (_e *MockTx_Expecter) BookSlotHasLiveRecord(ctx any, bookID any, kind any) *MockTx_BookSlotHasLiveRecord_Call {
-	return &MockTx_BookSlotHasLiveRecord_Call{Call: _e.mock.On("BookSlotHasLiveRecord", ctx, bookID, kind)}
+func (_e *MockTx_Expecter) BookSlotLiveRecord(ctx any, bookID any, kind any) *MockTx_BookSlotLiveRecord_Call {
+	return &MockTx_BookSlotLiveRecord_Call{Call: _e.mock.On("BookSlotLiveRecord", ctx, bookID, kind)}
 }
 
-func (_c *MockTx_BookSlotHasLiveRecord_Call) Run(run func(ctx context.Context, bookID uint32, kind downloadrecord.BookKind)) *MockTx_BookSlotHasLiveRecord_Call {
+func (_c *MockTx_BookSlotLiveRecord_Call) Run(run func(ctx context.Context, bookID uint32, kind downloadrecord.BookKind)) *MockTx_BookSlotLiveRecord_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -1593,12 +1663,12 @@ func (_c *MockTx_BookSlotHasLiveRecord_Call) Run(run func(ctx context.Context, b
 	return _c
 }
 
-func (_c *MockTx_BookSlotHasLiveRecord_Call) Return(b bool, err error) *MockTx_BookSlotHasLiveRecord_Call {
-	_c.Call.Return(b, err)
+func (_c *MockTx_BookSlotLiveRecord_Call) Return(downloadRecord *ent.DownloadRecord, err error) *MockTx_BookSlotLiveRecord_Call {
+	_c.Call.Return(downloadRecord, err)
 	return _c
 }
 
-func (_c *MockTx_BookSlotHasLiveRecord_Call) RunAndReturn(run func(ctx context.Context, bookID uint32, kind downloadrecord.BookKind) (bool, error)) *MockTx_BookSlotHasLiveRecord_Call {
+func (_c *MockTx_BookSlotLiveRecord_Call) RunAndReturn(run func(ctx context.Context, bookID uint32, kind downloadrecord.BookKind) (*ent.DownloadRecord, error)) *MockTx_BookSlotLiveRecord_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -308,20 +308,21 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			live, err := store.BookSlotHasLiveRecord(
+			live, err := store.BookSlotLiveRecord(
 				ctx,
 				b.ID,
 				downloadrecord.BookKindEbook,
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(live).To(BeTrue())
-			live, err = store.BookSlotHasLiveRecord(
+			Expect(live).NotTo(BeNil())
+			Expect(live.Status).To(Equal(downloadrecord.StatusDownloading))
+			live, err = store.BookSlotLiveRecord(
 				ctx,
 				b.ID,
 				downloadrecord.BookKindAudiobook,
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(live).To(BeFalse())
+			Expect(live).To(BeNil())
 		})
 	})
 

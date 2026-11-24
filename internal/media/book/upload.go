@@ -60,16 +60,12 @@ func (s *Service) BookUploadPreview(
 	if err != nil {
 		return nil, err
 	}
-	busy, err := s.db.BookSlotHasLiveRecord(
+	if err := s.checkSlotFree(
 		ctx,
 		bookID,
 		downloadrecord.BookKind(kind),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("check live record: %w", err)
-	}
-	if busy {
-		return nil, upload.ErrConflict
+	); err != nil {
+		return nil, err
 	}
 	out := make([]UploadFileView, 0, len(files))
 	var total int64
@@ -163,13 +159,8 @@ func (s *Service) UploadBook(
 		}
 	}
 	recKind := downloadrecord.BookKind(kind)
-	busy, err := s.db.BookSlotHasLiveRecord(ctx, bookID, recKind)
-	if err != nil {
-		return nil, otelx.RecordSpanError(
-			span, fmt.Errorf("check live record: %w", err))
-	}
-	if busy {
-		return nil, otelx.RecordSpanError(span, upload.ErrConflict)
+	if err := s.checkSlotFree(ctx, bookID, recKind); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
 	}
 	held := slices.ContainsFunc(
 		db.PresentFiles(b.Edges.MediaFiles),
@@ -190,15 +181,9 @@ func (s *Service) UploadBook(
 
 	s.uploadMu.Lock()
 	defer s.uploadMu.Unlock()
-	busy, err = s.db.BookSlotHasLiveRecord(ctx, bookID, recKind)
-	if err != nil {
+	if err := s.checkSlotFree(ctx, bookID, recKind); err != nil {
 		staged.Discard()
-		return nil, otelx.RecordSpanError(
-			span, fmt.Errorf("check live record: %w", err))
-	}
-	if busy {
-		staged.Discard()
-		return nil, otelx.RecordSpanError(span, upload.ErrConflict)
+		return nil, otelx.RecordSpanError(span, err)
 	}
 
 	var size int64
@@ -237,4 +222,22 @@ func (s *Service) UploadBook(
 	slog.InfoContext(ctx, "uploaded book files",
 		"book.kind", kind, "files", len(staged.Files))
 	return rec, nil
+}
+
+// checkSlotFree refuses with upload.ErrConflict when the slot has a download
+// or an upload in flight.
+func (s *Service) checkSlotFree(
+	ctx context.Context,
+	bookID uint32,
+	kind downloadrecord.BookKind,
+) error {
+	rec, err := s.db.BookSlotLiveRecord(ctx, bookID, kind)
+	if err != nil {
+		return fmt.Errorf("check live record: %w", err)
+	}
+	if rec != nil {
+		return upload.Busy(
+			"this book's "+string(kind), rec.Uploaded, string(rec.Status))
+	}
+	return nil
 }

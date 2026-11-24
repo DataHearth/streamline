@@ -1930,6 +1930,33 @@ func (db *DB) AlbumHasLiveRecord(ctx context.Context, albumID uint32) (bool, err
 		Exist(ctx)
 }
 
+// AlbumLiveRecord returns the oldest download record in flight for the album,
+// filed under it or linking it as part of a discography pack, or nil when
+// there is none.
+func (db *DB) AlbumLiveRecord(
+	ctx context.Context,
+	albumID uint32,
+) (*ent.DownloadRecord, error) {
+	return firstOrNil(db.client.DownloadRecord.Query().
+		Where(
+			liveRecord(),
+			downloadrecord.Or(
+				downloadrecord.HasAlbumWith(album.ID(albumID)),
+				downloadrecord.HasAlbumsWith(album.ID(albumID)),
+			),
+		).
+		Order(ent.Asc(downloadrecord.FieldID)).
+		First(ctx))
+}
+
+// firstOrNil turns a First that found no row into a nil record.
+func firstOrNil(rec *ent.DownloadRecord, err error) (*ent.DownloadRecord, error) {
+	if ent.IsNotFound(err) {
+		return nil, nil
+	}
+	return rec, err
+}
+
 // FindArtistRow returns the artist alone: no albums, members or credits.
 func (db *DB) FindArtistRow(ctx context.Context, id uint32) (*ent.Artist, error) {
 	return db.client.Artist.Get(ctx, id)

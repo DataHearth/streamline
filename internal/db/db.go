@@ -195,13 +195,16 @@ type Store interface {
 	// AlbumHasLiveRecord reports whether a download for the album, single or
 	// as part of a pack, is in flight.
 	AlbumHasLiveRecord(ctx context.Context, albumID uint32) (bool, error)
-	// BookSlotHasLiveRecord reports whether a download for one slot of the
-	// book is in flight.
-	BookSlotHasLiveRecord(
+	// AlbumLiveRecord returns a download record in flight for the album,
+	// single or pack, or nil when there is none.
+	AlbumLiveRecord(ctx context.Context, albumID uint32) (*ent.DownloadRecord, error)
+	// BookSlotLiveRecord returns a download record in flight for one slot of
+	// the book, or nil when there is none.
+	BookSlotLiveRecord(
 		ctx context.Context,
 		bookID uint32,
 		kind downloadrecord.BookKind,
-	) (bool, error)
+	) (*ent.DownloadRecord, error)
 	// ListKeptUploadPaths returns the staging folders of uploaded records
 	// that are importing, held, or failed without being rejected.
 	ListKeptUploadPaths(ctx context.Context) ([]string, error)

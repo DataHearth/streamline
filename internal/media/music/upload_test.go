@@ -82,8 +82,51 @@ var _ = Describe("uploads", Label("unit", "integration", "music"), func() {
 			recv, called, _ := stage("01.flac")
 			_, err = e.svc.UploadAlbum(e.ctx, al.ID, UploadOptions{}, recv)
 			Expect(err).To(MatchError(upload.ErrConflict))
+			Expect(err).To(MatchError(ContainSubstring(
+				"a download for this album is in progress, cancel it in Activity first",
+			)))
 			Expect(*called).To(BeFalse())
 		})
+
+		DescribeTable("names what holds the album and the way out",
+			func(status downloadrecord.Status, uploaded bool, want string) {
+				seedAlbum()
+				_, err := e.store.CreateDownloadRecord(
+					e.ctx,
+					db.CreateDownloadRecordParams{
+						Title:    "t",
+						Status:   status,
+						AlbumID:  al.ID,
+						Uploaded: uploaded,
+					},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				recv, called, _ := stage("01.flac")
+				_, err = e.svc.UploadAlbum(e.ctx, al.ID, UploadOptions{}, recv)
+				Expect(err).To(MatchError(upload.ErrConflict))
+				Expect(err).To(MatchError(ContainSubstring(want)))
+				Expect(*called).To(BeFalse())
+			},
+			Entry(
+				"an upload still importing",
+				downloadrecord.StatusImporting,
+				true,
+				"an earlier upload for this album is still being imported, wait for it to finish",
+			),
+			Entry(
+				"an upload held",
+				downloadrecord.StatusHeld,
+				true,
+				"an earlier upload for this album is waiting for a decision in Activity, resolve it first",
+			),
+			Entry(
+				"a download importing",
+				downloadrecord.StatusImporting,
+				false,
+				"a download for this album is still being imported, wait for it to finish",
+			),
+		)
 
 		It("files an uploaded record and marks the album downloading", func() {
 			seedAlbum()
