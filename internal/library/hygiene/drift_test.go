@@ -35,6 +35,8 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		tmpDir = GinkgoT().TempDir()
 		replaced = nil
 		configtest.Setup(map[string]any{"library": map[string]any{
+			"movie_path":                    tmpDir,
+			"drift_grace_ticks":             3,
 			"missing_file_redownload_after": "0",
 		}})
 		store = dbmocks.NewMockStore(GinkgoT())
@@ -46,12 +48,7 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		svc = New(
 			store,
 			meta,
-			metamocks.NewMockTVProvider(GinkgoT()),
-			&config.LibraryConfig{
-				MoviePath:       tmpDir,
-				DriftGraceTicks: 3,
-			},
-		)
+			metamocks.NewMockTVProvider(GinkgoT()))
 	})
 
 	// removed scripts what a revert asks of the store before it reverts.
@@ -187,6 +184,49 @@ var _ = Describe("Service.RunDriftCheck", Label("unit", "hygiene"), func() {
 		Entry("under off", "off"),
 		Entry("inside the wait", "168h"),
 	)
+
+	It("reads drift_grace_ticks at each run", func() {
+		configtest.SetupFile(map[string]any{"library": map[string]any{
+			"movie_path":                    tmpDir,
+			"drift_grace_ticks":             3,
+			"missing_file_redownload_after": "0",
+		}})
+		seen := time.Now().Add(-30 * time.Minute)
+		path := filepath.Join(tmpDir, "Gone.mkv")
+		file := &ent.MediaFile{
+			ID: 11, Path: path, MissingSince: &seen,
+			Edges: ent.MediaFileEdges{
+				Movie: &ent.Movie{ID: 88, Title: "Gone", TmdbID: 1234},
+			},
+		}
+		expectWalk := func() {
+			pages(db.DriftRow{ID: 11, Path: path, MissingSince: &seen})
+			store.EXPECT().
+				FindMediaFileWithOwners(mock.Anything, uint32(11)).
+				Return(file, nil).Once()
+			store.EXPECT().
+				MarkMediaFileMissing(mock.Anything, uint32(11)).
+				Return(false, nil).Once()
+		}
+
+		// Grace is 15m × 3: a file gone for 30 minutes is left alone.
+		expectWalk()
+		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
+
+		// One tick of grace, set with no restart: the same file has run out.
+		one := uint8(1)
+		_, err := config.UpdateLibrary(
+			ctx, config.LibraryPatch{DriftGraceTicks: &one},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		expectWalk()
+		removed(11)
+		store.EXPECT().
+			DeleteMediaFileAndRevertMovie(mock.Anything, uint32(11), uint32(88)).
+			Return(nil).Once()
+
+		Expect(svc.RunDriftCheck(ctx, 15*time.Minute)).To(Succeed())
+	})
 
 	It("reverts the movie when grace expires and the file is missing", func() {
 		seen := time.Now().Add(-2 * time.Hour)

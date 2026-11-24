@@ -106,8 +106,6 @@ type Service struct {
 	movieSvc    *movie.Service
 	seriesAdder SeriesAdder
 	ms          mediaserver.Refresher
-	moviePath   string
-	seriesPath  string
 	musicmeta   metadata.MusicProvider
 	musicAdder  MusicAdder
 	prober      ffmpeg.Prober
@@ -123,7 +121,9 @@ func WithProber(p ffmpeg.Prober) Option {
 	return func(s *Service) { s.prober = p }
 }
 
-// NewService constructs the bulk-import service.
+// NewService constructs the bulk-import service. It reads the library roots
+// from the config at each call: a path migration re-points a root with no
+// restart.
 func NewService(
 	store db.Store,
 	meta metadata.Provider,
@@ -132,8 +132,6 @@ func NewService(
 	movieSvc *movie.Service,
 	seriesAdder SeriesAdder,
 	ms mediaserver.Refresher,
-	moviePath string,
-	seriesPath string,
 	musicmeta metadata.MusicProvider,
 	musicAdder MusicAdder,
 	bookmeta metadata.BookProvider,
@@ -148,8 +146,6 @@ func NewService(
 		movieSvc:    movieSvc,
 		seriesAdder: seriesAdder,
 		ms:          ms,
-		moviePath:   moviePath,
-		seriesPath:  seriesPath,
 		musicmeta:   musicmeta,
 		musicAdder:  musicAdder,
 		bookmeta:    bookmeta,

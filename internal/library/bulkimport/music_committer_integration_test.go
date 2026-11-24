@@ -70,8 +70,6 @@ var _ = Describe(
 				nil,
 				nil,
 				nil,
-				root,
-				root,
 				mb,
 				music.NewService(
 					store,

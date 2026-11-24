@@ -16,7 +16,6 @@ import (
 	"github.com/datahearth/streamline/internal/auth"
 	authmocks "github.com/datahearth/streamline/internal/auth/mocks"
 	bittorrentmocks "github.com/datahearth/streamline/internal/bittorrent/mocks"
-	"github.com/datahearth/streamline/internal/config"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	downloadmocks "github.com/datahearth/streamline/internal/download/mocks"
 	"github.com/datahearth/streamline/internal/extension"
@@ -188,9 +187,7 @@ func newAPIKeyApp() *apiKeyApp {
 		Hygiene: hygiene.New(
 			a.store,
 			a.metadata,
-			a.metadataTV,
-			&config.LibraryConfig{},
-		),
+			a.metadataTV),
 		Prober:     a.prober,
 		Importer:   a.importer,
 		TrackPlans: a.trackPlans,

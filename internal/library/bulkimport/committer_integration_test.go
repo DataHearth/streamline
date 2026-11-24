@@ -53,7 +53,6 @@ var _ = Describe(
 			store = db.New(client)
 			svc = NewService(
 				store, nil, nil, library.NewImportService(), nil, nil, nil,
-				libDir, libDir,
 				nil, nil, nil, nil,
 			)
 			var err error

@@ -47,8 +47,6 @@ var _ = Describe("Service.Commit validation", Label("unit", "bulkimport"), func(
 			nil,
 			nil,
 			nil,
-			"/lib",
-			"/lib-tv",
 			nil,
 			nil,
 			nil,
@@ -170,6 +168,9 @@ var _ = Describe("Service.runCommit", Label("unit", "bulkimport"), func() {
 		ctx = context.Background()
 		store = dbmocks.NewMockStore(GinkgoT())
 		ms = msmocks.NewMockRefresher(GinkgoT())
+		configtest.Setup(map[string]any{"library": map[string]any{
+			"movie_path": "/lib",
+		}})
 		svc = NewService(
 			store,
 			nil,
@@ -178,8 +179,6 @@ var _ = Describe("Service.runCommit", Label("unit", "bulkimport"), func() {
 			nil,
 			nil,
 			ms,
-			"/lib",
-			"/lib-tv",
 			nil,
 			nil,
 			nil,
@@ -251,8 +250,6 @@ var _ = Describe("Service.commitAttach", Label("unit", "bulkimport"), func() {
 			nil,
 			nil,
 			nil,
-			"/lib",
-			"/lib-tv",
 			nil,
 			nil,
 			nil,
@@ -473,8 +470,6 @@ var _ = Describe(
 				nil,
 				nil,
 				nil,
-				libDir,
-				libDir,
 				nil, nil, nil, nil,
 			)
 		})
@@ -558,8 +553,6 @@ var _ = Describe("Service.addOrFindMovie", Label("unit", "bulkimport"), func() {
 			),
 			nil,
 			nil,
-			"/lib",
-			"/lib-tv",
 			nil, nil, nil, nil,
 		)
 	})
@@ -635,8 +628,6 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 				),
 				nil,
 				nil,
-				"/lib",
-				"/lib-tv",
 				nil, nil, nil, nil,
 			)
 			f := &ent.ImportScanFile{
@@ -695,8 +686,6 @@ var _ = Describe("Service.commitAdoptInPlace", Label("unit", "bulkimport"), func
 			),
 			nil,
 			nil,
-			"/lib",
-			"/lib-tv",
 			nil, nil, nil, nil,
 		)
 		f := &ent.ImportScanFile{
@@ -780,7 +769,6 @@ var _ = Describe("Service.commitRename", Label("unit", "bulkimport"), func() {
 			svc = NewService(
 				store, meta, nil, library.NewImportService(),
 				movie.NewService(store, meta, nil, nil, nil), nil, nil,
-				libDir, libDir,
 				nil, nil, nil, nil,
 			)
 

@@ -15,6 +15,7 @@ import (
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func() {
@@ -33,10 +34,11 @@ var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func()
 		store = dbmocks.NewMockStore(GinkgoT())
 		meta = metamocks.NewMockProvider(GinkgoT())
 		tvmeta = metamocks.NewMockTVProvider(GinkgoT())
-		svc = New(store, meta, tvmeta, &config.LibraryConfig{
-			SeriesPath: tmpDir,
-			ImportMode: "hardlink",
-		})
+		configtest.Setup(map[string]any{"library": map[string]any{
+			"series_path": tmpDir,
+			"import_mode": "hardlink",
+		}})
+		svc = New(store, meta, tvmeta)
 	})
 
 	// placeShowFile writes a > MinMediaSize video file inside a show folder and
@@ -119,11 +121,34 @@ var _ = Describe("Service.RunSeriesOrphanScan", Label("unit", "hygiene"), func()
 		Expect(svc.RunSeriesOrphanScan(ctx)).To(Succeed())
 	})
 
-	It("skips cleanly when series_path does not exist", func() {
-		svc = New(store, meta, tvmeta, &config.LibraryConfig{
-			SeriesPath: filepath.Join(tmpDir, "nope"),
-			ImportMode: "hardlink",
+	It("scans the root the config holds now", func() {
+		configtest.SetupFile(map[string]any{
+			"library": map[string]any{
+				"series_path": filepath.Join(tmpDir, "gone"),
+			},
 		})
+		svc = New(store, meta, tvmeta)
+		folder := filepath.Dir(
+			placeShowFile("Breaking Bad", "Breaking Bad S01E01.mkv"),
+		)
+		// The configured root does not exist: nothing is read.
+		Expect(svc.RunSeriesOrphanScan(ctx)).To(Succeed())
+
+		// What a path migration does to the root, with no restart.
+		_, err := config.UpdateLibrary(
+			ctx, config.LibraryPatch{SeriesPath: &tmpDir},
+		)
+		Expect(err).NotTo(HaveOccurred())
+		expectScanPrelude([]string{folder})
+
+		Expect(svc.RunSeriesOrphanScan(ctx)).To(Succeed())
+	})
+
+	It("skips cleanly when series_path does not exist", func() {
+		configtest.Setup(map[string]any{"library": map[string]any{
+			"series_path": filepath.Join(tmpDir, "nope"),
+		}})
+		svc = New(store, meta, tvmeta)
 		// No store/meta calls — early return before any I/O.
 
 		Expect(svc.RunSeriesOrphanScan(ctx)).To(Succeed())

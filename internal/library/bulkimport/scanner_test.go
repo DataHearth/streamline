@@ -11,8 +11,10 @@ import (
 
 	"github.com/datahearth/streamline/ent"
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/internal/config"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	metadatamocks "github.com/datahearth/streamline/internal/metadata/mocks"
+	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
 func writeFile(path string, sizeMB int) {
@@ -43,6 +45,10 @@ var _ = Describe(
 			metaProv = metadatamocks.NewMockProvider(GinkgoT())
 			tmpDir = GinkgoT().TempDir()
 			libRoot = tmpDir
+			configtest.Setup(map[string]any{"library": map[string]any{
+				"movie_path":  libRoot,
+				"series_path": libRoot,
+			}})
 			svc = NewService(
 				store,
 				metaProv,
@@ -51,8 +57,6 @@ var _ = Describe(
 				nil,
 				nil,
 				nil,
-				libRoot,
-				libRoot,
 				nil, nil, nil, nil,
 			)
 		})
@@ -90,11 +94,10 @@ var _ = Describe(
 		})
 
 		It("distinguishes a missing library root from a bad source path", func() {
-			svc = NewService(
-				store, metaProv, nil, nil, nil, nil, nil,
-				"/nonexistent/library/root", "/nonexistent/library/root",
-				nil, nil, nil, nil,
-			)
+			configtest.Setup(map[string]any{"library": map[string]any{
+				"movie_path":  "/nonexistent/library/root",
+				"series_path": "/nonexistent/library/root",
+			}})
 			_, err := svc.StartScan(
 				ctx,
 				StartScanParams{SourcePath: tmpDir, Mode: entimportscan.ModeInPlace},
@@ -105,11 +108,10 @@ var _ = Describe(
 
 		It("validates a series scan against series_path, not movie_path", func() {
 			seriesRoot := GinkgoT().TempDir()
-			svc = NewService(
-				store, metaProv, nil, nil, nil, nil, nil,
-				"/nonexistent/movie/root", seriesRoot,
-				nil, nil, nil, nil,
-			)
+			configtest.Setup(map[string]any{"library": map[string]any{
+				"movie_path":  "/nonexistent/movie/root",
+				"series_path": seriesRoot,
+			}})
 			store.EXPECT().
 				CountActiveImportScans(mock.Anything).
 				Return(1, nil).
@@ -119,6 +121,32 @@ var _ = Describe(
 				Kind:       entimportscan.KindSeries,
 				Mode:       entimportscan.ModeInPlace,
 			})
+			Expect(err).To(MatchError(ErrScanRunning))
+		})
+
+		It("validates against the root the config holds now", func() {
+			configtest.SetupFile(map[string]any{
+				"library": map[string]any{
+					"movie_path": "/nonexistent/movie/root",
+				},
+			})
+			scan := StartScanParams{
+				SourcePath: tmpDir, Mode: entimportscan.ModeInPlace,
+			}
+			_, err := svc.StartScan(ctx, scan)
+			Expect(err).To(MatchError(ErrLibraryPathMissing))
+
+			// What a path migration does to the root, with no restart.
+			_, err = config.UpdateLibrary(
+				ctx, config.LibraryPatch{MoviePath: &tmpDir},
+			)
+			Expect(err).NotTo(HaveOccurred())
+			store.EXPECT().
+				CountActiveImportScans(mock.Anything).
+				Return(1, nil).
+				Once()
+
+			_, err = svc.StartScan(ctx, scan)
 			Expect(err).To(MatchError(ErrScanRunning))
 		})
 

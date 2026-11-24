@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	entimportscan "github.com/datahearth/streamline/ent/importscan"
+	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/bulkimport"
@@ -26,10 +27,12 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 	ctx, span := tracer.Start(ctx, "hygiene.series_orphan_scan")
 	defer span.End()
 
-	if _, err := os.Stat(s.cfg.SeriesPath); err != nil {
+	// Read once, as the movie scan does: one pass, one root.
+	root := config.Get().Library.SeriesPath
+	if _, err := os.Stat(root); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			slog.InfoContext(ctx, "series path missing; skipping series orphan scan",
-				"path", s.cfg.SeriesPath)
+				"path", root)
 			return nil
 		}
 		return otelx.RecordSpanError(span, err)
@@ -55,7 +58,7 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 		return otelx.RecordSpanError(span, err)
 	}
 
-	entries, err := os.ReadDir(s.cfg.SeriesPath)
+	entries, err := os.ReadDir(root)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
@@ -66,7 +69,7 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 		if !e.IsDir() {
 			continue
 		}
-		folder := filepath.Join(s.cfg.SeriesPath, e.Name())
+		folder := filepath.Join(root, e.Name())
 		if _, ok := pending[folder]; ok {
 			continue
 		}
@@ -99,11 +102,7 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 		return nil
 	}
 	seriesOrphanQueued.Add(ctx, int64(len(queue)))
-	scanID, err := s.openReviewScanID(
-		ctx,
-		s.cfg.SeriesPath,
-		entimportscan.KindSeries,
-	)
+	scanID, err := s.openReviewScanID(ctx, root, entimportscan.KindSeries)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
@@ -111,7 +110,7 @@ func (s *Service) RunSeriesOrphanScan(ctx context.Context) error {
 		return otelx.RecordSpanError(span, err)
 	}
 	slog.InfoContext(ctx, "series orphan scan queued shows for review",
-		"count", len(queue), "path", s.cfg.SeriesPath)
+		"count", len(queue), "path", root)
 	return nil
 }
 
