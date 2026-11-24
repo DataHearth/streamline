@@ -16,6 +16,12 @@ permissions:
   checks: write
   pull-requests: read
 
+# "|" falls back to the module's origin on any proxy error, where the
+# default "," does so only on 404 and 410: a download the proxy cuts
+# mid-stream is fetched from the source, still checked against go.sum.
+env:
+  GOPROXY: "https://proxy.golang.org|direct"
+
 jobs:
   # One diff, read once, decides which sections run. A job whose section is
   # untouched is skipped at the job level. A push to main is filtered against
