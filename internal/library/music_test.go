@@ -246,6 +246,34 @@ var _ = Describe("TrackMatcher near titles", Label("unit", "library"), func() {
 		Expect(m.MatchByName("Sidilarsen - Un Élan Du Coeurs.flac")).To(BeNil())
 	})
 
+	It("pairs a reordered title and a store-labelled one", func() {
+		// Biotop's "Remix Heretik System" and Dancefloor Bastards' title
+		// track, as a store and another release name them.
+		tracks := []*ent.Track{
+			{ID: 1, Disc: 1, Position: 1, Title: "Cardiotonic"},
+			{ID: 2, Disc: 1, Position: 2, Title: "Remix Heretik System"},
+			{ID: 3, Disc: 1, Position: 3, Title: "Dancefloor Bastards"},
+		}
+		m := NewTrackMatcher(tracks, []audiotags.Info{
+			{Title: "Cardiotronic"},
+			{Title: "Heretik System Remix"},
+			{Title: "Dancefloor Bastards [Explicit]"},
+		})
+		Expect(m.Match(audiotags.Info{Title: "Cardiotronic"}).ID).
+			To(Equal(uint32(1)))
+		Expect(m.Match(audiotags.Info{Title: "Heretik System Remix"}).ID).
+			To(Equal(uint32(2)))
+		Expect(
+			m.Match(audiotags.Info{Title: "Dancefloor Bastards [Explicit]"}).ID,
+		).To(Equal(uint32(3)))
+	})
+
+	It("agrees with a track its number reaches under another spelling", func() {
+		t := &ent.Track{ID: 7, Disc: 1, Position: 7, Title: "Un élan du cœur"}
+		Expect(TrackTitleAgrees(t, "Un élan de cœur")).To(BeTrue())
+		Expect(TrackTitleAgrees(t, "Où il veut")).To(BeFalse())
+	})
+
 	It("does not read another title or number as a misspelling", func() {
 		tracks := []*ent.Track{
 			{ID: 1, Disc: 1, Position: 1, Title: "Fiddler's Day: Part One"},
@@ -259,6 +287,39 @@ var _ = Describe("TrackMatcher near titles", Label("unit", "library"), func() {
 		Expect(m.MatchByName("Interlude 2.flac")).To(BeNil())
 		Expect(m.MatchByName("Fir.flac")).To(BeNil())
 	})
+})
+
+var _ = Describe("TitleNear", Label("unit", "library"), func() {
+	DescribeTable("reads two spellings of one title as one",
+		func(a, b string) {
+			Expect(TitleNear(a, b)).To(BeTrue())
+			Expect(TitleNear(b, a)).To(BeTrue())
+		},
+		Entry("a misspelt word", "Un élan de cœur", "Un élan du cœur"),
+		Entry("a dropped letter", "Cardiotronic", "Cardiotonic"),
+		Entry("the same words in another order",
+			"Heretik System Remix", "Remix Heretik System"),
+		Entry("a store's label", "Dancefloor Bastards [Explicit]",
+			"Dancefloor Bastards"),
+		Entry("a store's clean label", "Go Fast (Clean Version)", "Go Fast"),
+	)
+
+	DescribeTable("keeps two titles apart",
+		func(a, b string) {
+			Expect(TitleNear(a, b)).To(BeFalse())
+			Expect(TitleNear(b, a)).To(BeFalse())
+		},
+		Entry("another number", "Interlude 1", "Interlude 2"),
+		Entry("a short word", "Fire", "Fir"),
+		Entry("another title", "Bonus Song", "Fiddler's Day: Part One"),
+		Entry("another recording", "Dancefloor Bastards (Live)",
+			"Dancefloor Bastards"),
+		Entry("a word more", "Heretik System Remix", "Heretik System"),
+		Entry("a live version of a long title",
+			"Les enfants de la rage (Live)", "Les enfants de la rage"),
+		Entry("a remix of a long title",
+			"Méditerranée damnée (Remix)", "Méditerranée damnée"),
+	)
 })
 
 var _ = Describe("MatchTrackByName", Label("unit", "library"), func() {

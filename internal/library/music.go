@@ -8,6 +8,9 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
+
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
@@ -237,30 +240,32 @@ func (m TrackMatcher) MatchByName(p string) *ent.Track {
 }
 
 // nearTitles pairs the files whose title names no track with the track that
-// title is a misspelling of: "Un Élan De Coeur" is the album's "Un élan du
-// cœur". A file is paired only with a track no file matches outright, only
-// when one such track is nearest, and only when no other file is nearest to
-// it too, so a bonus song never takes the slot of a track the release lacks
-// unless its title is all but that track's.
+// title is another spelling of (TitleNear): "Un Élan De Coeur" is the
+// album's "Un élan du cœur". A file is paired only with a track no file
+// matches outright, only when one such track is nearest, and only when no
+// other file is nearest to it too, so a bonus song never takes the slot of a
+// track the release lacks unless its title is all but that track's.
 func nearTitles(
 	tracks []*ent.Track,
 	infos []audiotags.Info,
 	match func(audiotags.Info) *ent.Track,
 ) map[string]*ent.Track {
 	claimed := make(map[uint32]bool, len(tracks))
-	var loose []string
+	loose := map[string]string{}
 	for _, info := range infos {
 		if t := match(info); t != nil {
 			claimed[t.ID] = true
 			continue
 		}
-		if n := normalizeTitle(info.Title); n != "" && !slices.Contains(loose, n) {
-			loose = append(loose, n)
+		if n := normalizeTitle(info.Title); n != "" {
+			if _, seen := loose[n]; !seen {
+				loose[n] = info.Title
+			}
 		}
 	}
 	pick := map[string]*ent.Track{}
 	takers := map[uint32]int{}
-	for _, n := range loose {
+	for n, title := range loose {
 		var best *ent.Track
 		bestDist, tied := math.MaxInt, false
 		for _, t := range tracks {
@@ -268,7 +273,7 @@ func nearTitles(
 				continue
 			}
 			for _, own := range TrackTitles(t) {
-				d, ok := titleDistance(normalizeTitle(own), n)
+				d, ok := titleNear(own, title)
 				if !ok || d > bestDist || (d == bestDist && best == t) {
 					continue
 				}
@@ -289,17 +294,70 @@ func nearTitles(
 	return pick
 }
 
-// titleDistance is the edit distance between two normalized titles, ok only
-// when it is small enough to be a misspelling: at most one edit in six
-// characters of the longer, the shorter at least five long, and the digits
-// equal, since "Part 1" and "Part 2" are two songs.
-func titleDistance(a, b string) (int, bool) {
-	ra, rb := []rune(a), []rune(b)
-	if min(len(ra), len(rb)) < 5 || digitsOf(a) != digitsOf(b) {
+// TitleNear reports whether two track titles are spellings of one title: a
+// store's content label set aside ("Dancefloor Bastards [Explicit]"), the
+// same words in another order ("Heretik System Remix" for "Remix Heretik
+// System"), or a misspelling ("Cardiotronic" for "Cardiotonic").
+func TitleNear(a, b string) bool {
+	_, ok := titleNear(a, b)
+	return ok
+}
+
+// titleNear is TitleNear with how far apart the two are: 0 for a store label
+// or another word order, else the edit distance between the normalized
+// titles, ok only when it is small enough to be a misspelling: as many
+// words on both sides (a "(Live)" or "(Remix)" more is another recording,
+// however long the title), at most one edit in six characters of the longer,
+// the shorter at least five long, and the digits equal, since "Part 1" and
+// "Part 2" are two songs.
+func titleNear(a, b string) (int, bool) {
+	a, b = storeLabel.ReplaceAllString(a, ""), storeLabel.ReplaceAllString(b, "")
+	na, nb := normalizePair(a, b)
+	if na == "" || nb == "" {
+		return 0, false
+	}
+	if na == nb {
+		return 0, true
+	}
+	wa, wb := titleWords(a), titleWords(b)
+	if len(wa) > 1 && slices.Equal(sortedWords(wa), sortedWords(wb)) {
+		return 0, true
+	}
+	ra, rb := []rune(na), []rune(nb)
+	if min(len(ra), len(rb)) < 5 || digitsOf(na) != digitsOf(nb) ||
+		len(wa) != len(wb) {
 		return 0, false
 	}
 	d := levenshtein(ra, rb)
-	return d, d > 0 && 6*d <= max(len(ra), len(rb))
+	return d, 6*d <= max(len(ra), len(rb))
+}
+
+// storeLabel is the content advisory a download store appends to a title:
+// "[Explicit]", "(Clean Version)". It names no other recording.
+var storeLabel = regexp.MustCompile(
+	`(?i)\s*[\[(]\s*(?:explicit|clean)(?:\s+(?:version|edit|lyrics))?\s*[\])]\s*$`,
+)
+
+// titleWords is a Latin title's words, folded as normalizeTitle folds them.
+// Nil for a title with no Latin letter, whose words a space may not part.
+func titleWords(s string) []string {
+	s = unaccentable.Replace(strings.ToLower(norm.NFD.String(s)))
+	s = strings.Map(func(r rune) rune {
+		if unicode.Is(unicode.Mn, r) {
+			return -1
+		}
+		return r
+	}, s)
+	if !titleLatinLetter.MatchString(s) {
+		return nil
+	}
+	return strings.FieldsFunc(s, func(r rune) bool {
+		return (r < 'a' || r > 'z') && (r < '0' || r > '9')
+	})
+}
+
+func sortedWords(words []string) []string {
+	return slices.Sorted(slices.Values(words))
 }
 
 func digitsOf(s string) string {
