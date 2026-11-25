@@ -200,6 +200,10 @@ func newAPIKeyApp() *apiKeyApp {
 		}),
 	})
 
+	// Every movie and series detail asks; no spec here cares about the logo.
+	a.movies.EXPECT().HasLogo(mock.Anything, mock.Anything).Return(false).Maybe()
+	a.tvshows.EXPECT().HasLogo(mock.Anything, mock.Anything).Return(false).Maybe()
+
 	r := chi.NewRouter()
 	r.Use(a.identityMiddleware())
 	Mount(r, rsrv)

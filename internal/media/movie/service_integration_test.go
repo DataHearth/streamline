@@ -26,13 +26,12 @@ import (
 
 var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func() {
 	var (
-		ctx     context.Context
-		client  *ent.Client
-		store   *db.DB
-		meta    *mockmeta.MockProvider
-		posters *mockimagecache.MockStore
-		images  *mockimagecache.MockManager
-		svc     *Service
+		ctx    context.Context
+		client *ent.Client
+		store  *db.DB
+		meta   *mockmeta.MockProvider
+		images *mockimagecache.MockManager
+		svc    *Service
 	)
 
 	const profileName = "HD"
@@ -46,7 +45,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		store = db.New(client)
 
 		meta = mockmeta.NewMockProvider(GinkgoT())
-		images, posters = imagecachetest.NewMocks(GinkgoT())
+		images, _ = imagecachetest.NewMocks(GinkgoT())
 		svc = NewService(store, meta, images, nil, nil)
 		configtest.Setup(map[string]any{
 			"metadata": map[string]any{"tmdb_region": ""},
@@ -73,15 +72,10 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 						PosterPath:    "/abc.jpg",
 					}, nil).Once()
 
-				done := make(chan struct{})
-				posters.EXPECT().
-					Follow(mock.Anything, "movies", mock.AnythingOfType("uint32"),
-						"https://image.tmdb.org/t/p/w780/abc.jpg").
-					RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error {
-						close(done)
-						return nil
-					}).
-					Once()
+				done := imagecachetest.ExpectRefresh(
+					images, "movies", mock.AnythingOfType("uint32"),
+					"https://image.tmdb.org/t/p/w780/abc.jpg",
+				)
 
 				m, posterPath, err := svc.Add(ctx, 157336, "")
 				Expect(err).NotTo(HaveOccurred())

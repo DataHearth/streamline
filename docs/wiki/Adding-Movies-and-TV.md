@@ -29,6 +29,8 @@ Pick the right one — check the year, posters help — and choose a **Quality p
 
 Confirm, and the film lands in your library as **Wanted** and monitored, which means Streamline actively hunts for it; switch that off with the bookmark on its page. Streamline searches on a schedule, not on the spot, so nothing happens instantly.
 
+When TMDB has a transparent title logo for the film, its page shows that logo in place of the title text on a desktop-sized screen; a phone or a tablet keeps the text. Streamline picks the logo in your metadata language, then an English one, then one with no text language, and falls back to the plain title when there is none. Films already in your library get their logo on the next metadata refresh (run `movie-metadata-refresh` from **Settings → Schedules** to do it now). A logo stays as long as TMDB still offers it for that language. A refresh replaces it when TMDB withdraws it or when you change the metadata language, and removes it when TMDB has none left.
+
 > [!TIP]
 > Impatient? Open the film and pick **Search for releases** in its actions menu to search right away instead of waiting for the next scheduled pass.
 
@@ -57,6 +59,8 @@ Changing that setting doesn't retroactively touch shows already in your library 
 Once added, the show page shows every season and episode, what's on disk, what's missing, and what's still to air:
 
 [![Series episodes](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/series-episodes.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/series-episodes.png)
+
+A series whose TVDB entry has a transparent title logo shows it on its page the way a film does, with the same choice of language and the same text title on a phone or a tablet. Series already in your library get theirs on the next `tv-metadata-refresh`.
 
 ---
 
@@ -185,7 +189,7 @@ On a show's page the bookmark switches the whole show on or off, and the small a
 
 Sometimes a title ends up pointing at the wrong entry — an import matched *The Matrix* to *The Matrix Reloaded*, or a series folder landed on the wrong show. **Change match…** in the actions menu repairs it without losing anything. Admin only.
 
-Pick the correct title from the same TMDB/TVDB search the add flow uses, confirm, and the entry is repointed **in place**: it keeps its id, its files, its download history and any requests attached to it. Only the provider identity changes. Metadata is refreshed from the new entry and the files are renamed into the new title's folder.
+Pick the correct title from the same TMDB/TVDB search the add flow uses, confirm, and the entry is repointed **in place**: it keeps its id, its files, its download history and any requests attached to it. Only the provider identity changes. Metadata is refreshed from the new entry and the files are renamed into the new title's folder. The poster and logo are fetched again from the new entry. Its page shows them at once, and posters elsewhere (the library grid, search, the calendar) the next time they load.
 
 **For a series** the season and episode list is rebuilt from the new show, and each file is re-attached to the episode with the same season and episode number. Files whose numbering has no counterpart in the new show are **left on disk** and listed back to you — a provider numbering seasons differently is not evidence the media is unwanted. Their database rows are dropped, so an orphan scan can re-adopt them once you have decided where they belong.
 

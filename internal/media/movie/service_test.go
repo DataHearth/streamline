@@ -33,7 +33,6 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		storeMock    *dbmocks.MockStore_Expecter
 		metaMock     *mockmeta.MockProvider_Expecter
 		imagesMock   *mockimagecache.MockManager_Expecter
-		posterMock   *mockimagecache.MockStore_Expecter
 		downloadMock *mockdownload.MockDownloader_Expecter
 		msMock       *msmocks.MockRefresher_Expecter
 		images       *mockimagecache.MockManager
@@ -46,10 +45,8 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		storeMock = store.EXPECT()
 		meta := mockmeta.NewMockProvider(GinkgoT())
 		metaMock = meta.EXPECT()
-		var posterStore *mockimagecache.MockStore
-		images, posterStore = imagecachetest.NewMocks(GinkgoT())
+		images, _ = imagecachetest.NewMocks(GinkgoT())
 		imagesMock = images.EXPECT()
-		posterMock = posterStore.EXPECT()
 		dl := mockdownload.NewMockDownloader(GinkgoT())
 		downloadMock = dl.EXPECT()
 		ms := msmocks.NewMockRefresher(GinkgoT())
@@ -145,48 +142,64 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					Return(&ent.Movie{ID: 11, Title: "Interstellar", TmdbID: 157336}, nil).
 					Once()
 
-				done := make(chan struct{})
-				posterMock.Follow(mock.Anything, "movies", uint32(11),
-					"https://image.tmdb.org/t/p/w780/abc.jpg").
-					RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error {
-						close(done)
-						return nil
-					}).
-					Once()
+				refreshed := imagecachetest.ExpectRefresh(
+					images,
+					"movies",
+					uint32(11),
+					"https://image.tmdb.org/t/p/w780/abc.jpg",
+				)
 
 				m, posterPath, err := svc.Add(ctx, 157336, "default")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(m.ID).To(Equal(uint32(11)))
 				Expect(posterPath).To(Equal("/abc.jpg"))
-				Eventually(done).Should(BeClosed())
+				Eventually(refreshed).Should(BeClosed())
 			})
 
-			It(
-				"logs but does not fail Add when poster fetch returns an error",
-				func() {
-					metaMock.GetMovie(mock.Anything, uint32(157336)).
-						Return(&metadata.MovieDetails{
-							TMDBID: 157336, Title: "Interstellar", Year: 2014,
-							PosterPath: "/abc.jpg",
-						}, nil).Once()
-					storeMock.CreateMovie(mock.Anything, mock.AnythingOfType("db.CreateMovieParams")).
-						Return(&ent.Movie{ID: 11, Title: "Interstellar", TmdbID: 157336}, nil).
-						Once()
+			It("offers the logos as PNG renditions, best first", func() {
+				metaMock.GetMovie(mock.Anything, uint32(157336)).
+					Return(&metadata.MovieDetails{
+						TMDBID: 157336, Title: "Interstellar", Year: 2014,
+						LogoPaths: []string{"/logo.svg", "/second.png"},
+					}, nil).Once()
+				storeMock.CreateMovie(mock.Anything, mock.AnythingOfType("db.CreateMovieParams")).
+					Return(&ent.Movie{ID: 11, Title: "Interstellar", TmdbID: 157336}, nil).
+					Once()
 
-					done := make(chan struct{})
-					posterMock.Follow(mock.Anything, "movies", uint32(11),
-						"https://image.tmdb.org/t/p/w780/abc.jpg").
-						RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error {
-							close(done)
-							return errors.New("network blew up")
-						}).
-						Once()
+				refreshed := imagecachetest.ExpectRefresh(
+					images,
+					"movies",
+					uint32(11),
+					"",
+					"https://image.tmdb.org/t/p/w500/logo.png",
+					"https://image.tmdb.org/t/p/w500/second.png",
+				)
 
-					_, _, err := svc.Add(ctx, 157336, "default")
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(done).Should(BeClosed())
-				},
-			)
+				_, _, err := svc.Add(ctx, 157336, "default")
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(refreshed).Should(BeClosed())
+			})
+
+			It("refreshes with no logo when TMDB has none", func() {
+				metaMock.GetMovie(mock.Anything, uint32(4)).
+					Return(&metadata.MovieDetails{
+						TMDBID: 4, Title: "NoLogo",
+					}, nil).Once()
+				storeMock.CreateMovie(mock.Anything, mock.AnythingOfType("db.CreateMovieParams")).
+					Return(&ent.Movie{ID: 12, Title: "NoLogo", TmdbID: 4}, nil).
+					Once()
+
+				refreshed := imagecachetest.ExpectRefresh(
+					images,
+					"movies",
+					uint32(12),
+					"",
+				)
+
+				_, _, err := svc.Add(ctx, 4, "default")
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(refreshed).Should(BeClosed())
+			})
 
 			It("skips poster fetch when TMDB has no poster path", func() {
 				metaMock.GetMovie(mock.Anything, uint32(2)).
@@ -528,6 +541,15 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		})
 	})
 
+	Describe("HasLogo", func() {
+		It("asks the image cache for the movie's row", func() {
+			imagesMock.HasLogo(mock.Anything, "movies", uint32(7)).
+				Return(true).Once()
+
+			Expect(svc.HasLogo(ctx, 7)).To(BeTrue())
+		})
+	})
+
 	Describe("Delete", func() {
 		It("calls store delete and evicts the cached poster", func() {
 			storeMock.DeleteMovie(mock.Anything, uint32(7)).Return(nil).Once()
@@ -713,6 +735,8 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 				Return(nil, &ent.NotFoundError{}).Once()
 			storeMock.SetMovieTMDBID(mock.Anything, uint32(7), uint32(604)).
 				Return(nil).Once()
+			// The old title's images go once the new metadata is in.
+			imagesMock.Remove("movies", uint32(7)).Return(nil).Once()
 			// Proves the refresh reads the *new* id, not the one the row was
 			// loaded with — the whole point of the swap.
 			metaMock.GetMovie(mock.Anything, uint32(604)).
@@ -752,6 +776,8 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					Return(nil, &ent.NotFoundError{}).Once()
 				storeMock.SetMovieTMDBID(mock.Anything, uint32(7), uint32(604)).
 					Return(nil).Once()
+				// No Remove: the old title's images stay with its metadata,
+				// and the next refresh follows the new title's addresses.
 				metaMock.GetMovie(mock.Anything, uint32(604)).
 					Return(nil, errors.New("tmdb down")).Once()
 

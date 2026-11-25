@@ -121,6 +121,8 @@ export type TVShow = {
 	downloading_episode?: number;
 	/** Mean progress across the in-flight items, 0-1. */
 	download_progress?: number;
+	// Detail responses only: whether tvLogoUrl serves the show's logo.
+	has_logo?: boolean;
 	// Only populated by GET /series/{id}; absent in list responses.
 	seasons?: Season[];
 	cast?: CastMember[];
@@ -320,6 +322,8 @@ export type Movie = {
 	crew?: CastMember[];
 	genres?: string[];
 	rating?: number;
+	// Detail responses only: whether movieLogoUrl serves the title's logo.
+	has_logo?: boolean;
 	added_at?: string;
 };
 

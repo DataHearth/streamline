@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -543,7 +545,10 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 						Expect(r.URL.Query().Get("language")).To(Equal("fr"))
 						Expect(
 							r.URL.Query().Get("append_to_response"),
-						).To(Equal("translations,alternative_titles,credits"))
+						).To(Equal("translations,alternative_titles,credits,images"))
+						Expect(
+							r.URL.Query().Get("include_image_language"),
+						).To(Equal("fr,en,null"))
 
 						w.Header().Set("Content-Type", "application/json")
 						_, _ = w.Write(jsonBytes(map[string]any{
@@ -569,7 +574,10 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			It(
 				"forwards language=fr and append_to_response=translations,credits",
 				func() {
-					details, err := client.GetMovie(context.Background(), 157336)
+					details, err := client.GetMovie(
+						WithLogos(context.Background()),
+						157336,
+					)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(details.Title).To(Equal("Interstellaire"))
 				},
@@ -1137,6 +1145,97 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			Expect(CoverArtURL("abc-123")).To(Equal(
 				"https://coverartarchive.org/release-group/abc-123/front-500",
 			))
+		})
+	})
+
+	Describe("GetMovie image lists", func() {
+		var asked url.Values
+
+		BeforeEach(func() {
+			ts = httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					asked = r.URL.Query()
+					body := map[string]any{"id": 157336, "title": "Interstellar"}
+					// As TMDB: the lists come only when appended.
+					if strings.Contains(asked.Get("append_to_response"), "images") {
+						body["images"] = map[string]any{
+							"logos": []map[string]any{
+								{"file_path": "/logo.png", "iso_639_1": "en"},
+							},
+						}
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write(jsonBytes(body))
+				}),
+			)
+			client = newTestTMDB(ts.URL)
+			DeferCleanup(func() { ts.Close() })
+		})
+
+		It("leaves them out of a call that draws no logo", func() {
+			details, err := client.GetMovie(context.Background(), 157336)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(asked.Get("append_to_response")).NotTo(ContainSubstring("images"))
+			Expect(asked.Has("include_image_language")).To(BeFalse())
+			Expect(details.LogoPaths).To(BeEmpty())
+		})
+
+		It("asks for them under WithLogos", func() {
+			details, err := client.GetMovie(
+				WithLogos(context.Background()), 157336,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(asked.Get("append_to_response")).To(HaveSuffix(",images"))
+			Expect(details.LogoPaths).To(Equal([]string{"/logo.png"}))
+		})
+	})
+
+	Describe("pickLogos", func() {
+		logos := []tmdbImage{
+			{FilePath: "/de.png", ISO639_1: "de", VoteAverage: 9},
+			{FilePath: "/none.png", VoteAverage: 8},
+			{FilePath: "/en-low.png", ISO639_1: "en", VoteAverage: 5.1},
+			{FilePath: "/en-high.svg", ISO639_1: "en", VoteAverage: 5.6},
+			{FilePath: "/fr.png", ISO639_1: "fr", VoteAverage: 1},
+		}
+
+		It("keeps the metadata language's logos, by primary subtag", func() {
+			Expect(pickLogos(logos, "fr-FR")).To(Equal([]string{"/fr.png"}))
+		})
+
+		It("falls back to the English logos, best voted first", func() {
+			Expect(pickLogos(logos, "es")).To(
+				Equal([]string{"/en-high.svg", "/en-low.png"}),
+			)
+		})
+
+		It("takes the textless logos when there is no English one", func() {
+			Expect(pickLogos(logos[:2], "es")).To(Equal([]string{"/none.png"}))
+		})
+
+		It("never picks another language's logo", func() {
+			Expect(pickLogos(logos[:1], "en")).To(BeEmpty())
+			Expect(pickLogos(nil, "en")).To(BeEmpty())
+		})
+	})
+
+	Describe("imageLanguages", func() {
+		It("asks for the language, English and textless art", func() {
+			Expect(imageLanguages("fr-FR")).To(Equal("fr,en,null"))
+			Expect(imageLanguages("en")).To(Equal("en,null"))
+			Expect(imageLanguages("")).To(Equal("en,null"))
+		})
+	})
+
+	Describe("LogoURL", func() {
+		It("asks TMDB for the PNG rendition", func() {
+			Expect(LogoURL("/abc.svg", "w500")).To(
+				Equal("https://image.tmdb.org/t/p/w500/abc.png"),
+			)
+			Expect(LogoURL("/abc.png", "w500")).To(
+				Equal("https://image.tmdb.org/t/p/w500/abc.png"),
+			)
+			Expect(LogoURL("", "w500")).To(BeEmpty())
 		})
 	})
 })

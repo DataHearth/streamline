@@ -34,6 +34,7 @@ var _ = Describe("Full Vertical Slice", Label("unit", "server", "movies"), func(
 	BeforeEach(func() {
 		t := GinkgoT()
 		movies = moviemocks.NewMockManager(t)
+		movies.EXPECT().HasLogo(mock.Anything, mock.Anything).Return(false).Maybe()
 		md = metadatamocks.NewMockProvider(t)
 		store = dbmocks.NewMockStore(t)
 

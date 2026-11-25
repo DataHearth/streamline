@@ -32,7 +32,7 @@
 	import MonitorSplitButton from "@components/shared/MonitorSplitButton.svelte";
 	import { twMerge } from "tailwind-merge";
 	import { missingEpisodes, seasonTallies, sumTallies } from "@lib/status";
-	import { tvPosterUrl } from "@lib/posters";
+	import { tvLogoUrl, tvPosterUrl } from "@lib/posters";
 	import { listHref, SERIES_SEARCH } from "@lib/prefs";
 	import { formatDate } from "@lib/dates";
 	import Poster from "@components/shared/Poster.svelte";
@@ -62,6 +62,7 @@
 	import type { SeriesAction } from "@components/series/SeriesKebabMenu.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import HeroBackdrop from "@components/shared/HeroBackdrop.svelte";
+	import HeroTitle from "@components/shared/HeroTitle.svelte";
 	import { provideHeroHold } from "@lib/hero-hold.svelte";
 	import type {
 		Episode,
@@ -570,7 +571,7 @@
 	</div>
 {:else if show}
 	<section class="hero relative" aria-labelledby="series-title">
-		<HeroBackdrop src={tvPosterUrl(show.id)} />
+		<HeroBackdrop src={tvPosterUrl(show.id, show.tvdb_id)} />
 
 		<div class="relative w-full px-4 pt-6 md:px-8">
 			<a
@@ -594,7 +595,7 @@
 						<Tv class="h-10 w-10" aria-hidden="true" />
 					</div>
 					<Poster
-						src={tvPosterUrl(show.id)}
+						src={tvPosterUrl(show.id, show.tvdb_id)}
 						alt={i18n.common_poster_alt({ title: show.title })}
 						loading="eager"
 						class="relative h-full w-full object-cover"
@@ -618,7 +619,10 @@
 					class="text-[23px] font-bold leading-[1.05] tracking-tight text-fg md:text-4xl lg:text-5xl"
 					title={show.title}
 				>
-					{show.title}
+					<HeroTitle
+						title={show.title}
+						logoSrc={show.has_logo ? tvLogoUrl(show) : undefined}
+					/>
 				</h1>
 
 				<!-- Each part carries its dot in front, and the row is pulled left by

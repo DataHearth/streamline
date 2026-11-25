@@ -101,7 +101,7 @@ Each granted folder is mounted into your module for the length of one call:
 | `music` | The music library, `library.music_path` | `/folders/music` | read-only |
 | `movies` | The movie library, `library.movie_path` | `/folders/movies` | read-only |
 | `series` | The series library, `library.series_path` | `/folders/series` | read-only |
-| `artwork` | Streamline's poster cache, laid out `<kind>/<id>/poster.jpg` | `/folders/artwork` | read-only |
+| `artwork` | Streamline's poster cache, laid out `<kind>/<id>/poster.jpg`, plus `<kind>/<id>/logo.png` for a movie or series with a title logo | `/folders/artwork` | read-only |
 | `cache` | Your own folder, `<data_dir>/extensions/<name>/cache` | `/folders/cache` | read and write |
 | `store` | Your own folder for files you keep, `<data_dir>/extensions/<name>/store` | `/folders/store` | read and write, up to the admin's limit |
 

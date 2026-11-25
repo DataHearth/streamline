@@ -681,6 +681,37 @@ var _ = Describe(
 		})
 
 		Describe("GetMovie", func() {
+			It("says whether the movie's logo is cached", func() {
+				const movieID uint32 = 44
+				app.movies.EXPECT().
+					Get(mock.Anything, movieID).
+					Return(&ent.Movie{ID: movieID, Title: "Film", Year: 2020, TmdbID: 44}, nil).
+					Once()
+				app.store.EXPECT().
+					TitleCredits(mock.Anything, db.CastOwnerMovie, movieID).
+					Return(nil, nil).Once()
+				app.store.EXPECT().
+					ListMediaFilesByMovieID(mock.Anything, movieID).
+					Return(nil, nil).Once()
+				// In place of the suite's stand-in for this call.
+				app.movies.EXPECT().HasLogo(mock.Anything, mock.Anything).Unset()
+				app.movies.EXPECT().HasLogo(mock.Anything, movieID).
+					Return(true).Once()
+
+				resp, err := http.Get(
+					fmt.Sprintf("%s/api/v1/movies/%d", app.srv.URL, movieID),
+				)
+				Expect(err).NotTo(HaveOccurred())
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+				var body struct {
+					HasLogo *bool `json:"has_logo"`
+				}
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.HasLogo).To(HaveValue(BeTrue()))
+			})
+
 			It("splits the credits into cast and crew", func() {
 				const movieID uint32 = 43
 				app.movies.EXPECT().

@@ -211,6 +211,31 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
+		It("says whether the show's logo is cached", func() {
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(1)).
+				Return(&ent.TVShow{ID: 1, Title: "Chuck", TvdbID: 80348}, nil).
+				Once()
+			app.store.EXPECT().
+				TitleCredits(mock.Anything, db.CastOwnerSeries, uint32(1)).
+				Return(nil, nil).Once()
+			// In place of the suite's stand-in for this call.
+			app.tvshows.EXPECT().HasLogo(mock.Anything, mock.Anything).Unset()
+			app.tvshows.EXPECT().HasLogo(mock.Anything, uint32(1)).
+				Return(true).Once()
+
+			resp := app.do(
+				app.req(http.MethodGet, "/api/v1/series/1", app.adminKey, nil),
+			)
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+			var body struct {
+				HasLogo *bool `json:"has_logo"`
+			}
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.HasLogo).To(HaveValue(BeTrue()))
+		})
+
 		// The strict TVDB mock carries no GetSeriesCredits expectation in either
 		// spec: the detail view must serve cast from the stored credits.
 		It("attaches the cast credited on the show", func() {

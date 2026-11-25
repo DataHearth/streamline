@@ -356,6 +356,8 @@ func (s *Server) GetSeries(
 	}
 	result := tvShowToAPI(show)
 	result.Cast, result.Crew = splitCredits(credits)
+	hasLogo := s.tvshows.HasLogo(ctx, show.ID)
+	result.HasLogo = &hasLogo
 	return GetSeries200JSONResponse{
 		SeriesDetailJSONResponse: SeriesDetailJSONResponse(result),
 	}, nil

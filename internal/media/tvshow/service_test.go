@@ -37,6 +37,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		metaMk   *mockmeta.MockTVProvider_Expecter
 		imagesMk *mockimagecache.MockManager_Expecter
 		posterMk *mockimagecache.MockStore_Expecter
+		images   *mockimagecache.MockManager
 		dlMk     *mockdownload.MockDownloader_Expecter
 		msMk     *msmocks.MockRefresher_Expecter
 		svc      *Service
@@ -48,9 +49,10 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		storeMk = store.EXPECT()
 		meta := mockmeta.NewMockTVProvider(GinkgoT())
 		metaMk = meta.EXPECT()
-		images, posterStore := imagecachetest.NewMocks(GinkgoT())
-		posterMk = posterStore.EXPECT()
+		var posterStore *mockimagecache.MockStore
+		images, posterStore = imagecachetest.NewMocks(GinkgoT())
 		imagesMk = images.EXPECT()
+		posterMk = posterStore.EXPECT()
 		dl := mockdownload.NewMockDownloader(GinkgoT())
 		dlMk = dl.EXPECT()
 		ms := msmocks.NewMockRefresher(GinkgoT())
@@ -74,7 +76,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		return done
 	}
 
-	It("fetches TVDB metadata and creates the show with a poster fetch", func() {
+	It("fetches TVDB metadata and creates the show with its art", func() {
 		air := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
 		metaMk.GetSeries(mock.Anything, uint32(123)).Return(&metadata.TVDetails{
 			TVDBID:     123,
@@ -82,6 +84,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Year:       2023,
 			Network:    "Halcyon",
 			PosterPath: "/p.jpg",
+			LogoPaths:  []string{"https://artworks.thetvdb.com/l.png"},
 			Status:     "continuing",
 			Type:       metadata.SeriesStandard,
 			Genres:     []string{"Drama"},
@@ -103,15 +106,14 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Return(&ent.TVShow{ID: 7, Title: "The Black Sea", TvdbID: 123}, nil).
 			Once()
 
-		done := make(chan struct{})
-		posterMk.Follow(mock.Anything, "tvshows", uint32(7), "https://artworks.thetvdb.com/p.jpg").
-			RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error { close(done); return nil }).
-			Once()
+		refreshed := imagecachetest.ExpectRefresh(images, "tvshows", uint32(7),
+			"https://artworks.thetvdb.com/p.jpg",
+			"https://artworks.thetvdb.com/l.png")
 
 		show, err := svc.Add(ctx, 123, "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(show.ID).To(Equal(uint32(7)))
-		Eventually(done).Should(BeClosed())
+		Eventually(refreshed).Should(BeClosed())
 	})
 
 	It("adds the show anyway when the cast fetch fails", func() {
@@ -402,6 +404,12 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Return(db.SeasonCascade{ShowID: 9, Number: 2, Episodes: 8}, nil).
 			Once()
 		Expect(svc.SetSeasonMonitored(ctx, 3, false)).To(Succeed())
+	})
+
+	It("HasLogo asks the image cache for the show's row", func() {
+		imagesMk.HasLogo(mock.Anything, "tvshows", uint32(7)).Return(true).Once()
+
+		Expect(svc.HasLogo(ctx, 7)).To(BeTrue())
 	})
 
 	It("Delete removes the show and evicts the cached poster", func() {
@@ -1101,6 +1109,29 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Expect(err).To(MatchError(ContainSubstring("tvdb get series")))
 		})
 
+		It("keeps the cached images when the repair fails midway", func() {
+			storeMk.FindTVShowByID(mock.Anything, uint32(5)).
+				Return(&ent.TVShow{ID: 5, TvdbID: 111}, nil).Once()
+			storeMk.FindTVShowByTVDBID(mock.Anything, uint32(999)).
+				Return(nil, nil).Once()
+			metaMk.GetSeries(mock.Anything, uint32(999)).
+				Return(newShow(), nil).Once()
+			storeMk.DetachEpisodeMediaFiles(mock.Anything, uint32(5)).
+				Return(nil, nil).Once()
+			storeMk.SetTVShowTVDBID(mock.Anything, uint32(5), uint32(999)).
+				Return(nil).Once()
+			metaMk.GetSeriesCredits(mock.Anything, uint32(999)).
+				Return(nil, nil).Once()
+			storeMk.UpdateTVShowMetadata(
+				mock.Anything, uint32(5),
+				mock.AnythingOfType("db.UpdateTVShowMetadataParams"),
+			).Return(errors.New("db locked")).Once()
+
+			// No Remove: the mock would fail the spec on one.
+			_, _, err := svc.Reidentify(ctx, 5, 999)
+			Expect(err).To(MatchError(ContainSubstring("db locked")))
+		})
+
 		It(
 			"detaches files before reconciling, then re-attaches them by S/E",
 			func() {
@@ -1134,6 +1165,8 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 					Return(detached, nil).Once()
 				storeMk.SetTVShowTVDBID(mock.Anything, uint32(5), uint32(999)).
 					Return(nil).Once()
+				// The old show's images go before the new ones are fetched.
+				imagesMk.Remove("tvshows", uint32(5)).Return(nil).Once()
 				metaMk.GetSeriesCredits(mock.Anything, uint32(999)).
 					Return(nil, nil).
 					Once()
