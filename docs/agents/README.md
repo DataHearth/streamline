@@ -22,6 +22,7 @@ without reading why it is shaped that way.**
 | [`extensions.md`](extensions.md) | `internal/extension/`, `internal/db/extension_views.go`, `extensions/**`, the `extensions` config family, the `/extensions` handlers, `database-backup`'s extension pass |
 | [`frontend.md`](frontend.md) | `web/app/**`, `web/static/**`, `routify.config.js`, `web/embed.go` |
 | [`media-lifecycle.md`](media-lifecycle.md) | episode/movie status transitions, `internal/events/`, `internal/db` list queries, the `media-probe` job, re-identify |
+| [`metadata-changes.md`](metadata-changes.md) | `internal/db/metadata_change.go`, `internal/media/*/changes.go`, `/metadata-changes` handlers, `web/app/lib/metadata-changes.ts`, `web/app/components/changes/` |
 | [`music.md`](music.md) | `internal/media/music/`, `internal/metadata/musicbrainz.go`/`mblimiter.go`, `internal/importer/album*.go`/`pack.go`, `/music/*` handlers |
 | [`music-tags.md`](music-tags.md) | `internal/library/audiotags/`, `internal/library/music_tags.go`, `internal/media/music/tags.go`, `internal/download/seeding.go`, the album importer's tagging, `library.music_tags` |
 | [`nix.md`](nix.md) | `nix/**`, `flake.nix`, `nix/toolchains.json`, `renovate-pins.yaml`, the toolchain declarations in go.mod and `package.json` |

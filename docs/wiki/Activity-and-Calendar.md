@@ -155,6 +155,23 @@ Adding a series this way monitors it, exactly as adding it by hand would, so Str
 
 ---
 
+## Metadata changes
+
+**Metadata changes** (in the sidebar's Operations group, at `/metadata-changes`). Admin only.
+
+Every scheduled metadata refresh updates your library from TMDB, TVDB, MusicBrainz and Hardcover on its own: titles, dates, lengths, artwork, credits, and anything you hold no files for. It stops and asks you only when a change would alter what your files are matched against, or take something out of your library:
+
+- **Music** — the edition an album follows was merged or removed, MusicBrainz now prefers another edition of an album you have files for, a track holding a file left the tracklist, an album or artist was merged or removed.
+- **Series** — episodes or a season you have files for are no longer listed by TVDB, or TVDB no longer knows the series.
+- **Movies** — TMDB no longer knows the movie.
+- **Books** — Hardcover no longer knows the book, or no longer has the edition a format you have a file for follows.
+
+Each change shows what you have next to what the provider says now, and offers **Follow** (apply it), **Keep as is** (leave the item as it is; you are not asked about that change again, only if the provider changes the same thing differently), and where it applies **Pick another edition…**, **Find it again…** (point a movie or series at another TMDB/TVDB entry) or **Remove from library…**. Following never deletes a file: tracks and episodes it removes leave their files on disk, untracked.
+
+An item waiting on a decision carries a **Changed** (amber) or **Removed** (red) badge on its cover, and its page opens with the same choices. The dashboard's *Needs you* strip counts them.
+
+---
+
 ## Torrents (built-in client)
 
 **Torrents** (in the sidebar's Operations group, at `/torrents`). Admin only, and only relevant if you're running Streamline's built-in torrent engine (`client_type: builtin`). The entry appears in the navigation only while an enabled built-in client is configured.

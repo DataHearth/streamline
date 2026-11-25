@@ -351,6 +351,10 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 | `DELETE` | `/activity/pending/{id}` | Forget a proposal so its torrent can be adopted again | 🔒 Admin |
 | `POST` | `/downloads/{id}/resolve` | Release a held download | 🔒 Admin |
 | `POST` | `/activity/history/{id}/retry` | Re-run a failed import — clears the attempt counter and re-queues the record (409 unless it failed) | 🔒 Admin |
+| `GET` | `/metadata-changes` | Provider changes a refresh left for you (`media=music\|series\|movies\|books`, `kind`, `page`, `limit` 1–100); each names its item (`owner`) and what changed (`details`) | 🔒 Admin |
+| `GET` | `/metadata-changes/counts` | Pending changes by media and by kind | 🔒 Admin |
+| `POST` | `/metadata-changes/{id}/follow` | Apply the provider's change; `409 not_followable` for an item the provider removed, `409 change_conflict` when it cannot be applied as it stands | 🔒 Admin |
+| `POST` | `/metadata-changes/{id}/keep` | Keep the item as it is; the same change is not asked again | 🔒 Admin |
 
 ### Requests
 
