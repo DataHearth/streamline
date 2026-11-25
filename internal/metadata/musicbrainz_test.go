@@ -815,6 +815,23 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 			Expect(rg.Tracks[0].Title).To(Equal("Regret"))
 		})
 
+		It("takes the track's length, else its recording's", func() {
+			serve(func(string) *http.Response {
+				return jsonResponse(200, `{"id":"rel-1","status":"Official","media":[
+					{"position":1,"format":"CD","tracks":[
+						{"position":1,"title":"Mack the Knife","length":259000,
+							"recording":{"id":"rec-1","length":206000}},
+						{"position":2,"title":"Hello, Dolly!","recording":{"id":"rec-2","length":147000}},
+						{"position":3,"title":"Untimed","recording":{"id":"rec-3"}}]}]}`)
+			})
+			rg, err := mb.GetReleaseGroup(ctx, "rg-1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rg.Tracks).To(HaveLen(3))
+			Expect(rg.Tracks[0].Duration).To(Equal(uint32(259)))
+			Expect(rg.Tracks[1].Duration).To(Equal(uint32(147)))
+			Expect(rg.Tracks[2].Duration).To(BeZero())
+		})
+
 		It("keeps a video-only release's tracks", func() {
 			serve(func(string) *http.Response {
 				return jsonResponse(200, `{"id":"rel-1","status":"Official","media":[

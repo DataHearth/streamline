@@ -811,8 +811,18 @@ type mbTrack struct {
 	ArtistCredit []mbCredit `json:"artist-credit"`
 }
 
+// duration is the length this release gives the track, else the recording's
+// own: many releases carry no track lengths while their recordings do.
+func (t mbTrack) duration() uint32 {
+	if t.Length != 0 {
+		return t.Length / 1000
+	}
+	return t.Recording.Length / 1000
+}
+
 type mbRecord struct {
 	ID        string  `json:"id"`
+	Length    uint32  `json:"length"`
 	Relations []mbRel `json:"relations"`
 }
 
@@ -1316,7 +1326,7 @@ func fillRelease(d *ReleaseGroupDetails, rel mbRelease, heavy bool) {
 				Title:            t.Title,
 				Disc:             disc,
 				Position:         t.Position,
-				Duration:         t.Length / 1000,
+				Duration:         t.duration(),
 				Artists:          trackArtists(t.ArtistCredit),
 				ArtistCredit:     trackArtistCredit(t.ArtistCredit),
 				Featuring:        featuring(t.ArtistCredit),
