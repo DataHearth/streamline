@@ -187,6 +187,20 @@ var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
 			Expect(got2).To(Equal(payload))
 		})
 
+		It("names no outcome for a failure it cannot classify", func() {
+			// A file where the row's folder should be: the write cannot start.
+			p := svc.(*posters)
+			dir := filepath.Dir(filepath.Dir(p.Path("movies", 3)))
+			Expect(os.MkdirAll(dir, 0o750)).To(Succeed())
+			Expect(
+				os.WriteFile(filepath.Dir(p.Path("movies", 3)), nil, 0o600),
+			).To(Succeed())
+
+			outcome, err := p.sync(context.Background(), "movies", 3, src.URL, true)
+			Expect(err).To(HaveOccurred())
+			Expect(outcome).To(BeEmpty())
+		})
+
 		It("rejects an invalid kind", func() {
 			err := svc.Fetch(context.Background(), "../escape", 1, src.URL)
 			Expect(err).To(MatchError(ContainSubstring("kind")))

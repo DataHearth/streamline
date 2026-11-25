@@ -161,39 +161,49 @@ func (p *posters) fetch(
 	// Serve counts cache hits and misses, and the outbound fetch behind a miss
 	// is counted too: with only a span, an artwork CDN degrading — timeouts,
 	// 403s, oversized bodies — could be seen in a trace and thresholded nowhere.
-	outcome := "ok"
-	defer func() {
-		posterFetch.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("poster.kind", kind),
-			attribute.String("outcome", outcome),
-		))
-	}()
+	outcome, err := p.sync(ctx, kind, id, src, follow)
+	if err != nil && outcome == "" {
+		outcome = "error"
+	}
+	posterFetch.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("poster.kind", kind),
+		attribute.String("outcome", outcome),
+	))
+	return otelx.RecordSpanError(span, err)
+}
 
+// sync brings the cached poster in line with src and names what it did for the
+// fetch counter. A failure it has no name for comes back with an empty one.
+func (p *posters) sync(
+	ctx context.Context,
+	kind string,
+	id uint32,
+	src string,
+	follow bool,
+) (string, error) {
 	dst := p.Path(kind, id)
 	if st, err := os.Stat(dst); err == nil && st.Size() > 0 {
 		if !follow {
-			outcome = "cached"
-			return nil
+			return "cached", nil
 		}
 		known, err := os.ReadFile(p.sourcePath(kind, id))
 		switch {
 		case err == nil && string(known) == src:
-			outcome = "cached"
-			return nil
+			return "cached", nil
 		case errors.Is(err, os.ErrNotExist):
-			outcome = "cached"
-			return otelx.RecordSpanError(
-				span,
-				os.WriteFile(p.sourcePath(kind, id), []byte(src), 0o600),
-			)
+			err := os.WriteFile(p.sourcePath(kind, id), []byte(src), 0o600)
+			if err != nil {
+				return "", err
+			}
+			return "cached", nil
 		case err != nil:
-			return otelx.RecordSpanError(span, err)
+			return "", err
 		}
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
 	if err != nil {
-		return otelx.RecordSpanError(span, err)
+		return "", err
 	}
 	// Wikimedia, where an artist photo can come from, refuses a generic
 	// client; the header follows every redirect.
@@ -205,28 +215,23 @@ func (p *posters) fetch(
 		"streamline/"+version+" (https://github.com/datahearth/streamline)")
 	resp, err := p.client.Do(req)
 	if err != nil {
-		outcome = "transport_error"
-		return otelx.RecordSpanError(span, err)
+		return "transport_error", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		outcome = "http_error"
-		return otelx.RecordSpanError(
-			span,
-			fmt.Errorf("poster source status %d", resp.StatusCode),
-		)
+		return "http_error", fmt.Errorf("poster source status %d", resp.StatusCode)
 	}
 
 	if err := store(dst, resp.Body, follow); err != nil {
 		if errors.Is(err, errTooLarge) {
-			outcome = "too_large"
+			return "too_large", err
 		}
-		return otelx.RecordSpanError(span, err)
+		return "", err
 	}
 	if follow {
 		err := os.WriteFile(p.sourcePath(kind, id), []byte(src), 0o600)
 		if err != nil {
-			return otelx.RecordSpanError(span, err)
+			return "", err
 		}
 	}
 	slog.InfoContext(
@@ -241,7 +246,7 @@ func (p *posters) fetch(
 		"cache.path",
 		dst,
 	)
-	return nil
+	return "ok", nil
 }
 
 // Put replaces the cached poster, unlike Fetch, which keeps one that exists:
@@ -329,9 +334,15 @@ func (p *posters) Serve(
 	id uint32,
 ) {
 	ctx := r.Context()
+	// The kind comes from the URL: one the cache does not know is counted
+	// under a single name, never as itself.
+	label := kind
+	if _, ok := validKinds[kind]; !ok {
+		label = "invalid"
+	}
 	record := func(outcome string) {
 		posterCache.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("kind", kind),
+			attribute.String("kind", label),
 			attribute.String("outcome", outcome),
 		))
 	}
