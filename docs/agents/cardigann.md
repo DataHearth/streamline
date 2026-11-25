@@ -54,7 +54,8 @@ the commit is the one in force. Only regular `definitions/v12/*.yml`,
   that pins or edits an entry resolves first. `GET /indexers` resolves too
   (`fetchUnkept`): an entry written in the file has no kept version until the boot run of
   the update job, and its card listed no site and no settings until then; the first
-  failed fetch ends that pass, so an unreachable GitHub costs one attempt per listing.
+  failed fetch ends that pass. An unreachable GitHub still costs one more attempt per unkept
+  entry, since each card's session lookup (`Session` → `newCardigann`) resolves it again.
   `update.Run` prunes every commit no entry is
   pinned to after its writes, and every directory an older converter wrote. The data
   directory is state, so a read-only configuration still keeps versions.
@@ -228,7 +229,8 @@ split at the `é`.
   text, where ZWNJ is everywhere. Its filter gets
   `"engine": "regexp2"` (`cardigann.RegexEngineNET`); a templated `re_replace` is renamed
   `re_replace_net`; the definition and its catalog row get `regex_net: true`. Most
-  regexp2 assignments are for `\b` and `$`; the current count is in `index.json`.
+  regexp2 assignments are for `\b` and `$`; the catalog's `regex_net` rows are the current
+  list.
 - **Checked by differential, not by eye.** Every pattern left on RE2 at `8df0764` was
   matched against its upstream original on regexp2 (with `rewriteNET`'s spelling, so the
   reference is .NET's meaning) over a multilingual corpus plus ZWNJ/ZWJ, trailing-newline
@@ -401,8 +403,8 @@ indexers:
   children, and a `..field` selector reads the unexpanded parent. A failing required field
   skips the field on an HTML row and fails the whole response on a JSON one, as upstream.
   Links resolve against the URL that was **asked for**, not wherever a redirect landed.
-- **Release fields** are normalised as `ParseFields` does (seeders/leechers over 5,000,000
-  read as 0, ids take the first run of digits, sizes in binary units, `category`/
+- **Release fields** are normalised as `ParseFields` does (seeders/leechers of 5,000,000 and
+  up read as 0, ids take the first run of digits, sizes in binary units, `category`/
   `categorydesc` through the caps). A non-private release with an info hash and no magnet
   gets one built with the public tracker list. `andmatch` drops releases missing a word of
   the term (`and`, `the`, `an` aside); an id search keeps everything.
@@ -427,7 +429,8 @@ indexers:
   **Feed** is the same query.
 
 What the engine does **not** do yet: pick a tracker's own category for a search beyond the
-newznab root of the kind, or page past the first response.
+newznab categories of the kind (`cardigannKind`: 2000, 5000, 3000, 7000 and 7020 for an
+ebook, 3030 for an audiobook), or page past the first response.
 
 ## The catalog and the API
 
@@ -573,13 +576,12 @@ request stops at a `magnet:` hop, which a transport cannot take; `Fetch` hands i
   user agent, `IndexerSession.user_agent` stores it, and a definition that logs in nowhere
   still gets a session row once a solve leaves cookies or a user agent behind. A
   `cf_clearance` is bound to the client address and user agent, which is why both travel
-  together and why the download target gets the user agent too.
+  together and why the torrent is fetched by the engine too.
 - **`cardigann.proxy`** (per indexer; http, https, socks5) builds the engine's client with
   `otelx.ProxiedHTTPClient` and is passed to the solver as `proxy` (credentials split into
   `username`/`password`), so the browser earns its clearance from the address the engine's
-  requests leave from. The final `.torrent` fetch in `download.resolveTorrentSource` does
-  **not** go through it — a tracker that challenges the download URL itself, from a
-  different address, still fails there. The audit log redacts `.cardigann.proxy`.
+  requests leave from. The final `.torrent` fetch goes through it as well (`Engine.Fetch`,
+  see Downloads above). The audit log redacts `.cardigann.proxy`.
 - Errors: `indexer.ErrChallenge` (outcome `challenge`), echoed in connection tests — the
   engine's messages carry no tracker URL, and a transport error reaching the solver is
   redacted. The solver's own `message` is foreign text about a request it was handed
