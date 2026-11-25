@@ -17,11 +17,12 @@ import (
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
 	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
+	"github.com/datahearth/streamline/internal/testutil/posterstest"
 )
 
 // stubCoverPaths points the mock's Path at a per-spec directory and returns a
 // function that marks an album's cover as already cached.
-func stubCoverPaths(p *mockposters.MockManager) func(id uint32) {
+func stubCoverPaths(p *mockposters.MockStore) func(id uint32) {
 	GinkgoHelper()
 	dir := GinkgoT().TempDir()
 	path := func(id uint32) string {
@@ -44,7 +45,7 @@ const (
 var _ = Describe("Cover resolver", Label("unit", "music"), func() {
 	var (
 		ctx     context.Context
-		posters *mockposters.MockManager
+		posters *mockposters.MockStore
 		deezer  *mockmeta.MockCoverProvider
 		svc     *Service
 		cache   func(id uint32)
@@ -79,10 +80,11 @@ var _ = Describe("Cover resolver", Label("unit", "music"), func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		posters = mockposters.NewMockManager(GinkgoT())
+		var mgr *mockposters.MockManager
+		mgr, posters = posterstest.NewMocks(GinkgoT())
 		deezer = mockmeta.NewMockCoverProvider(GinkgoT())
 		cache = stubCoverPaths(posters)
-		svc = &Service{posters: posters, covers: deezer}
+		svc = &Service{posters: mgr, covers: deezer}
 		album = albumWithFiles()
 	})
 

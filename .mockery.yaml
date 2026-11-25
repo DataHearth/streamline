@@ -91,6 +91,7 @@ packages:
   github.com/datahearth/streamline/internal/posters:
     interfaces:
       Manager: {}
+      Store: {}
   github.com/datahearth/streamline/internal/request:
     interfaces:
       AlbumMonitor: {}

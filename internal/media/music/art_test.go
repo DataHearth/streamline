@@ -121,7 +121,9 @@ var _ = Describe("Music tag artwork", Label("unit", "integration", "music"), fun
 
 	cacheCover := func(kind string, id uint32, data []byte) {
 		GinkgoHelper()
-		Expect(cache.Put(e.ctx, kind, id, bytes.NewReader(data))).To(Succeed())
+		Expect(
+			cache.Posters().Put(e.ctx, kind, id, bytes.NewReader(data)),
+		).To(Succeed())
 	}
 
 	placeFile := func(name string) *ent.MediaFile {
@@ -296,7 +298,7 @@ var _ = Describe("Music tag artwork", Label("unit", "integration", "music"), fun
 
 		e.svc.resolveCover(e.ctx, findAlbum())
 
-		data, err := os.ReadFile(cache.Path(coverKind, alb.ID))
+		data, err := os.ReadFile(cache.Posters().Path(coverKind, alb.ID))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(data).To(Equal(cover))
 	})

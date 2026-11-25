@@ -230,7 +230,7 @@ func New(cfg Config) *Server {
 			case "people":
 				s.fetchPersonPhoto(r.Context(), id)
 			}
-			s.posters.Serve(w, r, kind, id)
+			s.posters.Posters().Serve(w, r, kind, id)
 		},
 	)
 
@@ -258,7 +258,7 @@ func (s *Server) artistPosterSource(
 	id uint32,
 ) (string, uint32) {
 	if _, err := os.Stat(
-		s.posters.Path("artists", id),
+		s.posters.Posters().Path("artists", id),
 	); !errors.Is(
 		err,
 		os.ErrNotExist,
@@ -278,7 +278,7 @@ func (s *Server) artistPosterSource(
 		return "artists", id
 	}
 	for _, album := range albums {
-		if _, err := os.Stat(s.posters.Path("albums", album)); err == nil {
+		if _, err := os.Stat(s.posters.Posters().Path("albums", album)); err == nil {
 			return "albums", album
 		}
 	}
@@ -290,7 +290,7 @@ func (s *Server) artistPosterSource(
 // a cast rail shown before that would otherwise be all monograms.
 func (s *Server) fetchPersonPhoto(ctx context.Context, id uint32) {
 	if _, err := os.Stat(
-		s.posters.Path("people", id),
+		s.posters.Posters().Path("people", id),
 	); !errors.Is(
 		err,
 		os.ErrNotExist,
@@ -301,7 +301,7 @@ func (s *Server) fetchPersonPhoto(ctx context.Context, id uint32) {
 	if err != nil || src == "" {
 		return
 	}
-	if err := s.posters.Fetch(ctx, "people", id, src); err != nil {
+	if err := s.posters.Posters().Fetch(ctx, "people", id, src); err != nil {
 		slog.WarnContext(ctx, "person photo fetch failed",
 			"person.id", id, "error", err)
 	}

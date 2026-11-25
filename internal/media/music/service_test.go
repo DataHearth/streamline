@@ -518,8 +518,8 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 			a, albums := e.seedArtist("Nirvana",
 				albumSeed{mbid: "rg-1", title: "Nevermind", tracks: []string{"A"}})
 			f := seedFile(albums)
-			e.posters.EXPECT().Remove("artists", a.ID).Return(nil).Once()
-			e.posters.EXPECT().Remove("albums", albums[0].ID).Return(nil).Once()
+			e.images.EXPECT().Remove("artists", a.ID).Return(nil).Once()
+			e.images.EXPECT().Remove("albums", albums[0].ID).Return(nil).Once()
 
 			Expect(e.svc.Delete(e.ctx, a.ID, false)).To(Succeed())
 			Expect(f).To(BeAnExistingFile())
@@ -531,7 +531,7 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 			a, albums := e.seedArtist("Nirvana",
 				albumSeed{mbid: "rg-1", title: "Nevermind", tracks: []string{"A"}})
 			f := seedFile(albums)
-			e.posters.EXPECT().
+			e.images.EXPECT().
 				Remove(mock.Anything, mock.Anything).
 				Return(nil).
 				Twice()
@@ -556,7 +556,7 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 					albumSeed{mbid: "rg-1", title: "Nevermind"},
 				)
 				f := seedFile(albums)
-				e.posters.EXPECT().Remove("artists", a.ID).Return(nil).Once()
+				e.images.EXPECT().Remove("artists", a.ID).Return(nil).Once()
 
 				Expect(e.svc.Delete(e.ctx, a.ID, true)).To(Succeed())
 				Expect(f).To(BeAnExistingFile())
@@ -584,7 +584,7 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 					albumSeed{mbid: "rg-1", title: "Nevermind"},
 				)
 				f := seedFile(albums)
-				e.posters.EXPECT().Remove("artists", b.ID).Return(nil).Once()
+				e.images.EXPECT().Remove("artists", b.ID).Return(nil).Once()
 
 				Expect(e.svc.Delete(e.ctx, b.ID, true)).To(Succeed())
 				Expect(f).To(BeAnExistingFile())

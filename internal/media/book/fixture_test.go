@@ -16,6 +16,7 @@ import (
 	idxmocks "github.com/datahearth/streamline/internal/indexer/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
+	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
@@ -49,7 +50,7 @@ func (p *fakePosters) Follow(
 	context.Context,
 	string,
 	uint32,
-	string,
+	...string,
 ) error {
 	return nil
 }
@@ -70,6 +71,31 @@ func (p *fakePosters) Path(
 	id uint32,
 ) string {
 	return "/posters/" + kind
+}
+
+func (p *fakePosters) Has(string, uint32) bool {
+	return false
+}
+
+func (p *fakePosters) Posters() posters.Store {
+	return p
+}
+
+func (p *fakePosters) Logos() posters.Store {
+	return p
+}
+
+func (p *fakePosters) Refresh(
+	string,
+	uint32,
+	string,
+	[]string,
+) func(context.Context) {
+	return func(context.Context) {}
+}
+
+func (p *fakePosters) HasLogo(context.Context, string, uint32) bool {
+	return false
 }
 
 func (p *fakePosters) Remove(kind string, id uint32) error {

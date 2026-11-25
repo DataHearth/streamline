@@ -22,6 +22,7 @@ import (
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
 	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/posterstest"
 )
 
 // env is the shared harness of the service specs: a real in-memory database
@@ -34,11 +35,13 @@ type env struct {
 	overviews *mockmeta.MockOverviewProvider
 	photos    *mockmeta.MockArtistPhotoProvider
 	links     *mockmeta.MockArtistLinkProvider
-	posters   *mockposters.MockManager
-	idx       *mockindexer.MockManager
-	dl        *mockdownload.MockDownloader
-	svc       *Service
-	cacheArt  func(id uint32)
+	// posters is the poster Store; images is the Manager that hands it out.
+	posters  *mockposters.MockStore
+	images   *mockposters.MockManager
+	idx      *mockindexer.MockManager
+	dl       *mockdownload.MockDownloader
+	svc      *Service
+	cacheArt func(id uint32)
 }
 
 // newEnv builds the harness; withEnrichment wires the Wikipedia and Deezer
@@ -52,7 +55,7 @@ func newEnv(withEnrichment bool) *env {
 	DeferCleanup(func() { e.client.Close() })
 	e.store = db.New(e.client)
 	e.provider = mockmeta.NewMockMusicProvider(GinkgoT())
-	e.posters = mockposters.NewMockManager(GinkgoT())
+	e.images, e.posters = posterstest.NewMocks(GinkgoT())
 	e.idx = mockindexer.NewMockManager(GinkgoT())
 	e.dl = mockdownload.NewMockDownloader(GinkgoT())
 	stubCoverPaths(e.posters)
@@ -71,7 +74,7 @@ func newEnv(withEnrichment bool) *env {
 	e.svc = NewService(
 		e.store,
 		e.provider,
-		e.posters,
+		e.images,
 		nil,
 		e.idx,
 		e.dl,
@@ -211,7 +214,7 @@ func (e *env) settle(artistID uint32) {
 
 // stubKindPaths points the mock's Path for a poster kind at a per-spec
 // directory and returns a function that marks an id's poster as cached.
-func stubKindPaths(p *mockposters.MockManager, kind string) func(id uint32) {
+func stubKindPaths(p *mockposters.MockStore, kind string) func(id uint32) {
 	GinkgoHelper()
 	dir := GinkgoT().TempDir()
 	path := func(id uint32) string {

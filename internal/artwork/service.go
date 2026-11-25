@@ -282,12 +282,12 @@ func (s *Service) serveLibrary(
 		return false
 	}
 	if st, err := os.Stat(
-		s.posters.Path(string(kind), id),
+		s.posters.Posters().Path(string(kind), id),
 	); err != nil ||
 		st.Size() == 0 {
 		return false
 	}
-	s.posters.Serve(w, r, string(kind), id)
+	s.posters.Posters().Serve(w, r, string(kind), id)
 	return true
 }
 
