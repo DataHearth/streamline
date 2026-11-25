@@ -135,8 +135,6 @@ Open <http://localhost:8080>.
 | `main` | `main-vaapi` | Every push to `main`: expect breakage |
 | `sha-<short>` | `sha-<short>-vaapi` | An exact commit of `main`, or the commit of a release |
 
-A prerelease such as `v4.1.0-rc.1` publishes `4.1.0-rc.1` and its `sha-<short>`, each with its `-vaapi` twin. It moves neither `latest` nor a minor or major line.
-
 > [!TIP]
 > Pin to `X.Y.Z` or at least `X.Y` for anything you care about.
 

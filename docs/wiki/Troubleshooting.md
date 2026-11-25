@@ -362,7 +362,7 @@ curl -sS -X POST -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
 ```
 
 > [!WARNING]
-> Always run the `/preview` call first and check the result before dropping it to apply. Add `"move_files": true` (movies and series only) if the files also need relocating; without it Streamline expects them to already be at the new path and just rewrites the records — pointing the migration at the wrong `from`/`to` pair moves or orphans real files. Nothing on the server remembers the old prefix, so you have to name it yourself.
+> Always run the `/preview` call first and check the result before dropping it to apply. Add `"move_files": true` (movies and series only) if the files also need relocating: a wrong `from`/`to` pair then moves real files. Without it Streamline expects the files to already be at the new path, rewrites the records whose file it finds there, and leaves the others as they are, counted in `skipped`. Either way the configured root moves with the migration, however many records were skipped, unless the instance is `read_only` or the root lies outside `from`. Nothing on the server remembers the old prefix, so you have to name it yourself.
 
 **Only some files are outside the root.** `tracked` above zero but below `total` means part of the library is stored elsewhere. That is expected for files adopted where they lay, and a problem when an earlier move left rows behind on the old path. Streamline logs it at each start:
 

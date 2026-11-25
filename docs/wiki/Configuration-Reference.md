@@ -134,11 +134,11 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 
 | Area | Runtime-editable? | Where in the UI |
 | --- | --- | --- |
-| Indexers, download clients, media servers | ✅ Full CRUD | Settings → Indexers / Download clients / Media servers (the Connections group) |
+| Indexers, download clients, media servers | ✅ Full CRUD (the built-in download client applies at the next restart) | Settings → Indexers / Download clients / Media servers (the Connections group) |
 | Quality profiles (movie/series, music, book), custom formats | ✅ Full CRUD | Settings → Quality profiles, Settings → Custom formats |
 | `music_quality_default_profile`, `book_quality_default_profiles.*` | ✅ The star on a profile row (**Make default**; on a book profile, a menu of the book kinds) | Settings → Quality profiles |
 | `movie_quality_default_profile`, `series_quality_default_profile` | ✅ The star on a profile row (**Make default for**: Movies, Series) | Settings → Quality profiles |
-| Schedule intervals, pause/resume/run | ✅ | Settings → Schedules |
+| Schedule intervals, pause/resume/run | ✅ Pause, resume and run for every job with a `schedules` key; the interval of [most](Scheduled-Jobs#driving-them), eight being file-only | Settings → Schedules |
 | `auth.registration_mode`, `auth.session_ttl`, `auth.default_role` | ✅ | Settings → Authentication |
 | `auth.lockout.{threshold,window,duration}` | ✅ | Settings → Authentication |
 | `library.monitor_specials` | ✅ | Settings → Series |

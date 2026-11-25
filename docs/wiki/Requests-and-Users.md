@@ -118,7 +118,7 @@ Filter by status and media type, or search by title or requester.
 - **Clear a lockout** — resets the failed-login counter after too many bad password attempts
 - **Revoke individual sessions** — kick a specific device without touching the others
 - **Revoke their API keys**
-- **Set what an extension keeps for them** — the settings card of an extension that has one
+- **Set what an extension keeps for them**: the settings card of an extension that has one
 - **Delete the account** — permanently removes it and every resource they own
 
 Two guard rails: you can't delete your own account, and Streamline refuses to remove or demote the last remaining admin. It will not let you lock yourself out of your own instance.
@@ -137,9 +137,9 @@ streamline --config /etc/streamline/config.yaml auth unlock user@example.com
 
 Click your name at the bottom of the sidebar (on a phone, under **More** in the bottom bar).
 
-- **Profile** — your display name
+- **Profile**: your display name
 - **Change your password**
-- **Language** — of the web UI, for this browser only
+- **Language**: of the web UI, for this browser only
 - **Sessions** — every device you're logged in on, with the option to revoke any of them
 - **API keys** — create keys for scripts and mobile apps, each **read-only** or **full** and lasting 30, 90 or 365 days, or never expiring. Shown once at creation; store it immediately
 - **Players & readers** — a separate credential for each app an extension serves, such as the OPDS token an e-reader signs in with (see the [OPDS extension](Extensions) and [Music and Books](Music-and-Books#reading-from-other-apps))

@@ -314,13 +314,13 @@ curl -sS -X POST -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
 | `to` | New prefix |
 | `move_files` | If true, relocate each file first — a rename when both sides share a filesystem, a copy when they don't. **Only for `movies` and `series`.** `downloads` data belongs to your download client, and music and book folders hold lyrics and cover art with no record of their own, so move those yourself and re-point |
 
-Without `move_files`, the files must already be at the new path: a stored path whose file is not found there is left alone and counted in `skipped`. `preview` reports that count first.
+Without `move_files`, the files must already be at the new path: a stored path whose file is not found there is left alone and counted in `skipped` (a record already marked missing from disk is rewritten all the same). `preview` reports that count first.
 
 Returns `202`; it runs in the background. Poll `GET /library/path-migration` for progress. Only one migration runs at a time (`409` otherwise).
 
 It's also available in the UI at **Settings → Advanced** — *"Maintenance tools that rewrite stored data. Preview before you run anything here."* Take that literally: preview first.
 
-Migration also re-points the config at the new root. Under `read_only: true` it leaves the configured root untouched and rewrites only the stored rows, so in a GitOps deploy, update the path in git and let the migration handle the rows.
+Migration also re-points the config at the new root, however many records it skipped. Under `read_only: true` it leaves the configured root untouched and rewrites only the stored rows, so in a GitOps deploy, update the path in git and let the migration handle the rows.
 
 ---
 

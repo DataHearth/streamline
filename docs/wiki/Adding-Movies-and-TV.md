@@ -84,7 +84,7 @@ Every view you set up is in the page's address, so you can bookmark it, send it 
 
 Cards and detail pages name a **release day** rather than a year once one is known (`2 Feb 2024`) — a film's theatrical release, a show's first air date. An existing library fills these in gradually: the value arrives with the next metadata refresh of each title, and until then the year is shown as before.
 
-A film goes **Failed** when its import fails `library.import_max_attempts` (default 3) times, or when you delete a held download without searching for another. Nothing searches for it on its own after that: retry the import from **History**, or open the film and pick **Search for releases** in its actions menu.
+A film goes **Failed** when its import fails `library.import_max_attempts` (default 3) times, at once when trying again cannot help (no video in the download, several, only a sample, a file already at the destination, a film that already has a file), or when you delete a held download without searching for another. Nothing searches for it on its own after that: retry the import from **History**, or open the film and pick **Search for releases** in its actions menu.
 
 A grab that fails leaves the title Wanted and counts a strike. After `library.max_grab_failures` (default 3) strikes in a row the scheduled missing search passes it over. This is a circuit breaker, not a permanent verdict — it stops Streamline hammering a tracker for something that isn't working. **Search for releases** ignores it, and a successful grab clears the count. A timeout reaching your indexer or download client doesn't count toward it: that says nothing about the release, so it is retried on the next pass instead of spending a strike.
 

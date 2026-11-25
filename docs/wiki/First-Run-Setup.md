@@ -44,7 +44,7 @@ docker logs streamline 2>&1 | grep 'default admin'      # Docker
 journalctl -u streamline | grep 'default admin'         # systemd (plain binary, Proxmox LXC)
 ```
 
-Log in, then change the password from the account menu (top right → **Account settings**).
+Log in, then change the password on your account page: click your name at the bottom of the sidebar (on a phone, under **More** in the bottom bar).
 
 > [!WARNING]
 > Anything that captures the container's or the service's output captured the password too. Treat it as a bootstrap credential, not a permanent one — change it as soon as you've logged in.

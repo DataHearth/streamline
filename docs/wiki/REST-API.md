@@ -131,7 +131,7 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `monitored_total`); the three diverge as soon as two facets are filtered, so read each from its own. `total` is separate again: the library, filtered by nothing. So are `wanted_episodes`, `downloading_episodes` and the movie `trend`. Called with no parameters the whole response is the unfiltered library, which is the shape older clients already expected.
 
-**Errors** are `{"message": "..."}` with a conventional status: `400` bad request, `401` unauthenticated, `403` forbidden (usually not an admin), `404`, `409` conflict (already exists), `413` (`code: body_too_large`: a body over 1 MiB, uploads excepted), `422` unprocessable, `500`. Some carry a stable `code` alongside the message when the caller needs to branch on the specific reason — `last_admin`, `self_delete_forbidden`, `email_exists`, `connection_failed` (a connection test's upstream diagnostic), `invalid_condition` (a custom-format condition that would not compile), `grab_rejected` (a grab the server refused — an untrusted download host, a release whose files match no wanted episode, a built-in client already holding its maximum of 500 torrents with no imported one left to remove, a release that would not fit on the download client's disk (the [free-space check](First-Run-Setup#free-space-check)), a `.torrent` whose name the built-in engine refuses, an album `.torrent` that is one CUE disc image, a release the download client already holds, or a search result whose handle expired when the session secret rotated), `upload_rejected`, `upload_conflict` and `no_space` (an [upload](Uploading-files) the server refused, found busy or had no room for), `no_quality_profile`, `rate_limited` (a metadata provider's limit, with `Retry-After`), `provider_unavailable` (`502`, MusicBrainz cannot answer), `hardcover_not_configured` / `hardcover_key_rejected`, `indexers_unavailable` (a release search no enabled indexer answered: `504` when every one timed out, `502` otherwise; an indexer that fails while another answers only costs its own results). `connection_failed`, `invalid_condition`, `grab_rejected`, `indexers_unavailable`, `provider_unavailable`, `library_offline`, `files_unknown`, `assignment_rejected`, `edition_not_found`, `extension_unreadable` and the three upload codes carry a message composed for display, which the web UI shows verbatim (an `upload_conflict` also carries a `reason`, which the web UI translates instead); a coded error's `message` is otherwise still advisory.
+**Errors** are `{"message": "..."}` with a conventional status: `400` bad request, `401` unauthenticated, `403` forbidden (usually not an admin), `404`, `409` conflict (already exists), `413` (`code: body_too_large`: a body over 1 MiB, or 24 MiB when an admin adds a torrent; the upload endpoints have no cap), `422` unprocessable, `500`. Some carry a stable `code` alongside the message when the caller needs to branch on the specific reason — `last_admin`, `self_delete_forbidden`, `email_exists`, `connection_failed` (a connection test's upstream diagnostic), `invalid_condition` (a custom-format condition that would not compile), `grab_rejected` (a grab the server refused — an untrusted download host, a release whose files match no wanted episode, a built-in client already holding its maximum of 500 torrents with no imported one left to remove, a release that would not fit on the download client's disk (the [free-space check](First-Run-Setup#free-space-check)), a `.torrent` whose name the built-in engine refuses, an album `.torrent` that is one CUE disc image, a release the download client already holds, or a search result whose handle expired when the session secret rotated), `upload_rejected`, `upload_conflict` and `no_space` (an [upload](Uploading-files) the server refused, found busy or had no room for), `no_quality_profile`, `rate_limited` (a metadata provider's limit, with `Retry-After`), `provider_unavailable` (`502`, MusicBrainz cannot answer), `hardcover_not_configured` / `hardcover_key_rejected`, `indexers_unavailable` (a release search no enabled indexer answered: `504` when every one timed out, `502` otherwise; an indexer that fails while another answers only costs its own results). `connection_failed`, `invalid_condition`, `grab_rejected`, `indexers_unavailable`, `provider_unavailable`, `library_offline`, `library_online`, `library_accept_running`, `files_unknown`, `send_failed`, `not_sendable`, `no_device_email`, `assignment_rejected`, `edition_not_found`, `extension_unreadable` and the three upload codes carry a message composed for display, which the web UI shows verbatim (an `upload_conflict` also carries a `reason`, which the web UI translates instead); a coded error's `message` is otherwise still advisory.
 
 A change to the files of an offline library root (rename, delete with files, upload, re-identify, applying album tags, import commit) answers `409` with `code: library_offline`. A book or series is refused only when a root holding its files is offline.
 
@@ -792,7 +792,7 @@ is never silently undone. `422` for a value outside the three.
 alongside `path`, so presence does not have to be inferred from an empty string
 or from `status`.
 
-**Approve every pending request:**
+**Approve the pending requests, up to 100 at a time** (run it again while any are left):
 
 ```bash
 api "$SL/api/v1/requests?status=pending&limit=100" \
@@ -836,7 +836,7 @@ api "$SL/api/v1/activity/queue" \
   | jq '.items[] | select(.status=="held") | {id, title, hold_reasons}'
 ```
 
-Every held record needs a decision:
+Every other hold needs a decision:
 
 ```bash
 # Import it anyway — verification is skipped on the re-run
@@ -906,7 +906,7 @@ AND. The ambiguous rows are the ones that still need a human — resolve those
 with the per-row `PATCH`, supplying `tmdb_id`, `tvdb_id`, `release_group_mbid` or
 `book_hardcover_id`.
 
-**Finding files that sit outside your library roots:**
+**Finding files that are not where the naming template puts them:**
 
 `POST /movies/{id}/rename?preview=true` is a safe probe — it returns
 `{"movie_id":N,"operations":[]}` when the file is already where the naming

@@ -110,11 +110,11 @@ See [Configuration Reference](Configuration-Reference#import-verification) for t
 
 Filter by status, or by title or release name, and scroll back through time. This is where you find *why* something failed — an import error records the actual reason (permission denied, cross-device link, destination exists), which is far more useful than the status word on the queue.
 
-**Retry import** is on any failed entry: expand the row and it hands the record back to the importer with a clean attempt counter. Use it once you've fixed whatever the failure reason names — it reads the same files as before, so retrying an unchanged failure just fails again. The movie, episode or album comes back to *importing* with it.
+**Retry import** is on any failed entry: expand the row and it hands the record back to the importer with a clean attempt counter. Use it once you've fixed whatever the failure reason names — it reads the same files as before, so retrying an unchanged failure just fails again. The movie or episode comes back to *importing* with it, an album to *downloading*.
 
 Select entries the same way as on the queue to **remove** several history records at once; the titles and their files are not touched.
 
-**Clear completed** tidies out successful entries and leaves the failures. An entry whose torrent is still seeding stays, completed or failed, both here and in the automatic clean-up (completed entries after 30 days, failed ones after 14): without it, Streamline would no longer recognise the torrent as its own and list it under *Needs attention*. Events also age out on their own after `events.retention` (default 90 days).
+**Clear completed** tidies out successful entries and leaves the failures. An entry whose torrent is still seeding stays, completed or failed, both here and in the automatic clean-up (completed entries after 30 days, failed ones after 14, rejected ones never): without it, Streamline would no longer recognise the torrent as its own and list it under *Needs attention*. Events also age out on their own after `events.retention` (default 90 days).
 
 ---
 
@@ -122,7 +122,7 @@ Select entries the same way as on the queue to **remove** several history record
 
 This one is worth understanding because it looks like a bug the first time you see it.
 
-Streamline only manages torrents tagged with the category/label `streamline`. If you add a torrent to that category **yourself**, Streamline notices it and tries to work out what it is.
+Every finished torrent in an enabled download client that Streamline has no record of is a candidate: in qBittorrent only those in the `streamline` category, in Transmission, Deluge and the built-in client all of them. If you add a torrent **yourself**, Streamline notices it once it has finished and tries to work out what it is.
 
 When it can safely tell — and the file is a clean upgrade or a straightforward addition — it just imports it. When it *can't* be sure, it doesn't guess. It parks it as a **proposal** awaiting your decision, and the sidebar flags *"Adopted torrents need attention"*.
 
@@ -134,7 +134,7 @@ Proposals come up when:
 - A different file already exists for that title
 - The match is ambiguous
 - It's a season pack that doesn't map cleanly onto what you're missing
-- **Streamline can't find the files** — the reason reads `files not found — client reports <path>`. The torrent is in the `streamline` category but its data is somewhere else, which is what tagging a qBittorrent torrent without Automatic Torrent Management does. See [Troubleshooting](Troubleshooting#an-adopted-torrent-says-files-not-found)
+- **Streamline can't find the files** — the reason reads `files not found — client reports <path>`. Streamline sees the torrent but its data is somewhere else, which is what tagging a qBittorrent torrent without Automatic Torrent Management does. See [Troubleshooting](Troubleshooting#an-adopted-torrent-says-files-not-found)
 
 Three actions per proposal:
 

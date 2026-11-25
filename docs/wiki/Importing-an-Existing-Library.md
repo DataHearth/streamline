@@ -143,7 +143,7 @@ The orphan scans below cover movies and series only; music and books arrive thro
 
 Import scans are the manual, deliberate route. Streamline also watches for files that appear in your library without going through it.
 
-Two background jobs — `movie-orphan-scan` and `tv-orphan-scan`, every 6 hours by default — walk your library paths looking for untracked video files. A confident match for a film that is already in your library without a file is adopted where it lies. Everything else is queued as a review item, so you get the same accept/match/exclude flow rather than a surprise import.
+Two background jobs — `movie-orphan-scan` and `tv-orphan-scan`, every 6 hours by default — walk your library paths looking for untracked video files. A film file that confidently matches a film already in your library is adopted where it lies when that film has no file, and left alone when it has one. Any other film file, and any show folder holding an untracked episode, is queued as a review item, so you get the same accept/match/exclude flow rather than a surprise import.
 
 This is what catches files you dropped in by hand, or a title that arrived through some route Streamline didn't manage.
 
