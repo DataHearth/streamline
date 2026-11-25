@@ -1,7 +1,7 @@
-// Package posters caches artwork on the local filesystem and serves it via
-// HTTP. Keeps zero dependencies outside stdlib + otelx so the leaf can be
+// Package imagecache caches the images that stand for a row (a poster, a
+// cover, a photo) on the local filesystem and serves them via HTTP. Keeps zero dependencies outside stdlib + otelx so the leaf can be
 // imported by any package.
-package posters
+package imagecache
 
 import (
 	"context"
@@ -23,8 +23,8 @@ import (
 )
 
 var (
-	tracer = otel.Tracer("github.com/datahearth/streamline/internal/posters")
-	meter  = otel.Meter("github.com/datahearth/streamline/internal/posters")
+	tracer = otel.Tracer("github.com/datahearth/streamline/internal/imagecache")
+	meter  = otel.Meter("github.com/datahearth/streamline/internal/imagecache")
 
 	posterCache metric.Int64Counter
 	posterFetch metric.Int64Counter
@@ -155,7 +155,7 @@ func (s *store) file(kind string, id uint32, name string) string {
 // show that lands on the same id.
 func (m *manager) Remove(kind string, id uint32) error {
 	if _, ok := validKinds[kind]; !ok {
-		return fmt.Errorf("posters: invalid kind %q", kind)
+		return fmt.Errorf("imagecache: invalid kind %q", kind)
 	}
 	if err := os.RemoveAll(m.rowDir(kind, id)); err != nil {
 		return fmt.Errorf("remove image cache: %w", err)
@@ -194,9 +194,9 @@ func (s *store) fetch(
 	follow bool,
 ) error {
 	if _, ok := validKinds[kind]; !ok {
-		return fmt.Errorf("posters: invalid kind %q", kind)
+		return fmt.Errorf("imagecache: invalid kind %q", kind)
 	}
-	ctx, span := tracer.Start(ctx, "posters.fetch")
+	ctx, span := tracer.Start(ctx, "imagecache.fetch")
 	defer span.End()
 	span.SetAttributes(
 		attribute.String("poster.kind", kind),
@@ -305,9 +305,9 @@ func (s *store) Put(
 	r io.Reader,
 ) error {
 	if _, ok := validKinds[kind]; !ok {
-		return fmt.Errorf("posters: invalid kind %q", kind)
+		return fmt.Errorf("imagecache: invalid kind %q", kind)
 	}
-	_, span := tracer.Start(ctx, "posters.put")
+	_, span := tracer.Start(ctx, "imagecache.put")
 	defer span.End()
 	span.SetAttributes(
 		attribute.String("poster.kind", kind),

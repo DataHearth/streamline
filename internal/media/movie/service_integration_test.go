@@ -17,11 +17,11 @@ import (
 	entdownloadrecord "github.com/datahearth/streamline/ent/downloadrecord"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/db"
+	mockposters "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
-	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
-	"github.com/datahearth/streamline/internal/testutil/posterstest"
+	"github.com/datahearth/streamline/internal/testutil/imagecachetest"
 )
 
 var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func() {
@@ -46,7 +46,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		store = db.New(client)
 
 		meta = mockmeta.NewMockProvider(GinkgoT())
-		images, posters = posterstest.NewMocks(GinkgoT())
+		images, posters = imagecachetest.NewMocks(GinkgoT())
 		svc = NewService(store, meta, images, nil, nil)
 		configtest.Setup(map[string]any{
 			"metadata": map[string]any{"tmdb_region": ""},

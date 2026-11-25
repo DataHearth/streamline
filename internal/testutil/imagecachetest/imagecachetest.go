@@ -1,10 +1,10 @@
-// Package posterstest wires the image cache's mocks for specs.
-package posterstest
+// Package imagecachetest wires the image cache's mocks for specs.
+package imagecachetest
 
 import (
 	"github.com/stretchr/testify/mock"
 
-	"github.com/datahearth/streamline/internal/posters/mocks"
+	"github.com/datahearth/streamline/internal/imagecache/mocks"
 )
 
 // NewMocks returns a Manager mock and the Store mock its Posters() answers.

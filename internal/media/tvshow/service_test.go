@@ -16,14 +16,14 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	mockdownload "github.com/datahearth/streamline/internal/download/mocks"
+	mockposters "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
-	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
-	"github.com/datahearth/streamline/internal/testutil/posterstest"
+	"github.com/datahearth/streamline/internal/testutil/imagecachetest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -48,7 +48,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		storeMk = store.EXPECT()
 		meta := mockmeta.NewMockTVProvider(GinkgoT())
 		metaMk = meta.EXPECT()
-		post, posterStore := posterstest.NewMocks(GinkgoT())
+		post, posterStore := imagecachetest.NewMocks(GinkgoT())
 		posterMk = posterStore.EXPECT()
 		postMk = post.EXPECT()
 		dl := mockdownload.NewMockDownloader(GinkgoT())

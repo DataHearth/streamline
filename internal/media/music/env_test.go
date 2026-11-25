@@ -17,12 +17,12 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/internal/db"
 	mockdownload "github.com/datahearth/streamline/internal/download/mocks"
+	mockposters "github.com/datahearth/streamline/internal/imagecache/mocks"
 	mockindexer "github.com/datahearth/streamline/internal/indexer/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
-	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
-	"github.com/datahearth/streamline/internal/testutil/posterstest"
+	"github.com/datahearth/streamline/internal/testutil/imagecachetest"
 )
 
 // env is the shared harness of the service specs: a real in-memory database
@@ -55,7 +55,7 @@ func newEnv(withEnrichment bool) *env {
 	DeferCleanup(func() { e.client.Close() })
 	e.store = db.New(e.client)
 	e.provider = mockmeta.NewMockMusicProvider(GinkgoT())
-	e.images, e.posters = posterstest.NewMocks(GinkgoT())
+	e.images, e.posters = imagecachetest.NewMocks(GinkgoT())
 	e.idx = mockindexer.NewMockManager(GinkgoT())
 	e.dl = mockdownload.NewMockDownloader(GinkgoT())
 	stubCoverPaths(e.posters)

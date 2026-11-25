@@ -18,13 +18,13 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	mockdownload "github.com/datahearth/streamline/internal/download/mocks"
+	mockposters "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/library"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
-	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
-	"github.com/datahearth/streamline/internal/testutil/posterstest"
+	"github.com/datahearth/streamline/internal/testutil/imagecachetest"
 )
 
 var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
@@ -47,7 +47,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		meta := mockmeta.NewMockProvider(GinkgoT())
 		metaMock = meta.EXPECT()
 		var posterStore *mockposters.MockStore
-		posters, posterStore = posterstest.NewMocks(GinkgoT())
+		posters, posterStore = imagecachetest.NewMocks(GinkgoT())
 		fetchMock = posters.EXPECT()
 		posterMock = posterStore.EXPECT()
 		dl := mockdownload.NewMockDownloader(GinkgoT())

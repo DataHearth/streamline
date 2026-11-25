@@ -1,4 +1,4 @@
-package posters
+package imagecache
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("posters.Manager", Label("unit", "posters"), func() {
+var _ = Describe("imagecache.Manager", Label("unit", "imagecache"), func() {
 	var (
 		dataDir string
 		svc     Manager

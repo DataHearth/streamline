@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
-	posmocks "github.com/datahearth/streamline/internal/posters/mocks"
+	posmocks "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/server/middleware"
 	mwmocks "github.com/datahearth/streamline/internal/server/middleware/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"

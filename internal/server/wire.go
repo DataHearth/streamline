@@ -23,6 +23,7 @@ import (
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/extension"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/importer"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/jobs"
@@ -40,7 +41,6 @@ import (
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/observability"
-	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/request"
 	"github.com/datahearth/streamline/internal/rss"
 	"github.com/datahearth/streamline/internal/scheduler"
@@ -155,7 +155,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	default:
 		bookMeta, hardcoverHealth = hc, hc
 	}
-	postersSvc, err := posters.New(cfg.DataDir)
+	postersSvc, err := imagecache.New(cfg.DataDir)
 	if err != nil {
 		dbClient.Close()
 		return nil, fmt.Errorf("create posters service: %w", err)

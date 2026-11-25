@@ -17,8 +17,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/internal/artwork"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/metadata"
-	"github.com/datahearth/streamline/internal/posters"
 )
 
 const (
@@ -108,7 +108,7 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 		deezer  *fakeDeezer
 		links   *fakeLinks
 		lib     fakeLibrary
-		pm      posters.Manager
+		pm      imagecache.Manager
 		dir     string
 		fetched []string
 		reply   roundTrip
@@ -127,7 +127,7 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 	BeforeEach(func() {
 		dir = GinkgoT().TempDir()
 		var err error
-		pm, err = posters.New(dir)
+		pm, err = imagecache.New(dir)
 		Expect(err).NotTo(HaveOccurred())
 		sources = artwork.NewSources()
 		deezer = &fakeDeezer{

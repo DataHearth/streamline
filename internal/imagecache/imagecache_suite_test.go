@@ -1,4 +1,4 @@
-package posters
+package imagecache
 
 import (
 	"testing"
@@ -9,9 +9,9 @@ import (
 	"github.com/datahearth/streamline/internal/testutil"
 )
 
-func TestPosters(t *testing.T) {
+func TestImageCache(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Posters Suite")
+	RunSpecs(t, "Image Cache Suite")
 }
 
 var _ = BeforeSuite(func() {

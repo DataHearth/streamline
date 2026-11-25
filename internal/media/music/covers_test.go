@@ -14,10 +14,10 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	mockposters "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
-	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
-	"github.com/datahearth/streamline/internal/testutil/posterstest"
+	"github.com/datahearth/streamline/internal/testutil/imagecachetest"
 )
 
 // stubCoverPaths points the mock's Path at a per-spec directory and returns a
@@ -81,7 +81,7 @@ var _ = Describe("Cover resolver", Label("unit", "music"), func() {
 	BeforeEach(func() {
 		ctx = context.Background()
 		var mgr *mockposters.MockManager
-		mgr, posters = posterstest.NewMocks(GinkgoT())
+		mgr, posters = imagecachetest.NewMocks(GinkgoT())
 		deezer = mockmeta.NewMockCoverProvider(GinkgoT())
 		cache = stubCoverPaths(posters)
 		svc = &Service{posters: mgr, covers: deezer}

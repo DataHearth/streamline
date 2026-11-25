@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/extension"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/importer"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
@@ -29,7 +30,6 @@ import (
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
-	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/request"
 	"github.com/datahearth/streamline/internal/rss"
 	"github.com/datahearth/streamline/internal/scheduler"
@@ -50,7 +50,7 @@ type Server struct {
 	router  *chi.Mux
 	web     *web.Handler
 	api     *restapi.Server
-	posters posters.Manager
+	posters imagecache.Manager
 	art     LookupArt
 	db      db.Store
 }
@@ -91,7 +91,7 @@ type Config struct {
 	MetadataBook    metadata.BookProvider
 	MetadataMusic   metadata.MusicProvider
 	Hardcover       interface{ AuthRejected() bool }
-	Posters         posters.Manager
+	Posters         imagecache.Manager
 	LookupArt       LookupArt
 	Torrents        bittorrent.Manager
 	PathMigrations  *pathmigrate.Service

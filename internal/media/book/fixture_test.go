@@ -13,10 +13,10 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
 	dlmocks "github.com/datahearth/streamline/internal/download/mocks"
+	"github.com/datahearth/streamline/internal/imagecache"
 	idxmocks "github.com/datahearth/streamline/internal/indexer/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
-	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
@@ -73,7 +73,7 @@ func (p *fakePosters) Path(
 	return "/posters/" + kind
 }
 
-func (p *fakePosters) Posters() posters.Store {
+func (p *fakePosters) Posters() imagecache.Store {
 	return p
 }
 

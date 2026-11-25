@@ -15,7 +15,7 @@ import (
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
-	"github.com/datahearth/streamline/internal/testutil/posterstest"
+	"github.com/datahearth/streamline/internal/testutil/imagecachetest"
 )
 
 var _ = Describe(
@@ -63,7 +63,7 @@ var _ = Describe(
 						},
 					}, nil).
 					Once()
-				images, posters := posterstest.NewMocks(GinkgoT())
+				images, posters := imagecachetest.NewMocks(GinkgoT())
 				posters.EXPECT().Path(mock.Anything, mock.Anything).
 					Return(filepath.Join(root, "no-cover")).Maybe()
 				svc := music.NewService(
