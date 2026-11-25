@@ -299,10 +299,11 @@ five, and every account behind them still locks after
 `auth.lockout.threshold` failed attempts. The table clears itself within thirty
 minutes of the flood stopping, with no restart.
 
-Clear a locked-out account:
+Clear a locked-out account, naming the config file the server runs with
+(`/etc/streamline/config.yaml` in the container image):
 
 ```bash
-streamline --config /etc/streamline/config.yaml auth unlock user@example.com
+streamline --config ~/.config/streamline/config.yaml auth unlock user@example.com
 ```
 
 ### Single sign-on (OIDC)

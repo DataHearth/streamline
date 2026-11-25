@@ -129,6 +129,8 @@ You can also clear a lockout from the command line if the UI is unreachable:
 streamline --config /etc/streamline/config.yaml auth unlock user@example.com
 ```
 
+`--config` must name the file the server runs with, since that is where the database path comes from. In Docker, prefix the command with `docker exec streamline`.
+
 ---
 
 ## Your own account
