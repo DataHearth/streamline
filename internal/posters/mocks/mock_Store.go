@@ -118,24 +118,16 @@ func (_c *MockStore_Fetch_Call) RunAndReturn(run func(ctx context.Context, kind 
 }
 
 // Follow provides a mock function for the type MockStore
-func (_mock *MockStore) Follow(ctx context.Context, kind string, id uint32, srcs ...string) error {
-	// string
-	_va := make([]any, len(srcs))
-	for _i := range srcs {
-		_va[_i] = srcs[_i]
-	}
-	var _ca []any
-	_ca = append(_ca, ctx, kind, id)
-	_ca = append(_ca, _va...)
-	ret := _mock.Called(_ca...)
+func (_mock *MockStore) Follow(ctx context.Context, kind string, id uint32, src string) error {
+	ret := _mock.Called(ctx, kind, id, src)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Follow")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, ...string) error); ok {
-		r0 = returnFunc(ctx, kind, id, srcs...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, string) error); ok {
+		r0 = returnFunc(ctx, kind, id, src)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -151,13 +143,12 @@ type MockStore_Follow_Call struct {
 //   - ctx context.Context
 //   - kind string
 //   - id uint32
-//   - srcs ...string
-func (_e *MockStore_Expecter) Follow(ctx any, kind any, id any, srcs ...any) *MockStore_Follow_Call {
-	return &MockStore_Follow_Call{Call: _e.mock.On("Follow",
-		append([]any{ctx, kind, id}, srcs...)...)}
+//   - src string
+func (_e *MockStore_Expecter) Follow(ctx any, kind any, id any, src any) *MockStore_Follow_Call {
+	return &MockStore_Follow_Call{Call: _e.mock.On("Follow", ctx, kind, id, src)}
 }
 
-func (_c *MockStore_Follow_Call) Run(run func(ctx context.Context, kind string, id uint32, srcs ...string)) *MockStore_Follow_Call {
+func (_c *MockStore_Follow_Call) Run(run func(ctx context.Context, kind string, id uint32, src string)) *MockStore_Follow_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -171,19 +162,15 @@ func (_c *MockStore_Follow_Call) Run(run func(ctx context.Context, kind string, 
 		if args[2] != nil {
 			arg2 = args[2].(uint32)
 		}
-		var arg3 []string
-		variadicArgs := make([]string, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(string)
-			}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
 		}
-		arg3 = variadicArgs
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3...,
+			arg3,
 		)
 	})
 	return _c
@@ -194,64 +181,7 @@ func (_c *MockStore_Follow_Call) Return(err error) *MockStore_Follow_Call {
 	return _c
 }
 
-func (_c *MockStore_Follow_Call) RunAndReturn(run func(ctx context.Context, kind string, id uint32, srcs ...string) error) *MockStore_Follow_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Has provides a mock function for the type MockStore
-func (_mock *MockStore) Has(kind string, id uint32) bool {
-	ret := _mock.Called(kind, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Has")
-	}
-
-	var r0 bool
-	if returnFunc, ok := ret.Get(0).(func(string, uint32) bool); ok {
-		r0 = returnFunc(kind, id)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-	return r0
-}
-
-// MockStore_Has_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Has'
-type MockStore_Has_Call struct {
-	*mock.Call
-}
-
-// Has is a helper method to define mock.On call
-//   - kind string
-//   - id uint32
-func (_e *MockStore_Expecter) Has(kind any, id any) *MockStore_Has_Call {
-	return &MockStore_Has_Call{Call: _e.mock.On("Has", kind, id)}
-}
-
-func (_c *MockStore_Has_Call) Run(run func(kind string, id uint32)) *MockStore_Has_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 uint32
-		if args[1] != nil {
-			arg1 = args[1].(uint32)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockStore_Has_Call) Return(b bool) *MockStore_Has_Call {
-	_c.Call.Return(b)
-	return _c
-}
-
-func (_c *MockStore_Has_Call) RunAndReturn(run func(kind string, id uint32) bool) *MockStore_Has_Call {
+func (_c *MockStore_Follow_Call) RunAndReturn(run func(ctx context.Context, kind string, id uint32, src string) error) *MockStore_Follow_Call {
 	_c.Call.Return(run)
 	return _c
 }

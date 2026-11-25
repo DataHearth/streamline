@@ -50,7 +50,7 @@ func (p *fakePosters) Follow(
 	context.Context,
 	string,
 	uint32,
-	...string,
+	string,
 ) error {
 	return nil
 }
@@ -73,29 +73,8 @@ func (p *fakePosters) Path(
 	return "/posters/" + kind
 }
 
-func (p *fakePosters) Has(string, uint32) bool {
-	return false
-}
-
 func (p *fakePosters) Posters() posters.Store {
 	return p
-}
-
-func (p *fakePosters) Logos() posters.Store {
-	return p
-}
-
-func (p *fakePosters) Refresh(
-	string,
-	uint32,
-	string,
-	[]string,
-) func(context.Context) {
-	return func(context.Context) {}
-}
-
-func (p *fakePosters) HasLogo(context.Context, string, uint32) bool {
-	return false
 }
 
 func (p *fakePosters) Remove(kind string, id uint32) error {

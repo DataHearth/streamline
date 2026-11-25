@@ -105,7 +105,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 
 		done := make(chan struct{})
 		posterMk.Follow(mock.Anything, "tvshows", uint32(7), "https://artworks.thetvdb.com/p.jpg").
-			RunAndReturn(func(_ context.Context, _ string, _ uint32, _ ...string) error { close(done); return nil }).
+			RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error { close(done); return nil }).
 			Once()
 
 		show, err := svc.Add(ctx, 123, "")
