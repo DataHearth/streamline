@@ -39,6 +39,14 @@ type Torrent struct {
 	// Ratio is bytes uploaded over the torrent's size. Only the builtin
 	// engine fills it; rotation at the engine's cap is its only reader.
 	Ratio float64
+	// Foreign marks a listed torrent that does not carry streamline's mark in
+	// its client: Transmission's `streamline` label, or Deluge's Label-plugin
+	// `streamline` label. It is somebody else's torrent, so adoption never
+	// proposes, imports or removes it; the seeding set and the free-space
+	// check still count it, since it holds files and disk all the same. Set
+	// by ListTorrents only. qBittorrent lists its `streamline` category alone
+	// and the builtin engine holds nothing else, so both leave it false.
+	Foreign bool
 }
 
 // TorrentSource is what the manager hands to Client.AddTorrent.

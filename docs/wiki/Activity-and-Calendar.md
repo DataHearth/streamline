@@ -118,7 +118,7 @@ Select entries the same way as on the queue to **remove** several history record
 
 This one is worth understanding because it looks like a bug the first time you see it.
 
-Streamline only manages torrents tagged with the category/label `streamline`. If you add a torrent to that category **yourself**, Streamline notices it and tries to work out what it is.
+Streamline only manages the torrents it added and the ones marked `streamline` in your client: the category in qBittorrent, the label in Transmission, the Label plugin's label in Deluge ([per-client details](First-Run-Setup#4-add-a-download-client)). If you mark a torrent that way **yourself**, Streamline notices it and tries to work out what it is. A torrent without the mark is never touched, and a proposal disappears once its torrent loses the mark.
 
 When it can safely tell — and the file is a clean upgrade or a straightforward addition — it just imports it. When it *can't* be sure, it doesn't guess. It parks it as a **proposal** awaiting your decision, and the sidebar flags *"Adopted torrents need attention"*.
 
