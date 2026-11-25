@@ -769,42 +769,46 @@
 						/>
 					</div>
 
-					<fieldset
-						class="min-w-0 mt-5 hidden flex-wrap items-center gap-x-2.5 gap-y-3 md:flex"
-						aria-label={i18n.series_actions()}
-					>
-						<MonitorSplitButton
-							monitored={show.monitored ?? false}
-							onToggle={() => monitor.mutate(!(show.monitored ?? false))}
-							pending={monitor.isPending || applyPreset.isPending}
-							options={presetOptions}
-							onPick={(v) => applyPreset.mutate(v)}
-							menuLabel={i18n.series_monitor_choose()}
-							size="md"
-							backdrop
-						/>
-
-						<PlayOnMenu
-							path={`/series/${show.id}/play-on`}
-							queryKey={["series", show.id, "play-on"]}
-							disabled={!hasFiles}
-							disabledTitle={i18n.series_available_after_import()}
-						/>
-
-						<Button
-							type="button"
-							onclick={() => openPackSearch("series")}
-						
+					<!-- From md, one line: Play on is an icon and the gaps tighten below
+					     512px of row. -->
+					<div class="@container mt-5 hidden md:block">
+						<fieldset
+							class="flex min-w-0 items-center gap-1.5 @min-[512px]:gap-2.5"
+							aria-label={i18n.series_actions()}
 						>
-							<Search size={14} aria-hidden="true" />
-							{i18n.action_manual_search()}
-						</Button>
+							<MonitorSplitButton
+								monitored={show.monitored ?? false}
+								onToggle={() => monitor.mutate(!(show.monitored ?? false))}
+								pending={monitor.isPending || applyPreset.isPending}
+								options={presetOptions}
+								onPick={(v) => applyPreset.mutate(v)}
+								menuLabel={i18n.series_monitor_choose()}
+								size="md"
+								backdrop
+							/>
 
-						<SeriesKebabMenu
-							onPick={onKebabPick}
-							disabledActions={hasFiles ? [] : ["rename"]}
-						/>
-					</fieldset>
+							<PlayOnMenu
+								path={`/series/${show.id}/play-on`}
+								queryKey={["series", show.id, "play-on"]}
+								disabled={!hasFiles}
+								disabledTitle={i18n.series_available_after_import()}
+							/>
+
+							<Button
+								type="button"
+								class="min-w-0 px-3 @min-[512px]:px-4"
+								onclick={() => openPackSearch("series")}
+							>
+								<Search size={14} class="shrink-0" aria-hidden="true" />
+								<span class="truncate">{i18n.action_manual_search()}</span>
+							</Button>
+
+							<SeriesKebabMenu
+								onPick={onKebabPick}
+								disabledActions={hasFiles ? [] : ["rename"]}
+							/>
+						</fieldset>
+					</div>
 				{/if}
 			</div>
 		</div>
