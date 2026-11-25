@@ -104,7 +104,7 @@ Three roles, ranked `admin` (3) > `member` (2) > `request_only` (1):
 | Manage own API keys, sessions, password | ✅ | ✅ | ✅ |
 | Settings, users, indexers, download clients, media servers, quality profiles, schedules, library admin, torrents, transcoding, queue control, adoption review | ✅ | ❌ | ❌ |
 
-That last row is admin-gated end to end: `/config/*`, `/users/*`, `/indexers/*`, `/download-clients/*`, `/media-servers/*`, `/schedules/*`, `/library/*` (except `/library/recent`, the dashboard's arrivals), `/torrents/*`, `/transcoding/*`, every write under `/quality-profiles/*`, `/music/quality-profiles/*`, `/books/quality-profiles/*` and `/activity/*` (pausing, cancelling, clearing, retrying and deciding adoption proposals), the library-wide music actions (`/music/tags/retag`, `/music/monitored-types/apply`), plus invites and system info. The reads under the three quality-profile families and `/activity` stay open to every role.
+That last row is admin-gated end to end: `/config/*`, `/users/*`, `/indexers/*`, `/download-clients/*`, `/media-servers/*`, `/schedules/*`, `/library/*` (except `/library/recent`, the dashboard's arrivals), `/torrents/*`, `/transcoding/*`, adding, editing and approving `/extensions`, `/cardigann/*`, `/metadata-changes/*`, `/stats`, every write under `/quality-profiles/*`, `/music/quality-profiles/*`, `/books/quality-profiles/*`, `/custom-formats/*`, `/activity/*` and `/downloads/*` (pausing, cancelling, clearing, retrying, resolving held imports and deciding adoption proposals), re-identifying a movie or a series, the library-wide actions (`/music/tags/retag`, `/music/monitored-types/apply`, `/series/specials/apply`), plus invites, rotating the signing secret and system info. The reads under the three quality-profile families, `/custom-formats` and `/activity` stay open to every role.
 
 Music and books follow the same split as movies and series: browsing is open to every role, while adding, editing, searching, grabbing, renaming and a release's tag panel need `member`. Sending a book to your own e-reader is open to every role, `request_only` included.
 
@@ -159,9 +159,9 @@ The expiry is 30, 90 or 365 days from creation, or never. Past it the key is ref
 Keys created before scopes existed are full-access keys with no expiry, exactly what they could already do.
 
 > [!WARNING]
-> Keys are **read-only on the identity surface**. Any non-GET request under `/api/v1/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, `/account`, `/users`, `/config/auth` or `/config/oidc` returns `403` when authenticated with a key, whatever the key's scope — creating or revoking keys, changing passwords, managing sessions, administering users, and rotating the JWT secret, changing the registration mode and editing OIDC providers all require a logged-in session (Bearer JWT or the browser cookie). A leaked key therefore can't mint replacement credentials or reshape accounts; it grabs and browses, nothing more. Media endpoints and the other settings sections are unaffected.
+> Keys are **read-only on the identity surface**. Any request but `GET` and `HEAD` under `/api/v1/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, `/account`, `/users`, `/config/auth`, `/config/oidc` or `/extensions` (except an extension's own `/extensions/<name>/api`) returns `403` when authenticated with a key, whatever the key's scope — creating or revoking keys, changing passwords, managing sessions, administering users, rotating the JWT secret, changing the registration mode, editing OIDC providers and adding or approving extensions all require a logged-in session (Bearer JWT or the browser cookie). A leaked key therefore can't mint replacement credentials or reshape accounts; it grabs and browses, nothing more. Media endpoints and the other settings sections are unaffected.
 
-Admins can revoke any user's keys from Settings → Users.
+Admins can revoke any user's keys from Settings → Users. Changing your password deletes every key you hold and signs out your other sessions; an admin resetting a user's password deletes that user's keys and ends all of their sessions.
 
 ---
 
@@ -177,7 +177,7 @@ Admins can revoke any user's keys from Settings → Users.
 
 **The mode covers both doors onto a new account** — the registration form *and* a first-time SSO login — and it covers **only new accounts**. An existing user signs in whatever the mode is, and so does an existing local account that a provider adopts by email under `email_linking`: adoption links an identity to an account that already exists, so it is governed by that key, not by `registration_mode`.
 
-An admin is **always** seeded on a fresh install, so the user table is never empty at request time. There is no first-user-registration special case to race.
+An admin is seeded on a fresh install, so there is no first-user-registration special case to race. The exception is an `auth.seed_admin.email` of your own with no password, or an empty `password_file`: nothing is created, and the log says `seed admin has no usable password; skipping`.
 
 ### Two ways an invite is redeemed
 
@@ -203,15 +203,17 @@ It is only ever a **fallback**. An invite carries its own role, chosen by the ad
 
 > **Upgrading:** `auth.oidc_default_role` is **not read**. If your config still uses it, rename it to `auth.default_role` — otherwise the key is ignored and new self-registered accounts fall back to `member`, with nothing in the logs to say so. The API reads only the new name too: `GET /api/v1/config/auth` returns only `default_role`, and a `PATCH` naming `oidc_default_role` is ignored as an unknown field.
 
-Invites: `POST /api/v1/auth/invites` returns the raw token **once**. It takes a `ttl` as a Go duration string (default `168h`); the Invites card offers 1, 3, 7 and 30 days rather than a free-text field, since a typo there is a `422` on a form whose other two fields are fine. The SPA fetches `GET /auth/invite/{token}` to prefill the form; that lookup deliberately skips the email match so the page can render, while `RegisterWithInvite` enforces the binding atomically inside a transaction at submit time. Registration failures are mapped to user-safe messages — raw service errors are logged, never returned.
+Invites: `POST /api/v1/auth/invites` returns the raw token **once**, and answers `403` while `registration_mode` is `disabled`. It takes a `ttl` as a Go duration string (default `168h`); the Invites card offers 1, 3, 7 and 30 days. The SPA fetches `GET /auth/invite/{token}` to prefill the form; that lookup deliberately skips the email match so the page can render, while `RegisterWithInvite` enforces the binding atomically inside a transaction at submit time. Registration failures are mapped to user-safe messages — raw service errors are logged, never returned.
 
 ---
 
 ## Rate limiting and lockout
 
-Two independent mechanisms.
+Three independent mechanisms.
 
-**Per-IP rate limit** on login and registration: **5 attempts / 15 minutes**. Not configurable, not clearable. Wait it out.
+**Per-IP rate limit** on login, registration and the OIDC callback: **5 attempts / 15 minutes**, beyond which the answer is `429`. A successful login is not counted. Not configurable; wait it out, or restart Streamline, which keeps it in memory.
+
+**Per-IP limit on refused API credentials**: **20 failures / 15 minutes** on `/api/v1`, beyond which a failing request answers `429` instead of `401`. A request with a working credential is never refused by it.
 
 **Per-account lockout**, configurable:
 
@@ -226,16 +228,16 @@ auth:
 Clear a lock from Settings → Users, or:
 
 ```bash
-streamline auth unlock user@example.com
+streamline --config /etc/streamline/config.yaml auth unlock user@example.com
 ```
 
 ---
 
 ## OIDC
 
-Multi-provider. Each entry is discovered at startup; **a provider whose discovery fails is skipped silently** — check the boot logs if one doesn't appear on the login page.
+Multi-provider. Each entry is discovered at startup; **a provider whose discovery fails is unavailable until the next start**, and its button on the login page leads to a `404`. Look for `OIDC provider discovery failed; provider unavailable` in the boot log.
 
-With at least one provider available, the login page leads with the provider buttons (the first one listed in `auth.oidc` is the highlighted one) and folds the email and password form behind **Sign in with email**. The form opens on its own after a failed password attempt, after an `oidc_link_not_allowed` error, and in a browser whose last sign-in used it. Local accounts keep working exactly as before; with no provider, the form is all the page shows.
+With at least one provider configured, the login page leads with the provider buttons (the first one listed in `auth.oidc` is the highlighted one) and folds the email and password form behind **Sign in with email**. The form opens on its own after a failed password attempt, after an `oidc_link_not_allowed` error, and in a browser whose last sign-in used it. Local accounts keep working exactly as before; with no provider, the form is all the page shows.
 
 ```yaml
 auth:
@@ -244,6 +246,7 @@ auth:
       issuer: https://auth.example.com/application/o/streamline/
       client_id: streamline
       client_secret_file: /run/secrets/oidc-client-secret
+      allow_admin: true          # without it, no login here ever grants admin
       role_claim: groups
       role_mapping:
         streamline-admins: admin
@@ -297,9 +300,11 @@ On callback, in order:
 
 ### Role mapping
 
-With `role_claim` and `role_mapping` both set, the claim is **authoritative** — the mapped role is applied on every login, so demotions in your IdP take effect. A login that changes the role also signs the user out of every other session, which would otherwise keep the old role until it expired. The claim value may be a string or an array; every value is checked and the **highest-privilege match wins** (`admin` 3 > `member` 2 > `request_only` 1).
+With `role_claim` and `role_mapping` both set, the claim is **authoritative** — the mapped role is applied on every login but the one that adopts an existing account, so demotions in your IdP take effect. `role_claim` may be a dotted path into nested claims. A login that changes the role also signs the user out of every other session, which would otherwise keep the old role until it expired. The claim value may be a string or an array; every value is checked and the **highest-privilege match wins** (`admin` 3 > `member` 2 > `request_only` 1).
 
-With no mapping configured, new users get `auth.default_role` and existing users keep whatever role they have.
+**`allow_admin` is the ceiling.** With it `false`, the default, no login through that provider yields `admin`: a claim mapped to `admin` is ignored (a user also mapped to `member` lands there; one in the admin group alone keeps the role they had, or gets `auth.default_role` when new), and an `admin` default role or invite becomes `member`.
+
+With no mapping configured, or no claim value that maps, new users get `auth.default_role` and existing users keep whatever role they have.
 
 Every authorization request asks for the `openid email profile` scopes. Some IdPs — Dex, Authelia and Okta among them — only put a `groups` claim in the ID token when the `groups` scope is requested too; without it `role_claim: groups` finds nothing and every user lands on `auth.default_role`. If your IdP only sends groups when asked, add the scope to that provider:
 
@@ -311,6 +316,7 @@ auth:
       client_id: streamline
       client_secret_file: /run/secrets/oidc-client-secret
       scopes: [groups]
+      allow_admin: true
       role_claim: groups
       role_mapping:
         streamline-admins: admin
@@ -333,9 +339,9 @@ Callback failures redirect to `/login?error=<code>`:
 
 ### Restart requirement
 
-**OIDC providers are only loaded at process start.** UI edits persist but don't take effect until you restart. The Settings → Single Sign-On page says so; it's the most common OIDC support question.
+**OIDC providers are only loaded at process start.** A provider added or removed in the UI is saved but doesn't take effect until you restart. The Settings → Single Sign-On page says so; it's the most common OIDC support question.
 
-A provider whose config entry sets `allow_admin: true` or an `email_linking` other than `disabled` can't have its issuer changed from the UI or the API (`403`). That trust was granted to the issuer you named in the file, so move it there.
+A provider whose config entry sets `allow_admin: true` or an `email_linking` other than `disabled` can't have its issuer changed through the API (`403`). That trust was granted to the issuer you named in the file, so move it there.
 
 Changing the issuer of any other provider through the API needs its client secret in the same request (`422`, `code: secret_required`, otherwise). Streamline sends that secret to the issuer at every login, and keeping it across an issuer change would hand it to an identity provider that never issued it. A secret read from `client_secret_file` can't follow an issuer change through the API at all (`403`): change both in the config file.
 

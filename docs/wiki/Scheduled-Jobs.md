@@ -1,6 +1,6 @@
 # Scheduled Jobs
 
-Everything Streamline does on its own is a named job on a fixed interval. All of them are visible, retimeable, pausable and runnable on demand at **Settings → Schedules** or via `/api/v1/schedules`.
+Everything Streamline does on its own is a named job on a fixed interval. All of them are visible, pausable and runnable on demand at **Settings → Schedules** or via `/api/v1/schedules`, and most are [retimeable](#driving-them) there.
 
 - [The jobs](#the-jobs)
 - [Driving them](#driving-them)
@@ -12,6 +12,8 @@ Everything Streamline does on its own is a named job on a fixed interval. All of
 
 ## The jobs
 
+Besides its interval, every job that is not paused runs once shortly after start (the jobs start about two seconds apart), and at once when it is resumed or retimed.
+
 | Job | Default | Config key | What it does | Trigger |
 | --- | --- | --- | --- | --- |
 | `download-monitor` | `30s` | `schedules.download_monitor` | Polls download clients for progress; hands finished torrents to the importer; adopts manually-added `streamline`-tagged torrents | UI / API |
@@ -22,19 +24,19 @@ Everything Streamline does on its own is a named job on a fixed interval. All of
 | `tv-missing-search` | `12h` | `schedules.tv_missing_search` | Same, for episodes | UI / API |
 | `music-missing-search` | `12h` | `schedules.music_missing_search` | Same, for wanted albums | UI / API |
 | `book-missing-search` | `12h` | `schedules.book_missing_search` | Same, for wanted book slots (ebook and audiobook searched separately; one query per series) | UI / API |
-| `movie-metadata-refresh` | `24h` | `schedules.movie_metadata_refresh` | Re-pulls TMDB metadata, posters, release dates and age ratings; keeps a local copy of every credited person's photo | UI / API |
-| `tv-metadata-refresh` | `24h` | `schedules.tv_metadata_refresh` | Re-pulls TVDB metadata; discovers new seasons and episodes; reads each aired episode's guest stars and crew (once, then again only during its first month), and keeps a local copy of every credited person's photo | UI / API |
+| `movie-metadata-refresh` | `24h` | `schedules.movie_metadata_refresh` | Re-pulls TMDB metadata, posters, release dates and age ratings; keeps a local copy of every credited person's photo. A movie TMDB no longer knows waits under [Metadata changes](Activity-and-Calendar#metadata-changes) | UI / API |
+| `tv-metadata-refresh` | `24h` | `schedules.tv_metadata_refresh` | Re-pulls TVDB metadata; discovers new seasons and episodes; reads each aired episode's guest stars and crew (once, then again only during its first month), and keeps a local copy of every credited person's photo. Episodes you hold files for that TVDB stops listing, or a series it no longer knows, wait under [Metadata changes](Activity-and-Calendar#metadata-changes) | UI / API |
 | `music-metadata-refresh` | `24h` | `schedules.music_metadata_refresh` | Refreshes every artist not refreshed in the last 24h from MusicBrainz (oldest first): the artist, every one of its albums, covers, photo and overview, and retries missing album credits. An album you have files for keeps its edition; what would change it waits under [Metadata changes](Activity-and-Calendar#metadata-changes) | UI / API |
-| `book-metadata-refresh` | `24h` | `schedules.book_metadata_refresh` | Refreshes books and series from Hardcover: series placeholders first, then up to 100 stale books in batches of twenty and up to 5 stale series per run, stopping when the day's request reserve is reached | UI / API |
+| `book-metadata-refresh` | `24h` | `schedules.book_metadata_refresh` | Refreshes books and series from Hardcover: up to 100 series placeholders first, then up to 100 stale standalone books, both in batches of twenty, and up to 5 stale series per run, stopping when the day's request reserve is reached. A book, or an edition you have a file for, that Hardcover no longer has waits under [Metadata changes](Activity-and-Calendar#metadata-changes) | UI / API |
 | `movie-orphan-scan` | `6h` | `schedules.movie_orphan_scan` | Finds untracked video files under `movie_path` and queues them for review. There is no music or book orphan scan: those libraries are adopted with an [import scan](Importing-an-Existing-Library#music-and-books) | UI / API |
 | `tv-orphan-scan` | `6h` | `schedules.tv_orphan_scan` | Same, under `series_path` | UI / API |
 | `drift-check` | `15m` | `schedules.drift_check` | Detects tracked files that have vanished from disk. Skips a [library root that is offline](Troubleshooting#a-library-root-is-offline), and still reports success | UI / API |
-| `media-probe` | `15m` | `schedules.media_probe` | Measures the bit depth and sample rate of track files that never were (the `{BitDepth}` and `{SampleRate}` naming tokens), and backfills ffprobe technical info (`media_info`) onto `MediaFile` rows the importer didn't probe inline — adoption, orphan scan, bulk import. 25 rows/tick, oldest first. No-ops when `ffmpeg.enabled` is false or ffprobe isn't found | UI / API |
+| `media-probe` | `15m` | `schedules.media_probe` | Measures the bit depth and sample rate of track files that never were (the `{BitDepth}` and `{SampleRate}` naming tokens), and backfills ffprobe technical info (`media_info`) onto `MediaFile` rows the importer didn't probe inline — adoption, orphan scan, bulk import. Up to 25 video files and 25 tracks a run, oldest first. No-ops when `ffmpeg.enabled` is false or ffprobe isn't found | UI / API |
 | `file-selection` | `30s` | `schedules.file_selection` | Resolves magnet-sourced [selective file downloads](First-Run-Setup#selective-file-download) still waiting to learn what's inside the torrent. While records are actually pending the job re-checks every 5 seconds from inside its own run, so a magnet resolves at that cadence rather than this one; the interval here is only how often it looks for work when there is none. It keeps draining pending records regardless of `download.selective_files` — turning the setting off stops new pending records being created, but records already waiting still have to be resolved | UI / API |
 | `music-tag-sync` | `30m` | `schedules.music_tag_sync` | Writes the tags of every music file waiting for them (500 a run; a manual run takes all), retries files waiting on a torrent still seeding, and asks the media servers to rescan when something was written. Does nothing when `library.music_tags.mode` is `off`. See [Tags and artwork](Music-and-Books#tags-and-artwork) | UI / API |
-| `database-backup` | `24h` | `schedules.database_backup` | Backs the database up into `<data_dir>/backups` and keeps the newest `backup.retention.scheduled` (7). An automatic run (at boot, after a resume or retime, or on the ticker) skips when a scheduled backup from within 90% of the current interval already exists, so restarts do not rotate the week out; a manual run always takes one. See [Backups](GitOps-and-Kubernetes#backups) | UI / API |
+| `database-backup` | `24h` | `schedules.database_backup` | Backs the database up into `<data_dir>/backups`, and each configured extension's database into `<data_dir>/backups/extensions/<name>`, and keeps the newest `backup.retention.scheduled` (7) of each. An automatic run (at boot, after a resume or retime, or on the ticker) skips when a scheduled backup from within 90% of the current interval already exists, so restarts do not rotate the week out; a manual run always takes one. See [Backups](GitOps-and-Kubernetes#backups) | UI / API |
 | `cardigann-update` | `24h` | `schedules.cardigann_update` | Reads the latest tracker definitions from [Prowlarr/Indexers](https://github.com/Prowlarr/Indexers) into the catalog and moves each [built-in indexer](Configuration-Reference#built-in-indexers-protocol-cardigann) to the new version of its own. A change that would send one of your configured trackers to other domains, or change how it logs in, is held until you approve it under Settings → Indexers; on a read-only configuration every change is held there, with its commit to copy into the file. The version each indexer is pinned to is kept in the data directory | UI / API |
-| `cleanup` | `24h` | `schedules.cleanup` | Prunes completed download records and aged-out events | UI / API |
+| `cleanup` | `24h` | `schedules.cleanup` | Prunes completed download records after 30 days and failed ones after 14, never one whose torrent a client still lists (and none at all while a client cannot be listed), drops records whose torrent is gone from its client, and deletes events older than `events.retention` | UI / API |
 | `purge-sessions` | `1h` | — | Deletes expired sessions | System job — not controllable |
 | `purge-api-keys` | `1h` | — | Deletes API keys that expired more than a week ago | System job — not controllable |
 | `extension-cache-sweep` | `1h` | — | Deletes the oldest files of an extension's cache folder once it passes 1 GiB | System job — not controllable |
@@ -48,7 +50,7 @@ These are complementary, not redundant, and the distinction explains most latenc
 
 **Missing search** is *active*: it walks everything still marked Wanted and issues a real search query per item. Expensive, infrequent, and it's what eventually finds back-catalogue titles.
 
-So a new release typically lands in minutes; something old can take up to 12 hours unless you hit **Search now**.
+So a new release typically lands in minutes; something old can take up to 12 hours unless you start a search from the title's page.
 
 ### Orphan scan and drift check
 
@@ -94,9 +96,9 @@ curl -X POST -H "X-API-Key: $KEY" .../api/v1/schedules/movie-rss-sync/resume
 curl -X POST -H "X-API-Key: $KEY" .../api/v1/schedules/movie-missing-search/run
 ```
 
-A manual run does the work the ticker would defer: the missing searches ignore `library.no_match_cooldown` and the grab-failure cap, and the metadata refreshes revisit every title instead of only those not refreshed in the last 24 hours.
+A manual run does the work the ticker would defer: the missing searches ignore `library.no_match_cooldown` and the grab-failure cap, and the metadata refreshes revisit every title instead of only those not refreshed in the last 24 hours (`book-metadata-refresh` keeps its per-run limits). `music-tag-sync` takes every waiting file, and `database-backup` always takes a backup. `run` also works on a paused job.
 
-Intervals have a **10 second floor**. Pause state is persisted to the database, so a paused job stays paused across restarts.
+Intervals have a **10 second floor**. Those of `movie-orphan-scan`, `tv-orphan-scan`, `drift-check`, `media-probe`, `file-selection`, `music-tag-sync`, `database-backup` and `cardigann-update` are set by their config key alone, read at start; PATCH answers `404` for them. Pause state is persisted to the database, so a paused job stays paused across restarts. Intervals are written to the config file, so a `read_only` instance refuses to change one; pause, resume and run work there.
 
 `purge-sessions`, `purge-api-keys`, `extension-cache-sweep` and `purge-uploads` are flagged `system: true` and reject PATCH, pause, resume and run.
 

@@ -19,11 +19,12 @@ Streamline has a built-in request system, so you don't need to run Overseerr/Jel
 | --- | --- | --- | --- |
 | Settings, indexers, download clients, imports | Yes | No | No |
 | Manage users | Yes | No | No |
-| Add and search titles, manage downloads | Yes | Yes | No |
+| Add, search, grab, upload, rename and delete titles | Yes | Yes | No |
+| Pause, cancel or resolve downloads, adopted torrents, metadata changes | Yes | No | No |
 | Search for titles and submit requests | Yes | Yes | Yes |
 | See everyone's requests | Yes | Yes | No (own only) |
 | Approve requests | Yes | Yes | No |
-| Deny or reopen requests | Yes | Yes | No |
+| Reject or reopen requests | Yes | Yes | No |
 
 **Request only** is the role for the people you're running this *for* — housemates, family, the friend who keeps asking for films. They get a search box and a request button, and none of the machinery.
 
@@ -50,9 +51,9 @@ The mode governs **both** ways a new account gets created — the registration f
 
 ### Invites
 
-**Settings → Users → Invites → Create.**
+**Settings → Users → Invites → Create invite.**
 
-You choose the email address and the role the invite grants. Streamline generates a token and shows you the registration link — **once**. It is not stored in a retrievable form; if you lose it, revoke the invite and make another.
+You choose the email address, the role the invite grants and how long it stays valid (1, 3, 7 or 30 days). Streamline generates a token and shows you the registration link — **once**. It is not stored in a retrievable form; if you lose it, revoke the invite and make another.
 
 Send the link. When they open it, the registration form is pre-filled with the bound email address (read-only), and the account is created with the role you picked. Signing up with a different email than the invite was bound to is rejected.
 
@@ -95,14 +96,14 @@ Each request shows the title, poster, synopsis, who asked, when, and any quality
 | --- | --- |
 | **Pending** | Waiting on you |
 | **Approved** | Added to the library; being searched for and downloaded |
-| **Denied** | Refused, with a reason the requester can see |
+| **Rejected** | Refused, with any reason you gave shown to the requester (`denied` in the API) |
 | **Available** | Downloaded and imported — ready to watch |
 
 **Approve & add** creates the library item there and then. You pick the quality profile at approval time; leaving it blank uses your server default, and you're free to override whatever the requester asked for.
 
-**Deny** requires a reason, and that reason is shown to the requester — the placeholder text suggests the tone: *"Still in cinemas — let's revisit when it's on digital."* It's a message, not a log entry.
+**Reject** asks for a reason, which is shown to the requester — the placeholder text suggests the tone: *"Still in cinemas — let's revisit when it's on digital."* It's a message, not a log entry.
 
-**Reopen as pending** undoes a denial when circumstances change.
+**Reopen as pending** undoes a rejection when circumstances change.
 
 Filter by status and media type, or search by title or requester.
 
@@ -117,6 +118,7 @@ Filter by status and media type, or search by title or requester.
 - **Clear a lockout** — resets the failed-login counter after too many bad password attempts
 - **Revoke individual sessions** — kick a specific device without touching the others
 - **Revoke their API keys**
+- **Set what an extension keeps for them** — the settings card of an extension that has one
 - **Delete the account** — permanently removes it and every resource they own
 
 Two guard rails: you can't delete your own account, and Streamline refuses to remove or demote the last remaining admin. It will not let you lock yourself out of your own instance.
@@ -124,16 +126,18 @@ Two guard rails: you can't delete your own account, and Streamline refuses to re
 You can also clear a lockout from the command line if the UI is unreachable:
 
 ```bash
-streamline auth unlock user@example.com
+streamline --config /etc/streamline/config.yaml auth unlock user@example.com
 ```
 
 ---
 
 ## Your own account
 
-The avatar menu, top right → **Account settings**.
+Click your name at the bottom of the sidebar (on a phone, under **More** in the bottom bar).
 
+- **Profile** — your display name
 - **Change your password**
+- **Language** — of the web UI, for this browser only
 - **Sessions** — every device you're logged in on, with the option to revoke any of them
 - **API keys** — create keys for scripts and mobile apps, each **read-only** or **full** and lasting 30, 90 or 365 days, or never expiring. Shown once at creation; store it immediately
 - **Players & readers** — a separate credential for each app an extension serves, such as the OPDS token an e-reader signs in with (see the [OPDS extension](Extensions) and [Music and Books](Music-and-Books#reading-from-other-apps))

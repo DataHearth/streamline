@@ -54,10 +54,10 @@ Then continue with [First-Run Setup](First-Run-Setup). The library folders go in
 
 | Variable | Effect |
 | --- | --- |
-| `STREAMLINE_VERSION=3.2.0` | Install that release instead of the latest |
+| `STREAMLINE_VERSION=4.0.0` | Install that release instead of the latest |
 | `STREAMLINE_VERIFY_SIGNATURE=yes` | Refuse to install unless `cosign` is present and the signature checks out (`no` skips it; the default, `auto`, checks when `cosign` is installed) |
 
-Pass them to `bash`: `curl -fsSL … | STREAMLINE_VERSION=3.2.0 bash`.
+Pass them to `bash`: `curl -fsSL … | STREAMLINE_VERSION=4.0.0 bash`.
 
 ## 3. Mount your media
 

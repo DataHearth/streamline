@@ -29,7 +29,7 @@ Music and books work like movies and TV: adopt your existing library, then let a
 | qBittorrent, Transmission, Deluge | ✅ Shipped |
 | Torznab indexers | ✅ Shipped |
 | Prowlarr | ✅ Shipped |
-| Built-in indexers — Prowlarr/Jackett's tracker definitions, no Prowlarr or Jackett needed | 🚧 In progress |
+| Built-in indexers — Prowlarr/Jackett's tracker definitions, no Prowlarr or Jackett needed | ✅ Shipped — public and private trackers, see [Built-in indexers](Configuration-Reference#built-in-indexers-protocol-cardigann) |
 | Built-in torrent client (no external download client needed) | ✅ Shipped |
 | Media info from ffprobe (codec, resolution, duration, bitrate) | ✅ Shipped |
 | Import verification — hold a download that doesn't match what it claimed | ✅ Shipped |
@@ -84,6 +84,7 @@ Hardware encoding through VAAPI is shipped on Linux (`transcoding.hw_accel`, wit
 | Library path migration (re-root a moved library) | ✅ Shipped |
 | Installable web app (home-screen manifest) | ✅ Shipped |
 | Re-identify a title matched to the wrong movie or show | ✅ Shipped |
+| Review of provider changes that would alter what your files are matched against | ✅ Shipped — see [Metadata changes](Activity-and-Calendar#metadata-changes) |
 | Database backups — before every upgrade, daily, and from the CLI, with restore | ✅ Shipped |
 
 ---

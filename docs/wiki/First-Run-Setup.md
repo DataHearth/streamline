@@ -22,7 +22,7 @@ Streamline is installed and the page loads. This gets you from a blank library t
 
 [![Sign in](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/login.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/login.png)
 
-An admin account is always created on first boot — the database is never empty, so there's no "register the first user" flow to race someone to.
+An admin account is created on first boot, so there's no "register the first user" flow to race someone to.
 
 **If you set credentials in advance**, use them. In `config.yaml`:
 
@@ -34,6 +34,8 @@ auth:
     # or, better:
     # password_file: /run/secrets/streamline-admin-password
 ```
+
+Set both: with an email of your own and no password, or an empty password file, no account is created and the log says `seed admin has no usable password; skipping`.
 
 **If you didn't**, Streamline created `admin@streamline.local` with a randomly generated password and printed it **once** to standard output, on a line reading `default admin credentials`. It is never written to the config file and never sent to the log pipeline:
 
@@ -50,9 +52,11 @@ Log in, then change the password from the account menu (top right → **Account 
 > [!NOTE]
 > Locked yourself out by fat-fingering the password? Streamline rate-limits logins per IP (5 attempts / 15 minutes) *and* locks the account after 10 failures in a 15-minute window. Clear the account lock from the command line:
 > ```bash
-> streamline auth unlock you@example.com
+> streamline --config /etc/streamline/config.yaml auth unlock you@example.com
 > ```
-> The per-IP rate limit isn't clearable — wait it out.
+> In Docker, prefix it with `docker exec streamline`. `--config` must name the server's own file, since that is where the database path comes from. The per-IP rate limit has no such command: wait it out, or restart Streamline, which keeps it in memory.
+>
+> Lost the password instead? See [I can't log in](Troubleshooting#i-cant-log-in).
 
 ---
 
@@ -91,7 +95,7 @@ Prefer keeping secrets out of the config file? Every key has a `_file` twin — 
 
 ## 3. Set your library folders
 
-Streamline needs a root folder per library plus the folder it reads finished downloads from, and the roots are set in the **config file** (or the `STREAMLINE_LIBRARY__*_PATH` variables a container template uses). Settings → Library shows the movie, series and download roots read-only; moving one later is a [path migration](GitOps-and-Kubernetes#library-path-migration) on Settings → Advanced, which rewrites every stored path along with it.
+Streamline needs a root folder per library plus the folder it reads finished downloads from, and the roots are set in the **config file** (or the `STREAMLINE_LIBRARY__*_PATH` variables a container template uses). Settings → Library shows every root read-only; moving one later is a [path migration](GitOps-and-Kubernetes#library-path-migration) on Settings → Advanced, which rewrites every stored path along with it.
 
 ```yaml
 library:
@@ -112,7 +116,7 @@ Restart after changing the roots.
 
 ## 4. Add a download client
 
-**Settings → Download clients → Add.**
+**Settings → Download clients → Add client.**
 
 Streamline talks to qBittorrent, Transmission and Deluge, and also ships its own built-in torrent engine if you'd rather not run a separate client.
 
@@ -124,15 +128,15 @@ Streamline talks to qBittorrent, Transmission and Deluge, and also ships its own
 | Type | `qbittorrent`, `transmission` or `deluge` |
 | Host / Port | As reachable *from Streamline*. In Docker that's usually the service name, e.g. `qbittorrent`, not `localhost` |
 | Auth | Username + password, or an API key depending on the client |
-| Priority | Lower number wins when several clients are enabled |
+| Priority | When several clients are enabled, grabs go to the one with the highest number |
 
-Hit **Test** before saving. A green result means Streamline reached the client and authenticated; it does *not* prove the paths line up — that shows up later, at import time.
+Hit **Test connection** before saving. A green result means Streamline reached the client and authenticated; it does *not* prove the paths line up — that shows up later, at import time.
 
-Streamline tags everything it adds with the category (qBittorrent) or label (Transmission) **`streamline`**, and it only manages torrents carrying that tag. Anything else in your client is left completely alone. Usefully, this cuts both ways: if you manually add a torrent *into* the `streamline` category yourself, Streamline notices and offers to import it — see [Activity and Calendar](Activity-and-Calendar#adopted-torrents).
+Streamline tags everything it adds with the category (qBittorrent) or label (Transmission) **`streamline`**. In qBittorrent it only sees torrents in that category, and anything else is left completely alone. Usefully, this cuts both ways: if you manually add a torrent *into* the `streamline` category yourself, Streamline notices and offers to import it — see [Activity and Calendar](Activity-and-Calendar#adopted-torrents). Transmission and Deluge are not narrowed this way: every finished torrent in them is a candidate for that same adoption, so a client you share with something else is better off being qBittorrent.
 
 ### Using the built-in client
 
-Set the type to `builtin` and Streamline downloads torrents itself, no external client at all:
+Click **Enable built-in client** on that page, or add an entry of type `builtin` to the config file, and Streamline downloads torrents itself, no external client at all. Either way it starts with the next restart:
 
 ```yaml
 download_clients:
@@ -160,7 +164,7 @@ Once turned on, it applies automatically to every episode grab; there's no per-g
 | Built-in engine | Selects at add time for a `.torrent` release; a magnet downloads nothing until Streamline knows what's inside, then selects |
 | qBittorrent | Adds the torrent stopped, applies the selection, then starts it — qBittorrent refuses to accept a file selection in the same request as a `.torrent` upload. A magnet is added with a stop-after-metadata flag, selected, then started |
 | Deluge | Resolves a magnet's file list *before* admitting it to the session, so it can select on the very first add — no waste either way |
-| Transmission | Selects immediately for a `.torrent` release. For a magnet, Transmission has no way to defer, so it downloads normally until Streamline's next selection pass (every 5 seconds by default) catches up and trims it — a small, bounded amount of extra data rather than the whole torrent |
+| Transmission | Selects immediately for a `.torrent` release. For a magnet, Transmission has no way to defer, so it downloads normally until Streamline's next selection pass (at most 30 seconds away, then every 5 seconds while a selection is pending) catches up and trims it — a small, bounded amount of extra data rather than the whole torrent |
 
 If nothing in a release actually matches what's wanted, the grab is dropped rather than downloading a pack that would help nobody — for a `.torrent` source before it's even sent to the client, for a magnet by removing the torrent once that becomes clear. A selection that hasn't resolved after 10 minutes (`download.selection_grace`) gives up and downloads the release whole rather than leaving it stuck.
 
@@ -182,9 +186,9 @@ Torrents are never paused or resumed by this check, and it cannot see space take
 
 ## 5. Add an indexer
 
-**Settings → Indexers → Add.**
+**Settings → Indexers → Add indexer.**
 
-Indexers are where Streamline searches for releases. Two protocols can be added here:
+Indexers are where Streamline searches for releases. Three kinds can be added here:
 
 **Prowlarr** (recommended). Run Prowlarr, configure your trackers once there, and point Streamline at it. One entry covers every tracker Prowlarr knows about.
 
@@ -209,9 +213,9 @@ API key:  from Jackett
 
 **Built-in.** Streamline can also run a tracker itself, public or private, from the definitions Prowlarr and Jackett use, with neither installed: **Add built-in** opens the catalog of supported trackers — filter by language, privacy, category or whether they need a login — and builds the form for the one you pick. A private tracker logs in with what you enter; one whose login shows a captcha is logged in from its card with **Log in**. See [Built-in indexers](Configuration-Reference#built-in-indexers-protocol-cardigann).
 
-**Test** each one. Priority works like the download clients: lower number is tried first.
+**Test** each one. A search asks every enabled indexer at the same time, so their order does not matter.
 
-Tick **Private** on an indexer that is a private tracker. Neither protocol reports this, so Streamline only knows what you tell it; manual search then labels each release as coming from a private or public tracker. A Prowlarr entry has one setting for every tracker behind it, so if you mix private and public trackers, either leave it off or add the private ones as separate Torznab entries.
+Turn on **Private tracker** on an indexer that is one. Neither Prowlarr nor Torznab reports this, so Streamline only knows what you tell it; manual search then labels each release as coming from a private or public tracker. A Prowlarr entry has one setting for every tracker behind it, so if you mix private and public trackers, either leave it off or add the private ones as separate Torznab entries.
 
 ---
 
@@ -239,11 +243,11 @@ Full detail — including how 720p/1080p/2160p rank against each other — in [Q
 
 ## 7. Connect a media server
 
-**Settings → Media servers → Add.** Optional, but it's what makes "Play on…" buttons appear and stops you waiting on Plex's own scan timer.
+**Settings → Media servers → Add server.** Optional, but it's what makes "Play on…" buttons appear and stops you waiting on Plex's own scan timer.
 
 Streamline supports Plex, Jellyfin and Emby. Whenever it imports, renames or deletes something it asks the server to rescan just the folder that changed — the movie's folder, the season's, the album's — and it can deep-link you straight into playback. Changes that land close together (several downloads finishing in one go) are collected for 30 seconds and sent as one request, so a burst of imports costs the server one scan instead of one each.
 
-For **Plex**, authentication is a PIN pop-up rather than a pasted token — click **Connect**, approve at plex.tv, done. Then click **Discover** and fill in the two section fields:
+For **Plex**, authentication is a PIN pop-up rather than a pasted token — click **Connect with Plex**, approve at plex.tv, done. Then click **Discover sections** and fill in the two section fields:
 
 | Field | What it is |
 | --- | --- |
@@ -269,7 +273,7 @@ A folder-only rescan works when the server knows the folder by the path Streamli
 
 A server on Windows takes Windows paths on the right (`D:\Movies`, `\\nas\movies`). In YAML it is `path_mappings: [{from: /srv/streamline/movies, to: /data/movies}]` under the server's entry.
 
-Without a mapping that matches, nothing breaks: a folder the server does not know is rescanned as the whole library (for Plex the configured section, else every section), which is how every refresh worked before. The server's card in **Settings → Media servers** shows the last rescan and whether it covered folders or the whole library — "whole library" after an import is the sign a mapping is missing.
+Without a mapping that matches, nothing breaks: a folder the server does not know is rescanned as the whole library (for Plex the configured section, else every section). The server's card in **Settings → Media servers** shows the last rescan and whether it covered folders or the whole library — "whole library" after an import is the sign a mapping is missing.
 
 ---
 
@@ -281,24 +285,27 @@ Streamline splits configuration in two, and knowing which half you're in saves a
 
 **Editable at runtime** — change it in the web UI, takes effect immediately, no restart:
 
-- Indexers, download clients, media servers, quality profiles (movie/series, music and book) and custom formats
+- Indexers, download clients (except the built-in one), media servers, extensions, quality profiles (movie/series, music and book) and custom formats
 - Schedule intervals (and pausing/resuming/running jobs)
 - Registration mode, session lifetime, default role, account lockout thresholds
 - Users, invites, API keys
-- Import mode, naming templates for movies and series, selective file download, the free-space check, import verification, transcoding, music monitoring types and music tag writing
+- Import mode, every naming template, the preferred book language, selective file download, the free-space check, import verification, transcoding, music monitoring types and music tag writing
 
 **Editable in the UI, restart required** — the change is saved at once but only read at startup:
 
 - Metadata API keys, language, region and the MusicBrainz server (Settings → Metadata)
 - Logging and the OpenTelemetry endpoint (Settings → Logs and Settings → General)
 - OIDC providers (Settings → Single Sign-On)
+- The built-in download client
+- The ffmpeg folder (Settings → Media probe)
 
 **Config file only** — edit `config.yaml` and restart:
 
-- The library roots (moved later through path migration), and the music and book naming templates
+- The library roots (moved later through path migration)
 - `data_dir`, server host and port, trusted proxies
 - The auth mode, trusted networks, seed admin and session secret
 - The `smtp` section for [Send to Kindle](Send-to-Kindle)
+- An extension's hosts, settings and secret files
 - Database backup retention
 
 The full key-by-key table is in [Configuration Reference](Configuration-Reference#whats-editable-at-runtime).

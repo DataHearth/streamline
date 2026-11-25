@@ -8,7 +8,7 @@ Every configuration key, its default, and where it can be changed from.
 - [What's editable at runtime](#whats-editable-at-runtime)
 - [CLI](#cli)
 - [Reference](#reference)
-  - [Top level](#top-level) · [server](#server) · [auth](#auth) · [library](#library) · [schedules](#schedules) · [metadata](#metadata) · [ffmpeg](#ffmpeg) · [transcoding](#transcoding) · [log](#log) · [otel](#otel) · [smtp](#smtp) · [events](#events) · [backup](#backup)
+  - [Top level](#top-level) · [server](#server) · [auth](#auth) · [library](#library) · [schedules](#schedules) · [metadata](#metadata) · [ffmpeg](#ffmpeg) · [transcoding](#transcoding) · [log](#log) · [otel](#otel) · [smtp](#smtp) · [events](#events) · [backup](#backup) · [extensions](#extensions)
   - [media_server](#media_server) · [download](#download) · [download_clients](#download_clients) · [indexers](#indexers) · [quality_profiles](#quality_profiles) · [custom_formats](#custom_formats)
 
 ---
@@ -54,9 +54,11 @@ Prefix `STREAMLINE_`. **A double underscore (`__`) is the path separator; a sing
 | `otel.endpoint` | `STREAMLINE_OTEL__ENDPOINT` |
 | `library.import_mode` | `STREAMLINE_LIBRARY__IMPORT_MODE` |
 
-Arrays (`indexers`, `download_clients`, `auth.oidc`, `quality_profiles`, `custom_formats`) can't be expressed sensibly as environment variables. Put them in the file and use [`_file` secret references](#secrets) for the sensitive parts.
+Arrays (`indexers`, `download_clients`, `media_server.servers`, `auth.oidc`, `quality_profiles`, `custom_formats`, `extensions`) can't be expressed sensibly as environment variables. Put them in the file and use [`_file` secret references](#secrets) for the sensitive parts.
 
-One non-prefixed variable is also read: **`STREAMLINE_PUBLIC_URL`** sets the canonical external base URL: the base of invite links, the fallback that marks the session cookie `Secure` when it is `https://`, and a host trusted for same-origin and trusted-network checks. Without it, Streamline derives a base from `http://<server.host>:<server.port>`. OIDC redirect URIs do not use it: each is built from the request.
+One variable that is not a config key is also read: **`STREAMLINE_PUBLIC_URL`** sets the canonical external base URL: the base of invite links, the fallback that marks the session cookie `Secure` when it is `https://`, and a host trusted for same-origin and trusted-network checks. Without it, Streamline derives a base from `http://<server.host>:<server.port>`. OIDC redirect URIs do not use it: each is built from the request.
+
+Without `GOMEMLIMIT` in the environment, Streamline sets Go's memory limit to 80% of the container's or systemd unit's memory limit, when there is one. The standard `OTEL_*` variables are covered under [Observability and Logging](Observability-and-Logging#opentelemetry).
 
 ### torrent_listen_port
 
@@ -80,7 +82,7 @@ Behaviour worth knowing:
   VPN_PORT_FORWARDING_UP_COMMAND: '/bin/sh -c "curl -sS --fail -X PUT -H \"X-API-Key: $API_KEY\" -H \"Content-Type: application/json\" -d \"{\\\"port\\\":{{PORT}}}\" http://streamline:8080/api/v1/torrents/listen-port"'
   ```
 
-  An API key works here even though keys are otherwise locked out of parts of the API — that restriction is scoped to the identity band (`/auth/*`, `/users`), and this endpoint isn't on it. The move is **not persisted**: it only changes what the running process is doing right now, so a restart re-reads `torrent_listen_port`/`STREAMLINE_TORRENT_LISTEN_PORT` from config as before. Keep the sidecar's `UP_COMMAND` as the source of truth for the *current* port; don't expect the config file to reflect it.
+  An admin's API key works here, as long as its scope is `full`: keys are refused writes only on the endpoints that manage accounts, credentials, sign-in settings and extensions (see [API keys](Authentication-and-SSO#api-keys)), and this endpoint isn't one of them. The move is **not persisted**: it only changes what the running process is doing right now, so a restart re-reads `torrent_listen_port`/`STREAMLINE_TORRENT_LISTEN_PORT` from config as before. Keep the sidecar's `UP_COMMAND` as the source of truth for the *current* port; don't expect the config file to reflect it.
 - **Peers find you again at different speeds.** A completed move immediately re-announces every public torrent to the DHT, which carries the new port straight away. A private torrent is never announced to the DHT. Trackers are not re-announced — there is no way to force that in the torrent library Streamline pins — so a tracker keeps advertising the old port until its next scheduled announce, which on a private tracker can be half an hour. Nothing is lost in the meantime; inbound connections to the old port simply fail until the announce catches up.
 - **It is validated like any port.** A value outside 1–65535 fails config validation at boot rather than being silently ignored.
 - **It applies to the built-in engine only.** External clients (qBittorrent, Transmission, Deluge) manage their own listening port; Streamline never sets it for them.
@@ -102,6 +104,7 @@ Every secret-bearing key has a `_file` twin that reads the value from a path ins
 | `metadata.tvdb_api_key` | `metadata.tvdb_api_key_file` |
 | `metadata.hardcover_api_key` | `metadata.hardcover_api_key_file` |
 | `indexers[].api_key` | `indexers[].api_key_file` |
+| `indexers[].cardigann.settings.<name>` | `indexers[].cardigann.settings.<name>_file` |
 | `download_clients[].password` | `download_clients[].password_file` |
 | `download_clients[].api_key` | `download_clients[].api_key_file` |
 | `media_server.servers[].api_key` | `media_server.servers[].api_key_file` |
@@ -111,10 +114,10 @@ This is what makes Streamline work cleanly with Docker secrets, SOPS, sealed-sec
 
 ### Values Streamline generates for itself
 
-Two values are generated on first boot and **written back into your config file** if they're empty:
+Two values are generated when they're empty and **written back into your config file**:
 
-- **`auth.session_secret`** — the JWT HMAC signing key. Regenerating it invalidates every session.
-- **`media_server.plex_client_id`** — the `X-Plex-Client-Identifier` this instance presents.
+- **`auth.session_secret`** — the JWT HMAC signing key, generated on first boot. Regenerating it invalidates every session.
+- **`media_server.plex_client_id`** — the `X-Plex-Client-Identifier` this instance presents, generated once a Plex server is configured (when one is added, or at boot).
 
 `auth.seed_admin.password` is never written back: when no password is configured for the default `admin@streamline.local`, one is generated and printed once to stdout.
 
@@ -133,8 +136,8 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | --- | --- | --- |
 | Indexers, download clients, media servers | ✅ Full CRUD | Settings → Indexers / Download clients / Media servers (the Connections group) |
 | Quality profiles (movie/series, music, book), custom formats | ✅ Full CRUD | Settings → Quality profiles, Settings → Custom formats |
-| `music_quality_default_profile`, `book_quality_default_profiles.*` | ✅ The default buttons on a profile row | Settings → Quality profiles |
-| `movie_quality_default_profile`, `series_quality_default_profile` | ✅ The film / TV buttons on a profile row | Settings → Quality profiles |
+| `music_quality_default_profile`, `book_quality_default_profiles.*` | ✅ The star on a profile row (**Make default**; on a book profile, a menu of the book kinds) | Settings → Quality profiles |
+| `movie_quality_default_profile`, `series_quality_default_profile` | ✅ The star on a profile row (**Make default for**: Movies, Series) | Settings → Quality profiles |
 | Schedule intervals, pause/resume/run | ✅ | Settings → Schedules |
 | `auth.registration_mode`, `auth.session_ttl`, `auth.default_role` | ✅ | Settings → Authentication |
 | `auth.lockout.{threshold,window,duration}` | ✅ | Settings → Authentication |
@@ -153,6 +156,7 @@ Some config is hot — changed through the UI or API, applied immediately, persi
 | `transcoding.{enabled,max_concurrent,max_failures,defer_seeding,hw_accel,hw_device,verify.*}` | ✅ Read on every worker tick — no restart | Settings → Transcoding |
 | `quality_profiles[].transcode` | ✅ Set or changed in the profile form. **Removing** a policy is a file edit: the API has no way to delete one, so the form's switch stays on for a profile that already has one | Settings → Quality profiles |
 | `events.retention` | ✅ Applies on the next cleanup run | Settings → General |
+| `extensions[]`: adding and removing, `source`, `sha256`, `enabled`, `grants` | ✅ Applies at once; every other field is file-only | Settings → Extensions |
 | `metadata.*` | ⚠️ Accepted immediately, but the TMDB, TVDB, Hardcover and MusicBrainz clients are built at boot — restart required | Settings → Metadata |
 | `log.*`, `otel.endpoint` | ⚠️ Accepted immediately, but the log handlers and OTLP exporters are built at boot — restart required | Settings → Logs (`log.*`), Settings → General (`otel.endpoint`) |
 | OIDC providers | ⚠️ CRUD works, but only loaded at startup — restart required | Settings → Single Sign-On |
@@ -173,7 +177,7 @@ They are all **shown** read-only under **Server & security** on Settings → Gen
 
 **The library roots are a special case.** `library.movie_path`, `series_path`, `music_path`, `ebook_path`, `audiobook_path` and `download_path` show up read-only on Settings → Library and are changed through Settings → Advanced instead. That flow rewrites every stored path in the database and *then* repoints the config; a plain edit would leave every existing file recorded under the old prefix.
 
-Setting `read_only: true` refuses every runtime write, turning the first two rows into ❌ as well.
+Setting `read_only: true` refuses every runtime write, turning every row into ❌ except pausing, resuming and running a schedule, which the database records rather than the config.
 
 ---
 
@@ -252,7 +256,7 @@ Defaults shown are the built-in ones, as emitted by `streamline config init`.
 | `auth.oidc[]` | array | `[]` | See [Authentication and SSO](Authentication-and-SSO#oidc) |
 | `auth.oidc[].scopes` | list | `[]` | Scopes requested on top of `openid email profile` — e.g. `[groups]` for an IdP that sends the groups claim only when asked. File-only. See [Role mapping](Authentication-and-SSO#role-mapping) |
 
-Independently of `auth.lockout`, login and registration are rate-limited per IP at **5 attempts / 15 minutes**. That limit is not configurable.
+Independently of `auth.lockout`, login and registration are rate-limited per IP at **5 attempts / 15 minutes**. Rejected credentials on `/api/v1` have a budget of their own, **20 / 15 minutes** per IP. Neither limit is configurable.
 
 ### library
 
@@ -284,7 +288,7 @@ Independently of `auth.lockout`, login and registration are rate-limited per IP 
 | `library.music_tags.preserve` | list | `[REPLAYGAIN_*, R128_*, LYRICS, UNSYNCEDLYRICS, ACOUSTID_*, BPM, INITIALKEY]` | Tags never written or removed, even when Streamline manages them or `strip` names them. **Runtime-editable** |
 | `library.probe.min_duration_ratio` | float | `0.5` | Hold an import when the probed duration falls below this share of the expected runtime — the check for sample clips and truncated remuxes. A ratio, not a percentage: `0.5` is half. Greater than 0, at most 1. **Runtime-editable** |
 | `library.no_match_cooldown` | duration | `6h` | Quiet period after a search finds nothing acceptable |
-| `library.max_grab_failures` | int | `3` | Consecutive failures before an item is marked failed |
+| `library.max_grab_failures` | int | `3` | Failed grabs in a row before the scheduled missing search, and for episodes, albums and books the RSS feeds too, stop trying an item. A successful grab resets the count, and a manual search or a manual run of the job ignores it |
 | `library.keep_torrent_seeding` | bool | `true` | Leave torrents seeding after import. Ignored under `import_mode: move`: a moved torrent has nothing left to seed, so it is removed from the client, with any files the import left behind, as soon as its record imports |
 | `library.convert_wav` | bool | `true` | Convert WAV files to FLAC when a music download or upload is imported. Needs `ffmpeg` and `ffprobe` found and `ffmpeg.enabled`; without them, or with this off, a WAV release is rejected at search. **Runtime-editable** |
 | `library.import_max_attempts` | int | `3` | Import retries before giving up |
@@ -315,12 +319,13 @@ file is moved. Resolve a hold from the UI, or with
 `POST /api/v1/downloads/{id}/resolve` — see
 [REST API](REST-API#resolving-a-held-download).
 
-With ffmpeg disabled or the binary missing, only `always_ask` can hold anything;
-every other check is skipped and imports behave as before.
+With ffmpeg disabled or the binary missing, every check in the table but
+`always_ask` is skipped, and so are `tier` and `bitrate`. The other music and
+book checks read tags, names and metadata, and still hold.
 
 ### schedules
 
-All values are Go duration strings, runtime-editable, pausable and runnable on demand — see [Scheduled Jobs](Scheduled-Jobs).
+All values are Go duration strings. Every job is pausable and runnable on demand, and [most intervals](Scheduled-Jobs#driving-them) are runtime-editable — see [Scheduled Jobs](Scheduled-Jobs).
 
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
@@ -485,6 +490,7 @@ Per entry:
 | `sha256` | with a URL | The module's hex SHA-256; the download is refused when it differs |
 | `enabled` | | `false` stops it and keeps the entry |
 | `grants.mounts[]`, `grants.views[]`, `grants.services[]`, `grants.folders[]` | | What the module may use; must hold everything its manifest asks for, or it stays in `needs_approval`. See [Approving permissions](Extensions#approving-permissions), and read the warning there before granting the `ffmpeg` service |
+| `hosts[]`, `store_bytes`, `settings`, `secret_files` | | File-only: the servers it may call, the size of its store folder, and the values and secrets handed to it. See [Adding an extension](Extensions#adding-an-extension) |
 
 ### media_server
 
@@ -508,7 +514,7 @@ Per entry:
 
 Streamline asks a server to rescan only the folders a change touched, collecting changes for 30 seconds into one request. Each folder goes through `path_mappings` first; if one still lies outside every library the server reports, that request rescans the whole library instead (for Plex the configured section, else every section). In Docker or Kubernetes the server usually sees the library elsewhere (Streamline's `/srv/streamline/movies` is Plex's `/data/movies`), so add a mapping per library root — see [Path mappings](First-Run-Setup#path-mappings).
 
-Both section keys are Plex-only. Leave them unset and Streamline looks the section up by matching the folder (or, for a whole-library rescan, the mapped library root) against the paths Plex reports. When even that misses, Streamline falls back to rescanning **every** section: set the two keys to scope it. Settings → Media Servers lists the available sections (`POST /api/v1/media-servers/discover`).
+Both section keys are Plex-only. Leave them unset and Streamline looks the section up by matching the folder (or, for a whole-library rescan, the mapped library root) against the paths Plex reports. When even that misses, Streamline falls back to rescanning **every** section: set the two keys to scope it. Settings → Media servers lists the available sections (`POST /api/v1/media-servers/discover`).
 
 ### download
 
@@ -546,7 +552,7 @@ This is only consulted when a torrent is **not** where Streamline expected it �
 | `host`, `port`, `auth_method` | ✅ unless `builtin` | `auth_method`: `password` \| `api_key` |
 | `username`, `password`/`password_file`, `api_key`/`api_key_file` | | Per `auth_method` |
 | `use_ssl` | | |
-| `priority` | | 0–255, lower is tried first |
+| `priority` | | 0–255. Every grab goes to the enabled client with the highest value (the first in the file on a tie); no other client is tried when it refuses |
 | `enabled` | | |
 
 Built-in engine only (ignored for external clients):
@@ -580,7 +586,7 @@ The built-in engine treats what a release names as untrusted:
 | `path` | | Torznab endpoint path |
 | `api_key` / `api_key_file` | ✅ for `torznab` and `prowlarr` | |
 | `use_ssl` | | |
-| `priority` | | 0–255, lower first |
+| `priority` | | 0–255. Stored with the entry, but searches and feeds ask every enabled indexer whatever its value, and it does not affect which release is picked |
 | `enabled` | | |
 | `private` | | Default `false`. Marks the tracker as private (invite-only, ratio-tracked); manual search shows it on every release from this indexer. A Torznab feed carries no such flag, so this is your word for it. On a Prowlarr entry it applies to every tracker behind it |
 | `cardigann` | ✅ for `cardigann` | See below |
