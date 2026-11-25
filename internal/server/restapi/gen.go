@@ -13126,6 +13126,9 @@ type ServerInterface interface {
 	// GetMetadataChangeCounts Pending provider changes by media and kind (admin)
 	// (GET /metadata-changes/counts)
 	GetMetadataChangeCounts(w http.ResponseWriter, r *http.Request)
+	// FollowMetadataChange Apply the provider's change (admin)
+	// (POST /metadata-changes/{id}/follow)
+	FollowMetadataChange(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// KeepMetadataChange Keep the item as it is (admin)
 	// (POST /metadata-changes/{id}/keep)
 	KeepMetadataChange(w http.ResponseWriter, r *http.Request, id ResourceID)
@@ -14420,6 +14423,12 @@ func (_ Unimplemented) ListMetadataChanges(w http.ResponseWriter, r *http.Reques
 // GetMetadataChangeCounts Pending provider changes by media and kind (admin)
 // (GET /metadata-changes/counts)
 func (_ Unimplemented) GetMetadataChangeCounts(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// FollowMetadataChange Apply the provider's change (admin)
+// (POST /metadata-changes/{id}/follow)
+func (_ Unimplemented) FollowMetadataChange(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -19452,6 +19461,32 @@ func (siw *ServerInterfaceWrapper) GetMetadataChangeCounts(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMetadataChangeCounts(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// FollowMetadataChange operation middleware
+func (siw *ServerInterfaceWrapper) FollowMetadataChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.FollowMetadataChange(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -24896,6 +24931,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/metadata-changes/counts", wrapper.GetMetadataChangeCounts)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/metadata-changes/{id}/follow", wrapper.FollowMetadataChange)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/metadata-changes/{id}/keep", wrapper.KeepMetadataChange)
@@ -35556,6 +35594,94 @@ func (response GetMetadataChangeCounts500JSONResponse) VisitGetMetadataChangeCou
 	return err
 }
 
+type FollowMetadataChangeRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type FollowMetadataChangeResponseObject interface {
+	VisitFollowMetadataChangeResponse(w http.ResponseWriter) error
+}
+
+type FollowMetadataChange204Response = NoContentResponse
+
+func (response FollowMetadataChange204Response) VisitFollowMetadataChangeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type FollowMetadataChange403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response FollowMetadataChange403JSONResponse) VisitFollowMetadataChangeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FollowMetadataChange404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response FollowMetadataChange404JSONResponse) VisitFollowMetadataChangeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FollowMetadataChange409JSONResponse struct{ ConflictJSONResponse }
+
+func (response FollowMetadataChange409JSONResponse) VisitFollowMetadataChangeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FollowMetadataChange429JSONResponse struct{ RateLimitedJSONResponse }
+
+func (response FollowMetadataChange429JSONResponse) VisitFollowMetadataChangeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type FollowMetadataChange500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response FollowMetadataChange500JSONResponse) VisitFollowMetadataChangeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type KeepMetadataChangeRequestObject struct {
 	Id ResourceID `json:"id"`
 }
@@ -45616,6 +45742,9 @@ type StrictServerInterface interface {
 	// GetMetadataChangeCounts Pending provider changes by media and kind (admin)
 	// (GET /metadata-changes/counts)
 	GetMetadataChangeCounts(ctx context.Context, request GetMetadataChangeCountsRequestObject) (GetMetadataChangeCountsResponseObject, error)
+	// FollowMetadataChange Apply the provider's change (admin)
+	// (POST /metadata-changes/{id}/follow)
+	FollowMetadataChange(ctx context.Context, request FollowMetadataChangeRequestObject) (FollowMetadataChangeResponseObject, error)
 	// KeepMetadataChange Keep the item as it is (admin)
 	// (POST /metadata-changes/{id}/keep)
 	KeepMetadataChange(ctx context.Context, request KeepMetadataChangeRequestObject) (KeepMetadataChangeResponseObject, error)
@@ -50255,6 +50384,32 @@ func (sh *strictHandler) GetMetadataChangeCounts(w http.ResponseWriter, r *http.
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetMetadataChangeCountsResponseObject); ok {
 		if err := validResponse.VisitGetMetadataChangeCountsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// FollowMetadataChange operation middleware
+func (sh *strictHandler) FollowMetadataChange(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request FollowMetadataChangeRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.FollowMetadataChange(ctx, request.(FollowMetadataChangeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "FollowMetadataChange")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(FollowMetadataChangeResponseObject); ok {
+		if err := validResponse.VisitFollowMetadataChangeResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

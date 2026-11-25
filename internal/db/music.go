@@ -175,7 +175,7 @@ func createAlbum(
 	c *ent.Client,
 	artistID uint32,
 	a AlbumSeed,
-) (uint32, error) {
+) error {
 	b := c.Album.Create().
 		SetMbid(a.MBID).
 		SetTitle(a.Title).
@@ -186,11 +186,7 @@ func createAlbum(
 	if a.Type != "" {
 		b = b.SetType(album.Type(a.Type))
 	}
-	row, err := b.Save(ctx)
-	if err != nil {
-		return 0, err
-	}
-	return row.ID, nil
+	return b.Exec(ctx)
 }
 
 // sharedLink is one album linkSharedAlbums listed under an artist, logged by
@@ -346,7 +342,7 @@ func (db *DB) CreateArtist(
 		if shared[a.MBID] {
 			continue
 		}
-		if _, err := createAlbum(ctx, tx.Client(), row.ID, a); err != nil {
+		if err := createAlbum(ctx, tx.Client(), row.ID, a); err != nil {
 			tx.Rollback()
 			return nil, err
 		}
@@ -964,16 +960,15 @@ func (db *DB) HydratingArtists(
 // RefreshArtist rewrites the artist's provider-sourced fields and members and
 // reconciles its release groups: stored albums update title, type and date
 // only, new ones are created, and those no longer listed are pruned
-// (pruneUnlistedAlbums). It returns the ids of the created and of the deleted
-// albums.
+// (pruneUnlistedAlbums). It returns the ids of the deleted albums.
 func (db *DB) RefreshArtist(
 	ctx context.Context,
 	id uint32,
 	p RefreshArtistParams,
-) ([]uint32, []uint32, error) {
+) ([]uint32, error) {
 	tx, err := db.client.Tx(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	c := tx.Client()
 	u := c.Artist.UpdateOneID(id).
@@ -995,18 +990,18 @@ func (db *DB) RefreshArtist(
 	}
 	if err := u.Exec(ctx); err != nil {
 		tx.Rollback()
-		return nil, nil, err
+		return nil, err
 	}
 	if err := replaceMembers(ctx, c, id, p.Members); err != nil {
 		tx.Rollback()
-		return nil, nil, err
+		return nil, err
 	}
 	existing, err := c.Album.Query().
 		Where(album.HasArtistWith(artist.IDEQ(id))).
 		All(ctx)
 	if err != nil {
 		tx.Rollback()
-		return nil, nil, err
+		return nil, err
 	}
 	byMBID := make(map[string]*ent.Album, len(existing))
 	for _, a := range existing {
@@ -1015,9 +1010,8 @@ func (db *DB) RefreshArtist(
 	shared, links, err := linkSharedAlbums(ctx, c, id, p.Albums)
 	if err != nil {
 		tx.Rollback()
-		return nil, nil, err
+		return nil, err
 	}
-	var created []uint32
 	for _, a := range p.Albums {
 		if shared[a.MBID] {
 			continue
@@ -1034,27 +1028,50 @@ func (db *DB) RefreshArtist(
 			}
 			if err := u.Exec(ctx); err != nil {
 				tx.Rollback()
-				return nil, nil, err
+				return nil, err
 			}
 			continue
 		}
-		newID, err := createAlbum(ctx, c, id, a)
-		if err != nil {
+		if err := createAlbum(ctx, c, id, a); err != nil {
 			tx.Rollback()
-			return nil, nil, err
+			return nil, err
 		}
-		created = append(created, newID)
 	}
 	removed, err := pruneUnlistedAlbums(ctx, c, id, p.Albums)
 	if err != nil {
 		tx.Rollback()
-		return nil, nil, err
+		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	logSharedLinks(ctx, id, links)
-	return created, removed, nil
+	return removed, nil
+}
+
+// albumInUse matches an album something was done with: files, download
+// history, an acquisition event, a co-artist or a monitor flag set by hand.
+func albumInUse() predicate.Album {
+	return album.Or(
+		album.HasTracksWith(track.HasMediaFiles()),
+		album.HasDownloadRecords(),
+		album.HasPackRecords(),
+		album.HasEventsWith(mediaevent.TypeIn(
+			mediaevent.TypeGrabbed,
+			mediaevent.TypeDownloadCompleted,
+			mediaevent.TypeDownloadFailed,
+			mediaevent.TypeDownloadCancelled,
+			mediaevent.TypeGrabWidened,
+			mediaevent.TypeImported,
+			mediaevent.TypeImportFailed,
+			mediaevent.TypeImportHeldForReview,
+			mediaevent.TypeFileRenamed,
+			mediaevent.TypeFileRemoved,
+			mediaevent.TypeRequestApproved,
+		)),
+		album.HasCoArtists(),
+		album.MonitorPinned(true),
+	)
 }
 
 // pruneUnlistedAlbums handles the albums the artist owns that its discography
@@ -1084,27 +1101,7 @@ func pruneUnlistedAlbums(
 		album.HasArtistWith(artist.IDEQ(artistID)),
 		album.MbidNotIn(mbids...),
 	)
-	used := album.Or(
-		album.HasTracksWith(track.HasMediaFiles()),
-		album.HasDownloadRecords(),
-		album.HasPackRecords(),
-		album.HasEventsWith(mediaevent.TypeIn(
-			mediaevent.TypeGrabbed,
-			mediaevent.TypeDownloadCompleted,
-			mediaevent.TypeDownloadFailed,
-			mediaevent.TypeDownloadCancelled,
-			mediaevent.TypeGrabWidened,
-			mediaevent.TypeImported,
-			mediaevent.TypeImportFailed,
-			mediaevent.TypeImportHeldForReview,
-			mediaevent.TypeFileRenamed,
-			mediaevent.TypeFileRemoved,
-			mediaevent.TypeRequestApproved,
-		)),
-		album.HasCoArtists(),
-		album.MonitorPinned(true),
-	)
-	ids, err := c.Album.Query().Where(unlisted, album.Not(used)).IDs(ctx)
+	ids, err := c.Album.Query().Where(unlisted, album.Not(albumInUse())).IDs(ctx)
 	if err != nil {
 		return nil, err
 	}

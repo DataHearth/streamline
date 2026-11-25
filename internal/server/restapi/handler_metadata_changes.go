@@ -2,10 +2,12 @@ package restapi
 
 import (
 	"context"
+	"errors"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/metadata"
 )
 
 const metadataChangesMaxLimit = 100
@@ -126,6 +128,51 @@ func (s *Server) KeepMetadataChange(
 		return nil, err
 	}
 	return KeepMetadataChange204Response{}, nil
+}
+
+func (s *Server) FollowMetadataChange(
+	ctx context.Context,
+	req FollowMetadataChangeRequestObject,
+) (FollowMetadataChangeResponseObject, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return FollowMetadataChange403JSONResponse{
+			ForbiddenJSONResponse: notAdminResp,
+		}, nil
+	}
+	c, err := s.store.FindChange(ctx, req.Id)
+	if ent.IsNotFound(err) ||
+		(err == nil && c.State != metadatachange.StatePending) {
+		return FollowMetadataChange404JSONResponse{
+			NotFoundJSONResponse: errNotFound("metadata change not found"),
+		}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	switch db.ChangeOwnerOf(c).Type {
+	case db.ChangeOwnerArtist, db.ChangeOwnerAlbum:
+		err = s.music.FollowChange(ctx, c)
+	default:
+		err = db.ErrNotFollowable
+	}
+	switch {
+	case err == nil:
+		return FollowMetadataChange204Response{}, nil
+	case errors.Is(err, db.ErrNotFollowable), errors.Is(err, db.ErrChangeConflict):
+		code := "change_conflict"
+		if errors.Is(err, db.ErrNotFollowable) {
+			code = "not_followable"
+		}
+		return FollowMetadataChange409JSONResponse{
+			Message: err.Error(),
+			Code:    &code,
+		}, nil
+	case errors.Is(err, metadata.ErrRateLimited):
+		return FollowMetadataChange429JSONResponse{
+			RateLimitedJSONResponse: errMusicBrainzRateLimited(err),
+		}, nil
+	}
+	return nil, err
 }
 
 func toMetadataChange(c *ent.MetadataChange) MetadataChange {

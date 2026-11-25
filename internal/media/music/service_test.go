@@ -1,7 +1,6 @@
 package music
 
 import (
-	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -16,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
@@ -219,8 +219,16 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 	})
 
 	Describe("RefreshOne", func() {
+		// own is the artist as MusicBrainz answers for the seeded id: any
+		// other id is MusicBrainz saying it merged the artist away.
+		own := func(groups ...metadata.ReleaseGroupInfo) *metadata.ArtistDetails {
+			d := details(groups...)
+			d.MBID = "mbid-Nirvana"
+			return d
+		}
+
 		It(
-			"rewrites the artist, adds new release groups under the policy and hydrates them",
+			"rewrites the artist, adds new release groups under the policy and hydrates every album",
 			func() {
 				a, albums := e.seedArtist(
 					"Nirvana",
@@ -237,7 +245,7 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 				e.client.Album.UpdateOneID(albums[0].ID).
 					SetMonitored(false).SetStatus(album.StatusSkipped).ExecX(e.ctx)
 
-				d := details(
+				d := own(
 					rg("rg-1", "Nevermind (Remaster)", day(-9000)),
 					rg("old", "Old", day(-500)),
 					rg("new", "New", day(40)),
@@ -247,6 +255,8 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 					GetArtist(mock.Anything, "mbid-Nirvana").
 					Return(d, nil).
 					Once()
+				e.provider.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
+					Return(hydrated("rg-1", "A"), nil).Once()
 				e.provider.EXPECT().GetReleaseGroup(mock.Anything, "old").
 					Return(hydrated("old", "O"), nil).Once()
 				e.provider.EXPECT().GetReleaseGroup(mock.Anything, "new").
@@ -289,15 +299,15 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 			},
 		)
 
-		It("hydrates a known album that came back without tracks long ago", func() {
+		It("fetches a recently hydrated album again", func() {
 			a, albums := e.seedArtist("Nirvana",
 				albumSeed{mbid: "rg-1", title: "Nevermind", monitored: true},
 			)
 			e.client.Album.UpdateOneID(albums[0].ID).
-				SetMetadataFetchedAt(time.Now().Add(-10 * 24 * time.Hour)).
+				SetMetadataFetchedAt(time.Now().Add(-time.Hour)).
 				ExecX(e.ctx)
 			e.provider.EXPECT().GetArtist(mock.Anything, "mbid-Nirvana").
-				Return(details(rg("rg-1", "Nevermind", day(-9000))), nil).Once()
+				Return(own(rg("rg-1", "Nevermind", day(-9000))), nil).Once()
 			e.provider.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
 				Return(hydrated("rg-1", "A"), nil).Once()
 			e.posters.EXPECT().
@@ -314,25 +324,38 @@ var _ = Describe("Music service", Label("unit", "integration", "music"), func() 
 				To(Equal(1))
 		})
 
-		It("leaves a recently fetched trackless album for the sweep", func() {
-			a, albums := e.seedArtist("Nirvana",
-				albumSeed{mbid: "rg-1", title: "Nevermind", monitored: true},
-			)
-			e.client.Album.UpdateOneID(albums[0].ID).
-				SetMetadataFetchedAt(time.Now().Add(-time.Hour)).ExecX(e.ctx)
+		It(
+			"records an artist MusicBrainz merged away and leaves it as it is",
+			func() {
+				a, _ := e.seedArtist("Nirvana",
+					albumSeed{mbid: "rg-1", title: "Nevermind", monitored: true},
+				)
+				merged := own(rg("rg-1", "Nevermind", day(-9000)))
+				merged.MBID, merged.Name = "mbid-other", "Nirvana (US)"
+				e.provider.EXPECT().GetArtist(mock.Anything, "mbid-Nirvana").
+					Return(merged, nil).Once()
+
+				got, err := e.svc.RefreshOne(e.ctx, a.ID)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(got.Name).To(Equal("Nirvana"))
+				Expect(got.LastRefreshedAt).To(BeNil())
+				c := e.client.MetadataChange.Query().OnlyX(e.ctx)
+				Expect(c.Kind).To(Equal(metadatachange.KindArtistMerged))
+				Expect(c.Fingerprint).To(Equal("mbid-other"))
+				Expect(c.Payload).To(HaveKeyWithValue("target",
+					HaveKeyWithValue("title", "Nirvana (US)")))
+			},
+		)
+
+		It("records an artist MusicBrainz deleted", func() {
+			a, _ := e.seedArtist("Nirvana")
 			e.provider.EXPECT().GetArtist(mock.Anything, "mbid-Nirvana").
-				Return(details(rg("rg-1", "Nevermind", day(-9000))), nil).Once()
-			fetched := make(chan struct{})
-			e.posters.EXPECT().
-				Fetch(mock.Anything, "albums", mock.Anything, mock.Anything).
-				Run(func(context.Context, string, uint32, string) { close(fetched) }).
-				Return(nil).
-				Once()
+				Return(nil, metadata.ErrNotFound).Once()
 
 			_, err := e.svc.RefreshOne(e.ctx, a.ID)
 			Expect(err).NotTo(HaveOccurred())
-			e.settle(a.ID)
-			Eventually(fetched).Should(BeClosed())
+			Expect(e.client.MetadataChange.Query().OnlyX(e.ctx).Kind).
+				To(Equal(metadatachange.KindArtistRemoved))
 		})
 
 		It("maps a missing artist to ErrArtistNotFound", func() {

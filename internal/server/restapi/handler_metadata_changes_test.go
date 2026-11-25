@@ -19,6 +19,14 @@ var _ = Describe("Handler: MetadataChanges", Label("unit", "server"), func() {
 
 	BeforeEach(func() { app = newAPIKeyApp() })
 
+	errorOf := func(resp *http.Response) Error {
+		GinkgoHelper()
+		defer resp.Body.Close()
+		var e Error
+		Expect(json.NewDecoder(resp.Body).Decode(&e)).To(Succeed())
+		return e
+	}
+
 	It("is for admins only", func() {
 		app.addMember("member")
 		for _, path := range []string{"/api/v1/metadata-changes", "/api/v1/metadata-changes/counts"} {
@@ -131,5 +139,72 @@ var _ = Describe("Handler: MetadataChanges", Label("unit", "server"), func() {
 		)
 		resp.Body.Close()
 		Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+	})
+	Describe("follow", func() {
+		albumChange := func(state metadatachange.State) *ent.MetadataChange {
+			return &ent.MetadataChange{
+				ID: 5, Kind: metadatachange.KindEditionPreferred, State: state,
+				Edges: ent.MetadataChangeEdges{Album: &ent.Album{ID: 9}},
+			}
+		}
+
+		It("hands an album's change to the music service", func() {
+			c := albumChange(metadatachange.StatePending)
+			app.store.EXPECT().
+				FindChange(mock.Anything, uint32(5)).
+				Return(c, nil).
+				Once()
+			app.music.EXPECT().FollowChange(mock.Anything, c).Return(nil).Once()
+			resp := app.do(
+				app.req(
+					http.MethodPost,
+					"/api/v1/metadata-changes/5/follow",
+					app.adminKey,
+					nil,
+				),
+			)
+			resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+		})
+
+		It(
+			"answers 409 not_followable for a change that only removes the item",
+			func() {
+				c := albumChange(metadatachange.StatePending)
+				app.store.EXPECT().
+					FindChange(mock.Anything, uint32(5)).
+					Return(c, nil).
+					Once()
+				app.music.EXPECT().
+					FollowChange(mock.Anything, c).
+					Return(db.ErrNotFollowable).
+					Once()
+				resp := app.do(
+					app.req(
+						http.MethodPost,
+						"/api/v1/metadata-changes/5/follow",
+						app.adminKey,
+						nil,
+					),
+				)
+				Expect(resp.StatusCode).To(Equal(http.StatusConflict))
+				Expect(*errorOf(resp).Code).To(Equal("not_followable"))
+			},
+		)
+
+		It("answers 404 for a change already kept", func() {
+			app.store.EXPECT().FindChange(mock.Anything, uint32(5)).
+				Return(albumChange(metadatachange.StateKept), nil).Once()
+			resp := app.do(
+				app.req(
+					http.MethodPost,
+					"/api/v1/metadata-changes/5/follow",
+					app.adminKey,
+					nil,
+				),
+			)
+			resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
 	})
 })

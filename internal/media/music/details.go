@@ -39,9 +39,9 @@ func (s *Service) hasPhoto(artistID uint32) bool {
 	return err == nil && st.Size() > 0
 }
 
-// fillDetails fetches the artist's Wikipedia overview in every locale, once
-// ever: a later refresh (force) fetches again only when the English overview
-// is still empty. It also resolves the artist photo when none is cached.
+// fillDetails fetches the artist's Wikipedia overview in every locale and
+// its photo, once when the artist is added and again on every refresh
+// (force). A refresh that finds nothing keeps what is stored.
 func (s *Service) fillDetails(ctx context.Context, artistID uint32, force bool) {
 	ctx, span := tracer.Start(ctx, "music.fill_artist_details",
 		trace.WithAttributes(attribute.Int64("artist.id", int64(artistID))))
@@ -59,7 +59,7 @@ func (s *Service) fillDetails(ctx context.Context, artistID uint32, force bool) 
 
 	var params db.ArtistDetailsParams
 	if s.overviews != nil && a.WikidataID != "" &&
-		(a.DetailsFetchedAt == nil || (force && a.Overview == "")) {
+		(a.DetailsFetchedAt == nil || force) {
 		got, err := s.overviews.Overviews(ctx, a.WikidataID, overviewLangs)
 		if err != nil {
 			otelx.RecordSpanError(span, err)
@@ -74,7 +74,7 @@ func (s *Service) fillDetails(ctx context.Context, artistID uint32, force bool) 
 		}
 	}
 
-	if s.photos != nil && !s.hasPhoto(artistID) {
+	if s.photos != nil && (force || !s.hasPhoto(artistID)) {
 		if url := s.photoURL(ctx, a); url != "" {
 			if err := s.posters.Fetch(ctx, artistKind, artistID, url); err != nil {
 				otelx.RecordSpanError(span, err)

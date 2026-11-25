@@ -35,6 +35,7 @@ var minRole = map[string]string{
 	"ListMetadataChanges":       roleAdmin,
 	"GetMetadataChangeCounts":   roleAdmin,
 	"KeepMetadataChange":        roleAdmin,
+	"FollowMetadataChange":      roleAdmin,
 	"PreviewPending":            roleRequestOnly,
 	"IdentifyPending":           roleAdmin,
 	"IgnorePending":             roleAdmin,

@@ -59,6 +59,10 @@ var (
 
 // Manager is the surface the REST handlers use.
 type Manager interface {
+	// FollowChange applies an artist's or an album's pending provider change
+	// as MusicBrainz has it now: db.ErrNotFollowable for one that only
+	// removes the item, db.ErrChangeConflict when it cannot be applied.
+	FollowChange(ctx context.Context, c *ent.MetadataChange) error
 	Add(ctx context.Context, p AddParams) (*ent.Artist, error)
 	List(ctx context.Context, p db.ListArtistsParams) (ArtistPage, error)
 	Counts(ctx context.Context, p db.ListArtistsParams) (db.ArtistCounts, error)
@@ -629,13 +633,17 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 		return nil, otelx.RecordSpanError(span, notFound(err))
 	}
 	details, err := s.metadata.GetArtist(ctx, row.Mbid)
+	own, err := s.reviewArtist(ctx, row, details, err)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("get artist: %w", err))
+	}
+	if !own {
+		return row, nil
 	}
 	s.details.put(row.Mbid, details)
 
 	now := time.Now()
-	created, removed, err := s.db.RefreshArtist(ctx, id, db.RefreshArtistParams{
+	removed, err := s.db.RefreshArtist(ctx, id, db.RefreshArtistParams{
 		Name:        details.Name,
 		SortName:    details.SortName,
 		Aliases:     details.Aliases,
@@ -674,33 +682,19 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 	// A title, date or type the refresh changed reaches the files under
 	// managed; the hash settles the albums where nothing did.
 	s.tagsChanged(ctx, albumIDs...)
-	var items []hydrateItem
-	retried := 0
+	items := make([]hydrateItem, 0, len(updated.Edges.Albums))
+	var hydrated []uint32
 	for _, a := range updated.Edges.Albums {
-		retry := retried < tracklessPerRun && a.MetadataFetchedAt != nil &&
-			len(a.Edges.Tracks) == 0 &&
-			now.Sub(*a.MetadataFetchedAt) > tracklessStale &&
-			(a.ReleaseDate == nil || a.ReleaseDate.Before(now.Add(tracklessHorizon)))
-		if retry {
-			retried++
-		}
-		if !retry && a.MetadataFetchedAt != nil && !slices.Contains(created, a.ID) {
-			continue
-		}
 		items = append(items, hydrateItem{
 			albumID: a.ID, monitored: a.Monitored, date: a.ReleaseDate,
 		})
+		if a.MetadataFetchedAt != nil {
+			hydrated = append(hydrated, a.ID)
+		}
 	}
 	s.enqueueHydration(id, items...)
 	s.fillDetailsInBackground(ctx, id, true)
-
-	var uncovered []uint32
-	for _, a := range updated.Edges.Albums {
-		if !s.hasCover(a.ID) && a.MetadataFetchedAt != nil {
-			uncovered = append(uncovered, a.ID)
-		}
-	}
-	s.ResolveCoversInBackground(ctx, uncovered...)
+	s.refreshCoversInBackground(ctx, hydrated...)
 	return updated, nil
 }
 

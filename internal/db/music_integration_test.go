@@ -502,7 +502,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			client.Album.UpdateOneID(rg1.ID).
 				SetStatus(album.StatusAvailable).ExecX(ctx)
 
-			created, _, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
+			_, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
 				Name: "Nirvana", Type: "group", Origin: "Aberdeen, United States",
 				Since: 1987, Genre: "Rock", DeezerID: 415, WikidataID: "Q11649",
 				RefreshedAt: now,
@@ -527,7 +527,12 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(created).To(HaveLen(2))
+			Expect(
+				client.Album.Query().
+					Where(album.HasArtistWith(entartist.IDEQ(a.ID))).
+					CountX(ctx),
+			).
+				To(Equal(3))
 
 			got := client.Album.GetX(ctx, rg1.ID)
 			Expect(got.Title).To(Equal("Nevermind (Remaster)"))
@@ -567,9 +572,14 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				},
 			}
 			for range 2 {
-				created, _, err := store.RefreshArtist(ctx, b.ID, params)
+				_, err := store.RefreshArtist(ctx, b.ID, params)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(created).To(BeEmpty())
+				Expect(
+					client.Album.Query().
+						Where(album.HasArtistWith(entartist.IDEQ(b.ID))).
+						CountX(ctx),
+				).
+					To(BeZero())
 			}
 			Expect(albumByMBID("rg-1").QueryCoArtists().IDsX(ctx)).
 				To(Equal([]uint32{b.ID}))
@@ -590,7 +600,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 				client.MediaEvent.Create().SetType("searched").SetAlbumID(gone).
 					ExecX(ctx)
 
-				_, removed, err := store.RefreshArtist(
+				removed, err := store.RefreshArtist(
 					ctx,
 					a.ID,
 					RefreshArtistParams{
@@ -614,7 +624,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 
 		It("prunes nothing on an empty listing", func() {
 			a := seed()
-			_, removed, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
+			removed, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
 				Name: "Nirvana", RefreshedAt: now,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -624,7 +634,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 
 		It("clears the type when MusicBrainz states none", func() {
 			a := seed()
-			_, _, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
+			_, err := store.RefreshArtist(ctx, a.ID, RefreshArtistParams{
 				Name: "Nirvana", RefreshedAt: now,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -1395,7 +1405,7 @@ var _ = Describe("Music persistence", Label("integration", "db"), func() {
 			BeforeEach(func() {
 				zebra = client.Artist.Query().
 					Where(entartist.MbidEQ("a-3")).OnlyX(ctx)
-				_, _, err := store.RefreshArtist(ctx, zebra.ID, RefreshArtistParams{
+				_, err := store.RefreshArtist(ctx, zebra.ID, RefreshArtistParams{
 					Name: "Zebra", SortName: "Zebra", RefreshedAt: now,
 					Albums: []AlbumSeed{
 						{MBID: "rg-2", Title: "In Utero", Type: "album"},

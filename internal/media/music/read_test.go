@@ -236,7 +236,7 @@ var _ = Describe(
 							time.Now(),
 						),
 					).To(Succeed())
-					_, _, err := e.store.RefreshArtist(
+					_, err := e.store.RefreshArtist(
 						e.ctx,
 						b.ID,
 						db.RefreshArtistParams{
@@ -295,7 +295,7 @@ var _ = Describe(
 						time.Now(),
 					),
 				).To(Succeed())
-				_, _, err := e.store.RefreshArtist(
+				_, err := e.store.RefreshArtist(
 					e.ctx,
 					b.ID,
 					db.RefreshArtistParams{
@@ -359,7 +359,7 @@ var _ = Describe(
 					albumSeed{mbid: "rg-1", title: "Nevermind", monitored: true})
 				b, _ := e.seedArtist("Guest",
 					albumSeed{mbid: "rg-9", title: "Own", tracks: []string{"A"}})
-				_, _, err := e.store.RefreshArtist(
+				_, err := e.store.RefreshArtist(
 					e.ctx,
 					b.ID,
 					db.RefreshArtistParams{

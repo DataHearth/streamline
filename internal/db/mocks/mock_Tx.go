@@ -5326,6 +5326,69 @@ func (_c *MockTx_DeleteAPIKeysByUser_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// DeleteAlbumTracks provides a mock function for the type MockTx
+func (_mock *MockTx) DeleteAlbumTracks(ctx context.Context, albumID uint32, ids []uint32) error {
+	ret := _mock.Called(ctx, albumID, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteAlbumTracks")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []uint32) error); ok {
+		r0 = returnFunc(ctx, albumID, ids)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_DeleteAlbumTracks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteAlbumTracks'
+type MockTx_DeleteAlbumTracks_Call struct {
+	*mock.Call
+}
+
+// DeleteAlbumTracks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - albumID uint32
+//   - ids []uint32
+func (_e *MockTx_Expecter) DeleteAlbumTracks(ctx any, albumID any, ids any) *MockTx_DeleteAlbumTracks_Call {
+	return &MockTx_DeleteAlbumTracks_Call{Call: _e.mock.On("DeleteAlbumTracks", ctx, albumID, ids)}
+}
+
+func (_c *MockTx_DeleteAlbumTracks_Call) Run(run func(ctx context.Context, albumID uint32, ids []uint32)) *MockTx_DeleteAlbumTracks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 []uint32
+		if args[2] != nil {
+			arg2 = args[2].([]uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_DeleteAlbumTracks_Call) Return(err error) *MockTx_DeleteAlbumTracks_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_DeleteAlbumTracks_Call) RunAndReturn(run func(ctx context.Context, albumID uint32, ids []uint32) error) *MockTx_DeleteAlbumTracks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteAllCompletedDownloadRecords provides a mock function for the type MockTx
 func (_mock *MockTx) DeleteAllCompletedDownloadRecords(ctx context.Context, keepHashes []string) (int, error) {
 	ret := _mock.Called(ctx, keepHashes)
@@ -20763,7 +20826,7 @@ func (_c *MockTx_RecordMediaFileTagFailure_Call) RunAndReturn(run func(ctx conte
 }
 
 // RefreshArtist provides a mock function for the type MockTx
-func (_mock *MockTx) RefreshArtist(ctx context.Context, id uint32, p db.RefreshArtistParams) ([]uint32, []uint32, error) {
+func (_mock *MockTx) RefreshArtist(ctx context.Context, id uint32, p db.RefreshArtistParams) ([]uint32, error) {
 	ret := _mock.Called(ctx, id, p)
 
 	if len(ret) == 0 {
@@ -20771,9 +20834,8 @@ func (_mock *MockTx) RefreshArtist(ctx context.Context, id uint32, p db.RefreshA
 	}
 
 	var r0 []uint32
-	var r1 []uint32
-	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.RefreshArtistParams) ([]uint32, []uint32, error)); ok {
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.RefreshArtistParams) ([]uint32, error)); ok {
 		return returnFunc(ctx, id, p)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, db.RefreshArtistParams) []uint32); ok {
@@ -20783,19 +20845,12 @@ func (_mock *MockTx) RefreshArtist(ctx context.Context, id uint32, p db.RefreshA
 			r0 = ret.Get(0).([]uint32)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, db.RefreshArtistParams) []uint32); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, db.RefreshArtistParams) error); ok {
 		r1 = returnFunc(ctx, id, p)
 	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).([]uint32)
-		}
+		r1 = ret.Error(1)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, uint32, db.RefreshArtistParams) error); ok {
-		r2 = returnFunc(ctx, id, p)
-	} else {
-		r2 = ret.Error(2)
-	}
-	return r0, r1, r2
+	return r0, r1
 }
 
 // MockTx_RefreshArtist_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RefreshArtist'
@@ -20834,12 +20889,12 @@ func (_c *MockTx_RefreshArtist_Call) Run(run func(ctx context.Context, id uint32
 	return _c
 }
 
-func (_c *MockTx_RefreshArtist_Call) Return(uint32s []uint32, uint32s1 []uint32, err error) *MockTx_RefreshArtist_Call {
-	_c.Call.Return(uint32s, uint32s1, err)
+func (_c *MockTx_RefreshArtist_Call) Return(uint32s []uint32, err error) *MockTx_RefreshArtist_Call {
+	_c.Call.Return(uint32s, err)
 	return _c
 }
 
-func (_c *MockTx_RefreshArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32, p db.RefreshArtistParams) ([]uint32, []uint32, error)) *MockTx_RefreshArtist_Call {
+func (_c *MockTx_RefreshArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32, p db.RefreshArtistParams) ([]uint32, error)) *MockTx_RefreshArtist_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -21501,6 +21556,150 @@ func (_c *MockTx_ReplaceMediaFile_Call) Return(mediaFile *ent.MediaFile, err err
 }
 
 func (_c *MockTx_ReplaceMediaFile_Call) RunAndReturn(run func(ctx context.Context, oldIDs []uint32, p db.CreateMediaFileParams) (*ent.MediaFile, error)) *MockTx_ReplaceMediaFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RepointAlbum provides a mock function for the type MockTx
+func (_mock *MockTx) RepointAlbum(ctx context.Context, id uint32, mbid string) (uint32, error) {
+	ret := _mock.Called(ctx, id, mbid)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RepointAlbum")
+	}
+
+	var r0 uint32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (uint32, error)); ok {
+		return returnFunc(ctx, id, mbid)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) uint32); ok {
+		r0 = returnFunc(ctx, id, mbid)
+	} else {
+		r0 = ret.Get(0).(uint32)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) error); ok {
+		r1 = returnFunc(ctx, id, mbid)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_RepointAlbum_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RepointAlbum'
+type MockTx_RepointAlbum_Call struct {
+	*mock.Call
+}
+
+// RepointAlbum is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - mbid string
+func (_e *MockTx_Expecter) RepointAlbum(ctx any, id any, mbid any) *MockTx_RepointAlbum_Call {
+	return &MockTx_RepointAlbum_Call{Call: _e.mock.On("RepointAlbum", ctx, id, mbid)}
+}
+
+func (_c *MockTx_RepointAlbum_Call) Run(run func(ctx context.Context, id uint32, mbid string)) *MockTx_RepointAlbum_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_RepointAlbum_Call) Return(v uint32, err error) *MockTx_RepointAlbum_Call {
+	_c.Call.Return(v, err)
+	return _c
+}
+
+func (_c *MockTx_RepointAlbum_Call) RunAndReturn(run func(ctx context.Context, id uint32, mbid string) (uint32, error)) *MockTx_RepointAlbum_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RepointArtist provides a mock function for the type MockTx
+func (_mock *MockTx) RepointArtist(ctx context.Context, id uint32, mbid string) (uint32, error) {
+	ret := _mock.Called(ctx, id, mbid)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RepointArtist")
+	}
+
+	var r0 uint32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) (uint32, error)); ok {
+		return returnFunc(ctx, id, mbid)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, string) uint32); ok {
+		r0 = returnFunc(ctx, id, mbid)
+	} else {
+		r0 = ret.Get(0).(uint32)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, string) error); ok {
+		r1 = returnFunc(ctx, id, mbid)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTx_RepointArtist_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RepointArtist'
+type MockTx_RepointArtist_Call struct {
+	*mock.Call
+}
+
+// RepointArtist is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+//   - mbid string
+func (_e *MockTx_Expecter) RepointArtist(ctx any, id any, mbid any) *MockTx_RepointArtist_Call {
+	return &MockTx_RepointArtist_Call{Call: _e.mock.On("RepointArtist", ctx, id, mbid)}
+}
+
+func (_c *MockTx_RepointArtist_Call) Run(run func(ctx context.Context, id uint32, mbid string)) *MockTx_RepointArtist_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_RepointArtist_Call) Return(v uint32, err error) *MockTx_RepointArtist_Call {
+	_c.Call.Return(v, err)
+	return _c
+}
+
+func (_c *MockTx_RepointArtist_Call) RunAndReturn(run func(ctx context.Context, id uint32, mbid string) (uint32, error)) *MockTx_RepointArtist_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -1057,28 +1057,9 @@ func (m *MusicBrainz) ReleaseGroupEditions(
 	})
 	out := make([]ReleaseEdition, 0, len(rg.Releases))
 	for _, r := range rg.Releases {
-		tracks, discs := audioSize(r.Media)
-		if tracks == 0 {
-			continue
+		if e := toEdition(r); e.Tracks > 0 {
+			out = append(out, e)
 		}
-		var formats []string
-		for _, md := range r.Media {
-			if !isVideoMedium(md) && md.Format != "" &&
-				!slices.Contains(formats, md.Format) {
-				formats = append(formats, md.Format)
-			}
-		}
-		out = append(out, ReleaseEdition{
-			MBID:           r.ID,
-			Title:          r.Title,
-			Disambiguation: r.Disambig,
-			Date:           r.Date,
-			Country:        r.Country,
-			Official:       r.Status == "Official",
-			Formats:        formats,
-			Tracks:         tracks,
-			Discs:          discs,
-		})
 	}
 	return out, nil
 }
@@ -1105,18 +1086,25 @@ func (m *MusicBrainz) GetReleaseGroupEdition(
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	release := canonicalRelease(rg.Releases)
-	if slices.ContainsFunc(
+	canonical := canonicalRelease(rg.Releases)
+	listed := edition != "" && slices.ContainsFunc(
 		rg.Releases,
 		func(r mbRelease) bool { return r.ID == edition },
-	) {
+	)
+	release := canonical
+	if listed {
 		release = edition
 	}
 	details := &ReleaseGroupDetails{
 		ReleaseGroupInfo: rg.toInfo(),
 		ReleaseMBID:      release,
+		Canonical:        canonical,
+		EditionListed:    listed,
 		Genres:           topGenres(rg.Genres),
 		Aliases:          rg.aliases(),
+	}
+	for _, r := range rg.Releases {
+		details.Editions = append(details.Editions, toEdition(r))
 	}
 	if len(rg.ArtistCredit) > 0 {
 		details.ArtistMBID = rg.ArtistCredit[0].Artist.ID
@@ -1178,6 +1166,49 @@ func (m *MusicBrainz) getRelease(
 		return mbRelease{}, false, lerr
 	}
 	return rel, false, nil
+}
+
+func toEdition(r mbRelease) ReleaseEdition {
+	tracks, discs := audioSize(r.Media)
+	var formats []string
+	for _, md := range r.Media {
+		if !isVideoMedium(md) && md.Format != "" &&
+			!slices.Contains(formats, md.Format) {
+			formats = append(formats, md.Format)
+		}
+	}
+	return ReleaseEdition{
+		MBID:           r.ID,
+		Title:          r.Title,
+		Disambiguation: r.Disambig,
+		Date:           r.Date,
+		Country:        r.Country,
+		Official:       r.Status == "Official",
+		Formats:        formats,
+		Tracks:         tracks,
+		Discs:          discs,
+	}
+}
+
+func (m *MusicBrainz) ResolveRelease(
+	ctx context.Context,
+	mbid string,
+) (string, error) {
+	ctx, span := tracer.Start(ctx, "metadata.musicbrainz.resolve_release",
+		trace.WithAttributes(attribute.String("musicbrainz.mbid", mbid)))
+	defer span.End()
+	var rel struct {
+		ID string `json:"id"`
+	}
+	if err := m.get(
+		ctx,
+		"/release/"+url.PathEscape(mbid),
+		url.Values{},
+		&rel,
+	); err != nil {
+		return "", otelx.RecordSpanError(span, err)
+	}
+	return rel.ID, nil
 }
 
 // videoFormats are the MusicBrainz medium formats that hold video. DVD-Audio

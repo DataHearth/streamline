@@ -76,22 +76,34 @@ var _ = Describe(
 				Expect(row().OverviewFr).To(BeEmpty())
 			})
 
-			It("is fetched again on a refresh only while English is empty", func() {
-				e.overviews.EXPECT().
-					Overviews(mock.Anything, "Q11649", []string{"en", "fr"}).
-					Return(nil, nil).
-					Once()
-				e.svc.fillDetails(e.ctx, a.ID, false)
+			It(
+				"is fetched again on every refresh, kept when one finds none",
+				func() {
+					e.photos.EXPECT().SearchArtists(mock.Anything, mock.Anything).
+						Return(nil, nil).Maybe()
+					e.links.EXPECT().ArtistArt(mock.Anything, mock.Anything).
+						Return(metadata.ArtistArt{}, nil).Maybe()
+					e.overviews.EXPECT().
+						Overviews(mock.Anything, "Q11649", []string{"en", "fr"}).
+						Return(map[string]metadata.Overview{"en": {Text: "Then."}}, nil).
+						Once()
+					e.svc.fillDetails(e.ctx, a.ID, false)
 
-				e.overviews.EXPECT().
-					Overviews(mock.Anything, "Q11649", []string{"en", "fr"}).
-					Return(map[string]metadata.Overview{"en": {Text: "Now."}}, nil).
-					Once()
-				e.svc.fillDetails(e.ctx, a.ID, true)
-				Expect(row().Overview).To(Equal("Now."))
+					e.overviews.EXPECT().
+						Overviews(mock.Anything, "Q11649", []string{"en", "fr"}).
+						Return(map[string]metadata.Overview{"en": {Text: "Now."}}, nil).
+						Once()
+					e.svc.fillDetails(e.ctx, a.ID, true)
+					Expect(row().Overview).To(Equal("Now."))
 
-				e.svc.fillDetails(e.ctx, a.ID, true)
-			})
+					e.overviews.EXPECT().
+						Overviews(mock.Anything, "Q11649", []string{"en", "fr"}).
+						Return(nil, nil).
+						Once()
+					e.svc.fillDetails(e.ctx, a.ID, true)
+					Expect(row().Overview).To(Equal("Now."))
+				},
+			)
 
 			It("is stamped even when Wikipedia fails", func() {
 				e.overviews.EXPECT().

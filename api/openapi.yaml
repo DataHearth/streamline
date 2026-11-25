@@ -6532,6 +6532,37 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /metadata-changes/{id}/follow:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: followMetadataChange
+      summary: Apply the provider's change (admin)
+      description: |
+        Applies the change as the provider has it now and forgets it. An album
+        moves to the edition MusicBrainz prefers, or the one its edition was
+        merged into; tracks or episodes no longer listed are removed, their
+        files left on disk, untracked; a merged album or artist moves to what
+        it was merged into, joining it when the library already holds it.
+        `409 code: not_followable` for a change that only removes the item
+        (find it again, remove it or keep it instead); `409 code:
+        change_conflict` when it cannot be applied as it stands, such as an
+        album merged into one the library already uses.
+      tags: [metadata-changes]
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /metadata-changes/{id}/keep:
     parameters:
       - $ref: "#/components/parameters/ResourceID"

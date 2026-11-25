@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/datahearth/streamline/ent"
@@ -13,6 +14,15 @@ import (
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/utils/numeric"
+)
+
+var (
+	// ErrNotFollowable is a change with nothing to apply: the item is gone
+	// upstream, and what is left is finding it again, removing it or keeping
+	// it.
+	ErrNotFollowable = errors.New("this change has nothing to follow")
+	// ErrChangeConflict is a change that cannot be applied as it stands.
+	ErrChangeConflict = errors.New("the change cannot be applied")
 )
 
 // ChangeOwnerType names the kind of item a metadata change belongs to.

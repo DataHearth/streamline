@@ -88,13 +88,13 @@ type Store interface {
 		artistIDs []uint32,
 		now time.Time,
 	) (map[uint32]bool, error)
-	// RefreshArtist reconciles the discography and returns the created and
-	// the deleted albums.
+	// RefreshArtist reconciles the discography and returns the deleted
+	// albums.
 	RefreshArtist(
 		ctx context.Context,
 		id uint32,
 		p RefreshArtistParams,
-	) ([]uint32, []uint32, error)
+	) ([]uint32, error)
 	SetArtistDetails(
 		ctx context.Context,
 		id uint32,
@@ -978,6 +978,19 @@ type Store interface {
 	// pending change with that id.
 	KeepChange(ctx context.Context, id uint32) error
 	DeleteChange(ctx context.Context, id uint32) error
+
+	// RepointAlbum moves the album to another release group. Another album
+	// already on that group is dropped when nothing was done with it (its id
+	// is returned), else ErrAlbumInUse and nothing changes.
+	RepointAlbum(ctx context.Context, id uint32, mbid string) (uint32, error)
+	// RepointArtist moves the artist to another MusicBrainz artist. When the
+	// library already holds that one, every album listed under this artist
+	// is handed to it and this artist is deleted. It returns the id of the
+	// artist that remains.
+	RepointArtist(ctx context.Context, id uint32, mbid string) (uint32, error)
+	// DeleteAlbumTracks deletes these tracks of the album; their files stay
+	// on disk, untracked.
+	DeleteAlbumTracks(ctx context.Context, albumID uint32, ids []uint32) error
 	// DeleteStalePendingAdoptions prunes pending proposals for a client whose
 	// torrent_hash is absent from its current managed torrents (liveHashes).
 	DeleteStalePendingAdoptions(

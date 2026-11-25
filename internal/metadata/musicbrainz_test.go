@@ -770,6 +770,9 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(release).To(Equal("/ws/2/release/rel-2"))
 				Expect(rg.ReleaseMBID).To(Equal("rel-2"))
+				Expect(rg.EditionListed).To(BeTrue())
+				Expect(rg.Canonical).To(Equal("rel-1"))
+				Expect(rg.Editions).To(ContainElement(HaveField("MBID", "rel-1")))
 			})
 
 			It(
@@ -781,8 +784,26 @@ var _ = Describe("MusicBrainz provider", Label("unit", "metadata"), func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(release).To(Equal("/ws/2/release/rel-1"))
 					Expect(rg.ReleaseMBID).To(Equal("rel-1"))
+					Expect(rg.EditionListed).To(BeFalse())
 				},
 			)
+		})
+
+		Describe("ResolveRelease", func() {
+			It("answers the id a merged release now has", func() {
+				serve(func(string) *http.Response {
+					return jsonResponse(200, `{"id":"rel-new"}`)
+				})
+				id, err := mb.ResolveRelease(ctx, "rel-1")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(id).To(Equal("rel-new"))
+			})
+
+			It("reports a deleted release as not found", func() {
+				serve(func(string) *http.Response { return jsonResponse(404, `{}`) })
+				_, err := mb.ResolveRelease(ctx, "rel-1")
+				Expect(err).To(MatchError(ErrNotFound))
+			})
 		})
 
 		It("picks the earliest official release and flattens its media", func() {

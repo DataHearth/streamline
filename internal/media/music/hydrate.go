@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -217,7 +218,7 @@ func (s *Service) hydrationWorker(ctx context.Context) {
 			}
 			return
 		}
-		_, err := s.hydrateAlbum(ctx, it.albumID, true)
+		_, err := s.hydrateAlbum(ctx, it.albumID, hydrateRefresh)
 		s.hydrate.done(it.albumID)
 		var limited *metadata.RateLimitedError
 		switch {
@@ -329,7 +330,7 @@ var _ AlbumHydrator = (*Service)(nil)
 
 func (s *Service) HydrateAlbum(ctx context.Context, albumID uint32) error {
 	s.hydrate.remove(albumID)
-	detailsOnly, err := s.hydrateAlbum(ctx, albumID, false)
+	detailsOnly, err := s.hydrateAlbum(ctx, albumID, hydrateIfStale)
 	if err != nil && detailsOnly {
 		slog.WarnContext(ctx, "album details backfill failed, kept the stored album",
 			"album.id", albumID, "error", err)
@@ -338,14 +339,27 @@ func (s *Service) HydrateAlbum(ctx context.Context, albumID uint32) error {
 	return err
 }
 
-// hydrateAlbum fetches an album's release data and stores it. Without force it
-// does nothing for an album whose tracks are already stored, unless its
-// genres were never fetched. detailsOnly reports that case: the album already
-// had its tracks.
+type hydrateMode uint8
+
+const (
+	// hydrateIfStale fetches an album with no tracks yet, or one whose
+	// stored details predate what the tag writer reads.
+	hydrateIfStale hydrateMode = iota
+	// hydrateRefresh fetches every time. An album holding files is fetched
+	// on the edition it follows, and whatever would change what its files
+	// are matched against is recorded for an admin instead of written.
+	hydrateRefresh
+	// hydrateFollow writes what MusicBrainz has now, files or not: a person
+	// chose the edition, or chose to follow MusicBrainz.
+	hydrateFollow
+)
+
+// hydrateAlbum fetches an album's release data and stores it, as mode says.
+// detailsOnly reports an album that already had its tracks.
 func (s *Service) hydrateAlbum(
 	ctx context.Context,
 	albumID uint32,
-	force bool,
+	mode hydrateMode,
 ) (detailsOnly bool, _ error) {
 	a, err := s.db.FindAlbumByID(ctx, albumID)
 	if ent.IsNotFound(err) {
@@ -355,24 +369,48 @@ func (s *Service) hydrateAlbum(
 		return false, err
 	}
 	detailsOnly = a.MetadataFetchedAt != nil
-	if !force && detailsOnly && !detailsStale(a) {
+	if mode == hydrateIfStale && detailsOnly && !detailsStale(a) {
 		return false, nil
 	}
 	ctx, span := tracer.Start(ctx, "music.hydrate_album",
 		trace.WithAttributes(attribute.Int64("album.id", int64(albumID))))
 	defer span.End()
 
-	d, err := s.releaseGroup(ctx, a)
+	held := mode != hydrateFollow && detailsOnly && countFiles(a) > 0
+	edition := a.EditionMbid
+	if held {
+		edition = cmpOr(edition, a.ReleaseMbid)
+	}
+	d, err := s.releaseGroup(ctx, a.Mbid, edition)
 	switch {
 	case errors.Is(err, metadata.ErrNotFound) && detailsOnly:
 		// MusicBrainz no longer has the release group: keep what is stored
 		// and record that there are no genres, or the backfill would ask for
 		// it forever.
 		d = storedDetails(a)
+		if held {
+			err = s.db.ReportChange(
+				ctx,
+				albumOwner(a.ID),
+				metadatachange.KindAlbumRemoved,
+				"",
+				map[string]any{"files": countFiles(a)},
+			)
+		} else {
+			err = nil
+		}
 	case errors.Is(err, metadata.ErrNotFound):
 		// Stamp it, or the sweep would ask for it forever.
-		d = &metadata.ReleaseGroupDetails{}
+		d, err = &metadata.ReleaseGroupDetails{}, nil
 	case err != nil:
+	case held:
+		var apply bool
+		apply, err = s.reviewAlbum(ctx, a, d)
+		if !apply {
+			d = keptDetails(a)
+		}
+	}
+	if err != nil {
 		hydrations.Add(ctx, 1, outcomeAttr(hydrationFailed))
 		span.SetAttributes(attribute.String("outcome", hydrationFailed))
 		return detailsOnly, otelx.RecordSpanError(
@@ -394,6 +432,9 @@ func (s *Service) hydrateAlbum(
 			fmt.Errorf("store album %d: %w", albumID, err),
 		)
 	}
+	if err := s.settleChanges(ctx, a, d, held, mode); err != nil {
+		return detailsOnly, otelx.RecordSpanError(span, err)
+	}
 	s.tagsChanged(ctx, albumID)
 	outcome := hydrationOK
 	if !d.CreditsComplete {
@@ -404,7 +445,7 @@ func (s *Service) hydrateAlbum(
 		attribute.String("outcome", outcome),
 		attribute.Int("tracks", len(params.Tracks)),
 	)
-	if a.MetadataFetchedAt == nil && force {
+	if a.MetadataFetchedAt == nil && mode != hydrateIfStale {
 		if full, err := s.db.FindAlbumByID(ctx, albumID); err == nil {
 			s.resolveCover(ctx, full)
 		}
@@ -412,14 +453,42 @@ func (s *Service) hydrateAlbum(
 	return detailsOnly, nil
 }
 
-func (s *Service) releaseGroup(
+// settleChanges brings the album's pending changes in line with what was
+// just written: an album without files has nothing to decide, and one that
+// followed MusicBrainz has nothing left about its edition, but may hold files
+// of tracks the release no longer lists.
+func (s *Service) settleChanges(
 	ctx context.Context,
 	a *ent.Album,
-) (*metadata.ReleaseGroupDetails, error) {
-	if a.EditionMbid != "" {
-		return s.metadata.GetReleaseGroupEdition(ctx, a.Mbid, a.EditionMbid)
+	d *metadata.ReleaseGroupDetails,
+	held bool,
+	mode hydrateMode,
+) error {
+	switch {
+	case mode == hydrateFollow:
+		if err := s.db.ClearChange(
+			ctx,
+			albumOwner(a.ID),
+			albumKinds...); err != nil {
+			return err
+		}
+	case !held:
+		return s.db.ClearChange(ctx, albumOwner(a.ID), albumKinds...)
 	}
-	return s.metadata.GetReleaseGroup(ctx, a.Mbid)
+	if len(d.Tracks) == 0 || countFiles(a) == 0 {
+		return nil
+	}
+	return s.reviewTracks(ctx, a.ID, d)
+}
+
+func (s *Service) releaseGroup(
+	ctx context.Context,
+	mbid, edition string,
+) (*metadata.ReleaseGroupDetails, error) {
+	if edition != "" {
+		return s.metadata.GetReleaseGroupEdition(ctx, mbid, edition)
+	}
+	return s.metadata.GetReleaseGroup(ctx, mbid)
 }
 
 // AlbumEditions lists the releases a person can make the album follow.
@@ -459,7 +528,7 @@ func (s *Service) SetAlbumEdition(
 		return err
 	}
 	s.hydrate.remove(albumID)
-	if _, err := s.hydrateAlbum(ctx, albumID, true); err != nil {
+	if _, err := s.hydrateAlbum(ctx, albumID, hydrateFollow); err != nil {
 		if restore := s.db.SetAlbumEdition(
 			ctx,
 			albumID,

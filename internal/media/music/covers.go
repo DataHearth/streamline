@@ -88,6 +88,31 @@ func (s *Service) hasCover(albumID uint32) bool {
 	return err == nil && st.Size() > 0
 }
 
+// refreshCoversInBackground is ResolveCoversInBackground for a metadata
+// refresh: the remote sources are asked again even when a cover is cached,
+// so a corrected upstream cover reaches the album.
+func (s *Service) refreshCoversInBackground(
+	ctx context.Context,
+	albumIDs ...uint32,
+) {
+	if len(albumIDs) == 0 {
+		return
+	}
+	bg := context.WithoutCancel(ctx)
+	go func() {
+		defer observability.RecoverPanic(bg, "music.refresh_covers", nil)
+		for _, id := range albumIDs {
+			a, err := s.db.FindAlbumByID(bg, id)
+			if err != nil {
+				slog.WarnContext(bg, "album cover lookup failed",
+					"album.id", id, "error", err)
+				continue
+			}
+			s.coverFrom(bg, a, true)
+		}
+	}()
+}
+
 // resolveCover stores the album's cover from the first source that yields an
 // image: a picture embedded in one of its files, a cover file beside them,
 // Deezer by barcode, Deezer by search, then the Cover Art Archive. The local
@@ -95,6 +120,12 @@ func (s *Service) hasCover(albumID uint32) bool {
 // outranks a downloaded one; the remote ones only when none is. It takes the
 // album with its artist, tracks and their media files loaded.
 func (s *Service) resolveCover(ctx context.Context, a *ent.Album) {
+	s.coverFrom(ctx, a, false)
+}
+
+// coverFrom is resolveCover; fresh asks the remote sources even over a
+// cached cover, which stays when none of them yields one.
+func (s *Service) coverFrom(ctx context.Context, a *ent.Album, fresh bool) {
 	ctx, span := tracer.Start(ctx, "music.resolve_cover",
 		trace.WithAttributes(attribute.Int64("album.id", int64(a.ID))))
 	defer span.End()
@@ -111,7 +142,7 @@ func (s *Service) resolveCover(ctx context.Context, a *ent.Album) {
 
 	var errs []error
 	source := s.localCover(ctx, a, &errs)
-	if source == "" && s.hasCover(a.ID) {
+	if source == "" && !fresh && s.hasCover(a.ID) {
 		span.SetAttributes(attribute.String("cover.source", "cached"))
 		if len(errs) > 0 {
 			err := otelx.RecordSpanError(span, errors.Join(errs...))

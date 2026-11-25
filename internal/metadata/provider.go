@@ -339,6 +339,13 @@ type ReleaseGroupDetails struct {
 	ArtistMBID  string
 	ArtistName  string
 	ReleaseMBID string
+	// Canonical is the release MusicBrainz's listing would pick now.
+	// ReleaseMBID differs from it when the edition asked for is still listed
+	// under the group (EditionListed); otherwise ReleaseMBID fell back to it.
+	Canonical     string
+	EditionListed bool
+	// Editions summarises every release listed under the group.
+	Editions []ReleaseEdition
 	// Barcode is the canonical release's UPC/EAN, empty when MusicBrainz has none.
 	Barcode       string
 	Label         string
@@ -470,6 +477,9 @@ type MusicProvider interface {
 		mbid, edition string,
 	) (*ReleaseGroupDetails, error)
 	ReleaseGroupEditions(ctx context.Context, mbid string) ([]ReleaseEdition, error)
+	// ResolveRelease returns the id MusicBrainz now answers for a release:
+	// another one when it was merged, ErrNotFound when it was deleted.
+	ResolveRelease(ctx context.Context, mbid string) (string, error)
 	SearchReleaseGroups(
 		ctx context.Context,
 		artist, album string,

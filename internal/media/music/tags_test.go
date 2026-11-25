@@ -421,7 +421,7 @@ var _ = Describe("Music tag sync", Label("unit", "integration", "music"), func()
 					Return(hydrated("rg-1", "Lithium"), nil)
 
 				Expect(
-					e.svc.hydrateAlbum(e.ctx, alb.ID, true),
+					e.svc.hydrateAlbum(e.ctx, alb.ID, hydrateFollow),
 				).Error().
 					NotTo(HaveOccurred())
 				Expect(
@@ -430,7 +430,7 @@ var _ = Describe("Music tag sync", Label("unit", "integration", "music"), func()
 
 				tagConfig(map[string]any{"mode": config.MusicTagsManaged})
 				Expect(
-					e.svc.hydrateAlbum(e.ctx, alb.ID, true),
+					e.svc.hydrateAlbum(e.ctx, alb.ID, hydrateFollow),
 				).Error().
 					NotTo(HaveOccurred())
 				Expect(
