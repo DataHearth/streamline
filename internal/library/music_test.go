@@ -199,6 +199,206 @@ var _ = Describe("TrackMatcher", Label("unit", "library"), func() {
 	})
 })
 
+var _ = Describe("TrackMatcher near titles", Label("unit", "library"), func() {
+	// Sidilarsen's "Que la lumière soit": the release spells track 7 "Un
+	// Élan De Coeur" where MusicBrainz has "Un élan du cœur".
+	album := []*ent.Track{
+		{ID: 1, Disc: 1, Position: 1, Title: "Deuxième vie"},
+		{ID: 2, Disc: 1, Position: 2, Title: "Acide Occident"},
+		{ID: 7, Disc: 1, Position: 7, Title: "Un élan du cœur"},
+		{ID: 12, Disc: 1, Position: 12, Title: "Appel à résistance"},
+	}
+	files := []string{
+		"Sidilarsen - Deuxième Vie.flac",
+		"Sidilarsen - Acide Occident.flac",
+		"Sidilarsen - Un Élan De Coeur.flac",
+		"Sidilarsen - Appel À Résistance.flac",
+	}
+
+	It("pairs a misspelt title with the one track no file names", func() {
+		m := NewTrackMatcherByName(album, files)
+		Expect(m.MatchByName("Sidilarsen - Un Élan De Coeur.flac").ID).
+			To(Equal(uint32(7)))
+		Expect(m.Match(audiotags.Info{Title: "Un Élan De Coeur"}).ID).
+			To(Equal(uint32(7)))
+		Expect(m.MatchByName("Sidilarsen - Acide Occident.flac").ID).
+			To(Equal(uint32(2)))
+	})
+
+	It("leaves a track a file names outright to that file", func() {
+		m := NewTrackMatcherByName(album, append(
+			files[:2:2],
+			"Sidilarsen - Un élan du cœur.flac",
+			"Sidilarsen - Un Élan De Coeur.flac",
+		))
+		Expect(m.MatchByName("Sidilarsen - Un élan du cœur.flac").ID).
+			To(Equal(uint32(7)))
+		Expect(m.MatchByName("Sidilarsen - Un Élan De Coeur.flac")).To(BeNil())
+	})
+
+	It("pairs nothing when two files are nearest to one track", func() {
+		m := NewTrackMatcherByName(album, append(
+			files[:2:2],
+			"Sidilarsen - Un Élan De Coeur.flac",
+			"Sidilarsen - Un Élan Du Coeurs.flac",
+		))
+		Expect(m.MatchByName("Sidilarsen - Un Élan De Coeur.flac")).To(BeNil())
+		Expect(m.MatchByName("Sidilarsen - Un Élan Du Coeurs.flac")).To(BeNil())
+	})
+
+	It("pairs a reordered title and a store-labelled one", func() {
+		// Biotop's "Remix Heretik System" and Dancefloor Bastards' title
+		// track, as a store and another release name them.
+		tracks := []*ent.Track{
+			{ID: 1, Disc: 1, Position: 1, Title: "Cardiotonic"},
+			{ID: 2, Disc: 1, Position: 2, Title: "Remix Heretik System"},
+			{ID: 3, Disc: 1, Position: 3, Title: "Dancefloor Bastards"},
+		}
+		m := NewTrackMatcher(tracks, []audiotags.Info{
+			{Title: "Cardiotronic"},
+			{Title: "Heretik System Remix"},
+			{Title: "Dancefloor Bastards [Explicit]"},
+		})
+		Expect(m.Match(audiotags.Info{Title: "Cardiotronic"}).ID).
+			To(Equal(uint32(1)))
+		Expect(m.Match(audiotags.Info{Title: "Heretik System Remix"}).ID).
+			To(Equal(uint32(2)))
+		Expect(
+			m.Match(audiotags.Info{Title: "Dancefloor Bastards [Explicit]"}).ID,
+		).To(Equal(uint32(3)))
+	})
+
+	It("sets aside the label every file of a live album carries", func() {
+		// In Bikini Dura Sidi: MusicBrainz titles the live tracks bare, and
+		// spells "Des milliards" as "Des Millards".
+		titles := []string{
+			"Retourner la France", "Back to Basics", "Spread It",
+			"A qui je nuis me pardonne", "Guerre à vendre", "Wall of Shame",
+			"I feel fine", "Dancefloor Bastards", "Frapper la terre", "Fluidité",
+			"Où il veut", "Comme on vibre", "La morale de la fable", "Des Millards",
+		}
+		tracks := make([]*ent.Track, 0, len(titles))
+		for i, title := range titles {
+			tracks = append(tracks, &ent.Track{
+				ID: uint32(i + 1), Disc: 1, Position: uint16(i + 1), Title: title,
+			})
+		}
+		files := make([]string, 0, 13)
+		for _, title := range []string{
+			"Back to Basics", "Comme on vibre", "Dancefloor Bastards",
+			"Des milliards", "Fluidité", "Frapper la terre", "I Feel Fine",
+			"La morale de la fable", "Où il veut", "Retourner la France",
+			"Spread It", "Wall of Shame", "À qui je nuis me pardonne",
+		} {
+			files = append(files, "Sidilarsen - "+title+" (Live).flac")
+		}
+		m := NewTrackMatcherByName(tracks, files)
+		got := map[uint32]bool{}
+		for _, f := range files {
+			t := m.MatchByName(f)
+			Expect(t).NotTo(BeNil(), f)
+			got[t.ID] = true
+		}
+		Expect(got).To(HaveLen(13))
+		Expect(got).NotTo(HaveKey(uint32(5)))
+		Expect(m.MatchByName("Sidilarsen - Des milliards (Live).flac").ID).
+			To(Equal(uint32(14)))
+	})
+
+	It("keeps a live bonus file apart from the studio track", func() {
+		tracks := []*ent.Track{
+			{ID: 1, Disc: 1, Position: 1, Title: "Spread It"},
+			{ID: 2, Disc: 1, Position: 2, Title: "Go Fast"},
+		}
+		m := NewTrackMatcherByName(tracks, []string{
+			"Go Fast.flac", "Spread It (Live).flac",
+		})
+		Expect(m.MatchByName("Go Fast.flac").ID).To(Equal(uint32(2)))
+		Expect(m.MatchByName("Spread It (Live).flac")).To(BeNil())
+	})
+
+	It("agrees with a track its number reaches under another spelling", func() {
+		t := &ent.Track{ID: 7, Disc: 1, Position: 7, Title: "Un élan du cœur"}
+		Expect(TrackTitleAgrees(t, "Un élan de cœur")).To(BeTrue())
+		Expect(TrackTitleAgrees(t, "Où il veut")).To(BeFalse())
+	})
+
+	It("does not read another title or number as a misspelling", func() {
+		tracks := []*ent.Track{
+			{ID: 1, Disc: 1, Position: 1, Title: "Fiddler's Day: Part One"},
+			{ID: 2, Disc: 1, Position: 2, Title: "Interlude 1"},
+			{ID: 3, Disc: 1, Position: 3, Title: "Fire"},
+		}
+		m := NewTrackMatcherByName(tracks, []string{
+			"Bonus Song.flac", "Interlude 2.flac", "Fir.flac",
+		})
+		Expect(m.MatchByName("Bonus Song.flac")).To(BeNil())
+		Expect(m.MatchByName("Interlude 2.flac")).To(BeNil())
+		Expect(m.MatchByName("Fir.flac")).To(BeNil())
+	})
+})
+
+var _ = Describe("ReleaseTitleLabel", Label("unit", "library"), func() {
+	It("reads the label every titled file ends with", func() {
+		Expect(ReleaseTitleLabel([]string{
+			"Back to Basics (Live)", "Comme on vibre (live)", "", "Fluidité [Live]",
+		})).To(Equal("live"))
+		Expect(ReleaseTitleLabel([]string{
+			"Regret (Remastered 2011)", "New Land (Remastered  2011)",
+		})).To(Equal("remastered 2011"))
+	})
+
+	It("reads none when a file lacks it or carries another", func() {
+		Expect(ReleaseTitleLabel([]string{"Spread It (Live)", "Go Fast"})).
+			To(BeEmpty())
+		Expect(ReleaseTitleLabel([]string{"Spread It (Live)", "Go Fast (Demo)"})).
+			To(BeEmpty())
+		Expect(ReleaseTitleLabel([]string{"Spread It (Live)"})).To(BeEmpty())
+	})
+
+	It("strips only that label", func() {
+		Expect(StripTitleLabel("Où il veut (Live)", "live")).To(Equal("Où il veut"))
+		Expect(StripTitleLabel("Où il veut (Demo)", "live")).
+			To(Equal("Où il veut (Demo)"))
+		Expect(StripTitleLabel("(Live)", "live")).To(Equal("(Live)"))
+		Expect(StripTitleLabel("Où il veut (Live)", "")).
+			To(Equal("Où il veut (Live)"))
+	})
+})
+
+var _ = Describe("TitleNear", Label("unit", "library"), func() {
+	DescribeTable("reads two spellings of one title as one",
+		func(a, b string) {
+			Expect(TitleNear(a, b)).To(BeTrue())
+			Expect(TitleNear(b, a)).To(BeTrue())
+		},
+		Entry("a misspelt word", "Un élan de cœur", "Un élan du cœur"),
+		Entry("a dropped letter", "Cardiotronic", "Cardiotonic"),
+		Entry("the same words in another order",
+			"Heretik System Remix", "Remix Heretik System"),
+		Entry("a store's label", "Dancefloor Bastards [Explicit]",
+			"Dancefloor Bastards"),
+		Entry("a store's clean label", "Go Fast (Clean Version)", "Go Fast"),
+	)
+
+	DescribeTable("keeps two titles apart",
+		func(a, b string) {
+			Expect(TitleNear(a, b)).To(BeFalse())
+			Expect(TitleNear(b, a)).To(BeFalse())
+		},
+		Entry("another number", "Interlude 1", "Interlude 2"),
+		Entry("a short word", "Fire", "Fir"),
+		Entry("another title", "Bonus Song", "Fiddler's Day: Part One"),
+		Entry("another recording", "Dancefloor Bastards (Live)",
+			"Dancefloor Bastards"),
+		Entry("a word more", "Heretik System Remix", "Heretik System"),
+		Entry("a live version of a long title",
+			"Les enfants de la rage (Live)", "Les enfants de la rage"),
+		Entry("a remix of a long title",
+			"Méditerranée damnée (Remix)", "Méditerranée damnée"),
+	)
+})
+
 var _ = Describe("MatchTrackByName", Label("unit", "library"), func() {
 	tracks := []*ent.Track{
 		{ID: 1, Disc: 1, Position: 1, Title: "Open Water"},

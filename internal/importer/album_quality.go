@@ -86,12 +86,18 @@ func albumHoldReasons(plan []albumFile, alb *ent.Album) []schema.HoldReason {
 // title that differs, a script the comparison cannot read included, for a
 // person to answer. Without it, it speaks only when at least half the comparable
 // titles agree, since a mostly different list is a translated release whose
-// numbers are all there is to go on.
+// numbers are all there is to go on. A label every file's title ends with
+// (library.ReleaseTitleLabel: a live album's "(Live)") contradicts nothing.
 func trackHoldReasons(plan []albumFile, everyFile bool) []schema.HoldReason {
 	var (
 		out             []schema.HoldReason
 		agree, compared int
 	)
+	titles := make([]string, 0, len(plan))
+	for _, f := range plan {
+		titles = append(titles, f.info.Title)
+	}
+	label := library.ReleaseTitleLabel(titles)
 	for _, f := range plan {
 		if !library.TitleComparable(f.info.Title) ||
 			!library.TitleComparable(f.tr.Title) {
@@ -108,7 +114,11 @@ func trackHoldReasons(plan []albumFile, everyFile bool) []schema.HoldReason {
 			continue
 		}
 		compared++
-		if library.TrackTitleAgrees(f.tr, f.info.Title) {
+		if library.TrackTitleAgrees(f.tr, f.info.Title) ||
+			library.TrackTitleAgrees(
+				f.tr,
+				library.StripTitleLabel(f.info.Title, label),
+			) {
 			agree++
 			continue
 		}

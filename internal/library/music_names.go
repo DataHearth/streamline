@@ -42,10 +42,11 @@ func trackTitleIs(t *ent.Track, title string) bool {
 	})
 }
 
-// TrackTitleAgrees is TitlePrefixMatches against any of the track's titles.
+// TrackTitleAgrees is TitlePrefixMatches or TitleNear against any of the
+// track's titles.
 func TrackTitleAgrees(t *ent.Track, title string) bool {
 	return slices.ContainsFunc(TrackTitles(t), func(own string) bool {
-		return TitlePrefixMatches(own, title)
+		return TitlePrefixMatches(own, title) || TitleNear(own, title)
 	})
 }
 
