@@ -154,6 +154,8 @@ func (s *Server) FollowMetadataChange(
 		err = s.music.FollowChange(ctx, c)
 	case db.ChangeOwnerTVShow:
 		err = s.tvshows.FollowChange(ctx, c)
+	case db.ChangeOwnerBook:
+		err = s.books.FollowChange(ctx, c)
 	default:
 		err = db.ErrNotFollowable
 	}

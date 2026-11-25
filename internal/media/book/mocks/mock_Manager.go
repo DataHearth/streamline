@@ -459,6 +459,63 @@ func (_c *MockManager_DeleteSeries_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// FollowChange provides a mock function for the type MockManager
+func (_mock *MockManager) FollowChange(ctx context.Context, c *ent.MetadataChange) error {
+	ret := _mock.Called(ctx, c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FollowChange")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *ent.MetadataChange) error); ok {
+		r0 = returnFunc(ctx, c)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockManager_FollowChange_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FollowChange'
+type MockManager_FollowChange_Call struct {
+	*mock.Call
+}
+
+// FollowChange is a helper method to define mock.On call
+//   - ctx context.Context
+//   - c *ent.MetadataChange
+func (_e *MockManager_Expecter) FollowChange(ctx any, c any) *MockManager_FollowChange_Call {
+	return &MockManager_FollowChange_Call{Call: _e.mock.On("FollowChange", ctx, c)}
+}
+
+func (_c *MockManager_FollowChange_Call) Run(run func(ctx context.Context, c *ent.MetadataChange)) *MockManager_FollowChange_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *ent.MetadataChange
+		if args[1] != nil {
+			arg1 = args[1].(*ent.MetadataChange)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_FollowChange_Call) Return(err error) *MockManager_FollowChange_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockManager_FollowChange_Call) RunAndReturn(run func(ctx context.Context, c *ent.MetadataChange) error) *MockManager_FollowChange_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetBook provides a mock function for the type MockManager
 func (_mock *MockManager) GetBook(ctx context.Context, id uint32) (*ent.Book, error) {
 	ret := _mock.Called(ctx, id)

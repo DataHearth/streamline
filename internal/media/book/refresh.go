@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/media/book/pick"
@@ -59,13 +60,31 @@ func (s *Service) RefreshBook(ctx context.Context, id uint32) (*ent.Book, error)
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("get book: %w", err))
 	}
 	if len(recs) == 0 {
+		if err := s.db.ReportChange(
+			ctx, bookOwner(id), metadatachange.KindBookRemoved, "", nil,
+		); err != nil {
+			return nil, otelx.RecordSpanError(span, err)
+		}
 		return nil, otelx.RecordSpanError(span, ErrHardcoverNotFound)
+	}
+	if err := s.db.ClearChange(
+		ctx,
+		bookOwner(id),
+		metadatachange.KindBookRemoved,
+	); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
 	}
 	if err := s.applyRecord(ctx, row, recs[0]); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	out, err := s.GetBook(ctx, id)
-	return out, otelx.RecordSpanError(span, err)
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	if err := s.reviewEditions(ctx, prov, []*ent.Book{out}); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	return out, nil
 }
 
 // applyRecord writes a fresh Hardcover record onto a stored book. A stub, whose
@@ -113,13 +132,26 @@ func (s *Service) refreshBooks(ctx context.Context, books []*ent.Book) error {
 	for _, r := range recs {
 		byID[r.HardcoverID] = r
 	}
+	refreshed := make([]*ent.Book, 0, len(books))
 	for _, b := range books {
 		rec := byID[b.HardcoverID]
 		if rec == nil {
+			if err := s.db.ReportChange(
+				ctx, bookOwner(b.ID), metadatachange.KindBookRemoved, "", nil,
+			); err != nil {
+				return err
+			}
 			if err := s.db.MarkBookRefreshed(ctx, b.ID, time.Now()); err != nil {
 				return err
 			}
 			continue
+		}
+		if err := s.db.ClearChange(
+			ctx,
+			bookOwner(b.ID),
+			metadatachange.KindBookRemoved,
+		); err != nil {
+			return err
 		}
 		full, err := s.db.FindBookByID(ctx, b.ID)
 		if err != nil {
@@ -128,8 +160,12 @@ func (s *Service) refreshBooks(ctx context.Context, books []*ent.Book) error {
 		if err := s.applyRecord(ctx, full, rec); err != nil {
 			return err
 		}
+		if full, err = s.db.FindBookByID(ctx, b.ID); err != nil {
+			return err
+		}
+		refreshed = append(refreshed, full)
 	}
-	return nil
+	return s.reviewEditions(ctx, prov, refreshed)
 }
 
 // RefreshSeries re-reads a series: its skeleton, then every volume in batches

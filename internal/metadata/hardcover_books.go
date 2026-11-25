@@ -267,6 +267,38 @@ func (h *Hardcover) BookByISBN(ctx context.Context, isbn string) (uint32, error)
 	return payload.Editions[0].BookID, nil
 }
 
+const hcEditionsQuery = `
+query ($ids: [Int!]) {
+  editions(where: {id: {_in: $ids}}) { id }
+}`
+
+func (h *Hardcover) ExistingEditions(
+	ctx context.Context,
+	ids []uint32,
+) (map[uint32]bool, error) {
+	ctx, span := tracer.Start(ctx, "metadata.hardcover.existing_editions")
+	defer span.End()
+
+	var payload struct {
+		Editions []struct {
+			ID uint32 `json:"id"`
+		} `json:"editions"`
+	}
+	if err := h.query(
+		ctx,
+		hcEditionsQuery,
+		map[string]any{"ids": ids},
+		&payload,
+	); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	out := make(map[uint32]bool, len(payload.Editions))
+	for _, e := range payload.Editions {
+		out[e.ID] = true
+	}
+	return out, nil
+}
+
 // hcBooksQuery is the workhorse: one request for up to hcBookBatch books with
 // their editions. The five edition aliases are one GraphQL document, and the
 // depth stays at 3 (books > editions > language|publisher), which is

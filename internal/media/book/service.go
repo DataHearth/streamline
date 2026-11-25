@@ -67,6 +67,10 @@ const (
 
 // Manager is the surface the REST handlers use.
 type Manager interface {
+	// FollowChange applies a book's pending provider change: a format whose
+	// edition Hardcover removed takes the edition picked now, its file kept.
+	// db.ErrNotFollowable for a book Hardcover removed.
+	FollowChange(ctx context.Context, c *ent.MetadataChange) error
 	Lookup(ctx context.Context, query, kind string) ([]LookupHit, error)
 	LookupDetail(
 		ctx context.Context,

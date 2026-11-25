@@ -197,4 +197,7 @@ type BookProvider interface {
 	// minutes per id set. The answer is in ascending id order; an unknown id
 	// is simply absent.
 	GetSeriesLookup(ctx context.Context, ids []uint32) ([]SeriesLookupRecord, error)
+	// ExistingEditions reports which of these editions Hardcover still has,
+	// in one request.
+	ExistingEditions(ctx context.Context, ids []uint32) (map[uint32]bool, error)
 }

@@ -3,13 +3,17 @@ package book
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/book"
+	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
@@ -85,7 +89,66 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 			_, err := f.svc.RefreshBook(f.ctx, b.ID)
 
 			Expect(err).To(MatchError(ErrHardcoverNotFound))
+			Expect(f.client.MetadataChange.Query().OnlyX(f.ctx).Kind).
+				To(Equal(metadatachange.KindBookRemoved))
 		})
+
+		It(
+			"asks about a format whose edition Hardcover removed, and follows it",
+			func() {
+				b := f.addBook(1, "Elantris", "ebook")
+				f.client.MediaFile.Create().
+					SetPath("/books/elantris.epub").
+					SetSize(1).
+					SetBookID(b.ID).
+					SetBookKind(mediafile.BookKindEbook).
+					ExecX(f.ctx)
+				slot := f.reloadBook(b.ID).Edges.EbookEdition
+				Expect(slot).NotTo(BeNil())
+				r := rec(1, "Elantris")
+				r.Editions = slices.DeleteFunc(
+					r.Editions,
+					func(e metadata.EditionRecord) bool {
+						return e.HardcoverID == slot.HardcoverEditionID
+					},
+				)
+				f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1)).
+					Return([]*metadata.BookRecord{r}, nil).Once()
+				f.meta.EXPECT().
+					ExistingEditions(anyCtx, []uint32{slot.HardcoverEditionID}).
+					Return(map[uint32]bool{}, nil).
+					Once()
+
+				_, err := f.svc.RefreshBook(f.ctx, b.ID)
+
+				Expect(err).NotTo(HaveOccurred())
+				c := f.client.MetadataChange.Query().WithBook().OnlyX(f.ctx)
+				Expect(c.Kind).To(Equal(metadatachange.KindEditionRemoved))
+				Expect(c.Payload).To(HaveKeyWithValue("slots", ConsistOf("ebook")))
+				Expect(f.reloadBook(b.ID).Edges.EbookEdition.ID).
+					To(Equal(slot.ID), "the edition stays until an admin decides")
+
+				f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1)).
+					Return([]*metadata.BookRecord{r}, nil).Once()
+				f.meta.EXPECT().ExistingEditions(anyCtx, mock.Anything).
+					RunAndReturn(func(_ context.Context, ids []uint32) (map[uint32]bool, error) {
+						all := map[uint32]bool{}
+						for _, id := range ids {
+							all[id] = true
+						}
+						return all, nil
+					}).
+					Once()
+				Expect(f.svc.FollowChange(f.ctx, c)).To(Succeed())
+
+				after := f.reloadBook(b.ID)
+				Expect(after.Edges.EbookEdition).NotTo(BeNil())
+				Expect(after.Edges.EbookEdition.HardcoverEditionID).
+					NotTo(Equal(slot.HardcoverEditionID))
+				Expect(after.Edges.MediaFiles).To(HaveLen(1))
+				Expect(f.client.MetadataChange.Query().CountX(f.ctx)).To(BeZero())
+			},
+		)
 
 		It("passes a rate limit through and changes nothing", func() {
 			b := f.addBook(1, "Elantris", "")
