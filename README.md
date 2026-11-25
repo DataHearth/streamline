@@ -30,7 +30,7 @@ https://github.com/user-attachments/assets/f08f3d32-3172-4de7-afeb-163a484403ce
 - Quality profiles with custom-format scoring and upgrades, import verification, activity queue and history
 - Multi-user with SSO (OIDC), invites, API keys
 - Built-in request system (Seerr replacement) for every media type
-- Indexers: Torznab, Prowlarr
+- Indexers: Torznab, Prowlarr, or built-in: the tracker definitions Prowlarr and Jackett use, with neither installed
 - Torrent clients: qBittorrent, Transmission, Deluge, or the built-in BitTorrent engine — no external client needed; optionally download only the files a pack is wanted for
 - Media server notifications and deep links: Plex, Jellyfin, Emby
 - Optional transcoding to a quality profile's rules, verified before it replaces a file, with VAAPI hardware encoding
@@ -92,7 +92,7 @@ docker logs streamline 2>&1 | grep 'default admin'                              
 kubectl -n streamline logs deploy/streamline-streamline | grep 'default admin'  # Helm
 ```
 
-Copy it right then and change it from Settings. It is never written to your config file and never passed to the log pipeline, and `auth.seed_admin` is applied against an empty database and ignored afterwards. If you lose it, stop the server and set a new one with `streamline --config <path> auth set-password --generate admin@streamline.local` (in Compose, `docker compose run --rm streamline --config /etc/streamline/config.yaml auth set-password --generate admin@streamline.local`), which prints it once and signs that account out everywhere. Anything scraping container stdout captured it too, so treat it as compromised until you rotate it.
+Copy it right then and change it from your account page. It is never written to your config file and never passed to the log pipeline, and `auth.seed_admin` is applied against an empty database and ignored afterwards. If you lose it, stop the server and set a new one with `streamline --config <path> auth set-password --generate admin@streamline.local` (in Compose, `docker compose run --rm streamline --config /etc/streamline/config.yaml auth set-password --generate admin@streamline.local`), which prints it once, signs that account out everywhere and deletes its API keys. Anything scraping container stdout captured it too, so treat it as compromised until you rotate it.
 
 Streamline does not read or rewrite `auth.seed_admin.password` once the admin exists. If your file still holds a password there, it's your file: delete the leftover plaintext yourself.
 
@@ -117,11 +117,11 @@ docker run -d --name streamline \
 
 When `/etc/streamline/config.yaml` does not exist, the first start writes it with the defaults and the library paths from the environment. To edit the file before anything reads it, write it first with `docker run --rm -v "$PWD/config:/etc/streamline" ghcr.io/datahearth/streamline:latest config init --output /etc/streamline/config.yaml` and set the paths there instead.
 
-The library mount is **required**, not an optional extra: Streamline creates `library.movie_path` and `library.series_path` at startup and exits if it cannot. They default to `/media/movies` and `/media/series`, so without a mount and paths of your own the container stops with `create library path /media/movies: mkdir /media: permission denied`. Music and books default to `/data/music`, `/data/books` and `/data/audiobooks` — inside the data volume, a different filesystem from your downloads, where a hardlink import fails — so set all six. Keep library and downloads under one mount so the default `hardlink` import mode works (`library.import_mode` also accepts `copy` and `move`).
+The library mount is **required**, not an optional extra: Streamline creates `library.movie_path` and `library.series_path` at startup and exits if it cannot. They default to `/media/movies` and `/media/series`, so without a mount and paths of your own the container stops with `create library path /media/movies: mkdir /media: permission denied`. Music and books default to `/media/music`, `/media/books` and `/media/audiobooks`, which nothing creates at startup: without a mount there, the first import into one fails instead. Downloads default to `/downloads`, so set all six. Keep library and downloads under one mount so the default `hardlink` import mode works (`library.import_mode` also accepts `copy` and `move`).
 
 The config directory must stay writable. A read-only mount loses the generated session secret on every restart (everyone is signed out) and fails every save from Settings; for a declarative deploy use `read_only: true` and supply the secret yourself — see [GitOps and Kubernetes](https://github.com/DataHearth/streamline/wiki/GitOps-and-Kubernetes).
 
-Tags: `latest` (most recent stable release), `main` (main branch), `X.Y.Z`, `X.Y`, `X`, `sha-<short>`. Each also comes as a `-vaapi` variant (`latest-vaapi`, `X.Y.Z-vaapi`, …) for hardware transcoding.
+Tags: `latest`, `main` (main branch), `X.Y.Z`, `X.Y`, `X`, `sha-<short>`. Each also comes as a `-vaapi` variant (`latest-vaapi`, `X.Y.Z-vaapi`, …) for hardware transcoding.
 
 The image ships static `ffmpeg` and `ffprobe` alongside the binary in `/usr/local/bin`, so the [optional media features](#optional-ffmpeg-and-ffprobe) work with no extra setup. That static build cannot open a GPU: the `-vaapi` variant is a larger Ubuntu-based image carrying an ffmpeg with VAAPI and libvmaf, and needs the render node passed in (`--device /dev/dri` plus `--group-add` with its group id).
 
@@ -159,6 +159,7 @@ nixpkgs.overlays = [ inputs.streamline.overlays.default ];
 services.streamline = {
   enable = true;
   openFirewall = true;
+  settings.server.host = "0.0.0.0";   # 127.0.0.1 unless set
   settings.library = {
     movie_path = "/srv/media/movies";
     series_path = "/srv/media/series";
@@ -167,7 +168,7 @@ services.streamline = {
 };
 ```
 
-`settings` is freeform YAML, so every key in the configuration reference works under its own name. The sandbox's writable paths are derived from `data_dir` and every `library.*_path` you set, so add `music_path`, `ebook_path` and `audiobook_path` beside the three above if you use music or books (their defaults sit under `/data`, outside the sandbox). By default the declaration seeds `/var/lib/streamline/config.yaml` on first start and the web UI stays editable; set `mutableSettings = false` for a fully declarative, read-only instance. See [the NixOS wiki page](https://github.com/DataHearth/streamline/wiki/NixOS) for secrets, hardware transcoding and the sandbox's writable paths.
+`settings` is freeform YAML, so every key in the configuration reference works under its own name. The sandbox's writable paths are derived from `data_dir` and every `library.*_path` you set, so add `music_path`, `ebook_path` and `audiobook_path` beside the three above if you use music or books (their defaults sit under `/media`, outside the sandbox). By default the declaration seeds `/var/lib/streamline/config.yaml` on first start and the web UI stays editable; set `mutableSettings = false` for a fully declarative, read-only instance. See [the NixOS wiki page](https://github.com/DataHearth/streamline/wiki/NixOS) for secrets, hardware transcoding and the sandbox's writable paths.
 
 ### Unraid and Proxmox VE
 
@@ -214,7 +215,7 @@ Each archive also ships an SPDX SBOM (`<archive>.sbom.spdx.json`).
 
 ### From source
 
-Requires Go >= 1.27.3, Node >= 24.22.2, pnpm 12, [Task](https://taskfile.dev) — or `nix develop`, whose devshell pins all of them.
+Requires Go >= 1.27.4, Node >= 26.13.1, pnpm 12, [Task](https://taskfile.dev) — or `nix develop`, whose devshell pins all of them.
 
 ```bash
 git clone https://github.com/datahearth/streamline.git
@@ -224,7 +225,7 @@ task
 ./streamline --config ./config.yaml   # written with the defaults if missing
 ```
 
-The defaults put the movie and series libraries under `/media`, which a non-root user cannot create: set the `library.*_path` keys to folders you can write, or pass them as `STREAMLINE_LIBRARY__*_PATH` on the first start, which writes them into the new file.
+The defaults put every library under `/media`, which a non-root user cannot create: set the `library.*_path` keys to folders you can write, or pass them as `STREAMLINE_LIBRARY__*_PATH` on the first start, which writes them into the new file.
 
 ### Optional: ffmpeg and ffprobe
 
@@ -241,10 +242,14 @@ when that is empty, and uses whichever it finds:
 - **`ffmpeg`** writes files:
   - **Transcoding**: re-encoding imported files to a quality profile's rules (`transcoding.enabled`,
     off by default), including VAAPI hardware encoding
+  - **WAV albums**: converting a WAV release to FLAC at import (`library.convert_wav`, on by default),
+    which needs `ffprobe` too
 
 Without `ffprobe`, imports fall back to the release name, exactly as before the feature existed, and
 `GET /api/v1/system/info` reports `ffmpeg_warn` so you know why media info is missing. Without
-`ffmpeg`, the transcode worker stays idle (logged at boot). Neither case errors or blocks anything.
+`ffmpeg`, the transcode worker stays idle (logged at boot). Without either one, WAV releases are
+refused and an extension granted `ffmpeg` is told the missing binary is unavailable; nothing else
+errors or is blocked.
 `ffmpeg.enabled: false` switches off everything in both lists.
 
 **The official Docker image ships both binaries.** Static `ffmpeg` and `ffprobe` are copied into
@@ -262,7 +267,7 @@ Generate a default config:
 streamline config init --output ~/.config/streamline/config.yaml
 ```
 
-Every config key can also be set via environment variables with the `STREAMLINE_` prefix. A double underscore (`__`) is the path separator; a single underscore is literal, so keys with underscore segments stay reachable: `STREAMLINE_LOG__APP__LEVEL=debug` → `log.app.level`, `STREAMLINE_AUTH__SESSION_SECRET=…` → `auth.session_secret`, `STREAMLINE_OTEL__ENDPOINT=…` → `otel.endpoint`.
+Every config key outside a list of entries (`auth.oidc`, `indexers`, `download_clients`, the quality profiles and the like) can also be set via environment variables with the `STREAMLINE_` prefix. A double underscore (`__`) is the path separator; a single underscore is literal, so keys with underscore segments stay reachable: `STREAMLINE_LOG__APP__LEVEL=debug` → `log.app.level`, `STREAMLINE_AUTH__SESSION_SECRET=…` → `auth.session_secret`, `STREAMLINE_OTEL__ENDPOINT=…` → `otel.endpoint`.
 
 Validate a config file:
 
@@ -270,14 +275,16 @@ Validate a config file:
 streamline config validate --config ~/.config/streamline/config.yaml
 ```
 
-Login is rate-limited per client address: **5 attempts per 15 minutes**, counted
-as a sliding window, so no fifteen minutes anywhere on the clock ever contains
-more than five. Each attempt comes back to the budget exactly fifteen minutes
-after it was made, and refusals carry a `Retry-After` saying when — always at
-least one second. IPv6 clients are counted per `/64`, not per address: the
-smallest block an ISP routes to one subscriber is a `/64`, so counting single
-addresses would let one client step around its own throttle by picking the next
-address out of its allocation. Everything sharing a `/64` therefore shares one
+Login (SSO included) and registration share one rate limit per client address:
+**5 attempts per 15 minutes**, counted as a sliding window, so no fifteen
+minutes anywhere on the clock ever contains more than five that count. A login
+that succeeds hands its attempt back at once; every other attempt, an accepted
+registration included, comes back to the budget exactly fifteen minutes after it
+was made. Refusals carry a `Retry-After` saying when, always at least one
+second. IPv6 clients are counted per `/64`, not per address: the smallest block
+an ISP routes to one subscriber is a `/64`, so counting single addresses would
+let one client step around its own throttle by picking the next address out of
+its allocation. Everything sharing a `/64` therefore shares one
 budget. IPv4 is counted per address.
 
 Attempts are recorded per address and nothing is ever dropped to make room, so
@@ -378,9 +385,9 @@ apart, each axis is monotone: no move on one can add capability on the other.
 > *Adoption.* `email_linking` defaults to `disabled`, so a user whose SSO login
 > reaches their local account only by a matching email — rather than by an
 > identity already linked from a previous SSO login — fails at the login screen
-> with *"this SSO account is not linked to a Streamline user"*
-> (`oidc_link_not_allowed`). To bind those
-> identities, open the provider up for one pass and close it again:
+> with *"The identity provider returned an error."* (`oidc_provider_error`),
+> and the log says `oidc login refused: unlinked identity matched an existing
+> account by email`. To bind those identities, open the provider up for one pass and close it again:
 >
 > 1. set `email_linking: non_admin` on the provider and restart;
 > 2. have each affected user sign in through SSO once — that login links the
@@ -449,7 +456,7 @@ Direct-to-binary installs need no change.
 
 | Type             | Supported                                                                 |
 | ---------------- | ------------------------------------------------------------------------- |
-| Indexers         | Torznab, Prowlarr                                                         |
+| Indexers         | Torznab, Prowlarr, built-in tracker definitions (Prowlarr/Jackett's)      |
 | Download clients | qBittorrent, Transmission, Deluge, built-in BitTorrent engine             |
 | Media servers    | Plex, Jellyfin, Emby (books: Jellyfin and Emby — Plex has no book library) |
 | Metadata         | TMDB (movies, TV), TVDB (TV), MusicBrainz (music), Hardcover (books) — TMDB, TVDB and Hardcover take an API key of your own; Deezer, Cover Art Archive and Wikipedia for artwork and artist overviews, keyless |
@@ -457,7 +464,7 @@ Direct-to-binary installs need no change.
 
 ## Verifying images
 
-All images are signed with [cosign](https://github.com/sigstore/cosign) via GitHub OIDC (keyless). Verify:
+All `ghcr.io/datahearth/streamline` images are signed with [cosign](https://github.com/sigstore/cosign) via GitHub OIDC (keyless); the pull request images in `streamline-pr` are not. Verify:
 
 ```bash
 cosign verify ghcr.io/datahearth/streamline:latest \
@@ -472,7 +479,7 @@ cosign download attestation ghcr.io/datahearth/streamline:latest \
   --predicate-type=https://spdx.dev/Document
 ```
 
-Every image is scanned by [grype](https://github.com/anchore/grype) before it is tagged: a fixable vulnerability of severity high or above leaves the image untagged and fails the run. The report is attached to the Image workflow run and shown in its summary.
+Every one of them is scanned by [grype](https://github.com/anchore/grype) before it is tagged: a fixable vulnerability of severity high or above leaves the image untagged and fails the run. The report is attached to the Image workflow run and shown in its summary.
 
 ## Documentation
 

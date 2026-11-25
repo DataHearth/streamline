@@ -8,19 +8,21 @@ Port-forward locally:
 
 First-boot admin: seed_admin is applied ONCE, against an empty DB on first
 boot — setting or changing it later is ignored (the existing admin keeps its
-password; you'd have to wipe /data to re-seed). Unless you set
+password; a lost one is reset with `streamline auth set-password`, not by
+re-seeding). Unless you set
 config.auth.seed_admin, a default admin (admin@streamline.local) is created
 with a random password printed once to the pod's stdout — on every deploy, not
 just read-only ones; it is never written back to the config:
   kubectl --namespace {{ .Release.Namespace }} logs deploy/{{ include "streamline.fullname" . }} | grep -i "default admin"
-Anything scraping container stdout captured it too, so change it from Settings
-after your first login.
+Anything scraping container stdout captured it too, so change it from your
+account page after your first login.
 {{- if .Values.config.auth }}
 {{- if and .Values.config.auth.oidc (not (or (eq (.Values.config.auth.registration_mode | default "disabled") "open") (eq (.Values.config.auth.registration_mode | default "disabled") "invite"))) }}
 
 OIDC is configured but registration_mode is "{{ .Values.config.auth.registration_mode | default "disabled" }}", which rejects
 new SSO users ("registration disabled"). Set config.auth.registration_mode to
-"open" (or "invite" with pre-issued invites) to allow SSO auto-provisioning.
+"open" (or "invite", with pre-issued invites or auto_provision: true on the
+provider) to allow SSO auto-provisioning.
 {{- end }}
 {{- end }}
 {{- if (.Values.config.read_only | default false) }}
@@ -34,5 +36,5 @@ restarts.
 {{- if .Values.observability.enabled }}
 
 Grafana (observability subchart):
-  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "streamline.fullname" . }}-grafana 3000:3000
+  kubectl --namespace observability port-forward svc/grafana 3000:80
 {{- end }}

@@ -63,13 +63,15 @@ Out of scope:
 - Vulnerabilities in Plex, Jellyfin, Emby, qBittorrent, Transmission, Deluge or
   Prowlarr themselves. Report those upstream.
 - Dependency CVEs with no demonstrated path to exploitation in Streamline. A
-  scanner's raw output is not a report; every image is already grype-scanned
-  before it is tagged, and a fixable high or critical finding blocks the release.
+  scanner's raw output is not a report; every image of a release or of
+  `main` is already grype-scanned before it is tagged, and a fixable high or
+  critical finding leaves it untagged.
 - Missing hardening headers, cookie-flag nitpicks, or best-practice findings
   with no attack behind them.
 
 ## What's already in place
 
 Release artifacts are signed with cosign (keyless, GitHub OIDC) and ship SPDX
-SBOMs; images are signed, SBOM-attested and grype-scanned on every push. See
+SBOMs; the images of every release and every push to `main` are signed,
+SBOM-attested and grype-scanned. See
 [Verifying images](README.md#verifying-images) for the verification commands.
