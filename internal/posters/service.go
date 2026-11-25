@@ -12,11 +12,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/datahearth/streamline/internal/buildinfo"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -52,10 +49,7 @@ func init() {
 // metadata provider must not be able to fill the data volume.
 const maxPosterSize = 20 * 1024 * 1024
 
-var (
-	errTooLarge = fmt.Errorf("poster exceeds %d byte cap", maxPosterSize)
-	errNotImage = errors.New("image source did not answer an image")
-)
+var errTooLarge = fmt.Errorf("poster exceeds %d byte cap", maxPosterSize)
 
 // validKinds doubles as a path-traversal guard: any kind outside this set
 // is rejected before touching the filesystem or the HTTP response.
@@ -69,66 +63,36 @@ var validKinds = map[string]struct{}{
 	"people":  {},
 }
 
-// Store caches one image per row: its poster, or its logo.
+// Store caches one image per row.
 type Store interface {
 	Fetch(ctx context.Context, kind string, id uint32, src string) error
-	// Follow keeps the cached image on the addresses its provider offers: one
-	// that came from any of srcs stays, and anything else is replaced by the
-	// first. With none the row has no image, and the cached one goes.
-	Follow(ctx context.Context, kind string, id uint32, srcs ...string) error
+	// Follow keeps the cached image on src: it fetches when there is none or
+	// when src differs from the address the cached one came from.
+	Follow(ctx context.Context, kind string, id uint32, src string) error
 	// Put stores bytes the caller already holds, replacing any cached image.
 	Put(ctx context.Context, kind string, id uint32, r io.Reader) error
 	Serve(w http.ResponseWriter, r *http.Request, kind string, id uint32)
 	Path(kind string, id uint32) string
-	// Has reports whether the row's image is cached.
-	Has(kind string, id uint32) bool
 }
 
-// Manager is the consumer-facing surface of the image cache: one Store per
-// image a row can have, all in the row's folder.
+// Manager is the consumer-facing surface of the image cache: a Store per image
+// a row can have, all in the row's folder.
 type Manager interface {
 	// Posters caches what stands for a row in a list: a title's poster, an
 	// album's or a book's cover, a person's photo.
 	Posters() Store
-	// Logos caches the titles' transparent logos.
-	Logos() Store
 	// Remove drops every image cached for the row.
 	Remove(kind string, id uint32) error
-	// Refresh brings a title's poster and logo in line with what its provider
-	// offers now: the poster follows its address, or stays when there is none,
-	// and the logo follows logos as Store.Follow does. The row counts as being
-	// fetched from this call until the returned func, which does the work and
-	// is meant for a goroutine, has run.
-	Refresh(
-		kind string,
-		id uint32,
-		poster string,
-		logos []string,
-	) func(ctx context.Context)
-	// HasLogo reports whether the row's logo is cached, once a Refresh of the
-	// row still in flight has run: the request that follows an add or a
-	// re-identify would otherwise read the cache before the logo lands. It
-	// waits logoWait at most.
-	HasLogo(ctx context.Context, kind string, id uint32) bool
 }
-
-// logoWait bounds how long HasLogo waits for a Refresh in flight.
-const logoWait = 2 * time.Second
 
 // asset is what tells one Store's files from another's in a row's folder.
 type asset struct {
 	file string
 	// source holds the address the cached file came from, for Follow.
 	source string
-	// imageOnly refuses a body that does not sniff as an image. A logo source
-	// can answer SVG, which Serve would hand out as image/jpeg.
-	imageOnly bool
 }
 
-var (
-	posterAsset = asset{file: "poster.jpg", source: "source"}
-	logoAsset   = asset{file: "logo.png", source: "logo.source", imageOnly: true}
-)
+var posterAsset = asset{file: "poster.jpg", source: "source"}
 
 // cache is what the Stores share: the folder the images live in and the client
 // that fetches them. The folder is under data_dir, which only the config file
@@ -152,16 +116,6 @@ type store struct {
 type manager struct {
 	*cache
 	posters *store
-	logos   *store
-
-	mu      sync.Mutex
-	flights map[string]*flight
-}
-
-// flight is the fetches in progress for one row's folder.
-type flight struct {
-	n    int
-	done chan struct{}
 }
 
 func New(dataDir string) (Manager, error) {
@@ -175,92 +129,11 @@ func New(dataDir string) (Manager, error) {
 	return &manager{
 		cache:   c,
 		posters: &store{cache: c, asset: posterAsset},
-		logos:   &store{cache: c, asset: logoAsset},
-		flights: map[string]*flight{},
 	}, nil
-}
-
-func (m *manager) Refresh(
-	kind string,
-	id uint32,
-	poster string,
-	logos []string,
-) func(context.Context) {
-	done := m.fetching(kind, id)
-	logos = slices.DeleteFunc(slices.Clone(logos), func(src string) bool {
-		return src == ""
-	})
-	return func(ctx context.Context) {
-		defer done()
-		if poster != "" {
-			if err := m.posters.Follow(ctx, kind, id, poster); err != nil {
-				slog.WarnContext(ctx, "poster fetch failed",
-					"poster.kind", kind, "poster.id", id, "error", err)
-			}
-		}
-		if err := m.logos.Follow(ctx, kind, id, logos...); err != nil {
-			slog.WarnContext(ctx, "logo fetch failed",
-				"poster.kind", kind, "poster.id", id, "error", err)
-		}
-	}
-}
-
-func (m *manager) HasLogo(ctx context.Context, kind string, id uint32) bool {
-	ctx, cancel := context.WithTimeout(ctx, logoWait)
-	defer cancel()
-	m.settled(ctx, kind, id)
-	return m.logos.Has(kind, id)
-}
-
-// fetching marks the row's images as being fetched until the returned func is
-// called, and settled waits until none is, or ctx ends.
-func (m *manager) fetching(kind string, id uint32) func() {
-	key := m.rowDir(kind, id)
-	m.mu.Lock()
-	f := m.flights[key]
-	if f == nil {
-		f = &flight{done: make(chan struct{})}
-		m.flights[key] = f
-	}
-	f.n++
-	m.mu.Unlock()
-
-	var once sync.Once
-	return func() {
-		once.Do(func() {
-			m.mu.Lock()
-			defer m.mu.Unlock()
-			if f.n--; f.n == 0 {
-				delete(m.flights, key)
-				close(f.done)
-			}
-		})
-	}
-}
-
-func (m *manager) settled(ctx context.Context, kind string, id uint32) {
-	key := m.rowDir(kind, id)
-	for {
-		m.mu.Lock()
-		f := m.flights[key]
-		m.mu.Unlock()
-		if f == nil {
-			return
-		}
-		select {
-		case <-f.done:
-		case <-ctx.Done():
-			return
-		}
-	}
 }
 
 func (m *manager) Posters() Store {
 	return m.posters
-}
-
-func (m *manager) Logos() Store {
-	return m.logos
 }
 
 func (s *store) Path(kind string, id uint32) string {
@@ -271,23 +144,12 @@ func (s *store) sourcePath(kind string, id uint32) string {
 	return s.file(kind, id, s.asset.source)
 }
 
-// refusedPath holds the last address an image-only Store refused, so a
-// refresh does not download it again.
-func (s *store) refusedPath(kind string, id uint32) string {
-	return s.file(kind, id, s.asset.file+".refused")
-}
-
 func (s *store) file(kind string, id uint32, name string) string {
 	return filepath.Join(s.rowDir(kind, id), name)
 }
 
-func (s *store) Has(kind string, id uint32) bool {
-	st, err := os.Stat(s.Path(kind, id))
-	return err == nil && st.Size() > 0
-}
-
-// Remove drops the row's folder, so every Store's image goes with the addresses
-// kept beside them. SQLite reuses the rowid of a deleted record, so a cache
+// Remove drops the row's folder, so every Store's image goes with the address
+// kept beside it. SQLite reuses the rowid of a deleted record, so a cache
 // entry left behind outlives its media and is served — verbatim, because Fetch
 // short-circuits on an existing file — as the artwork of the next movie or
 // show that lands on the same id.
@@ -309,28 +171,26 @@ func (s *store) Fetch(
 	id uint32,
 	src string,
 ) error {
-	return s.fetch(ctx, kind, id, []string{src}, false)
+	return s.fetch(ctx, kind, id, src, false)
 }
 
 // Follow records the address next to the image, not in the database. An
-// image cached before addresses were kept is taken as the first address's:
-// comparing would refetch the whole library at once. Keeping an image that
-// came from any of srcs is what stops a logo from changing each time its
-// provider reorders the ones it offers.
+// image cached before addresses were kept is taken as src's: comparing
+// would refetch the whole library at once.
 func (s *store) Follow(
 	ctx context.Context,
 	kind string,
 	id uint32,
-	srcs ...string,
+	src string,
 ) error {
-	return s.fetch(ctx, kind, id, srcs, true)
+	return s.fetch(ctx, kind, id, src, true)
 }
 
 func (s *store) fetch(
 	ctx context.Context,
 	kind string,
 	id uint32,
-	srcs []string,
+	src string,
 	follow bool,
 ) error {
 	if _, ok := validKinds[kind]; !ok {
@@ -341,38 +201,32 @@ func (s *store) fetch(
 	span.SetAttributes(
 		attribute.String("poster.kind", kind),
 		attribute.Int64("poster.id", int64(id)),
-		attribute.StringSlice("poster.src", srcs),
-		attribute.String("poster.asset", s.asset.file),
+		attribute.String("poster.src", src),
 	)
 
 	// Serve counts cache hits and misses, and the outbound fetch behind a miss
 	// is counted too: with only a span, an artwork CDN degrading — timeouts,
 	// 403s, oversized bodies — could be seen in a trace and thresholded nowhere.
-	outcome, err := s.sync(ctx, kind, id, srcs, follow)
+	outcome, err := s.sync(ctx, kind, id, src, follow)
 	if err != nil && outcome == "" {
 		outcome = "error"
 	}
 	posterFetch.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("poster.kind", kind),
-		attribute.String("poster.asset", s.asset.file),
 		attribute.String("outcome", outcome),
 	))
 	return otelx.RecordSpanError(span, err)
 }
 
-// sync brings the cached image in line with srcs and names what it did for the
+// sync brings the cached image in line with src and names what it did for the
 // fetch counter. A failure it has no name for comes back with an empty one.
 func (s *store) sync(
 	ctx context.Context,
 	kind string,
 	id uint32,
-	srcs []string,
+	src string,
 	follow bool,
 ) (string, error) {
-	if len(srcs) == 0 {
-		return s.drop(kind, id)
-	}
-	src := srcs[0]
 	dst := s.Path(kind, id)
 	if st, err := os.Stat(dst); err == nil && st.Size() > 0 {
 		if !follow {
@@ -380,7 +234,7 @@ func (s *store) sync(
 		}
 		known, err := os.ReadFile(s.sourcePath(kind, id))
 		switch {
-		case err == nil && slices.Contains(srcs, string(known)):
+		case err == nil && string(known) == src:
 			return "cached", nil
 		case errors.Is(err, os.ErrNotExist):
 			err := os.WriteFile(s.sourcePath(kind, id), []byte(src), 0o600)
@@ -390,12 +244,6 @@ func (s *store) sync(
 			return "cached", nil
 		case err != nil:
 			return "", err
-		}
-	}
-	if follow && s.asset.imageOnly {
-		refused, err := os.ReadFile(s.refusedPath(kind, id))
-		if err == nil && string(refused) == src {
-			return "refused", nil
 		}
 	}
 
@@ -421,14 +269,8 @@ func (s *store) sync(
 	}
 
 	if err := s.write(dst, resp.Body, follow); err != nil {
-		switch {
-		case errors.Is(err, errTooLarge):
+		if errors.Is(err, errTooLarge) {
 			return "too_large", err
-		case errors.Is(err, errNotImage):
-			if follow {
-				_ = os.WriteFile(s.refusedPath(kind, id), []byte(src), 0o600)
-			}
-			return "not_image", err
 		}
 		return "", err
 	}
@@ -437,7 +279,6 @@ func (s *store) sync(
 		if err != nil {
 			return "", err
 		}
-		_ = os.Remove(s.refusedPath(kind, id))
 	}
 	slog.InfoContext(
 		ctx,
@@ -452,26 +293,6 @@ func (s *store) sync(
 		dst,
 	)
 	return "ok", nil
-}
-
-// drop removes the row's image and what is kept beside it.
-func (s *store) drop(kind string, id uint32) (string, error) {
-	outcome := "dropped"
-	if err := os.Remove(s.Path(kind, id)); errors.Is(err, os.ErrNotExist) {
-		outcome = "none"
-	} else if err != nil {
-		return "", err
-	}
-	for _, beside := range []string{
-		s.sourcePath(kind, id),
-		s.refusedPath(kind, id),
-	} {
-		err := os.Remove(beside)
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return "", err
-		}
-	}
-	return outcome, nil
 }
 
 // Put replaces the cached image, unlike Fetch, which keeps one that exists:
@@ -496,8 +317,7 @@ func (s *store) Put(
 }
 
 // write copies r to dst through a temp file in the same directory, so a
-// failed, oversized or refused copy never leaves a partial image behind nor
-// replaces a good one. Without replace, an image that appeared while r was
+// failed or oversized copy never leaves a partial image behind. Without replace, an image that appeared while r was
 // being read wins: an album's own art stored by Put must not be undone by a
 // slower remote fetch.
 func (s *store) write(dst string, r io.Reader, replace bool) error {
@@ -519,11 +339,6 @@ func (s *store) write(dst string, r io.Reader, replace bool) error {
 		tmp.Close()
 		_ = os.Remove(tmpName)
 		return errTooLarge
-	}
-	if s.asset.imageOnly && !isImage(tmp) {
-		tmp.Close()
-		_ = os.Remove(tmpName)
-		return errNotImage
 	}
 	if err := tmp.Close(); err != nil {
 		_ = os.Remove(tmpName)
@@ -553,11 +368,6 @@ func sniffImageType(f *os.File) string {
 	return t
 }
 
-func isImage(f *os.File) bool {
-	_, ok := sniff(f)
-	return ok
-}
-
 func sniff(f *os.File) (string, bool) {
 	head := make([]byte, 512)
 	n, err := f.ReadAt(head, 0)
@@ -584,7 +394,6 @@ func (s *store) Serve(
 	record := func(outcome string) {
 		posterCache.Add(ctx, 1, metric.WithAttributes(
 			attribute.String("kind", label),
-			attribute.String("asset", s.asset.file),
 			attribute.String("outcome", outcome),
 		))
 	}
