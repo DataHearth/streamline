@@ -127,12 +127,15 @@ Open <http://localhost:8080>.
 
 ### Image tags
 
-| Tag | What it tracks |
-| --- | --- |
-| `latest` | Most recent stable release |
-| `X.Y.Z`, `X.Y`, `X` | Pinned release / minor line / major line (no `v`: release `v4.0.0` is image `4.0.0`) |
-| `main` | Every push to `main` — expect breakage |
-| `sha-<short>` | An exact commit |
+| Default image | [VAAPI image](#hardware-encoding-vaapi) | What it tracks |
+| --- | --- | --- |
+| `latest` | `latest-vaapi` | Most recent stable release |
+| `X.Y.Z` | `X.Y.Z-vaapi` | One release (no `v`: release `v4.0.0` is image `4.0.0`) |
+| `X.Y`, `X` | `X.Y-vaapi`, `X-vaapi` | Most recent stable release of that minor or major line |
+| `main` | `main-vaapi` | Every push to `main`: expect breakage |
+| `sha-<short>` | `sha-<short>-vaapi` | An exact commit of `main`, or the commit of a release |
+
+A prerelease such as `v4.1.0-rc.1` publishes `4.1.0-rc.1` and its `sha-<short>`, each with its `-vaapi` twin. It moves neither `latest` nor a minor or major line.
 
 > [!TIP]
 > Pin to `X.Y.Z` or at least `X.Y` for anything you care about.

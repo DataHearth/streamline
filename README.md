@@ -121,7 +121,7 @@ The library mount is **required**, not an optional extra: Streamline creates `li
 
 The config directory must stay writable. A read-only mount loses the generated session secret on every restart (everyone is signed out) and fails every save from Settings; for a declarative deploy use `read_only: true` and supply the secret yourself — see [GitOps and Kubernetes](https://github.com/DataHearth/streamline/wiki/GitOps-and-Kubernetes).
 
-Tags: `latest`, `main` (main branch), `X.Y.Z`, `X.Y`, `X`, `sha-<short>`. Each also comes as a `-vaapi` variant (`latest-vaapi`, `X.Y.Z-vaapi`, …) for hardware transcoding.
+Tags: `latest` (most recent stable release), `main` (main branch), `X.Y.Z`, `X.Y`, `X`, `sha-<short>`. Each also comes as a `-vaapi` variant (`latest-vaapi`, `X.Y.Z-vaapi`, …) for hardware transcoding.
 
 The image ships static `ffmpeg` and `ffprobe` alongside the binary in `/usr/local/bin`, so the [optional media features](#optional-ffmpeg-and-ffprobe) work with no extra setup. That static build cannot open a GPU: the `-vaapi` variant is a larger Ubuntu-based image carrying an ffmpeg with VAAPI and libvmaf, and needs the render node passed in (`--device /dev/dri` plus `--group-add` with its group id).
 
