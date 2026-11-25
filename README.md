@@ -92,7 +92,7 @@ docker logs streamline 2>&1 | grep 'default admin'                              
 kubectl -n streamline logs deploy/streamline-streamline | grep 'default admin'  # Helm
 ```
 
-Copy it right then and change it from Settings. It is never written to your config file and never passed to the log pipeline, so if you lose it the only way back is to wipe the data dir and re-seed — `auth.seed_admin` is applied against an empty database and ignored afterwards. Anything scraping container stdout captured it too, so treat it as compromised until you rotate it.
+Copy it right then and change it from Settings. It is never written to your config file and never passed to the log pipeline, and `auth.seed_admin` is applied against an empty database and ignored afterwards. If you lose it, stop the server and set a new one with `streamline --config <path> auth set-password --generate admin@streamline.local` (in Compose, `docker compose run --rm streamline --config /etc/streamline/config.yaml auth set-password --generate admin@streamline.local`), which prints it once and signs that account out everywhere. Anything scraping container stdout captured it too, so treat it as compromised until you rotate it.
 
 Streamline does not read or rewrite `auth.seed_admin.password` once the admin exists. If your file still holds a password there, it's your file: delete the leftover plaintext yourself.
 
