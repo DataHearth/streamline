@@ -16,7 +16,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	mockdownload "github.com/datahearth/streamline/internal/download/mocks"
-	mockposters "github.com/datahearth/streamline/internal/imagecache/mocks"
+	mockimagecache "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
@@ -35,8 +35,8 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		ctx      context.Context
 		storeMk  *dbmocks.MockStore_Expecter
 		metaMk   *mockmeta.MockTVProvider_Expecter
-		postMk   *mockposters.MockManager_Expecter
-		posterMk *mockposters.MockStore_Expecter
+		postMk   *mockimagecache.MockManager_Expecter
+		posterMk *mockimagecache.MockStore_Expecter
 		dlMk     *mockdownload.MockDownloader_Expecter
 		msMk     *msmocks.MockRefresher_Expecter
 		svc      *Service

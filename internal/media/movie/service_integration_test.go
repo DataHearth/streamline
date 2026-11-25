@@ -17,7 +17,7 @@ import (
 	entdownloadrecord "github.com/datahearth/streamline/ent/downloadrecord"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/db"
-	mockposters "github.com/datahearth/streamline/internal/imagecache/mocks"
+	mockimagecache "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
@@ -30,8 +30,8 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		client  *ent.Client
 		store   *db.DB
 		meta    *mockmeta.MockProvider
-		posters *mockposters.MockStore
-		images  *mockposters.MockManager
+		posters *mockimagecache.MockStore
+		images  *mockimagecache.MockManager
 		svc     *Service
 	)
 

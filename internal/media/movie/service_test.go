@@ -18,7 +18,7 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	mockdownload "github.com/datahearth/streamline/internal/download/mocks"
-	mockposters "github.com/datahearth/streamline/internal/imagecache/mocks"
+	mockimagecache "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/library"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
@@ -32,11 +32,11 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		ctx          context.Context
 		storeMock    *dbmocks.MockStore_Expecter
 		metaMock     *mockmeta.MockProvider_Expecter
-		fetchMock    *mockposters.MockManager_Expecter
-		posterMock   *mockposters.MockStore_Expecter
+		fetchMock    *mockimagecache.MockManager_Expecter
+		posterMock   *mockimagecache.MockStore_Expecter
 		downloadMock *mockdownload.MockDownloader_Expecter
 		msMock       *msmocks.MockRefresher_Expecter
-		posters      *mockposters.MockManager
+		posters      *mockimagecache.MockManager
 		svc          *Service
 	)
 
@@ -46,7 +46,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		storeMock = store.EXPECT()
 		meta := mockmeta.NewMockProvider(GinkgoT())
 		metaMock = meta.EXPECT()
-		var posterStore *mockposters.MockStore
+		var posterStore *mockimagecache.MockStore
 		posters, posterStore = imagecachetest.NewMocks(GinkgoT())
 		fetchMock = posters.EXPECT()
 		posterMock = posterStore.EXPECT()
