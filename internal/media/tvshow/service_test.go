@@ -3,13 +3,14 @@ package tvshow
 import (
 	"context"
 	"errors"
-	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
@@ -28,6 +29,7 @@ import (
 )
 
 var _ = Describe("TVShow service", Label("unit", "series"), func() {
+	show7 := db.ChangeOwner{Type: db.ChangeOwnerTVShow, ID: 7}
 	var (
 		ctx     context.Context
 		storeMk *dbmocks.MockStore_Expecter
@@ -466,8 +468,13 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		storeMk.UpdateTVShowMetadata(mock.Anything, uint32(7), mock.Anything).
 			Return(nil).
 			Once()
-		storeMk.ReconcileEpisodes(mock.Anything, uint32(7), mock.Anything).
+		storeMk.ClearChange(mock.Anything, show7, metadatachange.KindSeriesRemoved).
+			Return(nil).Once()
+		storeMk.ReconcileEpisodes(mock.Anything, uint32(7), mock.Anything, true).
 			Return(nil, nil).
+			Once()
+		storeMk.ClearChange(mock.Anything, show7, metadatachange.KindEpisodesUnlisted).
+			Return(nil).
 			Once()
 		storeMk.SetTVShowRefreshedAt(mock.Anything, uint32(7), mock.Anything).
 			Return(nil).
@@ -476,29 +483,63 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("RefreshOne leaves a pruned episode's file on disk", func() {
-		pruned := filepath.Join(GinkgoT().TempDir(), "Show - S01E09.mkv")
-		Expect(os.WriteFile(pruned, []byte("x"), 0o644)).To(Succeed())
+	It(
+		"RefreshOne records episodes holding files the provider no longer lists",
+		func() {
+			storeMk.FindTVShowByID(mock.Anything, uint32(7)).
+				Return(&ent.TVShow{ID: 7, TvdbID: 123}, nil).Twice()
+			metaMk.GetSeries(mock.Anything, uint32(123)).
+				Return(&metadata.TVDetails{TVDBID: 123, Title: "X"}, nil).
+				Once()
+			metaMk.GetSeriesCredits(mock.Anything, uint32(123)).
+				Return(nil, nil).
+				Once()
+			storeMk.UpdateTVShowMetadata(mock.Anything, uint32(7), mock.Anything).
+				Return(nil).
+				Once()
+			storeMk.ClearChange(mock.Anything, show7, metadatachange.KindSeriesRemoved).
+				Return(nil).
+				Once()
+			storeMk.ReconcileEpisodes(mock.Anything, uint32(7), mock.Anything, true).
+				Return([]db.UnlistedEpisode{
+					{
+						ID:             9,
+						Season:         1,
+						Number:         9,
+						Title:          "Nine",
+						SeasonUnlisted: true,
+					},
+				}, nil).
+				Once()
+			storeMk.ReportChange(mock.Anything, show7, metadatachange.KindEpisodesUnlisted, "9",
+				mock.MatchedBy(func(p map[string]any) bool {
+					items, _ := p["items"].([]map[string]any)
+					return len(items) == 1 && items[0]["label"] == "S01E09" &&
+						slices.Equal(p["seasons"].([]uint16), []uint16{1})
+				})).
+				Return(nil).
+				Once()
+			storeMk.SetTVShowRefreshedAt(mock.Anything, uint32(7), mock.Anything).
+				Return(nil).
+				Once()
+
+			_, err := svc.RefreshOne(ctx, 7)
+			Expect(err).NotTo(HaveOccurred())
+		},
+	)
+
+	It("RefreshOne records a series TVDB deleted and changes nothing", func() {
 		storeMk.FindTVShowByID(mock.Anything, uint32(7)).
-			Return(&ent.TVShow{ID: 7, TvdbID: 123}, nil).Twice()
+			Return(&ent.TVShow{ID: 7, TvdbID: 123}, nil).Once()
 		metaMk.GetSeries(mock.Anything, uint32(123)).
-			Return(&metadata.TVDetails{TVDBID: 123, Title: "X"}, nil).
-			Once()
-		metaMk.GetSeriesCredits(mock.Anything, uint32(123)).Return(nil, nil).Once()
-		storeMk.UpdateTVShowMetadata(mock.Anything, uint32(7), mock.Anything).
-			Return(nil).
-			Once()
-		storeMk.ReconcileEpisodes(mock.Anything, uint32(7), mock.Anything).
-			Return([]string{pruned}, nil).
-			Once()
-		storeMk.SetTVShowRefreshedAt(mock.Anything, uint32(7), mock.Anything).
+			Return(nil, metadata.ErrNotFound).Once()
+		storeMk.ReportChange(mock.Anything, show7, metadatachange.KindSeriesRemoved, "",
+			map[string]any(nil)).
 			Return(nil).
 			Once()
 
 		_, err := svc.RefreshOne(ctx, 7)
-
 		Expect(err).NotTo(HaveOccurred())
-		Expect(pruned).To(BeAnExistingFile())
 	})
 
 	Describe("DeriveSeasonViews", func() {
@@ -1104,7 +1145,10 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 					mock.AnythingOfType("db.UpdateTVShowParams"),
 				).Return(&ent.TVShow{ID: 5}, nil).Once()
 				storeMk.ReconcileEpisodes(
-					mock.Anything, uint32(5), mock.AnythingOfType("[]db.SeasonSeed"),
+					mock.Anything,
+					uint32(5),
+					mock.AnythingOfType("[]db.SeasonSeed"),
+					false,
 				).Return(nil, nil).Once()
 
 				// The rebuilt tree: S01E01 and S01E02 exist, E09 does not.
@@ -1134,6 +1178,10 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 				).Return(nil).Once()
 				storeMk.FindTVShowByID(mock.Anything, uint32(5)).
 					Return(rebuilt, nil).
+					Once()
+				storeMk.ClearChange(mock.Anything, db.ChangeOwner{Type: db.ChangeOwnerTVShow, ID: 5},
+					metadatachange.KindSeriesRemoved, metadatachange.KindEpisodesUnlisted).
+					Return(nil).
 					Once()
 
 				show, unmatched, err := svc.Reidentify(ctx, 5, 999)

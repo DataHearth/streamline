@@ -152,6 +152,8 @@ func (s *Server) FollowMetadataChange(
 	switch db.ChangeOwnerOf(c).Type {
 	case db.ChangeOwnerArtist, db.ChangeOwnerAlbum:
 		err = s.music.FollowChange(ctx, c)
+	case db.ChangeOwnerTVShow:
+		err = s.tvshows.FollowChange(ctx, c)
 	default:
 		err = db.ErrNotFollowable
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"time"
 
 	entsql "entgo.io/ent/dialect/sql"
@@ -140,13 +141,25 @@ func (db *DB) UpdateTVShowMetadata(
 	return tx.Commit()
 }
 
+// UnlistedEpisode is an episode holding a file that the provider no longer
+// lists, kept by ReconcileEpisodes for an admin to decide on.
+type UnlistedEpisode struct {
+	ID     uint32
+	Season uint16
+	Number uint16
+	Title  string
+	// SeasonUnlisted is true when the provider no longer lists the season
+	// either.
+	SeasonUnlisted bool
+}
+
 // ReconcileEpisodes syncs the stored season/episode tree with freshly fetched
 // provider metadata: existing rows get their season name and episode
 // title/air date refreshed, seasons/episodes the provider now reports but we
 // don't have yet are inserted, and seasons/episodes the provider no longer
-// reports are deleted (their media_file/download_record rows cascade). It
-// returns the on-disk paths of files whose episodes were removed; the files
-// themselves are left where they are.
+// reports are deleted (their media_file/download_record rows cascade, the
+// files themselves stay where they are). With keepHeld an episode holding a
+// file is kept instead, with its season, and returned.
 // User-owned state (monitored, status, grab counters) on surviving rows is
 // preserved, except that a TBA episode gaining a title or air date is promoted
 // back to monitored when its season is monitored; new episodes inherit their
@@ -156,7 +169,8 @@ func (db *DB) ReconcileEpisodes(
 	ctx context.Context,
 	showID uint32,
 	seasons []SeasonSeed,
-) ([]string, error) {
+	keepHeld bool,
+) ([]UnlistedEpisode, error) {
 	show, err := db.FindTVShowByID(ctx, showID)
 	if err != nil {
 		return nil, err
@@ -253,13 +267,15 @@ func (db *DB) ReconcileEpisodes(
 	// library, so skip. Within a surviving season we only prune episodes when
 	// the provider actually reported some for it (an empty set is treated as
 	// "unknown", not "all removed").
-	var removedFiles []string
-	var removedSeasons, removedEpisodes int
+	var (
+		held                            []UnlistedEpisode
+		removedSeasons, removedEpisodes int
+	)
+	holds := func(er *ent.Episode) bool { return keepHeld && len(er.Edges.MediaFiles) > 0 }
 	if len(seasons) > 0 {
 		for _, sr := range show.Edges.Seasons {
 			epSet, kept := want[sr.Number]
-			if !kept {
-				removedFiles = appendEpisodeFiles(removedFiles, sr.Edges.Episodes)
+			if !kept && !slices.ContainsFunc(sr.Edges.Episodes, holds) {
 				if err := tx.Season.DeleteOne(sr).Exec(ctx); err != nil {
 					tx.Rollback()
 					return nil, err
@@ -268,14 +284,20 @@ func (db *DB) ReconcileEpisodes(
 				removedEpisodes += len(sr.Edges.Episodes)
 				continue
 			}
-			if len(epSet) == 0 {
+			if kept && len(epSet) == 0 {
 				continue
 			}
 			for _, er := range sr.Edges.Episodes {
 				if epSet[er.Number] {
 					continue
 				}
-				removedFiles = appendEpisodeFiles(removedFiles, []*ent.Episode{er})
+				if holds(er) {
+					held = append(held, UnlistedEpisode{
+						ID: er.ID, Season: sr.Number, Number: er.Number,
+						Title: er.Title, SeasonUnlisted: !kept,
+					})
+					continue
+				}
 				if err := tx.Episode.DeleteOne(er).Exec(ctx); err != nil {
 					tx.Rollback()
 					return nil, err
@@ -296,18 +318,43 @@ func (db *DB) ReconcileEpisodes(
 			"tvshow.id", showID,
 			"seasons_removed", removedSeasons,
 			"episodes_removed", removedEpisodes,
-			"files_removed", len(removedFiles))
+			"episodes_kept_for_review", len(held))
 	}
-	return removedFiles, nil
+	return held, nil
 }
 
-func appendEpisodeFiles(paths []string, eps []*ent.Episode) []string {
-	for _, er := range eps {
-		for _, mf := range er.Edges.MediaFiles {
-			paths = append(paths, mf.Path)
+func (db *DB) DeleteUnlistedEpisodes(
+	ctx context.Context,
+	showID uint32,
+	episodeIDs []uint32,
+	seasons []uint16,
+) error {
+	tx, err := db.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Episode.Delete().
+		Where(
+			episode.IDIn(episodeIDs...),
+			episode.HasSeasonWith(season.HasTvShowWith(tvshow.ID(showID))),
+		).
+		Exec(ctx); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if len(seasons) > 0 {
+		if _, err := tx.Season.Delete().
+			Where(
+				season.HasTvShowWith(tvshow.ID(showID)),
+				season.NumberIn(seasons...),
+				season.Not(season.HasEpisodes()),
+			).
+			Exec(ctx); err != nil {
+			tx.Rollback()
+			return err
 		}
 	}
-	return paths
+	return tx.Commit()
 }
 
 // CreateTVShow inserts the show + its seasons + episodes in one transaction.

@@ -214,7 +214,7 @@ func (t *TVDB) get(ctx context.Context, path string, out any) error {
 		// which a 404 is a real fault (a series TVDB deleted) logs it there.
 		slog.DebugContext(ctx, "tvdb request returned 404",
 			"tvdb.endpoint", path)
-		return fmt.Errorf("tvdb: unexpected status %d", resp.StatusCode)
+		return fmt.Errorf("tvdb: %s: %w", path, ErrNotFound)
 	default:
 		slog.WarnContext(
 			ctx,

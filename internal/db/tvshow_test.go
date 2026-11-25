@@ -74,7 +74,7 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 			}},
 			// Season 2: brand new.
 			{Number: 2, Episodes: []EpisodeSeed{{Number: 1, Title: "S2E1"}}},
-		})
+		}, false)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(removed).To(BeEmpty())
 
@@ -156,7 +156,7 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 					{Number: 2, AirDate: &aired},
 					{Number: 3},
 				}},
-			})
+			}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(epByNum(show.ID, 1, 1).Monitored).To(BeTrue())
 			Expect(epByNum(show.ID, 1, 2).Monitored).To(BeTrue())
@@ -177,7 +177,7 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 
 			_, err = store.ReconcileEpisodes(ctx, show.ID, []SeasonSeed{
 				{Number: 1, Episodes: []EpisodeSeed{{Number: 1, Title: "Pilot"}}},
-			})
+			}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(epByNum(show.ID, 1, 1).Monitored).To(BeFalse())
 		})
@@ -200,33 +200,38 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 				{Number: 1, Episodes: []EpisodeSeed{
 					{Number: 1, Title: "Pilot", AirDate: &aired},
 				}},
-			})
+			}, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(epByNum(show.ID, 1, 1).Monitored).To(BeFalse())
 		})
 	})
 
-	It(
-		"prunes provider-removed seasons/episodes and returns their file paths",
-		func() {
-			show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+	Describe("pruning what the provider no longer lists", func() {
+		var show *ent.TVShow
+		var s1e2 uint32
+
+		BeforeEach(func() {
+			var err error
+			show, err = store.CreateTVShow(ctx, CreateTVShowParams{
 				Title: "X", Year: 2020, TvdbID: 6,
 				Seasons: []SeasonSeed{
-					{Number: 1, Episodes: []EpisodeSeed{{Number: 1}, {Number: 2}}},
+					{
+						Number: 1,
+						Episodes: []EpisodeSeed{
+							{Number: 1},
+							{Number: 2, Title: "Two"},
+						},
+					},
 					{Number: 2, Episodes: []EpisodeSeed{{Number: 1}}},
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 			got, err := store.FindTVShowByID(ctx, show.ID)
 			Expect(err).NotTo(HaveOccurred())
-			// Attach a file to S01E02 (which the refresh will drop).
-			var s1e2 uint32
 			for _, se := range got.Edges.Seasons {
-				if se.Number == 1 {
-					for _, e := range se.Edges.Episodes {
-						if e.Number == 2 {
-							s1e2 = e.ID
-						}
+				for _, e := range se.Edges.Episodes {
+					if se.Number == 1 && e.Number == 2 {
+						s1e2 = e.ID
 					}
 				}
 			}
@@ -243,21 +248,43 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 					},
 				),
 			).To(Succeed())
+		})
 
-			// Provider now reports only S01E01 — S01E02 and all of season 2 are gone.
-			removed, err := store.ReconcileEpisodes(ctx, show.ID, []SeasonSeed{
-				{Number: 1, Episodes: []EpisodeSeed{{Number: 1}}},
-			})
+		// The provider now reports only S01E01: S01E02 and all of season 2
+		// are gone.
+		onlyPilot := []SeasonSeed{{Number: 1, Episodes: []EpisodeSeed{{Number: 1}}}}
+
+		It("deletes all of it, files and all, when told to", func() {
+			held, err := store.ReconcileEpisodes(ctx, show.ID, onlyPilot, false)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(removed).To(ConsistOf("/lib/orphan.mkv"))
+			Expect(held).To(BeEmpty())
 
 			after, err := store.FindTVShowByID(ctx, show.ID)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(after.Edges.Seasons).To(HaveLen(1))
-			Expect(after.Edges.Seasons[0].Number).To(Equal(uint16(1)))
 			Expect(after.Edges.Seasons[0].Edges.Episodes).To(HaveLen(1))
-		},
-	)
+		})
+
+		It("keeps an episode holding a file and returns it", func() {
+			held, err := store.ReconcileEpisodes(ctx, show.ID, onlyPilot, true)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(held).To(ConsistOf(UnlistedEpisode{
+				ID: s1e2, Season: 1, Number: 2, Title: "Two",
+			}))
+
+			after, err := store.FindTVShowByID(ctx, show.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(after.Edges.Seasons).To(HaveLen(1), "season 2 held no file")
+			Expect(after.Edges.Seasons[0].Edges.Episodes).To(HaveLen(2))
+
+			Expect(
+				store.DeleteUnlistedEpisodes(ctx, show.ID, []uint32{s1e2}, nil),
+			).To(Succeed())
+			after, err = store.FindTVShowByID(ctx, show.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(after.Edges.Seasons[0].Edges.Episodes).To(HaveLen(1))
+		})
+	})
 
 	It(
 		"does not prune when the provider returns nothing (failed fetch guard)",
@@ -272,7 +299,7 @@ var _ = Describe("TVShow store", Label("unit", "db"), func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			removed, err := store.ReconcileEpisodes(ctx, show.ID, nil)
+			removed, err := store.ReconcileEpisodes(ctx, show.ID, nil, false)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(removed).To(BeEmpty())
 

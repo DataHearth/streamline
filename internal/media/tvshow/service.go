@@ -12,6 +12,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/episode"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	enttvshow "github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
@@ -1021,8 +1022,20 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 		return nil, otelx.RecordSpanError(span, err)
 	}
 	d, err := s.metadata.GetSeries(ctx, show.TvdbID)
+	if errors.Is(err, metadata.ErrNotFound) {
+		return show, otelx.RecordSpanError(span, s.db.ReportChange(
+			ctx, showOwner(id), metadatachange.KindSeriesRemoved, "", nil,
+		))
+	}
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, fmt.Errorf("tvdb refresh: %w", err))
+	}
+	if err := s.db.ClearChange(
+		ctx,
+		showOwner(id),
+		metadatachange.KindSeriesRemoved,
+	); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
 	}
 	cast := s.seriesCast(ctx, show.TvdbID)
 	// Persist refreshed provider fields so changes (status, rating, network,
@@ -1049,26 +1062,16 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	s.enrichPeople(ctx, id)
 	// Re-sync the season/episode tree so refreshed titles (e.g. a language
 	// change) surface, an ongoing series picks up newly-aired episodes, and
-	// provider-removed episodes/seasons are pruned.
-	//
-	// The pruned episodes' files stay on disk, untracked. The listing is
-	// third-party data that a member can trigger a refresh against, and a
-	// valid-but-short one — a provider mid-edit, a renumbered season — is not
-	// evidence the media is unwanted; Reidentify keeps unmatched files for the
-	// same reason. A bulk-import scan picks them back up.
-	removed, err := s.db.ReconcileEpisodes(ctx, id, seedSeasons(d))
+	// provider-removed episodes/seasons go. One holding a file stays until an
+	// admin decides: the listing is third-party data, and a valid-but-short
+	// one — a provider mid-edit, a renumbered season — is not evidence the
+	// media is unwanted.
+	unlisted, err := s.db.ReconcileEpisodes(ctx, id, seedSeasons(d), true)
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	if len(removed) > 0 {
-		slog.WarnContext(
-			ctx,
-			"provider no longer lists these episodes; their files were left on disk, untracked",
-			"tvshow.id",
-			id,
-			"paths",
-			removed,
-		)
+	if err := s.reviewEpisodes(ctx, id, unlisted); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
 	}
 	if err := s.db.SetTVShowRefreshedAt(ctx, id, time.Now()); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
@@ -1080,17 +1083,10 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	// Only when the provider actually moved something. RefreshStale runs this
 	// over every stale show on a tick, and an unconditional event would bury a
 	// day of real activity under one row per series in the library.
-	if len(removed) > 0 || show.Title != d.Title {
-		payload := map[string]any{"title": d.Title}
-		if show.Title != d.Title {
-			payload["old_title"] = show.Title
-		}
-		if len(removed) > 0 {
-			payload["episodes_removed"] = len(removed)
-		}
+	if show.Title != d.Title {
 		if err := events.Record(
 			ctx, nil, events.TypeMetadataRefreshed, events.ScopeSeries, id,
-			payload,
+			map[string]any{"title": d.Title, "old_title": show.Title},
 		); err != nil {
 			slog.WarnContext(ctx, "record metadata refresh event failed",
 				"tvshow.id", id, "error", err)
@@ -1194,7 +1190,7 @@ func (s *Service) Reidentify(
 	}); err != nil {
 		return nil, nil, otelx.RecordSpanError(span, err)
 	}
-	if _, err := s.db.ReconcileEpisodes(ctx, id, seedSeasons(d)); err != nil {
+	if _, err := s.db.ReconcileEpisodes(ctx, id, seedSeasons(d), false); err != nil {
 		return nil, nil, otelx.RecordSpanError(span, err)
 	}
 
@@ -1239,6 +1235,14 @@ func (s *Service) Reidentify(
 	); err != nil {
 		slog.WarnContext(ctx, "record re-identify event failed",
 			"tvshow.id", id, "error", err)
+	}
+	if err := s.db.ClearChange(
+		ctx,
+		showOwner(id),
+		metadatachange.KindSeriesRemoved,
+		metadatachange.KindEpisodesUnlisted,
+	); err != nil {
+		return nil, nil, otelx.RecordSpanError(span, err)
 	}
 	return refreshed, unmatched, nil
 }
@@ -1348,6 +1352,10 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 
 // Manager is the tvshow service surface consumed by REST handlers and jobs.
 type Manager interface {
+	// FollowChange applies a series' pending provider change: the episodes
+	// it no longer lists are removed, their files left on disk, untracked.
+	// db.ErrNotFollowable for a series the provider deleted.
+	FollowChange(ctx context.Context, c *ent.MetadataChange) error
 	Add(
 		ctx context.Context,
 		tvdbID uint32,

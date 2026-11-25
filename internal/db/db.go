@@ -1511,7 +1511,17 @@ type Store interface {
 		ctx context.Context,
 		showID uint32,
 		seasons []SeasonSeed,
-	) ([]string, error)
+		keepHeld bool,
+	) ([]UnlistedEpisode, error)
+	// DeleteUnlistedEpisodes deletes these episodes of the show, their files
+	// left on disk, untracked, and then those of the given seasons left with
+	// no episode.
+	DeleteUnlistedEpisodes(
+		ctx context.Context,
+		showID uint32,
+		episodeIDs []uint32,
+		seasons []uint16,
+	) error
 	DeleteTVShow(ctx context.Context, id uint32) error
 	SetSeasonMonitored(ctx context.Context, id uint32, monitored bool) error
 	TVShowTVDBIndex(ctx context.Context) (map[uint32]uint32, error)

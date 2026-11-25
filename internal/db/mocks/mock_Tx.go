@@ -6835,6 +6835,75 @@ func (_c *MockTx_DeleteTorrentSessionByHash_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// DeleteUnlistedEpisodes provides a mock function for the type MockTx
+func (_mock *MockTx) DeleteUnlistedEpisodes(ctx context.Context, showID uint32, episodeIDs []uint32, seasons []uint16) error {
+	ret := _mock.Called(ctx, showID, episodeIDs, seasons)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteUnlistedEpisodes")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []uint32, []uint16) error); ok {
+		r0 = returnFunc(ctx, showID, episodeIDs, seasons)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockTx_DeleteUnlistedEpisodes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteUnlistedEpisodes'
+type MockTx_DeleteUnlistedEpisodes_Call struct {
+	*mock.Call
+}
+
+// DeleteUnlistedEpisodes is a helper method to define mock.On call
+//   - ctx context.Context
+//   - showID uint32
+//   - episodeIDs []uint32
+//   - seasons []uint16
+func (_e *MockTx_Expecter) DeleteUnlistedEpisodes(ctx any, showID any, episodeIDs any, seasons any) *MockTx_DeleteUnlistedEpisodes_Call {
+	return &MockTx_DeleteUnlistedEpisodes_Call{Call: _e.mock.On("DeleteUnlistedEpisodes", ctx, showID, episodeIDs, seasons)}
+}
+
+func (_c *MockTx_DeleteUnlistedEpisodes_Call) Run(run func(ctx context.Context, showID uint32, episodeIDs []uint32, seasons []uint16)) *MockTx_DeleteUnlistedEpisodes_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 []uint32
+		if args[2] != nil {
+			arg2 = args[2].([]uint32)
+		}
+		var arg3 []uint16
+		if args[3] != nil {
+			arg3 = args[3].([]uint16)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTx_DeleteUnlistedEpisodes_Call) Return(err error) *MockTx_DeleteUnlistedEpisodes_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockTx_DeleteUnlistedEpisodes_Call) RunAndReturn(run func(ctx context.Context, showID uint32, episodeIDs []uint32, seasons []uint16) error) *MockTx_DeleteUnlistedEpisodes_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteUser provides a mock function for the type MockTx
 func (_mock *MockTx) DeleteUser(ctx context.Context, id uint32) error {
 	ret := _mock.Called(ctx, id)
@@ -20398,27 +20467,27 @@ func (_c *MockTx_RecentArrivals_Call) RunAndReturn(run func(ctx context.Context,
 }
 
 // ReconcileEpisodes provides a mock function for the type MockTx
-func (_mock *MockTx) ReconcileEpisodes(ctx context.Context, showID uint32, seasons []db.SeasonSeed) ([]string, error) {
-	ret := _mock.Called(ctx, showID, seasons)
+func (_mock *MockTx) ReconcileEpisodes(ctx context.Context, showID uint32, seasons []db.SeasonSeed, keepHeld bool) ([]db.UnlistedEpisode, error) {
+	ret := _mock.Called(ctx, showID, seasons, keepHeld)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReconcileEpisodes")
 	}
 
-	var r0 []string
+	var r0 []db.UnlistedEpisode
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []db.SeasonSeed) ([]string, error)); ok {
-		return returnFunc(ctx, showID, seasons)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []db.SeasonSeed, bool) ([]db.UnlistedEpisode, error)); ok {
+		return returnFunc(ctx, showID, seasons, keepHeld)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []db.SeasonSeed) []string); ok {
-		r0 = returnFunc(ctx, showID, seasons)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, []db.SeasonSeed, bool) []db.UnlistedEpisode); ok {
+		r0 = returnFunc(ctx, showID, seasons, keepHeld)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]string)
+			r0 = ret.Get(0).([]db.UnlistedEpisode)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, []db.SeasonSeed) error); ok {
-		r1 = returnFunc(ctx, showID, seasons)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32, []db.SeasonSeed, bool) error); ok {
+		r1 = returnFunc(ctx, showID, seasons, keepHeld)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -20434,11 +20503,12 @@ type MockTx_ReconcileEpisodes_Call struct {
 //   - ctx context.Context
 //   - showID uint32
 //   - seasons []db.SeasonSeed
-func (_e *MockTx_Expecter) ReconcileEpisodes(ctx any, showID any, seasons any) *MockTx_ReconcileEpisodes_Call {
-	return &MockTx_ReconcileEpisodes_Call{Call: _e.mock.On("ReconcileEpisodes", ctx, showID, seasons)}
+//   - keepHeld bool
+func (_e *MockTx_Expecter) ReconcileEpisodes(ctx any, showID any, seasons any, keepHeld any) *MockTx_ReconcileEpisodes_Call {
+	return &MockTx_ReconcileEpisodes_Call{Call: _e.mock.On("ReconcileEpisodes", ctx, showID, seasons, keepHeld)}
 }
 
-func (_c *MockTx_ReconcileEpisodes_Call) Run(run func(ctx context.Context, showID uint32, seasons []db.SeasonSeed)) *MockTx_ReconcileEpisodes_Call {
+func (_c *MockTx_ReconcileEpisodes_Call) Run(run func(ctx context.Context, showID uint32, seasons []db.SeasonSeed, keepHeld bool)) *MockTx_ReconcileEpisodes_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -20452,21 +20522,26 @@ func (_c *MockTx_ReconcileEpisodes_Call) Run(run func(ctx context.Context, showI
 		if args[2] != nil {
 			arg2 = args[2].([]db.SeasonSeed)
 		}
+		var arg3 bool
+		if args[3] != nil {
+			arg3 = args[3].(bool)
+		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *MockTx_ReconcileEpisodes_Call) Return(strings []string, err error) *MockTx_ReconcileEpisodes_Call {
-	_c.Call.Return(strings, err)
+func (_c *MockTx_ReconcileEpisodes_Call) Return(unlistedEpisodes []db.UnlistedEpisode, err error) *MockTx_ReconcileEpisodes_Call {
+	_c.Call.Return(unlistedEpisodes, err)
 	return _c
 }
 
-func (_c *MockTx_ReconcileEpisodes_Call) RunAndReturn(run func(ctx context.Context, showID uint32, seasons []db.SeasonSeed) ([]string, error)) *MockTx_ReconcileEpisodes_Call {
+func (_c *MockTx_ReconcileEpisodes_Call) RunAndReturn(run func(ctx context.Context, showID uint32, seasons []db.SeasonSeed, keepHeld bool) ([]db.UnlistedEpisode, error)) *MockTx_ReconcileEpisodes_Call {
 	_c.Call.Return(run)
 	return _c
 }
