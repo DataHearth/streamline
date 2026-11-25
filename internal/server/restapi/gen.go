@@ -7518,7 +7518,12 @@ type Movie struct {
 	// Genres TMDB genres. Only populated by GET /movies/{id}; absent in
 	// list responses.
 	Genres *[]string `json:"genres,omitempty"`
-	Id     uint32    `json:"id"`
+
+	// HasLogo Whether the title's transparent logo is cached and served at
+	// `/posters/movies/{id}/logo.png`. Only populated by
+	// GET /movies/{id}.
+	HasLogo *bool  `json:"has_logo,omitempty"`
+	Id      uint32 `json:"id"`
 
 	// MediaFiles Files attached to this movie. Only populated by GET /movies/{id};
 	// list responses carry file_summary instead. Absent when the movie
@@ -9958,6 +9963,11 @@ type TVShow struct {
 	// which is why `year` stays required.
 	FirstAired *openapi_types.Date `json:"first_aired,omitempty"`
 	Genres     *[]string           `json:"genres,omitempty"`
+
+	// HasLogo Whether the show's transparent logo is cached and served at
+	// `/posters/tvshows/{id}/logo.png`. Only populated by
+	// GET /series/{id}.
+	HasLogo *bool `json:"has_logo,omitempty"`
 
 	// HaveEpisodes Episodes with a media file. Rolled up across seasons, specials
 	// excluded.

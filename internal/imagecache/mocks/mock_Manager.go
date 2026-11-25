@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/datahearth/streamline/internal/imagecache"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -43,6 +45,115 @@ type MockManager_Expecter struct {
 
 func (_m *MockManager) EXPECT() *MockManager_Expecter {
 	return &MockManager_Expecter{mock: &_m.Mock}
+}
+
+// HasLogo provides a mock function for the type MockManager
+func (_mock *MockManager) HasLogo(ctx context.Context, kind string, id uint32) bool {
+	ret := _mock.Called(ctx, kind, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HasLogo")
+	}
+
+	var r0 bool
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32) bool); ok {
+		r0 = returnFunc(ctx, kind, id)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	return r0
+}
+
+// MockManager_HasLogo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasLogo'
+type MockManager_HasLogo_Call struct {
+	*mock.Call
+}
+
+// HasLogo is a helper method to define mock.On call
+//   - ctx context.Context
+//   - kind string
+//   - id uint32
+func (_e *MockManager_Expecter) HasLogo(ctx any, kind any, id any) *MockManager_HasLogo_Call {
+	return &MockManager_HasLogo_Call{Call: _e.mock.On("HasLogo", ctx, kind, id)}
+}
+
+func (_c *MockManager_HasLogo_Call) Run(run func(ctx context.Context, kind string, id uint32)) *MockManager_HasLogo_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_HasLogo_Call) Return(b bool) *MockManager_HasLogo_Call {
+	_c.Call.Return(b)
+	return _c
+}
+
+func (_c *MockManager_HasLogo_Call) RunAndReturn(run func(ctx context.Context, kind string, id uint32) bool) *MockManager_HasLogo_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Logos provides a mock function for the type MockManager
+func (_mock *MockManager) Logos() imagecache.Store {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Logos")
+	}
+
+	var r0 imagecache.Store
+	if returnFunc, ok := ret.Get(0).(func() imagecache.Store); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(imagecache.Store)
+		}
+	}
+	return r0
+}
+
+// MockManager_Logos_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Logos'
+type MockManager_Logos_Call struct {
+	*mock.Call
+}
+
+// Logos is a helper method to define mock.On call
+func (_e *MockManager_Expecter) Logos() *MockManager_Logos_Call {
+	return &MockManager_Logos_Call{Call: _e.mock.On("Logos")}
+}
+
+func (_c *MockManager_Logos_Call) Run(run func()) *MockManager_Logos_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockManager_Logos_Call) Return(store imagecache.Store) *MockManager_Logos_Call {
+	_c.Call.Return(store)
+	return _c
+}
+
+func (_c *MockManager_Logos_Call) RunAndReturn(run func() imagecache.Store) *MockManager_Logos_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // Posters provides a mock function for the type MockManager
@@ -87,6 +198,77 @@ func (_c *MockManager_Posters_Call) Return(store imagecache.Store) *MockManager_
 }
 
 func (_c *MockManager_Posters_Call) RunAndReturn(run func() imagecache.Store) *MockManager_Posters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Refresh provides a mock function for the type MockManager
+func (_mock *MockManager) Refresh(kind string, id uint32, poster string, logos []string) func(ctx context.Context) {
+	ret := _mock.Called(kind, id, poster, logos)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Refresh")
+	}
+
+	var r0 func(ctx context.Context)
+	if returnFunc, ok := ret.Get(0).(func(string, uint32, string, []string) func(ctx context.Context)); ok {
+		r0 = returnFunc(kind, id, poster, logos)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(func(ctx context.Context))
+		}
+	}
+	return r0
+}
+
+// MockManager_Refresh_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Refresh'
+type MockManager_Refresh_Call struct {
+	*mock.Call
+}
+
+// Refresh is a helper method to define mock.On call
+//   - kind string
+//   - id uint32
+//   - poster string
+//   - logos []string
+func (_e *MockManager_Expecter) Refresh(kind any, id any, poster any, logos any) *MockManager_Refresh_Call {
+	return &MockManager_Refresh_Call{Call: _e.mock.On("Refresh", kind, id, poster, logos)}
+}
+
+func (_c *MockManager_Refresh_Call) Run(run func(kind string, id uint32, poster string, logos []string)) *MockManager_Refresh_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []string
+		if args[3] != nil {
+			arg3 = args[3].([]string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_Refresh_Call) Return(fn func(ctx context.Context)) *MockManager_Refresh_Call {
+	_c.Call.Return(fn)
+	return _c
+}
+
+func (_c *MockManager_Refresh_Call) RunAndReturn(run func(kind string, id uint32, poster string, logos []string) func(ctx context.Context)) *MockManager_Refresh_Call {
 	_c.Call.Return(run)
 	return _c
 }

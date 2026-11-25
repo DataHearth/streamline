@@ -423,6 +423,7 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 				Name    string `json:"name"`
 				Country string `json:"country"`
 			} `json:"contentRatings"`
+			Artworks []tvdbArtwork `json:"artworks"`
 			// Populated only when we request ?meta=translations.
 			Translations struct {
 				NameTranslations []struct {
@@ -455,6 +456,7 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 		Network:       ext.Data.LatestNetwork.Name,
 		Overview:      ext.Data.Overview,
 		PosterPath:    ext.Data.Image,
+		LogoPaths:     pickTVDBLogos(ext.Data.Artworks, t.language),
 		Status:        normalizeStatus(ext.Data.Status.Name),
 		Type:          SeriesStandard, // refined below if a genre marks it anime
 		Runtime:       ext.Data.AverageRuntime,
@@ -528,6 +530,33 @@ func (t *TVDB) GetSeries(ctx context.Context, tvdbID uint32) (*TVDetails, error)
 	t.fillUntranslatedEpisodes(ctx, tvdbID, d.Episodes)
 
 	return d, nil
+}
+
+// tvdbSeriesClearLogo is TVDB's artwork type for a series' transparent logo.
+const tvdbSeriesClearLogo = 23
+
+// tvdbArtwork is one image of a series. Language is an ISO 639-3 code, null for
+// art with no text, and Score is null when TVDB has not ranked it.
+type tvdbArtwork struct {
+	Image    string  `json:"image"`
+	Language string  `json:"language"`
+	Type     int     `json:"type"`
+	Score    float64 `json:"score"`
+}
+
+// pickTVDBLogos is rankLogos over a series' clear logos, for an ISO 639-3 code.
+func pickTVDBLogos(arts []tvdbArtwork, lang string) []string {
+	var imgs []logoImage
+	for _, a := range arts {
+		if a.Type == tvdbSeriesClearLogo {
+			imgs = append(imgs, logoImage{
+				ref:   a.Image,
+				lang:  a.Language,
+				score: a.Score,
+			})
+		}
+	}
+	return rankLogos(imgs, lang, "eng")
 }
 
 // episodes walks a series' default-order episode pages in one language. lang

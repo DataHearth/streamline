@@ -188,6 +188,10 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 	params := url.Values{
 		"append_to_response": {"translations,alternative_titles,credits"},
 	}
+	if wantsLogos(ctx) {
+		params.Set("append_to_response", params.Get("append_to_response")+",images")
+		params.Set("include_image_language", imageLanguages(t.language))
+	}
 	params = t.withLang(params, t.language)
 
 	var resp tmdbMovieResponse
@@ -284,6 +288,7 @@ func (t *TMDB) GetMovie(ctx context.Context, tmdbID uint32) (*MovieDetails, erro
 		Year:             extractYear(resp.ReleaseDate),
 		Overview:         overview,
 		PosterPath:       resp.PosterPath,
+		LogoPaths:        pickLogos(resp.Images.Logos, t.language),
 		Genres:           genres,
 		Runtime:          numeric.SaturateU16(resp.Runtime),
 		Rating:           resp.VoteAverage,
@@ -488,6 +493,32 @@ const (
 	tmdbDigital    = 4
 )
 
+// imageLanguages is the include_image_language filter for a metadata
+// language: its primary subtag, English, and "null" for textless art. TMDB
+// otherwise filters images by the request's language alone, and most logos
+// are tagged "en".
+func imageLanguages(lang string) string {
+	primary, _, _ := strings.Cut(strings.ToLower(lang), "-")
+	if primary == "" || primary == "en" {
+		return "en,null"
+	}
+	return primary + ",en,null"
+}
+
+// pickLogos is rankLogos over TMDB's logos, whose languages are ISO 639-1.
+func pickLogos(logos []tmdbImage, lang string) []string {
+	primary, _, _ := strings.Cut(lang, "-")
+	imgs := make([]logoImage, len(logos))
+	for i, l := range logos {
+		imgs[i] = logoImage{
+			ref:   l.FilePath,
+			lang:  l.ISO639_1,
+			score: float64(l.VoteAverage),
+		}
+	}
+	return rankLogos(imgs, primary, "en")
+}
+
 func findTranslation(ts []tmdbTranslation, lang string) (tmdbTranslation, bool) {
 	for _, t := range ts {
 		if t.ISO639_1 == lang {
@@ -612,6 +643,18 @@ type tmdbMovieResponse struct {
 	Translations     tmdbTranslationBag `json:"translations"`
 	AltTitles        tmdbAltTitleBag    `json:"alternative_titles"`
 	Credits          tmdbCredits        `json:"credits"`
+	Images           tmdbImages         `json:"images"`
+}
+
+// tmdbImages is append_to_response=images, narrowed by include_image_language.
+type tmdbImages struct {
+	Logos []tmdbImage `json:"logos"`
+}
+
+type tmdbImage struct {
+	FilePath    string  `json:"file_path"`
+	ISO639_1    string  `json:"iso_639_1"`
+	VoteAverage float32 `json:"vote_average"`
 }
 
 // tmdbAltTitleBag is append_to_response=alternative_titles. These are the

@@ -225,6 +225,8 @@ func (s *Server) GetMovie(
 		rating := float32(m.Rating)
 		result.Rating = &rating
 	}
+	hasLogo := s.movies.HasLogo(ctx, m.ID)
+	result.HasLogo = &hasLogo
 	return GetMovie200JSONResponse(result), nil
 }
 

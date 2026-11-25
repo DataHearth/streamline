@@ -104,6 +104,64 @@ var _ = Describe("TVDB provider", Label("unit", "metadata"), func() {
 	})
 })
 
+var _ = Describe("TVDB series logo", Label("unit", "metadata"), func() {
+	arts := []tvdbArtwork{
+		{Image: "/poster.jpg", Language: "eng", Type: 2, Score: 900000},
+		{Image: "/movie-logo.png", Language: "fra", Type: 25, Score: 900000},
+		{Image: "/de.png", Language: "deu", Type: 23, Score: 100009},
+		{Image: "/none.png", Type: 23, Score: 100008},
+		{Image: "/eng-low.png", Language: "eng", Type: 23},
+		{Image: "/eng-high.png", Language: "eng", Type: 23, Score: 100005},
+		{Image: "/fra.png", Language: "fra", Type: 23, Score: 100001},
+	}
+
+	It("prefers the metadata language's clear logo", func() {
+		Expect(pickTVDBLogos(arts, "fra")).To(Equal([]string{"/fra.png"}))
+	})
+
+	It("falls back to the best scored English one", func() {
+		Expect(pickTVDBLogos(arts, "spa")).To(
+			Equal([]string{"/eng-high.png", "/eng-low.png"}),
+		)
+		Expect(pickTVDBLogos(arts, "")).To(
+			Equal([]string{"/eng-high.png", "/eng-low.png"}),
+		)
+	})
+
+	It("takes a textless one when there is no English one", func() {
+		Expect(pickTVDBLogos(arts[:4], "spa")).To(Equal([]string{"/none.png"}))
+	})
+
+	It("never picks another language's logo or another artwork type", func() {
+		Expect(pickTVDBLogos(arts[:3], "spa")).To(BeEmpty())
+		Expect(pickTVDBLogos(nil, "eng")).To(BeEmpty())
+	})
+
+	It("decodes the extended record's artworks, nulls included", func() {
+		srv := httptest.NewServer(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if !strings.HasSuffix(r.URL.Path, "/extended") {
+					_, _ = w.Write([]byte(`{"data":{"episodes":[]}}`))
+					return
+				}
+				_, _ = w.Write([]byte(`{"data":{"id":9,"name":"Show","artworks":[
+					{"id":1,"image":"https://artworks.thetvdb.com/p.jpg","language":"eng","type":2,"score":100020},
+					{"id":2,"image":"https://artworks.thetvdb.com/l.png","language":null,"type":23,"score":null}
+				]}}`))
+			}),
+		)
+		DeferCleanup(srv.Close)
+
+		client := NewTVDB()
+		client.BaseURL = srv.URL
+		client.token = "test-token" // skip /login round trip
+
+		d, err := client.GetSeries(context.Background(), 9)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(d.LogoPaths).To(Equal([]string{"https://artworks.thetvdb.com/l.png"}))
+	})
+})
+
 var _ = DescribeTable(
 	"stripDisambiguationYear",
 	Label("unit", "metadata"),

@@ -50,7 +50,7 @@ func (p *fakeImages) Follow(
 	context.Context,
 	string,
 	uint32,
-	string,
+	...string,
 ) error {
 	return nil
 }
@@ -73,8 +73,29 @@ func (p *fakeImages) Path(
 	return "/posters/" + kind
 }
 
+func (p *fakeImages) Has(string, uint32) bool {
+	return false
+}
+
 func (p *fakeImages) Posters() imagecache.Store {
 	return p
+}
+
+func (p *fakeImages) Logos() imagecache.Store {
+	return p
+}
+
+func (p *fakeImages) Refresh(
+	string,
+	uint32,
+	string,
+	[]string,
+) func(context.Context) {
+	return func(context.Context) {}
+}
+
+func (p *fakeImages) HasLogo(context.Context, string, uint32) bool {
+	return false
 }
 
 func (p *fakeImages) Remove(kind string, id uint32) error {

@@ -9688,6 +9688,12 @@ components:
           description: |
             TMDB vote average (0–10). Only populated by GET /movies/{id}
             and omitted when TMDB has no votes.
+        has_logo:
+          type: boolean
+          description: |
+            Whether the title's transparent logo is cached and served at
+            `/posters/movies/{id}/logo.png`. Only populated by
+            GET /movies/{id}.
         added_at:
           type: string
           format: date-time
@@ -10364,6 +10370,12 @@ components:
           nullable: true
           items:
             type: string
+        has_logo:
+          type: boolean
+          description: |
+            Whether the show's transparent logo is cached and served at
+            `/posters/tvshows/{id}/logo.png`. Only populated by
+            GET /series/{id}.
         quality_profile:
           type: string
           description: Name of the quality profile (empty resolves to the series default).
