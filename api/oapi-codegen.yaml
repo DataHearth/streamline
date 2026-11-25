@@ -12,3 +12,11 @@ compatibility:
   # package-level collisions with ginkgo's dot-imported Pending/Skip in
   # restapi test files.
   always-prefix-enum-values: true
+output-options:
+  struct-tags:
+    tags:
+      # A property the spec does not list as required is absent when it has no
+      # value, nullable or not. The default template encodes a nullable one as
+      # null.
+      - name: json
+        template: "{{.FieldName}}{{if or .OmitEmpty .IsOptional}},omitempty{{end}}{{if .OmitZero}},omitzero{{end}}"
