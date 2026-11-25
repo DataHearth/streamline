@@ -24,6 +24,7 @@ import (
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
 	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/posterstest"
 )
 
 var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
@@ -32,6 +33,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		storeMock    *dbmocks.MockStore_Expecter
 		metaMock     *mockmeta.MockProvider_Expecter
 		fetchMock    *mockposters.MockManager_Expecter
+		posterMock   *mockposters.MockStore_Expecter
 		downloadMock *mockdownload.MockDownloader_Expecter
 		msMock       *msmocks.MockRefresher_Expecter
 		posters      *mockposters.MockManager
@@ -44,8 +46,10 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		storeMock = store.EXPECT()
 		meta := mockmeta.NewMockProvider(GinkgoT())
 		metaMock = meta.EXPECT()
-		posters = mockposters.NewMockManager(GinkgoT())
+		var posterStore *mockposters.MockStore
+		posters, posterStore = posterstest.NewMocks(GinkgoT())
 		fetchMock = posters.EXPECT()
+		posterMock = posterStore.EXPECT()
 		dl := mockdownload.NewMockDownloader(GinkgoT())
 		downloadMock = dl.EXPECT()
 		ms := msmocks.NewMockRefresher(GinkgoT())
@@ -142,9 +146,9 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					Once()
 
 				done := make(chan struct{})
-				fetchMock.Follow(mock.Anything, "movies", uint32(11),
+				posterMock.Follow(mock.Anything, "movies", uint32(11),
 					"https://image.tmdb.org/t/p/w780/abc.jpg").
-					RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error {
+					RunAndReturn(func(_ context.Context, _ string, _ uint32, _ ...string) error {
 						close(done)
 						return nil
 					}).
@@ -170,9 +174,9 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 						Once()
 
 					done := make(chan struct{})
-					fetchMock.Follow(mock.Anything, "movies", uint32(11),
+					posterMock.Follow(mock.Anything, "movies", uint32(11),
 						"https://image.tmdb.org/t/p/w780/abc.jpg").
-						RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error {
+						RunAndReturn(func(_ context.Context, _ string, _ uint32, _ ...string) error {
 							close(done)
 							return errors.New("network blew up")
 						}).

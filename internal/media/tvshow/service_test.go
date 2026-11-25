@@ -23,6 +23,7 @@ import (
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
 	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/posterstest"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
@@ -31,13 +32,14 @@ import (
 var _ = Describe("TVShow service", Label("unit", "series"), func() {
 	show7 := db.ChangeOwner{Type: db.ChangeOwnerTVShow, ID: 7}
 	var (
-		ctx     context.Context
-		storeMk *dbmocks.MockStore_Expecter
-		metaMk  *mockmeta.MockTVProvider_Expecter
-		postMk  *mockposters.MockManager_Expecter
-		dlMk    *mockdownload.MockDownloader_Expecter
-		msMk    *msmocks.MockRefresher_Expecter
-		svc     *Service
+		ctx      context.Context
+		storeMk  *dbmocks.MockStore_Expecter
+		metaMk   *mockmeta.MockTVProvider_Expecter
+		postMk   *mockposters.MockManager_Expecter
+		posterMk *mockposters.MockStore_Expecter
+		dlMk     *mockdownload.MockDownloader_Expecter
+		msMk     *msmocks.MockRefresher_Expecter
+		svc      *Service
 	)
 
 	BeforeEach(func() {
@@ -46,7 +48,8 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		storeMk = store.EXPECT()
 		meta := mockmeta.NewMockTVProvider(GinkgoT())
 		metaMk = meta.EXPECT()
-		post := mockposters.NewMockManager(GinkgoT())
+		post, posterStore := posterstest.NewMocks(GinkgoT())
+		posterMk = posterStore.EXPECT()
 		postMk = post.EXPECT()
 		dl := mockdownload.NewMockDownloader(GinkgoT())
 		dlMk = dl.EXPECT()
@@ -101,8 +104,8 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Once()
 
 		done := make(chan struct{})
-		postMk.Follow(mock.Anything, "tvshows", uint32(7), "https://artworks.thetvdb.com/p.jpg").
-			RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error { close(done); return nil }).
+		posterMk.Follow(mock.Anything, "tvshows", uint32(7), "https://artworks.thetvdb.com/p.jpg").
+			RunAndReturn(func(_ context.Context, _ string, _ uint32, _ ...string) error { close(done); return nil }).
 			Once()
 
 		show, err := svc.Add(ctx, 123, "")
@@ -170,7 +173,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		storeMk.PeopleWithPhotos(mock.Anything, db.CastOwnerSeries, db.CastOwnerEpisode).
 			Return([]db.Person{{ID: 3, ProfileURL: "https://artworks.thetvdb.com/p.jpg"}}, nil).
 			Once()
-		postMk.Fetch(mock.Anything, "people", uint32(3), "https://artworks.thetvdb.com/p.jpg").
+		posterMk.Fetch(mock.Anything, "people", uint32(3), "https://artworks.thetvdb.com/p.jpg").
 			Return(nil).
 			Once()
 

@@ -610,8 +610,11 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		MetadataMusic:   mb,
 		Hardcover:       hardcoverHealth,
 		AuthMiddleware:  authMW,
-		Extensions:      extMgr.Middleware(bookFiles{client: dbClient}, postersSvc),
-		HTTPLog:         httpLogger.Middleware(httpAccessSkip),
+		Extensions: extMgr.Middleware(
+			bookFiles{client: dbClient},
+			postersSvc.Posters(),
+		),
+		HTTPLog: httpLogger.Middleware(httpAccessSkip),
 	})
 
 	return &App{

@@ -295,7 +295,7 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 			func() {
 				lib.ids["books/42"] = 7
 				Expect(
-					pm.Put(
+					pm.Posters().Put(
 						context.Background(),
 						"books",
 						7,

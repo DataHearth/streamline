@@ -378,7 +378,7 @@ func (a *albumTagging) artwork(ctx context.Context) albumArt {
 	}
 	art := albumArt{id: "art:none"}
 	if a.svc.posters != nil {
-		data, err := os.ReadFile(a.svc.posters.Path(coverKind, a.alb.ID))
+		data, err := os.ReadFile(a.svc.posters.Posters().Path(coverKind, a.alb.ID))
 		if err == nil && len(data) > 0 {
 			art.cover = data
 		}

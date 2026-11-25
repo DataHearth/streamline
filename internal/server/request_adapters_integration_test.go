@@ -13,9 +13,9 @@ import (
 	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
-	postersmocks "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
+	"github.com/datahearth/streamline/internal/testutil/posterstest"
 )
 
 var _ = Describe(
@@ -63,13 +63,13 @@ var _ = Describe(
 						},
 					}, nil).
 					Once()
-				covers := postersmocks.NewMockManager(GinkgoT())
-				covers.EXPECT().Path(mock.Anything, mock.Anything).
+				images, posters := posterstest.NewMocks(GinkgoT())
+				posters.EXPECT().Path(mock.Anything, mock.Anything).
 					Return(filepath.Join(root, "no-cover")).Maybe()
 				svc := music.NewService(
 					store,
 					mb,
-					covers,
+					images,
 					nil,
 					nil,
 					nil,

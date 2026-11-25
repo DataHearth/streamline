@@ -179,7 +179,8 @@ func (s *Service) fetchPeoplePhotos(ctx context.Context) {
 	}
 	span.SetAttributes(attribute.Int("people.count", len(people)))
 	for _, p := range people {
-		if err := s.posters.Fetch(ctx, "people", p.ID, p.ProfileURL); err != nil {
+		if err := s.posters.Posters().
+			Fetch(ctx, "people", p.ID, p.ProfileURL); err != nil {
 			slog.WarnContext(ctx, "person photo fetch failed",
 				"person.id", p.ID, "error", err)
 		}

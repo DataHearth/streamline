@@ -6,9 +6,8 @@ package mocks
 
 import (
 	"context"
-	"io"
-	"net/http"
 
+	"github.com/datahearth/streamline/internal/posters"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -48,38 +47,37 @@ func (_m *MockManager) EXPECT() *MockManager_Expecter {
 	return &MockManager_Expecter{mock: &_m.Mock}
 }
 
-// Fetch provides a mock function for the type MockManager
-func (_mock *MockManager) Fetch(ctx context.Context, kind string, id uint32, src string) error {
-	ret := _mock.Called(ctx, kind, id, src)
+// HasLogo provides a mock function for the type MockManager
+func (_mock *MockManager) HasLogo(ctx context.Context, kind string, id uint32) bool {
+	ret := _mock.Called(ctx, kind, id)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Fetch")
+		panic("no return value specified for HasLogo")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, string) error); ok {
-		r0 = returnFunc(ctx, kind, id, src)
+	var r0 bool
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32) bool); ok {
+		r0 = returnFunc(ctx, kind, id)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(bool)
 	}
 	return r0
 }
 
-// MockManager_Fetch_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Fetch'
-type MockManager_Fetch_Call struct {
+// MockManager_HasLogo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasLogo'
+type MockManager_HasLogo_Call struct {
 	*mock.Call
 }
 
-// Fetch is a helper method to define mock.On call
+// HasLogo is a helper method to define mock.On call
 //   - ctx context.Context
 //   - kind string
 //   - id uint32
-//   - src string
-func (_e *MockManager_Expecter) Fetch(ctx any, kind any, id any, src any) *MockManager_Fetch_Call {
-	return &MockManager_Fetch_Call{Call: _e.mock.On("Fetch", ctx, kind, id, src)}
+func (_e *MockManager_Expecter) HasLogo(ctx any, kind any, id any) *MockManager_HasLogo_Call {
+	return &MockManager_HasLogo_Call{Call: _e.mock.On("HasLogo", ctx, kind, id)}
 }
 
-func (_c *MockManager_Fetch_Call) Run(run func(ctx context.Context, kind string, id uint32, src string)) *MockManager_Fetch_Call {
+func (_c *MockManager_HasLogo_Call) Run(run func(ctx context.Context, kind string, id uint32)) *MockManager_HasLogo_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -93,129 +91,151 @@ func (_c *MockManager_Fetch_Call) Run(run func(ctx context.Context, kind string,
 		if args[2] != nil {
 			arg2 = args[2].(uint32)
 		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *MockManager_Fetch_Call) Return(err error) *MockManager_Fetch_Call {
-	_c.Call.Return(err)
+func (_c *MockManager_HasLogo_Call) Return(b bool) *MockManager_HasLogo_Call {
+	_c.Call.Return(b)
 	return _c
 }
 
-func (_c *MockManager_Fetch_Call) RunAndReturn(run func(ctx context.Context, kind string, id uint32, src string) error) *MockManager_Fetch_Call {
+func (_c *MockManager_HasLogo_Call) RunAndReturn(run func(ctx context.Context, kind string, id uint32) bool) *MockManager_HasLogo_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Follow provides a mock function for the type MockManager
-func (_mock *MockManager) Follow(ctx context.Context, kind string, id uint32, src string) error {
-	ret := _mock.Called(ctx, kind, id, src)
+// Logos provides a mock function for the type MockManager
+func (_mock *MockManager) Logos() posters.Store {
+	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for Follow")
+		panic("no return value specified for Logos")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, string) error); ok {
-		r0 = returnFunc(ctx, kind, id, src)
+	var r0 posters.Store
+	if returnFunc, ok := ret.Get(0).(func() posters.Store); ok {
+		r0 = returnFunc()
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(posters.Store)
+		}
 	}
 	return r0
 }
 
-// MockManager_Follow_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Follow'
-type MockManager_Follow_Call struct {
+// MockManager_Logos_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Logos'
+type MockManager_Logos_Call struct {
 	*mock.Call
 }
 
-// Follow is a helper method to define mock.On call
-//   - ctx context.Context
-//   - kind string
-//   - id uint32
-//   - src string
-func (_e *MockManager_Expecter) Follow(ctx any, kind any, id any, src any) *MockManager_Follow_Call {
-	return &MockManager_Follow_Call{Call: _e.mock.On("Follow", ctx, kind, id, src)}
+// Logos is a helper method to define mock.On call
+func (_e *MockManager_Expecter) Logos() *MockManager_Logos_Call {
+	return &MockManager_Logos_Call{Call: _e.mock.On("Logos")}
 }
 
-func (_c *MockManager_Follow_Call) Run(run func(ctx context.Context, kind string, id uint32, src string)) *MockManager_Follow_Call {
+func (_c *MockManager_Logos_Call) Run(run func()) *MockManager_Logos_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 uint32
-		if args[2] != nil {
-			arg2 = args[2].(uint32)
-		}
-		var arg3 string
-		if args[3] != nil {
-			arg3 = args[3].(string)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
+		run()
 	})
 	return _c
 }
 
-func (_c *MockManager_Follow_Call) Return(err error) *MockManager_Follow_Call {
-	_c.Call.Return(err)
+func (_c *MockManager_Logos_Call) Return(store posters.Store) *MockManager_Logos_Call {
+	_c.Call.Return(store)
 	return _c
 }
 
-func (_c *MockManager_Follow_Call) RunAndReturn(run func(ctx context.Context, kind string, id uint32, src string) error) *MockManager_Follow_Call {
+func (_c *MockManager_Logos_Call) RunAndReturn(run func() posters.Store) *MockManager_Logos_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// Path provides a mock function for the type MockManager
-func (_mock *MockManager) Path(kind string, id uint32) string {
-	ret := _mock.Called(kind, id)
+// Posters provides a mock function for the type MockManager
+func (_mock *MockManager) Posters() posters.Store {
+	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for Path")
+		panic("no return value specified for Posters")
 	}
 
-	var r0 string
-	if returnFunc, ok := ret.Get(0).(func(string, uint32) string); ok {
-		r0 = returnFunc(kind, id)
+	var r0 posters.Store
+	if returnFunc, ok := ret.Get(0).(func() posters.Store); ok {
+		r0 = returnFunc()
 	} else {
-		r0 = ret.Get(0).(string)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(posters.Store)
+		}
 	}
 	return r0
 }
 
-// MockManager_Path_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Path'
-type MockManager_Path_Call struct {
+// MockManager_Posters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Posters'
+type MockManager_Posters_Call struct {
 	*mock.Call
 }
 
-// Path is a helper method to define mock.On call
-//   - kind string
-//   - id uint32
-func (_e *MockManager_Expecter) Path(kind any, id any) *MockManager_Path_Call {
-	return &MockManager_Path_Call{Call: _e.mock.On("Path", kind, id)}
+// Posters is a helper method to define mock.On call
+func (_e *MockManager_Expecter) Posters() *MockManager_Posters_Call {
+	return &MockManager_Posters_Call{Call: _e.mock.On("Posters")}
 }
 
-func (_c *MockManager_Path_Call) Run(run func(kind string, id uint32)) *MockManager_Path_Call {
+func (_c *MockManager_Posters_Call) Run(run func()) *MockManager_Posters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockManager_Posters_Call) Return(store posters.Store) *MockManager_Posters_Call {
+	_c.Call.Return(store)
+	return _c
+}
+
+func (_c *MockManager_Posters_Call) RunAndReturn(run func() posters.Store) *MockManager_Posters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Refresh provides a mock function for the type MockManager
+func (_mock *MockManager) Refresh(kind string, id uint32, poster string, logos []string) func(ctx context.Context) {
+	ret := _mock.Called(kind, id, poster, logos)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Refresh")
+	}
+
+	var r0 func(ctx context.Context)
+	if returnFunc, ok := ret.Get(0).(func(string, uint32, string, []string) func(ctx context.Context)); ok {
+		r0 = returnFunc(kind, id, poster, logos)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(func(ctx context.Context))
+		}
+	}
+	return r0
+}
+
+// MockManager_Refresh_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Refresh'
+type MockManager_Refresh_Call struct {
+	*mock.Call
+}
+
+// Refresh is a helper method to define mock.On call
+//   - kind string
+//   - id uint32
+//   - poster string
+//   - logos []string
+func (_e *MockManager_Expecter) Refresh(kind any, id any, poster any, logos any) *MockManager_Refresh_Call {
+	return &MockManager_Refresh_Call{Call: _e.mock.On("Refresh", kind, id, poster, logos)}
+}
+
+func (_c *MockManager_Refresh_Call) Run(run func(kind string, id uint32, poster string, logos []string)) *MockManager_Refresh_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -225,72 +245,13 @@ func (_c *MockManager_Path_Call) Run(run func(kind string, id uint32)) *MockMana
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockManager_Path_Call) Return(s string) *MockManager_Path_Call {
-	_c.Call.Return(s)
-	return _c
-}
-
-func (_c *MockManager_Path_Call) RunAndReturn(run func(kind string, id uint32) string) *MockManager_Path_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Put provides a mock function for the type MockManager
-func (_mock *MockManager) Put(ctx context.Context, kind string, id uint32, r io.Reader) error {
-	ret := _mock.Called(ctx, kind, id, r)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Put")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, uint32, io.Reader) error); ok {
-		r0 = returnFunc(ctx, kind, id, r)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-// MockManager_Put_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Put'
-type MockManager_Put_Call struct {
-	*mock.Call
-}
-
-// Put is a helper method to define mock.On call
-//   - ctx context.Context
-//   - kind string
-//   - id uint32
-//   - r io.Reader
-func (_e *MockManager_Expecter) Put(ctx any, kind any, id any, r any) *MockManager_Put_Call {
-	return &MockManager_Put_Call{Call: _e.mock.On("Put", ctx, kind, id, r)}
-}
-
-func (_c *MockManager_Put_Call) Run(run func(ctx context.Context, kind string, id uint32, r io.Reader)) *MockManager_Put_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		var arg2 uint32
+		var arg2 string
 		if args[2] != nil {
-			arg2 = args[2].(uint32)
+			arg2 = args[2].(string)
 		}
-		var arg3 io.Reader
+		var arg3 []string
 		if args[3] != nil {
-			arg3 = args[3].(io.Reader)
+			arg3 = args[3].([]string)
 		}
 		run(
 			arg0,
@@ -302,12 +263,12 @@ func (_c *MockManager_Put_Call) Run(run func(ctx context.Context, kind string, i
 	return _c
 }
 
-func (_c *MockManager_Put_Call) Return(err error) *MockManager_Put_Call {
-	_c.Call.Return(err)
+func (_c *MockManager_Refresh_Call) Return(fn func(ctx context.Context)) *MockManager_Refresh_Call {
+	_c.Call.Return(fn)
 	return _c
 }
 
-func (_c *MockManager_Put_Call) RunAndReturn(run func(ctx context.Context, kind string, id uint32, r io.Reader) error) *MockManager_Put_Call {
+func (_c *MockManager_Refresh_Call) RunAndReturn(run func(kind string, id uint32, poster string, logos []string) func(ctx context.Context)) *MockManager_Refresh_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -366,63 +327,5 @@ func (_c *MockManager_Remove_Call) Return(err error) *MockManager_Remove_Call {
 
 func (_c *MockManager_Remove_Call) RunAndReturn(run func(kind string, id uint32) error) *MockManager_Remove_Call {
 	_c.Call.Return(run)
-	return _c
-}
-
-// Serve provides a mock function for the type MockManager
-func (_mock *MockManager) Serve(w http.ResponseWriter, r *http.Request, kind string, id uint32) {
-	_mock.Called(w, r, kind, id)
-	return
-}
-
-// MockManager_Serve_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Serve'
-type MockManager_Serve_Call struct {
-	*mock.Call
-}
-
-// Serve is a helper method to define mock.On call
-//   - w http.ResponseWriter
-//   - r *http.Request
-//   - kind string
-//   - id uint32
-func (_e *MockManager_Expecter) Serve(w any, r any, kind any, id any) *MockManager_Serve_Call {
-	return &MockManager_Serve_Call{Call: _e.mock.On("Serve", w, r, kind, id)}
-}
-
-func (_c *MockManager_Serve_Call) Run(run func(w http.ResponseWriter, r *http.Request, kind string, id uint32)) *MockManager_Serve_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 http.ResponseWriter
-		if args[0] != nil {
-			arg0 = args[0].(http.ResponseWriter)
-		}
-		var arg1 *http.Request
-		if args[1] != nil {
-			arg1 = args[1].(*http.Request)
-		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 uint32
-		if args[3] != nil {
-			arg3 = args[3].(uint32)
-		}
-		run(
-			arg0,
-			arg1,
-			arg2,
-			arg3,
-		)
-	})
-	return _c
-}
-
-func (_c *MockManager_Serve_Call) Return() *MockManager_Serve_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *MockManager_Serve_Call) RunAndReturn(run func(w http.ResponseWriter, r *http.Request, kind string, id uint32)) *MockManager_Serve_Call {
-	_c.Run(run)
 	return _c
 }
