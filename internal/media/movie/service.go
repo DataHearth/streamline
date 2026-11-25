@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
@@ -600,6 +601,13 @@ func (s *Service) Reidentify(
 		slog.WarnContext(ctx, "record re-identify event failed",
 			"movie.id", id, "error", err)
 	}
+	if err := s.db.ClearChange(
+		ctx,
+		movieOwner(id),
+		metadatachange.KindMovieRemoved,
+	); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
 	return s.db.FindMovieByID(ctx, id)
 }
 
@@ -642,6 +650,10 @@ func (s *Service) RefreshStale(ctx context.Context) error {
 	return nil
 }
 
+func movieOwner(id uint32) db.ChangeOwner {
+	return db.ChangeOwner{Type: db.ChangeOwnerMovie, ID: id}
+}
+
 func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 	ctx, span := tracer.Start(ctx, "movie.refresh_stale.movie",
 		trace.WithAttributes(
@@ -652,7 +664,19 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 	defer span.End()
 
 	details, err := s.metadata.GetMovie(ctx, m.TmdbID)
+	if errors.Is(err, metadata.ErrNotFound) {
+		return otelx.RecordSpanError(span, s.db.ReportChange(
+			ctx, movieOwner(m.ID), metadatachange.KindMovieRemoved, "", nil,
+		))
+	}
 	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if err := s.db.ClearChange(
+		ctx,
+		movieOwner(m.ID),
+		metadatachange.KindMovieRemoved,
+	); err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
 	if err := s.applyMetadata(ctx, m.ID, details); err != nil {

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
@@ -602,6 +603,9 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					Overview:      "fresh",
 				}, nil).
 				Once()
+			storeMock.ClearChange(mock.Anything, db.ChangeOwner{Type: db.ChangeOwnerMovie, ID: 1}, metadatachange.KindMovieRemoved).
+				Return(nil).
+				Once()
 			storeMock.UpdateMovieMetadata(
 				mock.Anything, uint32(1), db.UpdateMovieMetadataParams{
 					Title:         "New",
@@ -632,6 +636,9 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					Year:          2024,
 				}, nil).
 				Once()
+			storeMock.ClearChange(mock.Anything, db.ChangeOwner{Type: db.ChangeOwnerMovie, ID: 2}, metadatachange.KindMovieRemoved).
+				Return(nil).
+				Once()
 			storeMock.UpdateMovieMetadata(
 				mock.Anything, uint32(2), db.UpdateMovieMetadataParams{
 					Title:         "B",
@@ -641,6 +648,25 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			).Return(nil).Once()
 			Expect(svc.RefreshStale(ctx)).To(Succeed())
 		})
+
+		It(
+			"records a movie TMDB no longer knows instead of failing every day",
+			func() {
+				storeMock.PeopleWithPhotos(mock.Anything, db.CastOwnerMovie).
+					Return(nil, nil).
+					Once()
+				storeMock.ListMoviesStaleSince(mock.Anything, mock.AnythingOfType("time.Time")).
+					Return([]*ent.Movie{{ID: 3, TmdbID: 9}}, nil).
+					Once()
+				metaMock.GetMovie(mock.Anything, uint32(9)).
+					Return(nil, metadata.ErrNotFound).Once()
+				storeMock.ReportChange(mock.Anything, db.ChangeOwner{Type: db.ChangeOwnerMovie, ID: 3},
+					metadatachange.KindMovieRemoved, "", map[string]any(nil)).
+					Return(nil).
+					Once()
+				Expect(svc.RefreshStale(ctx)).To(Succeed())
+			},
+		)
 
 		It("returns the DB error when ListMoviesStaleSince fails", func() {
 			storeMock.ListMoviesStaleSince(mock.Anything, mock.AnythingOfType("time.Time")).
@@ -692,6 +718,9 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					OriginalTitle: "The Matrix Reloaded",
 					Year:          2003,
 				}, nil).Once()
+			storeMock.ClearChange(mock.Anything, db.ChangeOwner{Type: db.ChangeOwnerMovie, ID: 7}, metadatachange.KindMovieRemoved).
+				Return(nil).
+				Once()
 			storeMock.UpdateMovieMetadata(
 				mock.Anything, uint32(7), db.UpdateMovieMetadataParams{
 					Title:         "The Matrix Reloaded",
@@ -762,6 +791,9 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					OriginalTitle: "Nouveau",
 					Year:          2024,
 				}, nil).
+				Once()
+			storeMock.ClearChange(mock.Anything, db.ChangeOwner{Type: db.ChangeOwnerMovie, ID: 7}, metadatachange.KindMovieRemoved).
+				Return(nil).
 				Once()
 			storeMock.UpdateMovieMetadata(
 				mock.Anything, uint32(7), db.UpdateMovieMetadataParams{

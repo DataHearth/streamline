@@ -735,7 +735,7 @@ var _ = Describe("TMDB Client", Label("unit", "metadata"), func() {
 			client = newTestTMDB(ts.URL)
 			_, err := client.GetMovie(context.Background(), 1)
 			Expect(err).To(MatchError(ContainSubstring("tmdb get movie")))
-			Expect(err).To(MatchError(ContainSubstring("unexpected status 404")))
+			Expect(err).To(MatchError(ErrNotFound))
 		})
 
 		It("returns error on 5xx from recommendations endpoint", func() {

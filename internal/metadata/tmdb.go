@@ -533,6 +533,9 @@ func (t *TMDB) get(
 	// alert could reach.
 	recordProviderStatus(ctx, resp.StatusCode)
 
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("tmdb: %s: %w", path, ErrNotFound)
+	}
 	if resp.StatusCode != http.StatusOK {
 		slog.WarnContext(
 			ctx,
