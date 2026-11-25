@@ -15,11 +15,11 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
-	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/scheduler"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -174,7 +174,7 @@ type MetadataRefresher interface {
 type Service struct {
 	db       db.Store
 	metadata metadata.Provider
-	posters  posters.Manager
+	posters  imagecache.Manager
 	download download.Downloader
 	ms       mediaserver.Refresher
 }
@@ -182,7 +182,7 @@ type Service struct {
 func NewService(
 	store db.Store,
 	meta metadata.Provider,
-	posters posters.Manager,
+	posters imagecache.Manager,
 	dl download.Downloader,
 	ms mediaserver.Refresher,
 ) *Service {

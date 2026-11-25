@@ -8,7 +8,7 @@ import (
 	"image/jpeg"
 	_ "image/png" // a cached cover is as often PNG as JPEG
 
-	"github.com/datahearth/streamline/internal/posters"
+	"github.com/datahearth/streamline/internal/imagecache"
 )
 
 // embedJPEGQuality is the quality a downscaled cover is encoded at.
@@ -40,7 +40,9 @@ func embeddableCover(data []byte, maxPx int) ([]byte, error) {
 	}
 	var out bytes.Buffer
 	if err := jpeg.Encode(
-		&out, posters.Downscale(src, w, h), &jpeg.Options{Quality: embedJPEGQuality},
+		&out,
+		imagecache.Downscale(src, w, h),
+		&jpeg.Options{Quality: embedJPEGQuality},
 	); err != nil {
 		return nil, fmt.Errorf("encode cover: %w", err)
 	}

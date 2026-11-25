@@ -18,10 +18,10 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/db"
+	postersmocks "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
-	postersmocks "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
 )

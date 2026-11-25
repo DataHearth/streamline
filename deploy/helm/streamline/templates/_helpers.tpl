@@ -53,7 +53,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
        readOnlyRootFilesystem makes anything that is not a volume mount
        unwritable, and the app mkdirs at startup, in this order
        (internal/server/wire.go):
-         1. <data_dir>/posters                      (internal/posters)
+         1. <data_dir>/posters                      (internal/imagecache)
          2. <download_dir>/.streamline-session      (internal/bittorrent/engine.go,
             only when an ENABLED client_type=builtin download client exists —
             config.BuiltinDownloadClient gates on `enabled`)

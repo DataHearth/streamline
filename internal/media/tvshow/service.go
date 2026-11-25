@@ -18,12 +18,12 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
-	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/scheduler"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 	"go.opentelemetry.io/otel"
@@ -79,7 +79,7 @@ const metadataMinRefreshInterval = 24 * time.Hour
 type Service struct {
 	db       db.Store
 	metadata metadata.TVProvider
-	posters  posters.Manager
+	posters  imagecache.Manager
 	download download.Downloader
 	ms       mediaserver.Refresher
 }
@@ -87,7 +87,7 @@ type Service struct {
 func NewService(
 	store db.Store,
 	meta metadata.TVProvider,
-	p posters.Manager,
+	p imagecache.Manager,
 	dl download.Downloader,
 	ms mediaserver.Refresher,
 ) *Service {

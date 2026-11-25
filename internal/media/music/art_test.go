@@ -20,8 +20,8 @@ import (
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/library/audiotags"
-	"github.com/datahearth/streamline/internal/posters"
 )
 
 var _ = Describe("albumDir", Label("unit", "music"), func() {
@@ -101,7 +101,7 @@ var _ = Describe("Music tag artwork", Label("unit", "integration", "music"), fun
 	var (
 		e        *env
 		musicDir string
-		cache    posters.Manager
+		cache    imagecache.Manager
 		artist   *ent.Artist
 		alb      *ent.Album
 		tr       *ent.Track
@@ -169,7 +169,7 @@ var _ = Describe("Music tag artwork", Label("unit", "integration", "music"), fun
 	BeforeEach(func() {
 		e = newEnv(false)
 		var err error
-		cache, err = posters.New(GinkgoT().TempDir())
+		cache, err = imagecache.New(GinkgoT().TempDir())
 		Expect(err).NotTo(HaveOccurred())
 		e.svc.posters = cache
 		e.dl.EXPECT().SeedingTorrents(mock.Anything).

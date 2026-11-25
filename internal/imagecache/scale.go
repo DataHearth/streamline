@@ -1,4 +1,4 @@
-package posters
+package imagecache
 
 import (
 	"image"

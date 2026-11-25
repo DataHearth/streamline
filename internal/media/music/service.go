@@ -22,12 +22,12 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
-	"github.com/datahearth/streamline/internal/posters"
 )
 
 var tracer = otel.Tracer("github.com/datahearth/streamline/internal/media/music")
@@ -174,7 +174,7 @@ type Service struct {
 
 	db        db.Store
 	metadata  metadata.MusicProvider
-	posters   posters.Manager
+	posters   imagecache.Manager
 	covers    metadata.CoverProvider
 	indexer   indexer.Manager
 	download  download.Downloader
@@ -198,7 +198,7 @@ type Service struct {
 func NewService(
 	store db.Store,
 	meta metadata.MusicProvider,
-	p posters.Manager,
+	p imagecache.Manager,
 	covers metadata.CoverProvider,
 	idx indexer.Manager,
 	dl download.Downloader,

@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/datahearth/streamline/internal/posters"
+	"github.com/datahearth/streamline/internal/imagecache"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -46,19 +46,19 @@ func (_m *MockManager) EXPECT() *MockManager_Expecter {
 }
 
 // Posters provides a mock function for the type MockManager
-func (_mock *MockManager) Posters() posters.Store {
+func (_mock *MockManager) Posters() imagecache.Store {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Posters")
 	}
 
-	var r0 posters.Store
-	if returnFunc, ok := ret.Get(0).(func() posters.Store); ok {
+	var r0 imagecache.Store
+	if returnFunc, ok := ret.Get(0).(func() imagecache.Store); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(posters.Store)
+			r0 = ret.Get(0).(imagecache.Store)
 		}
 	}
 	return r0
@@ -81,12 +81,12 @@ func (_c *MockManager_Posters_Call) Run(run func()) *MockManager_Posters_Call {
 	return _c
 }
 
-func (_c *MockManager_Posters_Call) Return(store posters.Store) *MockManager_Posters_Call {
+func (_c *MockManager_Posters_Call) Return(store imagecache.Store) *MockManager_Posters_Call {
 	_c.Call.Return(store)
 	return _c
 }
 
-func (_c *MockManager_Posters_Call) RunAndReturn(run func() posters.Store) *MockManager_Posters_Call {
+func (_c *MockManager_Posters_Call) RunAndReturn(run func() imagecache.Store) *MockManager_Posters_Call {
 	_c.Call.Return(run)
 	return _c
 }

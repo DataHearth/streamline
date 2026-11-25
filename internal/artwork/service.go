@@ -23,10 +23,10 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/datahearth/streamline/internal/buildinfo"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
-	"github.com/datahearth/streamline/internal/posters"
 )
 
 var (
@@ -116,7 +116,7 @@ type ArtistLinks interface {
 // can swap the transport.
 type Deps struct {
 	DataDir string
-	Posters posters.Manager
+	Posters imagecache.Manager
 	Library Library
 	Deezer  ArtistPictures
 	Links   ArtistLinks
@@ -126,7 +126,7 @@ type Deps struct {
 
 type Service struct {
 	dir     string
-	posters posters.Manager
+	posters imagecache.Manager
 	library Library
 	deezer  ArtistPictures
 	links   ArtistLinks

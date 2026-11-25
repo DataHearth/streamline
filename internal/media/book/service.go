@@ -17,12 +17,12 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/mailer"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
-	"github.com/datahearth/streamline/internal/posters"
 )
 
 var tracer = otel.Tracer("github.com/datahearth/streamline/internal/media/book")
@@ -142,7 +142,7 @@ type Service struct {
 
 	db       db.Store
 	metadata metadata.BookProvider
-	posters  posters.Manager
+	posters  imagecache.Manager
 	indexers indexer.Manager
 	download download.Downloader
 	ms       mediaserver.Refresher
@@ -155,7 +155,7 @@ type Service struct {
 func NewService(
 	store db.Store,
 	meta metadata.BookProvider,
-	p posters.Manager,
+	p imagecache.Manager,
 	idx indexer.Manager,
 	dl download.Downloader,
 	ms mediaserver.Refresher,
