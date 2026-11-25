@@ -17,6 +17,7 @@
 		Magnet,
 		Replace,
 		ChartColumn,
+		RefreshCw,
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
@@ -31,6 +32,7 @@
 		activityCurrent,
 		type IsActiveFn,
 	} from "@lib/activity-nav";
+	import { changeCountsQuery } from "@lib/metadata-changes";
 	import { navCountsQuery, type NavDot } from "@lib/nav-counts";
 	import type {
 		MovieCounts,
@@ -146,7 +148,12 @@
 					},
 				]
 			: []),
+		...(auth.isAdmin
+			? [{ label: i18n.nav_metadata_changes(), href: "/metadata-changes", icon: RefreshCw }]
+			: []),
 	]);
+	const changeCounts = changeCountsQuery();
+	let pendingChanges = $derived(changeCounts.data?.total ?? 0);
 	const torrentCounts = torrentCountsQuery();
 	const transcodeCounts = transcodeCountsQuery();
 	// Shares the page keys the other nav surfaces already ride, so the pills
@@ -377,6 +384,13 @@
 						{/if}
 						{#if link.href === "/transcoding"}
 							{@render dotPills(transcodePills)}
+						{/if}
+						{#if link.href === "/metadata-changes" && pendingChanges > 0}
+							<span
+								class="shrink-0 rounded-full bg-status-wanted/20 px-1.5 py-px font-mono text-[10.5px] tabular-nums text-status-wanted"
+							>
+								{pendingChanges.toLocaleString()}
+							</span>
 						{/if}
 					</a>
 				</li>

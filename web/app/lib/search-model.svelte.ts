@@ -27,6 +27,7 @@ import {
 	Settings,
 	User,
 	LogOut,
+	RefreshCw,
 } from "@lucide/svelte";
 import { api } from "./api";
 import { albumPosterUrl, artistPosterUrl, bookPosterUrl } from "./posters";
@@ -205,6 +206,7 @@ const ADMIN_PAGES = new Set([
 	"/torrents",
 	"/transcoding",
 	"/imports",
+	"/metadata-changes",
 	"/settings",
 ]);
 
@@ -219,6 +221,7 @@ const PAGES: PageItem[] = [
 	{ kind: "page", label: i18n.torrent_label(), path: "/torrents", icon: Magnet },
 	{ kind: "page", label: i18n.transcode_label(), path: "/transcoding", icon: Replace },
 	{ kind: "page", label: i18n.imports_label(), path: "/imports", icon: FolderInput },
+	{ kind: "page", label: i18n.nav_metadata_changes(), path: "/metadata-changes", icon: RefreshCw },
 	{ kind: "page", label: i18n.common_calendar(), path: "/calendar", icon: CalendarDays },
 	{ kind: "page", label: i18n.nav_settings(), path: "/settings", icon: Settings },
 	{ kind: "page", label: i18n.common_account(), path: "/account", icon: User },

@@ -24,6 +24,7 @@
 	import { booksRow, freeSpace, movieRow, musicRow, seriesRow, type LedgerRow } from "@lib/dashboard";
 	import { entryHeading } from "@lib/activity-touch";
 	import { KIND_CHIPS, KIND_MEDIA } from "@lib/requests-touch";
+	import { changeCountsQuery } from "@lib/metadata-changes";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	// Nothing on the dashboard raises the global loading bar (`meta.silent`):
@@ -77,6 +78,7 @@
 	// No status filter on the wire: imports have no counts endpoint and the
 	// newest hundred always hold every scan still awaiting review (see
 	// lib/nav-counts).
+	const changeCounts = changeCountsQuery();
 	const importsQuery = createQuery<ImportScanList>(() => ({
 		queryKey: ["imports", "dashboard"],
 		queryFn: () => api<ImportScanList>("/library/imports?limit=100"),
@@ -180,6 +182,26 @@
 					label: word(scans.length, i18n.dash_needs_imports_one, i18n.dash_needs_imports_other),
 					detail: scans.map((s) => s.source_path).join(" · "),
 					href: scans.length === 1 && scans[0] ? `/imports/${scans[0].id}` : "/imports",
+					token: "wanted",
+				});
+			const ch = changeCounts.data;
+			if (ch?.total)
+				out.push({
+					key: "changes",
+					count: ch.total,
+					label: word(ch.total, i18n.dash_needs_changes_one, i18n.dash_needs_changes_other),
+					detail: (
+						[
+							[ch.music, i18n.music_label],
+							[ch.series, i18n.settings_series],
+							[ch.movies, i18n.movies_label],
+							[ch.books, i18n.books_label],
+						] as const
+					)
+						.filter(([n]) => n > 0)
+						.map(([n, label]) => `${label()} ${n}`)
+						.join(" · "),
+					href: "/metadata-changes",
 					token: "wanted",
 				});
 		}

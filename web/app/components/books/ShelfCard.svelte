@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { CoverMark } from "@lib/metadata-changes";
+	import ChangeMark from "@components/changes/ChangeMark.svelte";
 	import { BookOpen, Headphones } from "@lucide/svelte";
 	import { twMerge } from "tailwind-merge";
 	import { auth } from "@lib/auth.svelte";
@@ -23,12 +25,14 @@
 		selectionActive = false,
 		onSelect,
 		onLongPress,
+		mark,
 	}: {
 		item: ShelfItem;
 		selected?: boolean;
 		selectionActive?: boolean;
 		onSelect?: (v: boolean) => void;
 		onLongPress?: () => void;
+		mark?: CoverMark;
 	} = $props();
 	let canEdit = $derived(auth.canAddDirectly);
 	// While selecting, the card is a selection target rather than a link.
@@ -72,6 +76,7 @@
 		{:else}
 			<BookCover src={bookPosterUrl(item.cover_id)} alt={i18n.common_poster_alt({ title: item.title })} />
 		{/if}
+		<ChangeMark {mark} />
 		<div class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent px-3 pb-2.5 pt-12">
 			<p class="line-clamp-1 break-words group-hover:line-clamp-none group-has-[:focus-visible]:line-clamp-none text-sm font-semibold text-white drop-shadow-[0_1px_3px_rgb(0_0_0_/0.95)]">{item.title}</p>
 			<p class="line-clamp-1 break-words group-hover:line-clamp-none group-has-[:focus-visible]:line-clamp-none text-[11px] text-white/70">{item.author}</p>

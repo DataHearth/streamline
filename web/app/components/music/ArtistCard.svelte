@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { CoverMark } from "@lib/metadata-changes";
+	import ChangeMark from "@components/changes/ChangeMark.svelte";
 	import { ArrowDown, Search, UserRound } from "@lucide/svelte";
 	import { twMerge } from "tailwind-merge";
 	import { artistNow, artistPill, artistSegments, artistTally, releasesCount, type Artist } from "@lib/music-books";
@@ -31,6 +33,7 @@
 		selectionActive = false,
 		onSelect,
 		onLongPress,
+		mark,
 	}: {
 		artist: Artist;
 		canEdit?: boolean;
@@ -44,6 +47,7 @@
 		selectionActive?: boolean;
 		onSelect?: (v: boolean) => void;
 		onLongPress?: () => void;
+		mark?: CoverMark;
 	} = $props();
 
 	// While selecting, the card is a selection target rather than a link.
@@ -119,6 +123,7 @@
 				</div>
 				<Poster src={artistPosterUrl(a.id)} alt="" class="relative h-full w-full object-cover" />
 			</div>
+			<ChangeMark {mark} class="right-0 top-0" />
 		</a>
 
 		{#if pill}

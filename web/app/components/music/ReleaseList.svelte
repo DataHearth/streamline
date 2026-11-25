@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { markIndex, pendingChangesQuery } from "@lib/metadata-changes";
 	import { ChevronRight } from "@lucide/svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { slide } from "svelte/transition";
@@ -43,6 +44,8 @@
 	const opensByDefault = (g: ReleaseGroup) =>
 		g.types.some((t) => cfg.data?.music_monitored_types?.includes(t)) ||
 		g.releases.some((r) => r.monitored || r.tracks_have > 0 || r.id === selectedId);
+	const changes = pendingChangesQuery();
+	const markFor = $derived(markIndex(changes.data?.items));
 </script>
 
 {#snippet item(r: Release)}
@@ -61,6 +64,8 @@
 			<div class="w-10 shrink-0">
 				<ReleaseCover
 					src={albumPosterUrl(r.id)}
+					mark={markFor("album", r.id)}
+					compact
 					dim={up || (r.status === "wanted" && r.tracks_have === 0)}
 					dashed={up}
 					class="rounded"

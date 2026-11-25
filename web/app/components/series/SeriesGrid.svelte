@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { markIndex, pendingChangesQuery } from "@lib/metadata-changes";
 	import { auth } from "@lib/auth.svelte";
 	import { api } from "@lib/api";
 	import { createAction, monitorToast, SERIES, updateFailed } from "@lib/actions";
@@ -81,6 +82,8 @@
 			size_text: inFlight ? downloadText(s) : episodeText(s),
 		};
 	}
+	const changes = pendingChangesQuery();
+	const markFor = $derived(markIndex(changes.data?.items));
 </script>
 
 <div
@@ -88,6 +91,7 @@
 >
 	{#each series as show (show.id)}
 		<PosterCard
+			mark={markFor("tv_show", show.id)}
 			movie={enrich(show)}
 			href={`/series/${show.id}`}
 			posterSrc={tvPosterUrl(show.id)}

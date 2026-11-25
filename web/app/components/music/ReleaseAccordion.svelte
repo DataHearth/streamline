@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { markIndex, pendingChangesQuery } from "@lib/metadata-changes";
 	import { ChevronRight, Radar, Search, Tags, Upload } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import { slide } from "svelte/transition";
@@ -57,6 +58,8 @@
 	} = $props();
 
 	let groups = $derived(releaseGroups(releases));
+	const changes = pendingChangesQuery();
+	const markFor = $derived(markIndex(changes.data?.items));
 </script>
 
 {#snippet row(r: Release)}
@@ -73,6 +76,8 @@
 			<div class="w-12 shrink-0">
 				<ReleaseCover
 					src={albumPosterUrl(r.id)}
+					mark={markFor("album", r.id)}
+					compact
 					dim={up || (r.status === "wanted" && r.tracks_have === 0)}
 					dashed={up}
 					class="rounded"

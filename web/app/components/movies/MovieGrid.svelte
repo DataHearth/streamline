@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { markIndex, pendingChangesQuery } from "@lib/metadata-changes";
 	import { auth } from "@lib/auth.svelte";
 	import { api } from "@lib/api";
 	import { createAction, monitorToast, MOVIES, updateFailed } from "@lib/actions";
@@ -47,6 +48,8 @@
 			size_text: formatBytes(f?.size_bytes, ""),
 		};
 	}
+	const changes = pendingChangesQuery();
+	const markFor = $derived(markIndex(changes.data?.items));
 </script>
 
 <div
@@ -54,6 +57,7 @@
 >
 	{#each movies as movie (movie.id)}
 		<PosterCard
+			mark={markFor("movie", movie.id)}
 			movie={enrich(movie)}
 			onMonitor={auth.canAddDirectly ? () => monitor.mutate(movie) : undefined}
 			monitorPending={monitor.isPending && monitor.variables?.id === movie.id}

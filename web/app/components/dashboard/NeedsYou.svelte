@@ -2,7 +2,7 @@
 	// Something waiting on the person looking. Held downloads and imports are
 	// an admin's; requests are any reviewer's.
 	export type NeedItem = {
-		key: "held" | "requests" | "imports" | "failed";
+		key: "held" | "requests" | "imports" | "failed" | "changes";
 		count: number;
 		label: string;
 		detail: string;
@@ -13,12 +13,12 @@
 </script>
 
 <script lang="ts">
-	import { ChevronRight, CircleX, FolderInput, Inbox, TriangleAlert } from "@lucide/svelte";
+	import { ChevronRight, CircleX, FolderInput, Inbox, RefreshCw, TriangleAlert } from "@lucide/svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
 	let { items }: { items: NeedItem[] } = $props();
 
-	const ICONS = { held: TriangleAlert, requests: Inbox, imports: FolderInput, failed: CircleX };
+	const ICONS = { held: TriangleAlert, requests: Inbox, imports: FolderInput, failed: CircleX, changes: RefreshCw };
 	const tint = (t: string) => `background: color-mix(in srgb, var(--status-${t}) 14%, transparent); color: var(--status-${t})`;
 </script>
 

@@ -11,6 +11,8 @@
 	import type { StatusKind } from "./StatusPill.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import { formatDate } from "@lib/dates";
+	import type { CoverMark } from "@lib/metadata-changes";
+	import ChangeMark from "@components/changes/ChangeMark.svelte";
 
 	type PosterMovie = {
 		id: number;
@@ -42,6 +44,7 @@
 		onSelect,
 		onLongPress,
 		kebab,
+		mark,
 	}: {
 		movie: PosterMovie;
 		size?: "sm" | "md" | "lg";
@@ -66,6 +69,8 @@
 		// selection mode and takes this card with it.
 		onLongPress?: () => void;
 		kebab?: Snippet;
+		// A provider change waits on this title (lib/metadata-changes).
+		mark?: CoverMark;
 	} = $props();
 
 	let cardHref = $derived(href ?? `/movies/${movie.id}`);
@@ -179,6 +184,7 @@
 			alt={i18n.common_poster_alt({ title: movie.title })}
 			class="relative h-full w-full object-cover"
 		/>
+		<ChangeMark {mark} class="top-12" />
 
 		<div
 			class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent px-3 pt-12 pb-2.5"

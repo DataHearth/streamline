@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { markIndex, pendingChangesQuery } from "@lib/metadata-changes";
 	import { pageTitle } from "@lib/page-title.svelte";
 	import { createInfiniteQuery, createQuery, keepPreviousData } from "@tanstack/svelte-query";
 	import { ArrowLeft, Layers, UserRound } from "@lucide/svelte";
@@ -302,6 +303,8 @@
 			: undefined,
 	);
 	let shelfSelection = $derived(selection && sel);
+	const changes = pendingChangesQuery();
+	const markFor = $derived(markIndex(changes.data?.items));
 </script>
 
 <div class="flex flex-col pb-6">
@@ -376,6 +379,7 @@
 		<div class="grid w-full grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-4 gap-y-6 px-4 pt-5 md:grid-cols-[repeat(auto-fill,minmax(170px,1fr))] md:px-6">
 			{#each kindItems as it (shelfKey(it))}
 				<ShelfCard
+					mark={it.type === "book" ? markFor("book", it.id) : undefined}
 					item={it}
 					selected={sel.has(shelfKey(it))}
 					selectionActive={sel.selecting}

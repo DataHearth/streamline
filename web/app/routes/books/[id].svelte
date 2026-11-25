@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ChangeBanners from "@components/changes/ChangeBanners.svelte";
 	import Button from "@components/shared/Button.svelte";
 	import { tick } from "svelte";
 	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
@@ -321,6 +322,18 @@
 		{/snippet}
 	</MediaHero>
 
+	<ChangeBanners
+		type="book"
+		id={book.id}
+		class="px-4 pt-4 md:px-8"
+		onPickEdition={() => {
+			tab = "overview";
+			requestAnimationFrame(() =>
+				document.getElementById("book-formats")?.scrollIntoView({ behavior: "smooth", block: "center" }),
+			);
+		}}
+	/>
+
 	<nav class="sticky top-(--top-bar-height) z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
 		<div bind:this={tabTrack} class="flex w-full gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 			{#each [{ key: "overview", label: i18n.common_overview() }, { key: "history", label: i18n.common_history() }] as const as t (t.key)}
@@ -345,7 +358,7 @@
 		</div>
 	{:else}
 	<div class={twMerge("w-full px-4 pt-6 md:px-8 md:pb-8", canEdit ? "pb-24" : "pb-8")}>
-		<div class="grid gap-3 md:grid-cols-2 md:gap-4">
+		<div id="book-formats" class="grid gap-3 md:grid-cols-2 md:gap-4">
 			{#each slots as slot (slot.format)}
 				{@const edition = editionOf(slot.edition_id)}
 				<FormatCard

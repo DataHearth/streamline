@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { markIndex, pendingChangesQuery } from "@lib/metadata-changes";
 	import { ArrowRight, ChevronLeft, ChevronRight } from "@lucide/svelte";
 	import { twMerge } from "tailwind-merge";
 	import { dragScroll } from "@lib/drag-scroll";
@@ -46,6 +47,8 @@
 		scroller?.scrollBy({ left: dir * scroller.clientWidth * 0.8, behavior: "smooth" });
 	const arrow =
 		"grid h-7 w-7 place-items-center rounded-md border border-border text-fg-muted transition hover:border-border-strong hover:text-fg disabled:cursor-default disabled:text-fg-faint disabled:hover:border-border";
+	const changes = pendingChangesQuery();
+	const markFor = $derived(markIndex(changes.data?.items));
 </script>
 
 <section class="w-full px-4 pt-6 md:px-6" aria-label={title}>
@@ -91,6 +94,7 @@
 		{#each items as it (shelfKey(it))}
 			<div class="w-[112px] shrink-0 snap-start md:w-[140px]">
 				<ShelfCard
+					mark={it.type === "book" ? markFor("book", it.id) : undefined}
 					item={it}
 					selected={selection?.has(shelfKey(it))}
 					selectionActive={selection?.selecting}

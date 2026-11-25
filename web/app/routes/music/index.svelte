@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { BELOW_MD, createMediaQuery } from "@lib/viewport.svelte";
+	import { markIndex, pendingChangesQuery } from "@lib/metadata-changes";
 	import { onMount, tick, untrack } from "svelte";
 	import { createInfiniteQuery, createQuery, keepPreviousData } from "@tanstack/svelte-query";
 	import { Eye, Tags } from "@lucide/svelte";
@@ -481,6 +482,8 @@
 
 	const GRID =
 		"grid grid-cols-3 gap-x-3 gap-y-6 md:grid-cols-[repeat(auto-fill,minmax(120px,1fr))] md:gap-x-4 md:gap-y-7 lg:gap-x-5";
+	const changes = pendingChangesQuery();
+	const markFor = $derived(markIndex(changes.data?.items));
 </script>
 
 <div class="flex flex-col">
@@ -583,6 +586,7 @@
 						<div class={twMerge(GRID, "pb-6", !s.letter && "pt-3")}>
 							{#each s.items as a (a.id)}
 								<ArtistCard
+									mark={markFor("artist", a.id)}
 									artist={a}
 									canEdit={auth.canAddDirectly}
 									onSearch={() => searchMissing.mutate(a)}

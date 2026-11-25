@@ -57,6 +57,7 @@
 		{ prefix: "/activity", label: i18n.nav_activity() },
 		{ prefix: "/torrents", label: i18n.torrent_label() },
 		{ prefix: "/transcoding", label: i18n.transcode_label() },
+		{ prefix: "/metadata-changes", label: i18n.nav_metadata_changes() },
 		{ prefix: "/calendar", label: i18n.common_calendar() },
 		{ prefix: "/requests", label: i18n.requests_label() },
 		{ prefix: "/imports", label: i18n.imports_label() },

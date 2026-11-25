@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ChangeBanners from "@components/changes/ChangeBanners.svelte";
 	import Button from "@components/shared/Button.svelte";
 	import ClampedText from "@components/shared/ClampedText.svelte";
 	import { around } from "@lib/message-parts";
@@ -808,6 +809,8 @@
 			</div>
 		</div>
 	</section>
+
+	<ChangeBanners type="tv_show" id={show.id} class="px-4 pt-4 md:px-8" />
 
 	<nav
 		aria-label={i18n.series_sections()}

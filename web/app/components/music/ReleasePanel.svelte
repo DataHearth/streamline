@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ChangeBanners from "@components/changes/ChangeBanners.svelte";
 	import Button from "@components/shared/Button.svelte";
 	import { Radar, Search, Tags, Upload } from "@lucide/svelte";
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
@@ -58,6 +59,7 @@
 </script>
 
 <section aria-labelledby="release-title" class="min-w-0">
+	<ChangeBanners type="album" id={r.id} class="mb-3" />
 	<div class="flex items-start gap-4 rounded-lg border border-border bg-bg-elevated/70 p-4 lg:gap-5">
 		<div class="w-[88px] shrink-0 lg:w-[112px]">
 			<ReleaseCover src={albumPosterUrl(r.id)} dim={up} dashed={up} />

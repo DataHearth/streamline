@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ChangeBanners from "@components/changes/ChangeBanners.svelte";
 	import Button from "@components/shared/Button.svelte";
 	import { oneOf, param, setParam, syncRouteQuery } from "@lib/url-state.svelte";
 	import { createQuery, useQueryClient } from "@tanstack/svelte-query";
@@ -495,6 +496,8 @@
 				{/if}
 			{/snippet}
 		</MediaHero>
+
+		<ChangeBanners type="artist" id={artist.id} class="px-4 pt-4 md:px-8" />
 
 		<nav class="sticky top-(--top-bar-height) z-10 border-b border-border bg-bg-deep/70 px-4 backdrop-blur-md saturate-150 md:px-8">
 			<div bind:this={tabTrack} class="flex w-full gap-0.5 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ChangeBanners from "@components/changes/ChangeBanners.svelte";
 	import Button from "@components/shared/Button.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { params, goto } from "@roxi/routify";
@@ -194,6 +195,8 @@
 			{/if}
 		{/snippet}
 	</MovieDetailHero>
+
+	<ChangeBanners type="movie" id={movie.id} class="px-4 pt-4 md:px-8" />
 
 	<nav
 		aria-label={i18n.movies_sections()}

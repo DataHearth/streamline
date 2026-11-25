@@ -2047,3 +2047,66 @@ export const seriesSelectionRow = (s: TVShow): SeriesSelectionRow => ({
 	have_episodes: s.have_episodes ?? 0,
 	wanted_episodes: s.wanted_episodes ?? 0,
 });
+
+export type MetadataChangeKind =
+	| "edition_removed"
+	| "edition_merged"
+	| "edition_preferred"
+	| "tracks_unlisted"
+	| "album_removed"
+	| "album_merged"
+	| "artist_removed"
+	| "artist_merged"
+	| "series_removed"
+	| "episodes_unlisted"
+	| "movie_removed"
+	| "book_removed";
+
+export type MetadataChangeOwnerType = "artist" | "album" | "tv_show" | "movie" | "book";
+
+export type MetadataChangeEdition = {
+	mbid?: string;
+	title?: string;
+	country?: string;
+	date?: string;
+	formats?: string[];
+	tracks?: number;
+	format?: string;
+	publisher?: string;
+	year?: number;
+	language?: string;
+};
+
+export type MetadataChange = {
+	id: number;
+	kind: MetadataChangeKind;
+	owner: {
+		type: MetadataChangeOwnerType;
+		id: number;
+		title: string;
+		artist_id?: number;
+		artist_name?: string;
+		year?: number;
+	};
+	details: {
+		files?: number;
+		albums?: number;
+		current?: MetadataChangeEdition | MetadataChangeEdition[];
+		upstream?: MetadataChangeEdition;
+		items?: { id: number; label: string; title: string }[];
+		target?: { mbid?: string; title?: string; id?: number };
+		slots?: string[];
+		seasons?: number[];
+	};
+	detected_at: string;
+};
+
+export type MetadataChangeCounts = {
+	total: number;
+	music: number;
+	series: number;
+	movies: number;
+	books: number;
+	kinds: Partial<Record<MetadataChangeKind, number>>;
+};
+

@@ -20,6 +20,7 @@
 		Settings,
 		LogOut,
 		ChartColumn,
+		RefreshCw,
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
@@ -76,6 +77,9 @@
 				: []),
 			...(features.transcoding
 				? [{ label: i18n.transcode_label(), href: "/transcoding", icon: Replace }]
+				: []),
+			...(auth.isAdmin
+				? [{ label: i18n.nav_metadata_changes(), href: "/metadata-changes", icon: RefreshCw }]
 				: []),
 		],
 	});

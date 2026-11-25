@@ -11,6 +11,7 @@ const NAV_COUNT_KEYS = [
 	["series", "counts"],
 	["activity", "queue"],
 	["imports", "counts"],
+	["metadata-changes"],
 ] as const;
 
 // Tag a query `meta: SILENT` to keep it out of the global loading bar

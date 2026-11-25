@@ -23,6 +23,7 @@
 		Ellipsis,
 		ChevronRight,
 		ChartColumn,
+		RefreshCw,
 	} from "@lucide/svelte";
 	import { isActive as routifyIsActive } from "@roxi/routify";
 	import { createQuery } from "@tanstack/svelte-query";
@@ -30,6 +31,7 @@
 	import { NAV_POLL_MS, SILENT } from "@lib/query";
 	import type { PendingList, RequestCounts, SystemInfo } from "@lib/types";
 	import { auth } from "@lib/auth.svelte";
+	import { changeCountsQuery } from "@lib/metadata-changes";
 	import { twMerge } from "tailwind-merge";
 	import {
 		TORRENT_PILLS,
@@ -130,6 +132,7 @@
 		return parts.join(" · ") || i18n.transcode_nothing_in_flight();
 	});
 
+	const changeCounts = changeCountsQuery();
 	let activityRows = $derived<Row[]>([
 		{
 			label: i18n.activity_queue_history(),
@@ -158,6 +161,16 @@
 						icon: Replace,
 						line: transcodeLine,
 						badge: transcodeCounts.counts.failed,
+					},
+				]
+			: []),
+		...(auth.isAdmin
+			? [
+					{
+						label: i18n.nav_metadata_changes(),
+						href: "/metadata-changes",
+						icon: RefreshCw,
+						badge: changeCounts.data?.total ?? 0,
 					},
 				]
 			: []),
