@@ -621,35 +621,32 @@
 					{show.title}
 				</h1>
 
-				<div
-					class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-xs text-fg-muted"
-				>
-					{#if show.type !== "standard"}
-						<span
-							class={twMerge(
-								"rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
-								show.type === "anime"
-									? "bg-accent-soft text-accent-text"
-									: "bg-status-grabbing/15 text-status-grabbing",
-							)}
-						>
-							{show.type}
-						</span>
-					{/if}
-					<!-- Each part carries its dot in front, and the row is pulled left
-					     by one dot inside a clip: the part that starts a line has its
-					     dot clipped, so a wrap never leaves one hanging. -->
-					<div class="min-w-0 overflow-hidden">
-						<div class="-ml-5 flex flex-wrap gap-y-2">
-							{#each metaParts as part, i (i)}
-								<span
-									class={twMerge(
-										"relative pl-5 before:absolute before:left-0 before:w-5 before:text-center before:text-fg-faint before:content-['·']",
-										i === 0 && "uppercase tracking-wide",
-									)}>{part}</span
-								>
-							{/each}
-						</div>
+				<!-- Each part carries its dot in front, and the row is pulled left by
+				     one dot inside a clip: the part that starts a line has its dot
+				     clipped, so a wrap never leaves one hanging. The type chip opens
+				     the row, pushed back in by that same width. -->
+				<div class="mt-3 overflow-hidden font-mono text-xs text-fg-muted">
+					<div class="-ml-5 flex flex-wrap items-center gap-y-2">
+						{#if show.type !== "standard"}
+							<span
+								class={twMerge(
+									"ml-5 rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
+									show.type === "anime"
+										? "bg-accent-soft text-accent-text"
+										: "bg-status-grabbing/15 text-status-grabbing",
+								)}
+							>
+								{show.type}
+							</span>
+						{/if}
+						{#each metaParts as part, i (i)}
+							<span
+								class={twMerge(
+									"relative pl-5 before:absolute before:left-0 before:w-5 before:text-center before:text-fg-faint before:content-['·']",
+									i === 0 && "uppercase tracking-wide",
+								)}>{part}</span
+							>
+						{/each}
 					</div>
 				</div>
 
