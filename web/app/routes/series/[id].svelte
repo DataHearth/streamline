@@ -624,6 +624,18 @@
 				<div
 					class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-xs text-fg-muted"
 				>
+					{#if show.type !== "standard"}
+						<span
+							class={twMerge(
+								"rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
+								show.type === "anime"
+									? "bg-accent-soft text-accent-text"
+									: "bg-status-grabbing/15 text-status-grabbing",
+							)}
+						>
+							{show.type}
+						</span>
+					{/if}
 					<!-- Each part carries its dot in front, and the row is pulled left
 					     by one dot inside a clip: the part that starts a line has its
 					     dot clipped, so a wrap never leaves one hanging. -->
@@ -639,18 +651,6 @@
 							{/each}
 						</div>
 					</div>
-					{#if show.type !== "standard"}
-						<span
-							class={twMerge(
-								"rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
-								show.type === "anime"
-									? "bg-accent-soft text-accent-text"
-									: "bg-status-grabbing/15 text-status-grabbing",
-							)}
-						>
-							{show.type}
-						</span>
-					{/if}
 				</div>
 
 				{#if show.overview}
