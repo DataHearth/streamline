@@ -35,7 +35,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		ctx      context.Context
 		storeMk  *dbmocks.MockStore_Expecter
 		metaMk   *mockmeta.MockTVProvider_Expecter
-		postMk   *mockimagecache.MockManager_Expecter
+		imagesMk *mockimagecache.MockManager_Expecter
 		posterMk *mockimagecache.MockStore_Expecter
 		dlMk     *mockdownload.MockDownloader_Expecter
 		msMk     *msmocks.MockRefresher_Expecter
@@ -48,14 +48,14 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		storeMk = store.EXPECT()
 		meta := mockmeta.NewMockTVProvider(GinkgoT())
 		metaMk = meta.EXPECT()
-		post, posterStore := imagecachetest.NewMocks(GinkgoT())
+		images, posterStore := imagecachetest.NewMocks(GinkgoT())
 		posterMk = posterStore.EXPECT()
-		postMk = post.EXPECT()
+		imagesMk = images.EXPECT()
 		dl := mockdownload.NewMockDownloader(GinkgoT())
 		dlMk = dl.EXPECT()
 		ms := msmocks.NewMockRefresher(GinkgoT())
 		msMk = ms.EXPECT()
-		svc = NewService(store, meta, post, dl, ms)
+		svc = NewService(store, meta, images, dl, ms)
 		// Cast enrichment runs after every add and metadata update and is
 		// exercised on its own in people_test.go; here it is background noise
 		// with nothing to enrich.
@@ -406,7 +406,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 
 	It("Delete removes the show and evicts the cached poster", func() {
 		storeMk.DeleteTVShow(mock.Anything, uint32(7)).Return(nil).Once()
-		postMk.Remove("tvshows", uint32(7)).Return(nil).Once()
+		imagesMk.Remove("tvshows", uint32(7)).Return(nil).Once()
 		Expect(svc.Delete(ctx, 7, DeleteOptions{})).To(Succeed())
 	})
 
@@ -424,7 +424,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 		storeMk.LatestImportedRecordForEpisode(mock.Anything, uint32(0)).
 			Return(nil, &ent.NotFoundError{}).Once()
 		storeMk.DeleteTVShow(mock.Anything, uint32(7)).Return(nil).Once()
-		postMk.Remove("tvshows", uint32(7)).Return(nil).Once()
+		imagesMk.Remove("tvshows", uint32(7)).Return(nil).Once()
 		refreshed := expectRefresh(root)
 
 		Expect(svc.Delete(ctx, 7, DeleteOptions{DeleteFiles: true})).To(Succeed())
@@ -454,7 +454,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			Return(pack, nil).Once()
 		dlMk.RemoveTorrent(mock.Anything, "qb", "PACK", false).Return(nil).Once()
 		storeMk.DeleteTVShow(mock.Anything, uint32(7)).Return(nil).Once()
-		postMk.Remove("tvshows", uint32(7)).Return(nil).Once()
+		imagesMk.Remove("tvshows", uint32(7)).Return(nil).Once()
 		refreshed := expectRefresh(root)
 
 		Expect(svc.Delete(ctx, 7, DeleteOptions{DeleteFiles: true})).To(Succeed())

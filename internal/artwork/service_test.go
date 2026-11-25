@@ -108,7 +108,7 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 		deezer  *fakeDeezer
 		links   *fakeLinks
 		lib     fakeLibrary
-		pm      imagecache.Manager
+		images  imagecache.Manager
 		dir     string
 		fetched []string
 		reply   roundTrip
@@ -127,7 +127,7 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 	BeforeEach(func() {
 		dir = GinkgoT().TempDir()
 		var err error
-		pm, err = imagecache.New(dir)
+		images, err = imagecache.New(dir)
 		Expect(err).NotTo(HaveOccurred())
 		sources = artwork.NewSources()
 		deezer = &fakeDeezer{
@@ -146,7 +146,7 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 		build := func() {
 			svc, err = artwork.New(artwork.Deps{
 				DataDir: dir,
-				Images:  pm,
+				Images:  images,
 				Library: lib,
 				Deezer:  deezer,
 				Links:   links,
@@ -295,7 +295,7 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 			func() {
 				lib.ids["books/42"] = 7
 				Expect(
-					pm.Posters().Put(
+					images.Posters().Put(
 						context.Background(),
 						"books",
 						7,

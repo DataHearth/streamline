@@ -32,7 +32,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		ctx          context.Context
 		storeMock    *dbmocks.MockStore_Expecter
 		metaMock     *mockmeta.MockProvider_Expecter
-		fetchMock    *mockimagecache.MockManager_Expecter
+		imagesMock   *mockimagecache.MockManager_Expecter
 		posterMock   *mockimagecache.MockStore_Expecter
 		downloadMock *mockdownload.MockDownloader_Expecter
 		msMock       *msmocks.MockRefresher_Expecter
@@ -48,7 +48,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		metaMock = meta.EXPECT()
 		var posterStore *mockimagecache.MockStore
 		images, posterStore = imagecachetest.NewMocks(GinkgoT())
-		fetchMock = images.EXPECT()
+		imagesMock = images.EXPECT()
 		posterMock = posterStore.EXPECT()
 		dl := mockdownload.NewMockDownloader(GinkgoT())
 		downloadMock = dl.EXPECT()
@@ -531,7 +531,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 	Describe("Delete", func() {
 		It("calls store delete and evicts the cached poster", func() {
 			storeMock.DeleteMovie(mock.Anything, uint32(7)).Return(nil).Once()
-			fetchMock.Remove("movies", uint32(7)).Return(nil).Once()
+			imagesMock.Remove("movies", uint32(7)).Return(nil).Once()
 
 			Expect(svc.Delete(ctx, 7, DeleteOptions{})).To(Succeed())
 		})
@@ -544,7 +544,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			storeMock.LatestImportedRecordForMovie(mock.Anything, uint32(7)).
 				Return(nil, &ent.NotFoundError{}).Once()
 			storeMock.DeleteMovie(mock.Anything, uint32(7)).Return(nil).Once()
-			fetchMock.Remove("movies", uint32(7)).Return(nil).Once()
+			imagesMock.Remove("movies", uint32(7)).Return(nil).Once()
 			refreshed := expectRefresh(root)
 
 			Expect(

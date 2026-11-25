@@ -1,6 +1,7 @@
-// Package imagecache caches the images that stand for a row (a poster, a
-// cover, a photo) on the local filesystem and serves them via HTTP. Keeps zero dependencies outside stdlib + otelx so the leaf can be
-// imported by any package.
+// Package imagecache caches the images that stand for a row (a poster,
+// a cover, a photo) on the local filesystem and serves them via HTTP.
+// Of the application it imports only otelx and buildinfo, which import
+// nothing of it, so any package can import this one.
 package imagecache
 
 import (
@@ -26,30 +27,30 @@ var (
 	tracer = otel.Tracer("github.com/datahearth/streamline/internal/imagecache")
 	meter  = otel.Meter("github.com/datahearth/streamline/internal/imagecache")
 
-	posterCache metric.Int64Counter
-	posterFetch metric.Int64Counter
+	cacheCounter metric.Int64Counter
+	fetchCounter metric.Int64Counter
 )
 
 func init() {
-	posterCache = otelx.Must(meter.Int64Counter(
+	cacheCounter = otelx.Must(meter.Int64Counter(
 		"streamline.posters.cache",
 		metric.WithDescription("Poster Serve cache hits/misses by kind + outcome"),
 	))
-	posterFetch = otelx.Must(meter.Int64Counter(
+	fetchCounter = otelx.Must(meter.Int64Counter(
 		"streamline.posters.fetch",
 		metric.WithDescription("Poster source fetches by kind + outcome"),
 	))
 	ctx := context.Background()
-	posterCache.Add(ctx, 0)
-	posterFetch.Add(ctx, 0)
+	cacheCounter.Add(ctx, 0)
+	fetchCounter.Add(ctx, 0)
 }
 
-// maxPosterSize caps the fetched artwork. The TV path forwards whatever
+// maxImageSize caps a fetched image. The TV path forwards whatever
 // TVDBArtworkURL returns — an arbitrary host — so a hostile or compromised
 // metadata provider must not be able to fill the data volume.
-const maxPosterSize = 20 * 1024 * 1024
+const maxImageSize = 20 * 1024 * 1024
 
-var errTooLarge = fmt.Errorf("poster exceeds %d byte cap", maxPosterSize)
+var errTooLarge = fmt.Errorf("image exceeds %d byte cap", maxImageSize)
 
 // validKinds doubles as a path-traversal guard: any kind outside this set
 // is rejected before touching the filesystem or the HTTP response.
@@ -211,7 +212,7 @@ func (s *store) fetch(
 	if err != nil && outcome == "" {
 		outcome = "error"
 	}
-	posterFetch.Add(ctx, 1, metric.WithAttributes(
+	fetchCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("poster.kind", kind),
 		attribute.String("outcome", outcome),
 	))
@@ -265,10 +266,10 @@ func (s *store) sync(
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "http_error", fmt.Errorf("poster source status %d", resp.StatusCode)
+		return "http_error", fmt.Errorf("image source status %d", resp.StatusCode)
 	}
 
-	if err := s.write(dst, resp.Body, follow); err != nil {
+	if err := write(dst, resp.Body, follow); err != nil {
 		if errors.Is(err, errTooLarge) {
 			return "too_large", err
 		}
@@ -282,7 +283,7 @@ func (s *store) sync(
 	}
 	slog.InfoContext(
 		ctx,
-		"poster fetched",
+		"image fetched",
 		"poster.kind",
 		kind,
 		"poster.id",
@@ -313,29 +314,30 @@ func (s *store) Put(
 		attribute.String("poster.kind", kind),
 		attribute.Int64("poster.id", int64(id)),
 	)
-	return otelx.RecordSpanError(span, s.write(s.Path(kind, id), r, true))
+	return otelx.RecordSpanError(span, write(s.Path(kind, id), r, true))
 }
 
 // write copies r to dst through a temp file in the same directory, so a
-// failed or oversized copy never leaves a partial image behind. Without replace, an image that appeared while r was
-// being read wins: an album's own art stored by Put must not be undone by a
-// slower remote fetch.
-func (s *store) write(dst string, r io.Reader, replace bool) error {
+// failed or oversized copy never leaves a partial image behind. Without
+// replace, an image that appeared while r was being read wins: an
+// album's own art stored by Put must not be undone by a slower remote
+// fetch.
+func write(dst string, r io.Reader, replace bool) error {
 	if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
-		return fmt.Errorf("mkdir poster dir: %w", err)
+		return fmt.Errorf("mkdir image dir: %w", err)
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(dst), "poster-*.tmp")
+	tmp, err := os.CreateTemp(filepath.Dir(dst), "image-*.tmp")
 	if err != nil {
 		return fmt.Errorf("create temp: %w", err)
 	}
 	tmpName := tmp.Name()
-	n, err := io.Copy(tmp, io.LimitReader(r, maxPosterSize+1))
+	n, err := io.Copy(tmp, io.LimitReader(r, maxImageSize+1))
 	if err != nil {
 		tmp.Close()
 		_ = os.Remove(tmpName)
 		return fmt.Errorf("copy body: %w", err)
 	}
-	if n > maxPosterSize {
+	if n > maxImageSize {
 		tmp.Close()
 		_ = os.Remove(tmpName)
 		return errTooLarge
@@ -361,21 +363,16 @@ func (s *store) write(dst string, r io.Reader, replace bool) error {
 // Anything that does not sniff as an image keeps image/jpeg, so a hostile body
 // is never served as a type a browser would render as a page.
 func sniffImageType(f *os.File) string {
-	t, ok := sniff(f)
-	if !ok {
-		return "image/jpeg"
-	}
-	return t
-}
-
-func sniff(f *os.File) (string, bool) {
 	head := make([]byte, 512)
 	n, err := f.ReadAt(head, 0)
 	if err != nil && !errors.Is(err, io.EOF) {
-		return "", false
+		return "image/jpeg"
 	}
 	t := http.DetectContentType(head[:n])
-	return t, strings.HasPrefix(t, "image/")
+	if !strings.HasPrefix(t, "image/") {
+		return "image/jpeg"
+	}
+	return t
 }
 
 func (s *store) Serve(
@@ -387,17 +384,18 @@ func (s *store) Serve(
 	ctx := r.Context()
 	// The kind comes from the URL: one the cache does not know is counted
 	// under a single name, never as itself.
+	_, valid := validKinds[kind]
 	label := kind
-	if _, ok := validKinds[kind]; !ok {
+	if !valid {
 		label = "invalid"
 	}
 	record := func(outcome string) {
-		posterCache.Add(ctx, 1, metric.WithAttributes(
+		cacheCounter.Add(ctx, 1, metric.WithAttributes(
 			attribute.String("kind", label),
 			attribute.String("outcome", outcome),
 		))
 	}
-	if _, ok := validKinds[kind]; !ok {
+	if !valid {
 		record("invalid_kind")
 		http.NotFound(w, r)
 		return
