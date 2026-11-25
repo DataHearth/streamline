@@ -225,12 +225,6 @@
 			return { token: "wanted", label: countWanted(wantedEpisodes), live: false };
 		return null;
 	});
-	// What the line above the title says about the show, in order. The type
-	// chip follows it on its own.
-	let heroFacts = $derived(
-		show ? [show.series_status, show.network, show.creator].filter((f): f is string => !!f) : [],
-	);
-
 	// Named as First aired where it is labelled, and printed bare in the hero's
 	// dotted meta line — the same date either way.
 	let airedText = $derived(formatDate(show?.first_aired));
@@ -253,9 +247,12 @@
 		episodes: regularSeasons.flatMap((s) => s.episodes ?? []),
 	});
 
+	// The dotted line under the title, the status first.
 	let metaParts = $derived.by(() => {
 		if (!show) return [] as string[];
-		const p: string[] = [];
+		const p: string[] = [show.series_status];
+		if (show.network) p.push(show.network);
+		if (show.creator) p.push(show.creator);
 		// The date carries its own year, so the two never both appear.
 		p.push(airedText || String(show.year));
 		if (show.certification) p.push(show.certification);
@@ -616,40 +613,6 @@
 			</div>
 
 			<div class="min-w-0 text-left">
-				<div
-					class="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-xs text-fg-muted"
-				>
-					{#if heroFacts.length > 0}
-						<!-- Each fact carries its dot in front, and the row is pulled left
-						     by one dot inside a clip: the fact that starts a line has its
-						     dot clipped, so a wrap never leaves one hanging. -->
-						<div class="min-w-0 overflow-hidden">
-							<div class="-ml-5 flex flex-wrap gap-y-1">
-								{#each heroFacts as fact, i (i)}
-									<span
-										class={twMerge(
-											"relative pl-5 before:absolute before:left-0 before:w-5 before:text-center before:text-fg-faint before:content-['·']",
-											i === 0 && show.series_status && "uppercase tracking-wide",
-										)}>{fact}</span
-									>
-								{/each}
-							</div>
-						</div>
-					{/if}
-					<span
-						class={twMerge(
-							"rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
-							show.type === "anime"
-								? "bg-accent-soft text-accent-text"
-								: show.type === "daily"
-									? "bg-status-grabbing/15 text-status-grabbing"
-									: "bg-white/[0.06] text-fg-muted",
-						)}
-					>
-						{show.type}
-					</span>
-				</div>
-
 				<h1
 					id="series-title"
 					class="text-[23px] font-bold leading-[1.05] tracking-tight text-fg md:text-4xl lg:text-5xl"
@@ -658,20 +621,37 @@
 					{show.title}
 				</h1>
 
-				{#if metaParts.length > 0}
-					<!-- The facts line's clip, for the same reason: no dot left at the
-					     end of a line on a phone. -->
-					<div class="mt-3 overflow-hidden font-mono text-xs text-fg-muted">
+				<div
+					class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-xs text-fg-muted"
+				>
+					<!-- Each part carries its dot in front, and the row is pulled left
+					     by one dot inside a clip: the part that starts a line has its
+					     dot clipped, so a wrap never leaves one hanging. -->
+					<div class="min-w-0 overflow-hidden">
 						<div class="-ml-5 flex flex-wrap gap-y-2">
 							{#each metaParts as part, i (i)}
 								<span
-									class="relative pl-5 before:absolute before:left-0 before:w-5 before:text-center before:text-fg-faint before:content-['·']"
-									>{part}</span
+									class={twMerge(
+										"relative pl-5 before:absolute before:left-0 before:w-5 before:text-center before:text-fg-faint before:content-['·']",
+										i === 0 && "uppercase tracking-wide",
+									)}>{part}</span
 								>
 							{/each}
 						</div>
 					</div>
-				{/if}
+					{#if show.type !== "standard"}
+						<span
+							class={twMerge(
+								"rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
+								show.type === "anime"
+									? "bg-accent-soft text-accent-text"
+									: "bg-status-grabbing/15 text-status-grabbing",
+							)}
+						>
+							{show.type}
+						</span>
+					{/if}
+				</div>
 
 				{#if show.overview}
 					<ClampedText class="mt-4" text={show.overview} />
@@ -684,7 +664,7 @@
 					<!-- Below lg the count has a line to itself and the states follow on
 					     their own, so the break never moves with which states are present.
 					     Each state carries its dot in front and the row is pulled left by
-					     one dot inside a clip, as the facts line above does: whichever state
+					     one dot inside a clip, as the line under the title does: whichever state
 					     starts a line has its dot clipped. From lg it is one line. -->
 					<div
 						class="mb-1.5 flex flex-col gap-y-0.5 font-mono text-xs text-fg-muted lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-1.5"
