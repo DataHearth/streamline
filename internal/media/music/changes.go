@@ -300,7 +300,7 @@ func (s *Service) FollowChange(ctx context.Context, c *ent.MetadataChange) error
 			return err
 		}
 		if dropped != 0 {
-			if err := s.posters.Remove(coverKind, dropped); err != nil {
+			if err := s.images.Remove(coverKind, dropped); err != nil {
 				return err
 			}
 		}

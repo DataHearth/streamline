@@ -35,7 +35,7 @@ func (s *Service) fillDetailsInBackground(
 }
 
 func (s *Service) hasPhoto(artistID uint32) bool {
-	st, err := os.Stat(s.posters.Posters().Path(artistKind, artistID))
+	st, err := os.Stat(s.images.Posters().Path(artistKind, artistID))
 	return err == nil && st.Size() > 0
 }
 
@@ -76,7 +76,7 @@ func (s *Service) fillDetails(ctx context.Context, artistID uint32, force bool) 
 
 	if s.photos != nil && (force || !s.hasPhoto(artistID)) {
 		if url := s.photoURL(ctx, a); url != "" {
-			if err := s.posters.Posters().
+			if err := s.images.Posters().
 				Fetch(ctx, artistKind, artistID, url); err != nil {
 				otelx.RecordSpanError(span, err)
 				slog.WarnContext(ctx, "artist photo not fetched",

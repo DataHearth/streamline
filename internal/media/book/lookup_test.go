@@ -546,7 +546,7 @@ var _ = Describe("Book lookup", Label("unit", "integration", "books"), func() {
 		})
 
 		It("says so when there is no Hardcover key", func() {
-			svc := NewService(f.store, nil, f.posters, f.idx, f.dl, nil, nil)
+			svc := NewService(f.store, nil, f.images, f.idx, f.dl, nil, nil)
 			_, err := svc.Lookup(f.ctx, "x", lookupAll)
 			Expect(err).To(MatchError(ErrNotConfigured))
 		})

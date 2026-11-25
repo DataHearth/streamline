@@ -36,7 +36,7 @@ var _ = Describe("auth exclude list", Label("unit", "server"), func() {
 		)
 		srv := New(Config{
 			Ent:            client,
-			Posters:        imagecachemocks.NewMockManager(GinkgoT()),
+			Images:         imagecachemocks.NewMockManager(GinkgoT()),
 			AuthMiddleware: authMW,
 		})
 		ts = httptest.NewServer(srv.Router())

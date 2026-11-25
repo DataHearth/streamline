@@ -36,7 +36,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		posterMock   *mockimagecache.MockStore_Expecter
 		downloadMock *mockdownload.MockDownloader_Expecter
 		msMock       *msmocks.MockRefresher_Expecter
-		posters      *mockimagecache.MockManager
+		images       *mockimagecache.MockManager
 		svc          *Service
 	)
 
@@ -47,14 +47,14 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		meta := mockmeta.NewMockProvider(GinkgoT())
 		metaMock = meta.EXPECT()
 		var posterStore *mockimagecache.MockStore
-		posters, posterStore = imagecachetest.NewMocks(GinkgoT())
-		fetchMock = posters.EXPECT()
+		images, posterStore = imagecachetest.NewMocks(GinkgoT())
+		fetchMock = images.EXPECT()
 		posterMock = posterStore.EXPECT()
 		dl := mockdownload.NewMockDownloader(GinkgoT())
 		downloadMock = dl.EXPECT()
 		ms := msmocks.NewMockRefresher(GinkgoT())
 		msMock = ms.EXPECT()
-		svc = NewService(store, meta, posters, dl, ms)
+		svc = NewService(store, meta, images, dl, ms)
 		// Cast enrichment runs after every add and metadata update and is
 		// exercised on its own in people_test.go; here it is background noise
 		// with nothing to enrich.

@@ -171,7 +171,7 @@ var _ = Describe("Music tag artwork", Label("unit", "integration", "music"), fun
 		var err error
 		cache, err = imagecache.New(GinkgoT().TempDir())
 		Expect(err).NotTo(HaveOccurred())
-		e.svc.posters = cache
+		e.svc.images = cache
 		e.dl.EXPECT().SeedingTorrents(mock.Anything).
 			Return(download.NewSeedingSet(true, nil, nil)).Maybe()
 		musicDir = GinkgoT().TempDir()

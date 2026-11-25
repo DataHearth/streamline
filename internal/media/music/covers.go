@@ -84,7 +84,7 @@ func (s *Service) ResolveCoversInBackground(
 
 // hasCover reports whether a poster is already cached for the album.
 func (s *Service) hasCover(albumID uint32) bool {
-	st, err := os.Stat(s.posters.Posters().Path(coverKind, albumID))
+	st, err := os.Stat(s.images.Posters().Path(coverKind, albumID))
 	return err == nil && st.Size() > 0
 }
 
@@ -192,7 +192,7 @@ func (s *Service) localCover(
 			// every resolve.
 			continue
 		}
-		if err := s.posters.Posters().Put(
+		if err := s.images.Posters().Put(
 			ctx,
 			coverKind,
 			a.ID,
@@ -226,12 +226,12 @@ func (s *Service) putFile(ctx context.Context, albumID uint32, path string) erro
 		return err
 	}
 	defer f.Close()
-	return s.posters.Posters().Put(ctx, coverKind, albumID, f)
+	return s.images.Posters().Put(ctx, coverKind, albumID, f)
 }
 
 // coverHash identifies the cached cover, empty when there is none.
 func (s *Service) coverHash(albumID uint32) string {
-	data, err := os.ReadFile(s.posters.Posters().Path(coverKind, albumID))
+	data, err := os.ReadFile(s.images.Posters().Path(coverKind, albumID))
 	if err != nil || len(data) == 0 {
 		return ""
 	}
@@ -271,7 +271,7 @@ func (s *Service) remoteCover(
 	errs *[]error,
 ) string {
 	fetch := func(src, source string) string {
-		if err := s.posters.Posters().Fetch(ctx, coverKind, a.ID, src); err != nil {
+		if err := s.images.Posters().Fetch(ctx, coverKind, a.ID, src); err != nil {
 			*errs = append(*errs, err)
 			return ""
 		}

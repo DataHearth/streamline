@@ -146,7 +146,7 @@ var _ = Describe("Service", Label("unit", "artwork"), func() {
 		build := func() {
 			svc, err = artwork.New(artwork.Deps{
 				DataDir: dir,
-				Posters: pm,
+				Images:  pm,
 				Library: lib,
 				Deezer:  deezer,
 				Links:   links,

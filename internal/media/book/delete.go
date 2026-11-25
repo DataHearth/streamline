@@ -61,13 +61,13 @@ func filePaths(b *ent.Book) []string {
 // show on the next row with that id.
 func (s *Service) removePosters(ctx context.Context, bookIDs, authorIDs []uint32) {
 	for _, id := range bookIDs {
-		if err := s.posters.Remove(coverKind, id); err != nil {
+		if err := s.images.Remove(coverKind, id); err != nil {
 			slog.WarnContext(ctx, "book poster was not removed",
 				"book.id", id, "error", err)
 		}
 	}
 	for _, id := range authorIDs {
-		if err := s.posters.Remove(photoKind, id); err != nil {
+		if err := s.images.Remove(photoKind, id); err != nil {
 			slog.WarnContext(ctx, "author poster was not removed",
 				"author.id", id, "error", err)
 		}

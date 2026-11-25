@@ -65,7 +65,7 @@ func (s *Service) fetchArtInBackground(ctx context.Context, jobs ...artJob) {
 		defer observability.RecoverPanic(bg, "book.fetch_art", nil)
 		for _, j := range jobs {
 			if j.cover != "" {
-				if err := s.posters.Posters().Fetch(
+				if err := s.images.Posters().Fetch(
 					bg,
 					coverKind,
 					j.bookID,
@@ -76,7 +76,7 @@ func (s *Service) fetchArtInBackground(ctx context.Context, jobs ...artJob) {
 				}
 			}
 			for _, a := range j.authors {
-				if err := s.posters.Posters().Fetch(
+				if err := s.images.Posters().Fetch(
 					bg,
 					photoKind,
 					a.ID,

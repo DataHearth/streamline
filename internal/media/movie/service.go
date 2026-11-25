@@ -174,7 +174,7 @@ type MetadataRefresher interface {
 type Service struct {
 	db       db.Store
 	metadata metadata.Provider
-	posters  imagecache.Manager
+	images   imagecache.Manager
 	download download.Downloader
 	ms       mediaserver.Refresher
 }
@@ -182,14 +182,14 @@ type Service struct {
 func NewService(
 	store db.Store,
 	meta metadata.Provider,
-	posters imagecache.Manager,
+	images imagecache.Manager,
 	dl download.Downloader,
 	ms mediaserver.Refresher,
 ) *Service {
 	return &Service{
 		db:       store,
 		metadata: meta,
-		posters:  posters,
+		images:   images,
 		download: dl,
 		ms:       ms,
 	}
@@ -504,7 +504,7 @@ func (s *Service) Update(
 // fetchPoster caches the movie's poster in the background. Best-effort: a
 // missing poster is cosmetic and must not fail the operation that asked for it.
 func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string) {
-	if posterPath == "" || s.posters == nil {
+	if posterPath == "" || s.images == nil {
 		return
 	}
 	bg := context.WithoutCancel(ctx)
@@ -514,7 +514,7 @@ func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string)
 	// against w780's ~360 KB, and the cards only ever needed ~400px.
 	src := metadata.PosterURL(posterPath, "w780")
 	go func() {
-		if err := s.posters.Posters().Follow(bg, "movies", id, src); err != nil {
+		if err := s.images.Posters().Follow(bg, "movies", id, src); err != nil {
 			slog.WarnContext(bg, "poster fetch failed",
 				"movie.id", id, "error", err)
 		}
@@ -862,8 +862,8 @@ func (s *Service) Delete(
 		}
 		return otelx.RecordSpanError(span, fmt.Errorf("delete movie: %w", err))
 	}
-	if s.posters != nil {
-		if err := s.posters.Remove("movies", id); err != nil {
+	if s.images != nil {
+		if err := s.images.Remove("movies", id); err != nil {
 			slog.WarnContext(ctx, "poster cache eviction failed",
 				"movie.id", id, "error", err)
 		}

@@ -72,9 +72,9 @@ var _ = Describe("Book lifecycle", Label("unit", "integration", "books"), func()
 				Expect(f.client.Book.Query().CountX(f.ctx)).To(BeZero())
 				Expect(f.client.Author.Query().CountX(f.ctx)).To(BeZero())
 				Expect(
-					f.posters.removals(),
+					f.images.removals(),
 				).To(ContainElement(fetch{kind: "books", id: b.ID}))
-				Expect(f.posters.removals()).To(HaveLen(2))
+				Expect(f.images.removals()).To(HaveLen(2))
 			},
 		)
 
@@ -118,7 +118,7 @@ var _ = Describe("Book lifecycle", Label("unit", "integration", "books"), func()
 			Expect(f.svc.DeleteBook(f.ctx, b.ID, false)).To(Succeed())
 
 			Expect(f.client.Author.Query().CountX(f.ctx)).To(Equal(1))
-			Expect(f.posters.removals()).To(HaveLen(1))
+			Expect(f.images.removals()).To(HaveLen(1))
 		})
 
 		It("refuses a volume, which goes with its series", func() {
@@ -156,7 +156,7 @@ var _ = Describe("Book lifecycle", Label("unit", "integration", "books"), func()
 				Expect(f.client.Book.Query().CountX(f.ctx)).To(BeZero())
 				Expect(f.client.BookSeries.Query().CountX(f.ctx)).To(BeZero())
 				Expect(f.client.Author.Query().CountX(f.ctx)).To(BeZero())
-				removed := f.posters.removals()
+				removed := f.images.removals()
 				Expect(
 					removed,
 				).To(ContainElement(fetch{kind: "books", id: s.Edges.Volumes[0].ID}))
