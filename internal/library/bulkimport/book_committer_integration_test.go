@@ -18,7 +18,7 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/db"
-	postersmocks "github.com/datahearth/streamline/internal/imagecache/mocks"
+	imagecachemocks "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
@@ -87,7 +87,7 @@ var _ = Describe(
 			bookSvc := book.NewService(
 				store,
 				bookmeta,
-				postersmocks.NewMockManager(GinkgoT()),
+				imagecachemocks.NewMockManager(GinkgoT()),
 				nil,
 				nil,
 				nil,

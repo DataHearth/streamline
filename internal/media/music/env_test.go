@@ -17,7 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/album"
 	"github.com/datahearth/streamline/internal/db"
 	mockdownload "github.com/datahearth/streamline/internal/download/mocks"
-	mockposters "github.com/datahearth/streamline/internal/imagecache/mocks"
+	mockimagecache "github.com/datahearth/streamline/internal/imagecache/mocks"
 	mockindexer "github.com/datahearth/streamline/internal/indexer/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
@@ -36,8 +36,8 @@ type env struct {
 	photos    *mockmeta.MockArtistPhotoProvider
 	links     *mockmeta.MockArtistLinkProvider
 	// posters is the poster Store; images is the Manager that hands it out.
-	posters  *mockposters.MockStore
-	images   *mockposters.MockManager
+	posters  *mockimagecache.MockStore
+	images   *mockimagecache.MockManager
 	idx      *mockindexer.MockManager
 	dl       *mockdownload.MockDownloader
 	svc      *Service
@@ -214,7 +214,7 @@ func (e *env) settle(artistID uint32) {
 
 // stubKindPaths points the mock's Path for a poster kind at a per-spec
 // directory and returns a function that marks an id's poster as cached.
-func stubKindPaths(p *mockposters.MockStore, kind string) func(id uint32) {
+func stubKindPaths(p *mockimagecache.MockStore, kind string) func(id uint32) {
 	GinkgoHelper()
 	dir := GinkgoT().TempDir()
 	path := func(id uint32) string {

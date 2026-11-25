@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/datahearth/streamline/ent"
-	mockposters "github.com/datahearth/streamline/internal/imagecache/mocks"
+	mockimagecache "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/testutil/imagecachetest"
@@ -22,7 +22,7 @@ import (
 
 // stubCoverPaths points the mock's Path at a per-spec directory and returns a
 // function that marks an album's cover as already cached.
-func stubCoverPaths(p *mockposters.MockStore) func(id uint32) {
+func stubCoverPaths(p *mockimagecache.MockStore) func(id uint32) {
 	GinkgoHelper()
 	dir := GinkgoT().TempDir()
 	path := func(id uint32) string {
@@ -45,7 +45,7 @@ const (
 var _ = Describe("Cover resolver", Label("unit", "music"), func() {
 	var (
 		ctx     context.Context
-		posters *mockposters.MockStore
+		posters *mockimagecache.MockStore
 		deezer  *mockmeta.MockCoverProvider
 		svc     *Service
 		cache   func(id uint32)
@@ -80,7 +80,7 @@ var _ = Describe("Cover resolver", Label("unit", "music"), func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		var mgr *mockposters.MockManager
+		var mgr *mockimagecache.MockManager
 		mgr, posters = imagecachetest.NewMocks(GinkgoT())
 		deezer = mockmeta.NewMockCoverProvider(GinkgoT())
 		cache = stubCoverPaths(posters)
