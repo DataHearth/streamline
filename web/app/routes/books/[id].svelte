@@ -271,52 +271,58 @@
 				     bookmark), then the actions (both searches and the menu). One
 				     wrapping flow in DOM order, broken by a full-width spacer from md,
 				     so a phone keeps one shape: label over select + bookmark +
-				     menu, with the searches in the pinned bar. No "Downloading…"
-				     chip: the status pill on the cover already says it. -->
-				<div class="flex flex-wrap items-center gap-2 md:gap-x-2.5 md:gap-y-3">
-					<span class="basis-full eyebrow text-[10.5px] text-fg-subtle md:basis-auto">{i18n.action_monitor()}</span>
-					<MonitorSelect value={book.monitor} options={MONITOR} onChange={(v) => setMonitor.mutate(v)} label={i18n.action_monitor()} class="flex-1 md:flex-none" />
-					<MonitorToggle monitored={book.monitor !== "none"} onToggle={toggleMonitor} pending={setMonitor.isPending} />
-					<span class="hidden h-0 basis-full md:block" aria-hidden="true"></span>
-					<Button
-						class="hidden h-11 md:inline-flex"
-						type="button"
-						onclick={searchAll}
-						disabled={book.monitor === "none"}
-					>
-						<Radar size={16} aria-hidden="true" />
-						{i18n.books_search_now()}
-					</Button>
-					<button
-						type="button"
-						onclick={() => (manualOpen = true)}
-						class="hidden h-11 items-center gap-2 rounded-lg border border-border-strong bg-white/[0.08] px-4 text-[14px] font-medium text-fg backdrop-blur-sm transition hover:bg-white/[0.14] md:inline-flex"
-					>
-						<Search size={16} aria-hidden="true" />
-						{i18n.action_manual_search()}
-					</button>
-					<button
-						type="button"
-						onclick={() => (uploadOpen = true)}
-						aria-label={i18n.upload_button()}
-						title={i18n.upload_button()}
-						class="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.08] px-3 text-[14px] font-medium text-fg backdrop-blur-sm transition hover:bg-white/[0.14] md:px-4"
-					>
-						<Upload size={16} aria-hidden="true" />
-						<span class="hidden md:inline">{i18n.upload_button()}</span>
-					</button>
-					<LibraryActions
-						base={`/books/${book.id}`}
-						title={book.title}
-						media="books"
-						queryKey="books"
-						backHref="/books"
-						hasFiles={book.formats.some((f) => !!f.file)}
-						profile={book.quality_profile}
-						removeBody={i18n.books_remove_body()}
-						filesLabel={i18n.books_delete_files_label()}
-						canRemove={!book.series}
-					/>
+				     menu, with the searches in the pinned bar. Manual search and
+				     Upload are icons below 640px of row, which the labelled line
+				     needs in French. No "Downloading…" chip: the status pill on the
+				     cover already says it. -->
+				<div class="@container">
+					<div class="flex flex-wrap items-center gap-2 md:gap-x-2.5 md:gap-y-3">
+						<span class="basis-full eyebrow text-[10.5px] text-fg-subtle md:basis-auto">{i18n.action_monitor()}</span>
+						<MonitorSelect value={book.monitor} options={MONITOR} onChange={(v) => setMonitor.mutate(v)} label={i18n.action_monitor()} class="flex-1 md:flex-none" />
+						<MonitorToggle monitored={book.monitor !== "none"} onToggle={toggleMonitor} pending={setMonitor.isPending} />
+						<span class="hidden h-0 basis-full md:block" aria-hidden="true"></span>
+						<Button
+							class="hidden h-11 md:inline-flex"
+							type="button"
+							onclick={searchAll}
+							disabled={book.monitor === "none"}
+						>
+							<Radar size={16} aria-hidden="true" />
+							{i18n.books_search_now()}
+						</Button>
+						<button
+							type="button"
+							onclick={() => (manualOpen = true)}
+							aria-label={i18n.action_manual_search()}
+							title={i18n.action_manual_search()}
+							class="hidden h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.08] px-3 text-[14px] font-medium text-fg backdrop-blur-sm transition hover:bg-white/[0.14] md:inline-flex @min-[640px]:px-4"
+						>
+							<Search size={16} aria-hidden="true" />
+							<span class="hidden @min-[640px]:inline">{i18n.action_manual_search()}</span>
+						</button>
+						<button
+							type="button"
+							onclick={() => (uploadOpen = true)}
+							aria-label={i18n.upload_button()}
+							title={i18n.upload_button()}
+							class="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-lg border border-border-strong bg-white/[0.08] px-3 text-[14px] font-medium text-fg backdrop-blur-sm transition hover:bg-white/[0.14] @min-[640px]:px-4"
+						>
+							<Upload size={16} aria-hidden="true" />
+							<span class="hidden @min-[640px]:inline">{i18n.upload_button()}</span>
+						</button>
+						<LibraryActions
+							base={`/books/${book.id}`}
+							title={book.title}
+							media="books"
+							queryKey="books"
+							backHref="/books"
+							hasFiles={book.formats.some((f) => !!f.file)}
+							profile={book.quality_profile}
+							removeBody={i18n.books_remove_body()}
+							filesLabel={i18n.books_delete_files_label()}
+							canRemove={!book.series}
+						/>
+					</div>
 				</div>
 			{/if}
 		{/snippet}

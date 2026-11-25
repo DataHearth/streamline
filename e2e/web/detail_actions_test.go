@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/go-rod/rod"
@@ -22,7 +23,11 @@ type heroActions struct {
 func readHeroActions(page *rod.Page, titleID string) heroActions {
 	GinkgoHelper()
 	hero := page.MustElement(fmt.Sprintf(`section[aria-labelledby="%s"]`, titleID))
-	row := hero.MustElement("fieldset")
+	return readRow(hero.MustElement("fieldset"))
+}
+
+func readRow(row *rod.Element) heroActions {
+	GinkgoHelper()
 	var got heroActions
 	Expect(row.MustEval(`() => {
 		const shown = [...this.querySelectorAll("button")].filter((b) => b.offsetWidth > 0);
@@ -63,6 +68,51 @@ func expectOneLine(page *rod.Page, titleID string) {
 			g.Expect(got.Clipped).To(BeEmpty(), "%dpx: %+v", width, got)
 		}).WithTimeout(2 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 	}
+}
+
+// expectBookLines checks the book page's row: the monitoring controls, then
+// every action on one line, the menu included. 1014 and 1240 are the two widths
+// where the row reaches the 640px its labels need.
+func expectBookLines(page *rod.Page) {
+	GinkgoHelper()
+	for _, width := range []int{768, 820, 1014, 1024, 1240, 1440} {
+		page.MustSetViewport(width, 900, 1, false)
+		page.MustEval(`() => document.fonts.ready.then(() => true)`)
+		Eventually(func(g Gomega) {
+			got := readRow(page.MustElement(`section[aria-labelledby="book-title"]`).
+				MustElement(".lucide-radar").
+				MustParent().MustParent())
+			g.Expect(got.Names).To(HaveLen(6), "%dpx: %+v", width, got)
+			for i, c := range got.Centres {
+				first := got.Centres[0]
+				if i >= 2 {
+					first = got.Centres[2]
+				}
+				g.Expect(c).To(BeNumerically("~", first, 1), "%dpx: %+v", width, got)
+			}
+			g.Expect(got.Overflow).
+				To(BeNumerically("<=", 0.5), "%dpx: %+v", width, got)
+			g.Expect(got.Clipped).To(BeEmpty(), "%dpx: %+v", width, got)
+		}).WithTimeout(2 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
+	}
+}
+
+// seedBook adds a one-volume series and returns its volume's book id.
+func seedBook() uint32 {
+	GinkgoHelper()
+	var series struct {
+		Volumes []struct {
+			ID uint32 `json:"id"`
+		} `json:"volumes"`
+	}
+	Expect(apiDo(
+		http.MethodGet,
+		fmt.Sprintf("/api/v1/books/series/%d", seedSeries(5450, "foundation", 1)),
+		nil,
+		&series,
+	)).To(Equal(http.StatusOK))
+	Expect(series.Volumes).To(HaveLen(1))
+	return series.Volumes[0].ID
 }
 
 func openInLocale(locale, path string, setup func(*rod.Page)) *rod.Page {
@@ -112,6 +162,19 @@ var _ = Describe("Detail hero actions", Label("e2e"), func() {
 		func(locale string) {
 			page := openInLocale(locale, "/series/1", stubSeries)
 			expectOneLine(page, "series-title")
+		},
+		Entry("in English", "en"),
+		Entry("in French", "fr"),
+	)
+
+	DescribeTable("stay on their line on the book page",
+		func(locale string) {
+			page := openInLocale(
+				locale,
+				fmt.Sprintf("/books/%d", seedBook()),
+				func(*rod.Page) {},
+			)
+			expectBookLines(page)
 		},
 		Entry("in English", "en"),
 		Entry("in French", "fr"),
