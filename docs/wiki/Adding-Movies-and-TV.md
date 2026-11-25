@@ -50,9 +50,9 @@ Shows have one extra decision, and it's the one worth reading carefully — **wh
 | **None** | Nothing |
 
 > [!NOTE]
-> Specials (season 0) are not monitored by default. Most people don't want them, and they're the most poorly-named releases on any tracker. Turn them on globally at Settings → Series (`library.monitor_specials`), or per show from the show's page.
+> Specials (season 0) follow the option you pick, like any other season: **All episodes**, the one selected when you add a show, monitors them too. Most people don't want them, and they're the most poorly-named releases on any tracker: switch season 0 off on the show's page. A show that arrives without an option (an approved request, an import) and a season 0 discovered by a later refresh are left unmonitored, unless Settings → Series (`library.monitor_specials`) says otherwise.
 
-The Settings → Series page also holds the defaults applied to *new* shows and to seasons discovered later. Changing it doesn't retroactively touch shows already in your library — there's an explicit **Apply to existing series** action for that. It leaves alone any special season or episode you monitored or unmonitored by hand; switching a show's monitoring off and on, or picking a monitoring preset for it, starts that show over.
+Changing that setting doesn't retroactively touch shows already in your library — there's an explicit **Apply to existing series** action for that. It leaves alone any special season or episode you monitored or unmonitored by hand; switching a show's monitoring off and on, or picking a monitoring preset for it, starts that show over.
 
 Once added, the show page shows every season and episode, what's on disk, what's missing, and what's still to air:
 
@@ -100,7 +100,7 @@ The detail page is where all of this comes together — cast, artwork, and once 
 
 Two independent jobs hunt for things, and it helps to know which one is doing what.
 
-**RSS sync** (every 15 minutes by default) reads the newest releases from your indexers and checks whether any match something you want. This is what catches new releases quickly — usually within minutes of them being posted.
+**RSS sync** (every 15 minutes by default) reads the newest releases from your indexers and checks whether any match something you want. This is what catches new releases quickly — usually within minutes of them being posted. A Prowlarr indexer has no feed, so this job skips it: releases from trackers that are only behind Prowlarr wait for the missing search. A Torznab or built-in indexer is read.
 
 For TV, a release is matched to a show by name: its title, its original title or one of its alternative and translated titles. Case, punctuation and accents don't matter (`Shogun.2024.S01E01` matches *Shōgun*), and titles in other scripts match releases written in that script. A show's own title always beats another show's alternative title, and a year after a title is ignored (*Foundation (2021)* matches `Foundation.2021.S01E01`). When two shows of your library share a name, a release goes to the one whose year it states (`Doctor.Who.2005.S01E01` to *Doctor Who (2005)*); one that states no year, or a year neither has, matches neither — those releases are left to the missing search, which looks for each show on its own.
 
@@ -121,7 +121,7 @@ flowchart LR
   G --> H[Media server refresh]
 ```
 
-When a release passes the quality bar, Streamline sends it to the highest-priority enabled download client, tagged `streamline`. When it finishes, the download monitor (every 30 seconds) notices, and the importer hardlinks it into your library under the naming template, then nudges your media server to rescan.
+When a release passes the quality bar, Streamline sends it to the highest-priority enabled download client (in qBittorrent under the `streamline` category, in Transmission with that label). When it finishes, the download monitor (every 30 seconds) notices, and the importer hardlinks it into your library under the naming template, then nudges your media server to rescan.
 
 So the expected latency for a brand-new release is *minutes*, and for something obscure and old it can be *hours* — that's not a fault, it's the missing-search interval.
 

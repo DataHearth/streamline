@@ -320,7 +320,7 @@ Returns `202`; it runs in the background. Poll `GET /library/path-migration` for
 
 It's also available in the UI at **Settings → Advanced** — *"Maintenance tools that rewrite stored data. Preview before you run anything here."* Take that literally: preview first.
 
-Migration also re-points the config at the new root, however many records it skipped. Under `read_only: true` it leaves the configured root untouched and rewrites only the stored rows, so in a GitOps deploy, update the path in git and let the migration handle the rows.
+Migration also re-points the config at the new root, however many records it skipped, unless the configured root lies outside `from`. Under `read_only: true` it leaves the configured root untouched and rewrites only the stored rows, so in a GitOps deploy, update the path in git and let the migration handle the rows.
 
 ---
 

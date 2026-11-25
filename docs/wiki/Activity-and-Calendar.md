@@ -215,9 +215,9 @@ Each row names the movie or episode, the file on disk, and where the job got to:
 
 | Status | Meaning |
 | --- | --- |
-| **Queued** | Waiting for a free slot. `max_concurrent` decides how many run at once. A deferred job — waiting for seeding to end when `transcoding.defer_seeding` is on — shows the next re-check time as a hint |
+| **Queued** | Waiting for a free slot. `max_concurrent` decides how many run at once. A deferred job shows the next re-check time as a hint, an hour away: one waiting for seeding to end when `transcoding.defer_seeding` is on, for the hardware under `hw_accel: vaapi`, or for a file that is missing or whose library root is offline |
 | **Running** | Encoding now, with a live percentage, speed and ETA |
-| **Succeeded** | The file on disk has been replaced. The row shows the size before and after |
+| **Succeeded** | The file on disk has been replaced, and the row shows the size before and after. A new import that already complied ends here too, untouched, with both sizes equal |
 | **Failed** | Out of attempts, or failed once in a way no retry can fix. The row carries the tail of ffmpeg's own error output |
 | **Rejected** | The encode finished but failed verification (size band, health check, VMAF); the original is untouched. Terminal until retried |
 | **Canceled** | You stopped it, it was queued when you did, or the file changed under the encode. Terminal — see below |
@@ -233,7 +233,7 @@ Each row names the movie or episode, the file on disk, and where the job got to:
 
 A running job's progress comes from the encoder inside the running process, so it disappears if Streamline restarts mid-encode. That job is put back in the queue on the next boot and starts over; the half-written file it left behind is cleaned up automatically.
 
-**Scan library** (on this page and on Settings → Transcoding) re-probes every file whose profile has a `transcode` block and queues the ones that don't comply. Files that arrived before you turned transcoding on — or before you wrote the rules — are only reachable this way; new imports queue themselves. It's a full pass over your library, so it's a deliberate button rather than a schedule.
+**Scan library** (on this page and on Settings → Transcoding) re-probes every file whose profile has a `transcode` block and queues the ones that don't comply, leaving out files it already transcoded and those with a rejected job. Files that arrived before you turned transcoding on — or before you wrote the rules — are only reachable this way; new imports queue themselves. It's a full pass over your library, so it's a deliberate button rather than a schedule.
 
 ---
 

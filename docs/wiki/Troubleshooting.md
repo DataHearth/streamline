@@ -6,6 +6,7 @@ Find what you're seeing in the table below, then jump straight to the fix. Order
 | --- | --- | --- |
 | Title search returns nothing at all, not just no releases | No metadata API key configured | [Searching finds nothing at all](#searching-finds-nothing-at-all) |
 | Titles sit at **Wanted** forever | No working indexer/client, or quality profile rejecting every release | [Nothing ever gets grabbed](#nothing-ever-gets-grabbed) |
+| A built-in indexer's card says **login failed**, or a search says `blocked by a browser challenge` | Wrong settings, a captcha to type, or no challenge solver | [A built-in indexer can't log in or is challenged](#a-built-in-indexer-cant-log-in-or-is-challenged) |
 | Torrent completes in the client but Streamline does nothing with it | Held for review, or a path/mount mismatch | [Downloads finish but never import](#downloads-finish-but-never-import) |
 | Container exits on first start: `config file … does not exist and cannot be created` | The config directory is not writable by Streamline's uid/gid | [The config file cannot be created](#the-config-file-cannot-be-created) |
 | Import fails writing to disk | Streamline's uid/gid can't write to your media directories | [Permission denied on import](#permission-denied-on-import) |
@@ -50,7 +51,7 @@ Settings → Metadata takes the same keys. Restart afterwards either way. Keys a
 
 Titles sit at **Wanted** forever. Work down this list in order.
 
-**1. Is there an enabled indexer that passes its test?** Settings → Indexers → Test. A red result means Streamline can't reach it or the API key is wrong.
+**1. Is there an enabled indexer that passes its test?** Settings → Indexers → Test. A red result means Streamline can't reach it or the API key is wrong; for a built-in indexer, see [A built-in indexer can't log in](#a-built-in-indexer-cant-log-in-or-is-challenged).
 
 > [!TIP]
 > Check this one first: with no working download client, Streamline won't even search — the RSS scans and the missing searches bail out immediately when there's nowhere to send a grab, logging `no enabled download client`. It's the single most common cause of this symptom, and it's silent unless you read the logs.
@@ -71,11 +72,23 @@ Titles sit at **Wanted** forever. Work down this list in order.
 
 Loosen the profile, or grab the release manually — a manual grab bypasses the profile entirely.
 
-**5. Has it been long enough?** RSS sync runs every 15 minutes; missing search every 12 hours. A title that was searched and matched nothing is also on a `library.no_match_cooldown` (6h default) before it's searched again; a search no indexer answered does not start that cooldown. Force it from the title's actions menu (**Search for releases** on a film, **Search for wanted episodes** on a series), or run the job from Settings → Schedules.
+**5. Has it been long enough?** RSS sync runs every 15 minutes, and skips Prowlarr indexers, which have no feed; missing search every 12 hours. A title that was searched and matched nothing is also on a `library.no_match_cooldown` (6h default) before it's searched again; a search no indexer answered does not start that cooldown. Force it from the title's actions menu (**Search for releases** on a film, **Search for wanted episodes** on a series), or run the job from Settings → Schedules.
 
 **6. Has it run out of attempts?** After `library.max_grab_failures` (default 3) failed grabs in a row the missing search passes the title over, though it still reads Wanted. A search from its actions menu ignores the count, and a successful grab clears it. A film marked **Failed** is another case: its import failed, or you deleted its held download, and nothing searches for it until you do. Episodes report the running count as `grab_failures` (absent when zero) on the series detail response, which is the only warning before an episode goes quiet — a retired episode is skipped by the search entirely, so it produces no log line and no activity entry.
 
 Failures that were never about the release do **not** count: an unreachable indexer or download client (a Prowlarr timeout, most often) is retried on the next pass with the counter untouched. If that were counted, three slow ticks would retire an episode that had a perfectly good release waiting.
+
+---
+
+## A built-in indexer can't log in or is challenged
+
+On Settings → Indexers, hover **login failed** on the indexer's card: it gives the tracker's own message and when the next automatic attempt is. Searches and feeds fail until then, so a wrong password is not retried into an account ban. The wait grows with each failure, from one minute up to a day.
+
+- **The settings are wrong.** Edit the indexer. Changed settings start over, with no wait left; **Log in** on the card tries at once whatever the wait.
+- **The message says the login form asks for a captcha.** Use **Log in** on the card, which shows the captcha, and type it. The login is then kept for 30 days from its last use.
+- **`tracker challenge not solved`**: the site is behind Cloudflare or DDoS-Guard, and the text after it says why. With no solver, set `cardigann.solver_url` in the config file and restart. `still challenged after solving` usually means the solver and Streamline reach the internet from different addresses: give the indexer the `proxy` its traffic leaves through, which the solver is told to use too.
+
+[Built-in indexers](Configuration-Reference#built-in-indexers-protocol-cardigann) has the details.
 
 ---
 
@@ -128,7 +141,7 @@ While qBittorrent is moving a torrent's files (switching it to Automatic Torrent
 
 ## An adopted torrent says "files not found"
 
-You added a torrent in your download client yourself, tagged it `streamline` so Streamline would pick it up, and it shows on **Queue & History** under *Needs attention* as a proposal reading `files not found — client reports /some/path`.
+You added a torrent in your download client yourself (in qBittorrent, under the `streamline` category so Streamline would pick it up), and it shows on **Queue & History** under *Needs attention* as a proposal reading `files not found — client reports /some/path`.
 
 **qBittorrent only moves files to a category's save path under Automatic Torrent Management.** A torrent added in Manual mode keeps whatever save path it was added with, forever. Setting its category changes the label and nothing else — so Streamline adopts it, looks under `library.download_path/<torrent name>`, and finds nothing.
 
@@ -202,7 +215,7 @@ Gone from the logs? Set a new one from the command line, with the service stoppe
 streamline -c /etc/streamline/config.yaml auth unlock you@example.com
 ```
 
-There's also a per-IP rate limit of 5 attempts per 15 minutes that is *not* clearable — wait it out.
+There's also a per-IP rate limit of 5 attempts per 15 minutes that no command clears: wait it out, or restart Streamline, which keeps it in memory.
 
 **You've genuinely lost the admin password.** `auth.seed_admin` only acts when the user table is empty, so you can't use it to reset an existing install. Another admin can reset the password from Settings → Users; with no other admin, the `auth set-password` command above is the way back in. It works on any account, opens the database directly and revokes the account's sessions. Forgot which email the admin uses? `streamline -c … auth list --role admin` prints them.
 
@@ -252,7 +265,7 @@ Edit your config file and restart, or set `read_only: false` if you'd rather man
 
 **OIDC providers are only discovered at process start.** Adding or editing one in the UI saves it, but the provider isn't live until you restart. The Settings → Single Sign-On page says so, but it's easy to miss.
 
-Also: **a provider whose discovery fails at startup is skipped silently.** If your IdP was down, or the issuer URL is wrong, the provider simply won't appear on the login page and no error is shown in the UI. Check the startup logs.
+Also: **a provider whose discovery fails at startup is unavailable until the next start.** If your IdP was down, or the issuer URL is wrong, its button is still on the login page but leads to a `404`. Look for `OIDC provider discovery failed; provider unavailable` in the startup logs.
 
 The redirect URI to register at your IdP is:
 

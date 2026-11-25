@@ -190,7 +190,7 @@ Torrents are never paused or resumed by this check, and it cannot see space take
 
 Indexers are where Streamline searches for releases. Three kinds can be added here:
 
-**Prowlarr** (recommended). Run Prowlarr, configure your trackers once there, and point Streamline at it. One entry covers every tracker Prowlarr knows about.
+**Prowlarr** (recommended). Run Prowlarr, configure your trackers once there, and point Streamline at it. One entry covers every tracker Prowlarr knows about. It is searched but has no feed: [RSS sync](Scheduled-Jobs#rss-sync-vs-missing-search) reads only Torznab and built-in indexers, so add the trackers you want new releases from quickly that way too.
 
 ```
 Name:     prowlarr

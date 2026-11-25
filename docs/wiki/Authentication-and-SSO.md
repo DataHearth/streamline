@@ -64,7 +64,7 @@ In `full` mode, the middleware picks its credential source by path prefix. This 
 2. `Authorization: Bearer <jwt>`
 3. The `streamline_session` cookie — **only** when the request is demonstrably same-origin: `Sec-Fetch-Site: same-origin`, or, with that header absent, a single matching `Origin`, or (`GET`/`HEAD` only) a single matching `Referer`. Any other `Sec-Fetch-Site` value is refused
 
-Failure is a `401` with a JSON body.
+Failure is a `401` with a plain-text body.
 
 That third case exists so the SPA can call the API without a second credential. It's gated twice: `SameSite=Lax` on the cookie already blocks cross-origin POSTs, and the same-origin check additionally blocks cross-origin `GET`-via-`fetch`. A request with none of the three headers, or one that does not match, is refused; the `Origin`/`Referer` fallback is what keeps a browser on plain-http LAN installs working, where some omit `Sec-Fetch-Site`.
 
@@ -239,7 +239,7 @@ streamline --config /etc/streamline/config.yaml auth unlock user@example.com
 
 Multi-provider. Each entry is discovered at startup; **a provider whose discovery fails is unavailable until the next start**, and its button on the login page leads to a `404`. Look for `OIDC provider discovery failed; provider unavailable` in the boot log.
 
-With at least one provider configured, the login page leads with the provider buttons (the first one listed in `auth.oidc` is the highlighted one) and folds the email and password form behind **Sign in with email**. The form opens on its own after a failed password attempt, after an `oidc_link_not_allowed` error, and in a browser whose last sign-in used it. Local accounts keep working exactly as before; with no provider, the form is all the page shows.
+With at least one provider configured, the login page leads with the provider buttons (the first one listed in `auth.oidc` is the highlighted one) and folds the email and password form behind **Sign in with email**. The form opens on its own after a failed password attempt, and in a browser whose last sign-in used it. Local accounts keep working; with no provider, the form is all the page shows.
 
 ```yaml
 auth:
@@ -294,7 +294,7 @@ On callback, in order:
 
 1. **Known `(provider, subject)`** → log that user in.
 2. **`email_verified` is false** → reject (`oidc_email_unverified`). Streamline will not link on an unverified email; that would let anyone who can assert an address take over the matching account.
-3. **Existing user with that (lowercased) email** → linked only if the provider's `email_linking` allows adopting that account (`non_admin` or `all`; the default `disabled` never does), then `auth_method` goes from `local` to `both`. Otherwise `oidc_link_not_allowed`.
+3. **Existing user with that (lowercased) email** → linked only if the provider's `email_linking` allows adopting that account (`non_admin` or `all`; the default `disabled` never does), then `auth_method` goes from `local` to `both`. Otherwise the login is refused with `oidc_provider_error`, and the log says `oidc login refused: unlinked identity matched an existing account by email`.
 4. **New user** → apply `registration_mode`:
    - `open` → create with `auth.default_role`
    - `invite` → consume the earliest unused, unexpired invite bound to that email; no match → `oidc_no_invite`, or `auth.default_role` when the provider sets `auto_provision`
@@ -336,8 +336,7 @@ Callback failures redirect to `/login?error=<code>`:
 | `oidc_email_unverified` | IdP reported the email as unverified |
 | `oidc_registration_disabled` | New user, `registration_mode: disabled` |
 | `oidc_no_invite` | New user, `invite` mode, no matching invite, provider without `auto_provision` |
-| `oidc_link_not_allowed` | An account with that email exists, but the provider's `email_linking` does not allow adopting it |
-| `oidc_provider_error` | The IdP returned an error |
+| `oidc_provider_error` | The IdP returned an error, the login failed on the server, or an account with that email exists that the provider's `email_linking` does not allow adopting. The log says which |
 
 ### Restart requirement
 

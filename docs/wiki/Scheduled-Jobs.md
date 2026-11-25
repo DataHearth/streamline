@@ -16,7 +16,7 @@ Besides its interval, every job that is not paused runs once shortly after start
 
 | Job | Default | Config key | What it does | Trigger |
 | --- | --- | --- | --- | --- |
-| `download-monitor` | `30s` | `schedules.download_monitor` | Polls download clients for progress; hands finished torrents to the importer; adopts manually-added `streamline`-tagged torrents | UI / API |
+| `download-monitor` | `30s` | `schedules.download_monitor` | Polls download clients for progress; hands finished torrents to the importer; adopts torrents you added yourself (in qBittorrent only those in the `streamline` category) | UI / API |
 | `import-scan` | `60s` | `schedules.import_scan` | Recovery sweep: re-queues any download record stuck in `importing` state, so work isn't lost across a restart or transient failure | UI / API |
 | `movie-rss-sync` | `15m` | `schedules.movie_rss_sync` | Reads indexer RSS feeds, grabs matching wanted movies, albums and books (one pass over the feeds serves all three) | UI / API |
 | `tv-rss-sync` | `15m` | `schedules.tv_rss_sync` | Same, for episodes | UI / API |
@@ -29,7 +29,7 @@ Besides its interval, every job that is not paused runs once shortly after start
 | `music-metadata-refresh` | `24h` | `schedules.music_metadata_refresh` | Refreshes every artist not refreshed in the last 24h from MusicBrainz (oldest first): the artist, every one of its albums, covers, photo and overview, and retries missing album credits. An album you have files for keeps its edition; what would change it waits under [Metadata changes](Activity-and-Calendar#metadata-changes) | UI / API |
 | `book-metadata-refresh` | `24h` | `schedules.book_metadata_refresh` | Refreshes books and series from Hardcover: up to 100 series placeholders first, then up to 100 stale standalone books, both in batches of twenty, and up to 5 stale series per run, stopping when the day's request reserve is reached. A standalone book, or an edition one of its files follows, that Hardcover no longer has waits under [Metadata changes](Activity-and-Calendar#metadata-changes) | UI / API |
 | `movie-orphan-scan` | `6h` | `schedules.movie_orphan_scan` | Finds untracked video files under `movie_path`: a confident match for a film in the library is adopted in place when the film has no file and skipped when it has one, the rest are queued for review. There is no music or book orphan scan: those libraries are adopted with an [import scan](Importing-an-Existing-Library#music-and-books) | UI / API |
-| `tv-orphan-scan` | `6h` | `schedules.tv_orphan_scan` | Same, under `series_path` | UI / API |
+| `tv-orphan-scan` | `6h` | `schedules.tv_orphan_scan` | Queues for review every show folder under `series_path` holding an untracked episode; nothing is adopted by itself | UI / API |
 | `drift-check` | `15m` | `schedules.drift_check` | Detects tracked files that have vanished from disk. Skips a [library root that is offline](Troubleshooting#a-library-root-is-offline), and still reports success | UI / API |
 | `media-probe` | `15m` | `schedules.media_probe` | Measures the bit depth and sample rate of track files that never were (the `{BitDepth}` and `{SampleRate}` naming tokens), and backfills ffprobe technical info (`media_info`) onto `MediaFile` rows the importer didn't probe inline — adoption, orphan scan, bulk import. Up to 25 video files and 25 tracks a run, oldest first. No-ops when `ffmpeg.enabled` is false or ffprobe isn't found | UI / API |
 | `file-selection` | `30s` | `schedules.file_selection` | Resolves magnet-sourced [selective file downloads](First-Run-Setup#selective-file-download) still waiting to learn what's inside the torrent. While records are actually pending the job re-checks every 5 seconds from inside its own run, so a magnet resolves at that cadence rather than this one; the interval here is only how often it looks for work when there is none. It keeps draining pending records regardless of `download.selective_files` — turning the setting off stops new pending records being created, but records already waiting still have to be resolved | UI / API |
@@ -46,7 +46,7 @@ Besides its interval, every job that is not paused runs once shortly after start
 
 These are complementary, not redundant, and the distinction explains most latency questions.
 
-**RSS sync** is *reactive*: it reads the newest items from each indexer's feed and checks them against what you want. Cheap, frequent, catches new releases within minutes. But a feed only carries recent items — an RSS sync will never find a film from 2011.
+**RSS sync** is *reactive*: it reads the newest items from each indexer's feed and checks them against what you want. Cheap, frequent, catches new releases within minutes. But a feed only carries recent items — an RSS sync will never find a film from 2011. Only Torznab and built-in indexers have a feed; a Prowlarr one is skipped.
 
 **Missing search** is *active*: it walks everything still marked Wanted and issues a real search query per item. Expensive, infrequent, and it's what eventually finds back-catalogue titles.
 
@@ -64,7 +64,7 @@ If your storage is flaky, raise `drift_grace_ticks` (max 20) rather than lengthe
 
 ### Download monitor
 
-The busiest job, and the one that does the most. Every 30 seconds it polls each enabled client for the state of `streamline`-tagged torrents, updates the queue, hands anything complete to the importer, and notices torrents *you* added into the `streamline` category — producing the proposals described in [Activity and Calendar](Activity-and-Calendar#adopted-torrents).
+The busiest job, and the one that does the most. Every 30 seconds it polls each enabled client for the state of its torrents (in qBittorrent those in the `streamline` category), updates the queue, hands anything complete to the importer, and notices finished torrents *you* added — producing the proposals described in [Activity and Calendar](Activity-and-Calendar#adopted-torrents).
 
 Raising the interval above 30s makes imports feel sluggish. Lowering it mostly generates API traffic against your download client.
 

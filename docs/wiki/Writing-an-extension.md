@@ -54,7 +54,7 @@ A fresh instance of the module handles **every** request, so nothing in memory s
 | `hooks[]` | `library`, see [Library changes](#library-changes); `settings`, see [Settings and secrets from the config file](#settings-and-secrets-from-the-config-file). Not a grant: nothing to approve |
 | `account_cards[]` | `{id, kind, title, mount, username, fields}`. `kind: credential` is a credential the account page manages (`mount`, `username`, see [Credential cards](#credential-cards)). `username` is what the app signs in with: `email` (the account's email, shown on the card) or `none`. `mount` is the address the account page shows, the one a user pastes into their app, relative to your path like a mount (`/` is `/extensions/<name>` itself): name what the app expects to be given, never a path the app adds by itself. A Subsonic app appends `/rest` to its server address, so the Subsonic card is `/`; `/rest` there would send the app to `/rest/rest`; `kind: settings` is a set of per-user controls an admin edits (`fields`, see [Settings cards](#settings-cards)). Streamline calls your module at `/cards/<id>` for both |
 
-Whatever you list must be granted by the admin, exactly, hooks aside. A settings card that declares no field, two fields with one id, a field of another kind or a number whose `min` is above its `max` makes the manifest unusable, and the extension fails to start.
+Whatever you list must be granted by the admin, all of it, hooks aside. A settings card that declares no field, two fields with one id, a field of another kind or a number whose `min` is above its `max` makes the manifest unusable, and the extension fails to start.
 
 ## Requests and responses
 

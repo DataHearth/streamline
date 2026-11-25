@@ -21,12 +21,13 @@ Streamline has a built-in request system, so you don't need to run Overseerr/Jel
 | Manage users | Yes | No | No |
 | Add, search, grab, upload, rename and delete titles | Yes | Yes | No |
 | Pause, cancel or resolve downloads, adopted torrents, metadata changes | Yes | No | No |
+| Browse the library, the calendar and the download queue | Yes | Yes | Yes |
 | Search for titles and submit requests | Yes | Yes | Yes |
 | See everyone's requests | Yes | Yes | No (own only) |
 | Approve requests | Yes | Yes | No |
 | Reject or reopen requests | Yes | Yes | No |
 
-**Request only** is the role for the people you're running this *for* — housemates, family, the friend who keeps asking for films. They get a search box and a request button, and none of the machinery.
+**Request only** is the role for the people you're running this *for* — housemates, family, the friend who keeps asking for films. They get the library to browse, a search box and a request button, and can change nothing in it.
 
 **Member** is for someone you trust to help run the library but not to reconfigure it.
 
@@ -74,7 +75,7 @@ If you'd rather not manage passwords at all, Streamline speaks OIDC — Authenti
 
 ## Making a request
 
-From a request-only user's side, this is the entire app: search, find, ask.
+From a request-only user's side, this is what there is to do besides browsing: search, find, ask.
 
 Search returns titles from TMDB (films), TVDB (shows), MusicBrainz (artists and albums) and Hardcover (books and series, when a Hardcover key is configured), including things not in the library. Pick one, optionally state a quality preference, and submit.
 
@@ -84,7 +85,7 @@ Their **Requests** page lists what they've asked for and where each one stands. 
 
 ---
 
-Music and books can be requested too: an artist, a single album, a single book or a whole series of books. A requester never chooses what to monitor: approving an artist monitors all of its albums, approving an album adds its artist unmonitored (if the library lacks it) and monitors just that album, a book is added with both its ebook and audiobook slots, and a series with every volume monitored (placeholders for the later volumes fill in afterwards); change that on the title's page afterwards. The profile you pick at approval comes from that medium's own profiles (music, or books); one from another medium is refused and the request stays pending. A music or book request turns *available* when its first file lands. See [Music and Books](Music-and-Books).
+Music and books can be requested too: an artist, a single album, a single book or a whole series of books. A requester never chooses what to monitor: approving an artist monitors all of its albums of the types ticked under Settings → Music, approving an album adds its artist unmonitored (if the library lacks it) and monitors just that album, a book is added with both its ebook and audiobook slots, and a series with every volume's ebook monitored (placeholders for the later volumes fill in afterwards); change that on the title's page afterwards. The profile you pick at approval comes from that medium's own profiles (music, or books); one from another medium is refused and the request stays pending. A music or book request turns *available* when its first file lands. See [Music and Books](Music-and-Books).
 
 ## Reviewing requests
 
