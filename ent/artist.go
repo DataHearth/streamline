@@ -76,11 +76,13 @@ type ArtistEdges struct {
 	DownloadRecords []*DownloadRecord `json:"download_records,omitempty"`
 	// Events holds the value of the events edge.
 	Events []*MediaEvent `json:"events,omitempty"`
+	// MetadataChanges holds the value of the metadata_changes edge.
+	MetadataChanges []*MetadataChange `json:"metadata_changes,omitempty"`
 	// CoAlbums holds the value of the co_albums edge.
 	CoAlbums []*Album `json:"co_albums,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [6]bool
 }
 
 // AlbumsOrErr returns the Albums value or an error if the edge
@@ -119,10 +121,19 @@ func (e ArtistEdges) EventsOrErr() ([]*MediaEvent, error) {
 	return nil, &NotLoadedError{edge: "events"}
 }
 
+// MetadataChangesOrErr returns the MetadataChanges value or an error if the edge
+// was not loaded in eager-loading.
+func (e ArtistEdges) MetadataChangesOrErr() ([]*MetadataChange, error) {
+	if e.loadedTypes[4] {
+		return e.MetadataChanges, nil
+	}
+	return nil, &NotLoadedError{edge: "metadata_changes"}
+}
+
 // CoAlbumsOrErr returns the CoAlbums value or an error if the edge
 // was not loaded in eager-loading.
 func (e ArtistEdges) CoAlbumsOrErr() ([]*Album, error) {
-	if e.loadedTypes[4] {
+	if e.loadedTypes[5] {
 		return e.CoAlbums, nil
 	}
 	return nil, &NotLoadedError{edge: "co_albums"}
@@ -323,6 +334,11 @@ func (_m *Artist) QueryDownloadRecords() *DownloadRecordQuery {
 // QueryEvents queries the "events" edge of the Artist entity.
 func (_m *Artist) QueryEvents() *MediaEventQuery {
 	return NewArtistClient(_m.config).QueryEvents(_m)
+}
+
+// QueryMetadataChanges queries the "metadata_changes" edge of the Artist entity.
+func (_m *Artist) QueryMetadataChanges() *MetadataChangeQuery {
+	return NewArtistClient(_m.config).QueryMetadataChanges(_m)
 }
 
 // QueryCoAlbums queries the "co_albums" edge of the Artist entity.

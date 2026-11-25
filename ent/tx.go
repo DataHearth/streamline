@@ -54,6 +54,8 @@ type Tx struct {
 	MediaEvent *MediaEventClient
 	// MediaFile is the client for interacting with the MediaFile builders.
 	MediaFile *MediaFileClient
+	// MetadataChange is the client for interacting with the MetadataChange builders.
+	MetadataChange *MetadataChangeClient
 	// Movie is the client for interacting with the Movie builders.
 	Movie *MovieClient
 	// MusicCredit is the client for interacting with the MusicCredit builders.
@@ -234,6 +236,7 @@ func (tx *Tx) init() {
 	tx.Invite = NewInviteClient(tx.config)
 	tx.MediaEvent = NewMediaEventClient(tx.config)
 	tx.MediaFile = NewMediaFileClient(tx.config)
+	tx.MetadataChange = NewMetadataChangeClient(tx.config)
 	tx.Movie = NewMovieClient(tx.config)
 	tx.MusicCredit = NewMusicCreditClient(tx.config)
 	tx.OIDCIdentity = NewOIDCIdentityClient(tx.config)

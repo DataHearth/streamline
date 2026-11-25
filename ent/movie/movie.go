@@ -65,6 +65,8 @@ const (
 	EdgeMediaFiles = "media_files"
 	// EdgeEvents holds the string denoting the events edge name in mutations.
 	EdgeEvents = "events"
+	// EdgeMetadataChanges holds the string denoting the metadata_changes edge name in mutations.
+	EdgeMetadataChanges = "metadata_changes"
 	// EdgeCredits holds the string denoting the credits edge name in mutations.
 	EdgeCredits = "credits"
 	// Table holds the table name of the movie in the database.
@@ -90,6 +92,13 @@ const (
 	EventsInverseTable = "media_events"
 	// EventsColumn is the table column denoting the events relation/edge.
 	EventsColumn = "movie_events"
+	// MetadataChangesTable is the table that holds the metadata_changes relation/edge.
+	MetadataChangesTable = "metadata_changes"
+	// MetadataChangesInverseTable is the table name for the MetadataChange entity.
+	// It exists in this package in order to avoid circular dependency with the "metadatachange" package.
+	MetadataChangesInverseTable = "metadata_changes"
+	// MetadataChangesColumn is the table column denoting the metadata_changes relation/edge.
+	MetadataChangesColumn = "movie_metadata_changes"
 	// CreditsTable is the table that holds the credits relation/edge.
 	CreditsTable = "credits"
 	// CreditsInverseTable is the table name for the Credit entity.
@@ -336,6 +345,20 @@ func ByEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByMetadataChangesCount orders the results by metadata_changes count.
+func ByMetadataChangesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newMetadataChangesStep(), opts...)
+	}
+}
+
+// ByMetadataChanges orders the results by metadata_changes terms.
+func ByMetadataChanges(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newMetadataChangesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByCreditsCount orders the results by credits count.
 func ByCreditsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -368,6 +391,13 @@ func newEventsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(EventsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
+	)
+}
+func newMetadataChangesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(MetadataChangesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, MetadataChangesTable, MetadataChangesColumn),
 	)
 }
 func newCreditsStep() *sqlgraph.Step {

@@ -69,6 +69,9 @@ type MediaEvent func(*sql.Selector)
 // MediaFile is the predicate function for mediafile builders.
 type MediaFile func(*sql.Selector)
 
+// MetadataChange is the predicate function for metadatachange builders.
+type MetadataChange func(*sql.Selector)
+
 // Movie is the predicate function for movie builders.
 type Movie func(*sql.Selector)
 

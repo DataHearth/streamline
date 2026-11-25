@@ -76,11 +76,13 @@ type MovieEdges struct {
 	MediaFiles []*MediaFile `json:"media_files,omitempty"`
 	// Events holds the value of the events edge.
 	Events []*MediaEvent `json:"events,omitempty"`
+	// MetadataChanges holds the value of the metadata_changes edge.
+	MetadataChanges []*MetadataChange `json:"metadata_changes,omitempty"`
 	// Credits holds the value of the credits edge.
 	Credits []*Credit `json:"credits,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 }
 
 // DownloadRecordsOrErr returns the DownloadRecords value or an error if the edge
@@ -110,10 +112,19 @@ func (e MovieEdges) EventsOrErr() ([]*MediaEvent, error) {
 	return nil, &NotLoadedError{edge: "events"}
 }
 
+// MetadataChangesOrErr returns the MetadataChanges value or an error if the edge
+// was not loaded in eager-loading.
+func (e MovieEdges) MetadataChangesOrErr() ([]*MetadataChange, error) {
+	if e.loadedTypes[3] {
+		return e.MetadataChanges, nil
+	}
+	return nil, &NotLoadedError{edge: "metadata_changes"}
+}
+
 // CreditsOrErr returns the Credits value or an error if the edge
 // was not loaded in eager-loading.
 func (e MovieEdges) CreditsOrErr() ([]*Credit, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[4] {
 		return e.Credits, nil
 	}
 	return nil, &NotLoadedError{edge: "credits"}
@@ -323,6 +334,11 @@ func (_m *Movie) QueryMediaFiles() *MediaFileQuery {
 // QueryEvents queries the "events" edge of the Movie entity.
 func (_m *Movie) QueryEvents() *MediaEventQuery {
 	return NewMovieClient(_m.config).QueryEvents(_m)
+}
+
+// QueryMetadataChanges queries the "metadata_changes" edge of the Movie entity.
+func (_m *Movie) QueryMetadataChanges() *MetadataChangeQuery {
+	return NewMovieClient(_m.config).QueryMetadataChanges(_m)
 }
 
 // QueryCredits queries the "credits" edge of the Movie entity.

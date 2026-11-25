@@ -36,6 +36,7 @@ import (
 	"github.com/datahearth/streamline/ent/invite"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/oidcidentity"
@@ -99,6 +100,8 @@ type Client struct {
 	MediaEvent *MediaEventClient
 	// MediaFile is the client for interacting with the MediaFile builders.
 	MediaFile *MediaFileClient
+	// MetadataChange is the client for interacting with the MetadataChange builders.
+	MetadataChange *MetadataChangeClient
 	// Movie is the client for interacting with the Movie builders.
 	Movie *MovieClient
 	// MusicCredit is the client for interacting with the MusicCredit builders.
@@ -159,6 +162,7 @@ func (c *Client) init() {
 	c.Invite = NewInviteClient(c.config)
 	c.MediaEvent = NewMediaEventClient(c.config)
 	c.MediaFile = NewMediaFileClient(c.config)
+	c.MetadataChange = NewMetadataChangeClient(c.config)
 	c.Movie = NewMovieClient(c.config)
 	c.MusicCredit = NewMusicCreditClient(c.config)
 	c.OIDCIdentity = NewOIDCIdentityClient(c.config)
@@ -286,6 +290,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Invite:             NewInviteClient(cfg),
 		MediaEvent:         NewMediaEventClient(cfg),
 		MediaFile:          NewMediaFileClient(cfg),
+		MetadataChange:     NewMetadataChangeClient(cfg),
 		Movie:              NewMovieClient(cfg),
 		MusicCredit:        NewMusicCreditClient(cfg),
 		OIDCIdentity:       NewOIDCIdentityClient(cfg),
@@ -340,6 +345,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Invite:             NewInviteClient(cfg),
 		MediaEvent:         NewMediaEventClient(cfg),
 		MediaFile:          NewMediaFileClient(cfg),
+		MetadataChange:     NewMetadataChangeClient(cfg),
 		Movie:              NewMovieClient(cfg),
 		MusicCredit:        NewMusicCreditClient(cfg),
 		OIDCIdentity:       NewOIDCIdentityClient(cfg),
@@ -387,9 +393,9 @@ func (c *Client) Use(hooks ...Hook) {
 		c.BookContribution, c.BookEdition, c.BookSeries, c.Credit, c.DownloadRecord,
 		c.Episode, c.ImportScan, c.ImportScanAlbum, c.ImportScanBook, c.ImportScanFile,
 		c.ImportScanShow, c.IndexerSession, c.Invite, c.MediaEvent, c.MediaFile,
-		c.Movie, c.MusicCredit, c.OIDCIdentity, c.Person, c.Request, c.ScheduledJob,
-		c.Season, c.Session, c.TVShow, c.TorrentDataRemoval, c.TorrentSession, c.Track,
-		c.TranscodeJob, c.User,
+		c.MetadataChange, c.Movie, c.MusicCredit, c.OIDCIdentity, c.Person, c.Request,
+		c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentDataRemoval,
+		c.TorrentSession, c.Track, c.TranscodeJob, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -403,9 +409,9 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.BookContribution, c.BookEdition, c.BookSeries, c.Credit, c.DownloadRecord,
 		c.Episode, c.ImportScan, c.ImportScanAlbum, c.ImportScanBook, c.ImportScanFile,
 		c.ImportScanShow, c.IndexerSession, c.Invite, c.MediaEvent, c.MediaFile,
-		c.Movie, c.MusicCredit, c.OIDCIdentity, c.Person, c.Request, c.ScheduledJob,
-		c.Season, c.Session, c.TVShow, c.TorrentDataRemoval, c.TorrentSession, c.Track,
-		c.TranscodeJob, c.User,
+		c.MetadataChange, c.Movie, c.MusicCredit, c.OIDCIdentity, c.Person, c.Request,
+		c.ScheduledJob, c.Season, c.Session, c.TVShow, c.TorrentDataRemoval,
+		c.TorrentSession, c.Track, c.TranscodeJob, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -456,6 +462,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.MediaEvent.mutate(ctx, m)
 	case *MediaFileMutation:
 		return c.MediaFile.mutate(ctx, m)
+	case *MetadataChangeMutation:
+		return c.MetadataChange.mutate(ctx, m)
 	case *MovieMutation:
 		return c.Movie.mutate(ctx, m)
 	case *MusicCreditMutation:
@@ -670,6 +678,22 @@ func (c *AlbumClient) QueryEvents(_m *Album) *MediaEventQuery {
 			sqlgraph.From(album.Table, album.FieldID, id),
 			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, album.EventsTable, album.EventsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryMetadataChanges queries the metadata_changes edge of a Album.
+func (c *AlbumClient) QueryMetadataChanges(_m *Album) *MetadataChangeQuery {
+	query := (&MetadataChangeClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(album.Table, album.FieldID, id),
+			sqlgraph.To(metadatachange.Table, metadatachange.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, album.MetadataChangesTable, album.MetadataChangesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1048,6 +1072,22 @@ func (c *ArtistClient) QueryEvents(_m *Artist) *MediaEventQuery {
 			sqlgraph.From(artist.Table, artist.FieldID, id),
 			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, artist.EventsTable, artist.EventsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryMetadataChanges queries the metadata_changes edge of a Artist.
+func (c *ArtistClient) QueryMetadataChanges(_m *Artist) *MetadataChangeQuery {
+	query := (&MetadataChangeClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, id),
+			sqlgraph.To(metadatachange.Table, metadatachange.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, artist.MetadataChangesTable, artist.MetadataChangesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1623,6 +1663,22 @@ func (c *BookClient) QueryEvents(_m *Book) *MediaEventQuery {
 			sqlgraph.From(book.Table, book.FieldID, id),
 			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, book.EventsTable, book.EventsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryMetadataChanges queries the metadata_changes edge of a Book.
+func (c *BookClient) QueryMetadataChanges(_m *Book) *MetadataChangeQuery {
+	query := (&MetadataChangeClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(book.Table, book.FieldID, id),
+			sqlgraph.To(metadatachange.Table, metadatachange.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, book.MetadataChangesTable, book.MetadataChangesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -4402,6 +4458,219 @@ func (c *MediaFileClient) mutate(ctx context.Context, m *MediaFileMutation) (Val
 	}
 }
 
+// MetadataChangeClient is a client for the MetadataChange schema.
+type MetadataChangeClient struct {
+	config
+}
+
+// NewMetadataChangeClient returns a client for the MetadataChange from the given config.
+func NewMetadataChangeClient(c config) *MetadataChangeClient {
+	return &MetadataChangeClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `metadatachange.Hooks(f(g(h())))`.
+func (c *MetadataChangeClient) Use(hooks ...Hook) {
+	c.hooks.MetadataChange = append(c.hooks.MetadataChange, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `metadatachange.Intercept(f(g(h())))`.
+func (c *MetadataChangeClient) Intercept(interceptors ...Interceptor) {
+	c.inters.MetadataChange = append(c.inters.MetadataChange, interceptors...)
+}
+
+// Create returns a builder for creating a MetadataChange entity.
+func (c *MetadataChangeClient) Create() *MetadataChangeCreate {
+	mutation := newMetadataChangeMutation(c.config, OpCreate)
+	return &MetadataChangeCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of MetadataChange entities.
+func (c *MetadataChangeClient) CreateBulk(builders ...*MetadataChangeCreate) *MetadataChangeCreateBulk {
+	return &MetadataChangeCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *MetadataChangeClient) MapCreateBulk(slice any, setFunc func(*MetadataChangeCreate, int)) *MetadataChangeCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &MetadataChangeCreateBulk{err: fmt.Errorf("calling to MetadataChangeClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*MetadataChangeCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &MetadataChangeCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for MetadataChange.
+func (c *MetadataChangeClient) Update() *MetadataChangeUpdate {
+	mutation := newMetadataChangeMutation(c.config, OpUpdate)
+	return &MetadataChangeUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *MetadataChangeClient) UpdateOne(_m *MetadataChange) *MetadataChangeUpdateOne {
+	mutation := newMetadataChangeMutation(c.config, OpUpdateOne, withMetadataChange(_m))
+	return &MetadataChangeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *MetadataChangeClient) UpdateOneID(id uint32) *MetadataChangeUpdateOne {
+	mutation := newMetadataChangeMutation(c.config, OpUpdateOne, withMetadataChangeID(id))
+	return &MetadataChangeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for MetadataChange.
+func (c *MetadataChangeClient) Delete() *MetadataChangeDelete {
+	mutation := newMetadataChangeMutation(c.config, OpDelete)
+	return &MetadataChangeDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *MetadataChangeClient) DeleteOne(_m *MetadataChange) *MetadataChangeDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *MetadataChangeClient) DeleteOneID(id uint32) *MetadataChangeDeleteOne {
+	builder := c.Delete().Where(metadatachange.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &MetadataChangeDeleteOne{builder}
+}
+
+// Query returns a query builder for MetadataChange.
+func (c *MetadataChangeClient) Query() *MetadataChangeQuery {
+	return &MetadataChangeQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeMetadataChange},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a MetadataChange entity by its id.
+func (c *MetadataChangeClient) Get(ctx context.Context, id uint32) (*MetadataChange, error) {
+	return c.Query().Where(metadatachange.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *MetadataChangeClient) GetX(ctx context.Context, id uint32) *MetadataChange {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryArtist queries the artist edge of a MetadataChange.
+func (c *MetadataChangeClient) QueryArtist(_m *MetadataChange) *ArtistQuery {
+	query := (&ArtistClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(metadatachange.Table, metadatachange.FieldID, id),
+			sqlgraph.To(artist.Table, artist.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, metadatachange.ArtistTable, metadatachange.ArtistColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAlbum queries the album edge of a MetadataChange.
+func (c *MetadataChangeClient) QueryAlbum(_m *MetadataChange) *AlbumQuery {
+	query := (&AlbumClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(metadatachange.Table, metadatachange.FieldID, id),
+			sqlgraph.To(album.Table, album.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, metadatachange.AlbumTable, metadatachange.AlbumColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTvShow queries the tv_show edge of a MetadataChange.
+func (c *MetadataChangeClient) QueryTvShow(_m *MetadataChange) *TVShowQuery {
+	query := (&TVShowClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(metadatachange.Table, metadatachange.FieldID, id),
+			sqlgraph.To(tvshow.Table, tvshow.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, metadatachange.TvShowTable, metadatachange.TvShowColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryMovie queries the movie edge of a MetadataChange.
+func (c *MetadataChangeClient) QueryMovie(_m *MetadataChange) *MovieQuery {
+	query := (&MovieClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(metadatachange.Table, metadatachange.FieldID, id),
+			sqlgraph.To(movie.Table, movie.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, metadatachange.MovieTable, metadatachange.MovieColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryBook queries the book edge of a MetadataChange.
+func (c *MetadataChangeClient) QueryBook(_m *MetadataChange) *BookQuery {
+	query := (&BookClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(metadatachange.Table, metadatachange.FieldID, id),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, metadatachange.BookTable, metadatachange.BookColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *MetadataChangeClient) Hooks() []Hook {
+	return c.hooks.MetadataChange
+}
+
+// Interceptors returns the client interceptors.
+func (c *MetadataChangeClient) Interceptors() []Interceptor {
+	return c.inters.MetadataChange
+}
+
+func (c *MetadataChangeClient) mutate(ctx context.Context, m *MetadataChangeMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&MetadataChangeCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&MetadataChangeUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&MetadataChangeUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&MetadataChangeDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown MetadataChange mutation op: %q", m.Op())
+	}
+}
+
 // MovieClient is a client for the Movie schema.
 type MovieClient struct {
 	config
@@ -4551,6 +4820,22 @@ func (c *MovieClient) QueryEvents(_m *Movie) *MediaEventQuery {
 			sqlgraph.From(movie.Table, movie.FieldID, id),
 			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, movie.EventsTable, movie.EventsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryMetadataChanges queries the metadata_changes edge of a Movie.
+func (c *MovieClient) QueryMetadataChanges(_m *Movie) *MetadataChangeQuery {
+	query := (&MetadataChangeClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(movie.Table, movie.FieldID, id),
+			sqlgraph.To(metadatachange.Table, metadatachange.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, movie.MetadataChangesTable, movie.MetadataChangesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -5814,6 +6099,22 @@ func (c *TVShowClient) QueryEvents(_m *TVShow) *MediaEventQuery {
 	return query
 }
 
+// QueryMetadataChanges queries the metadata_changes edge of a TVShow.
+func (c *TVShowClient) QueryMetadataChanges(_m *TVShow) *MetadataChangeQuery {
+	query := (&MetadataChangeClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tvshow.Table, tvshow.FieldID, id),
+			sqlgraph.To(metadatachange.Table, metadatachange.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, tvshow.MetadataChangesTable, tvshow.MetadataChangesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryCredits queries the credits edge of a TVShow.
 func (c *TVShowClient) QueryCredits(_m *TVShow) *CreditQuery {
 	query := (&CreditClient{config: c.config}).Query()
@@ -6670,16 +6971,18 @@ type (
 		Album, ApiKey, Artist, ArtistMember, Author, Book, BookContribution,
 		BookEdition, BookSeries, Credit, DownloadRecord, Episode, ImportScan,
 		ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow,
-		IndexerSession, Invite, MediaEvent, MediaFile, Movie, MusicCredit,
-		OIDCIdentity, Person, Request, ScheduledJob, Season, Session, TVShow,
-		TorrentDataRemoval, TorrentSession, Track, TranscodeJob, User []ent.Hook
+		IndexerSession, Invite, MediaEvent, MediaFile, MetadataChange, Movie,
+		MusicCredit, OIDCIdentity, Person, Request, ScheduledJob, Season, Session,
+		TVShow, TorrentDataRemoval, TorrentSession, Track, TranscodeJob,
+		User []ent.Hook
 	}
 	inters struct {
 		Album, ApiKey, Artist, ArtistMember, Author, Book, BookContribution,
 		BookEdition, BookSeries, Credit, DownloadRecord, Episode, ImportScan,
 		ImportScanAlbum, ImportScanBook, ImportScanFile, ImportScanShow,
-		IndexerSession, Invite, MediaEvent, MediaFile, Movie, MusicCredit,
-		OIDCIdentity, Person, Request, ScheduledJob, Season, Session, TVShow,
-		TorrentDataRemoval, TorrentSession, Track, TranscodeJob, User []ent.Interceptor
+		IndexerSession, Invite, MediaEvent, MediaFile, MetadataChange, Movie,
+		MusicCredit, OIDCIdentity, Person, Request, ScheduledJob, Season, Session,
+		TVShow, TorrentDataRemoval, TorrentSession, Track, TranscodeJob,
+		User []ent.Interceptor
 	}
 )

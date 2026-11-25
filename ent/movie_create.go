@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/movie"
 )
 
@@ -335,6 +336,21 @@ func (_c *MovieCreate) AddEvents(v ...*MediaEvent) *MovieCreate {
 	return _c.AddEventIDs(ids...)
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (_c *MovieCreate) AddMetadataChangeIDs(ids ...uint32) *MovieCreate {
+	_c.mutation.AddMetadataChangeIDs(ids...)
+	return _c
+}
+
+// AddMetadataChanges adds the "metadata_changes" edges to the MetadataChange entity.
+func (_c *MovieCreate) AddMetadataChanges(v ...*MetadataChange) *MovieCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddMetadataChangeIDs(ids...)
+}
+
 // AddCreditIDs adds the "credits" edge to the Credit entity by IDs.
 func (_c *MovieCreate) AddCreditIDs(ids ...uint32) *MovieCreate {
 	_c.mutation.AddCreditIDs(ids...)
@@ -620,6 +636,22 @@ func (_c *MovieCreate) createSpec() (*Movie, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.MetadataChangesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.MetadataChangesTable,
+			Columns: []string{movie.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

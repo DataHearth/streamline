@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/predicate"
 )
 
@@ -31,6 +32,7 @@ type ArtistQuery struct {
 	withMembers         *ArtistMemberQuery
 	withDownloadRecords *DownloadRecordQuery
 	withEvents          *MediaEventQuery
+	withMetadataChanges *MetadataChangeQuery
 	withCoAlbums        *AlbumQuery
 	modifiers           []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
@@ -150,6 +152,28 @@ func (_q *ArtistQuery) QueryEvents() *MediaEventQuery {
 			sqlgraph.From(artist.Table, artist.FieldID, selector),
 			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, artist.EventsTable, artist.EventsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryMetadataChanges chains the current query on the "metadata_changes" edge.
+func (_q *ArtistQuery) QueryMetadataChanges() *MetadataChangeQuery {
+	query := (&MetadataChangeClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(artist.Table, artist.FieldID, selector),
+			sqlgraph.To(metadatachange.Table, metadatachange.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, artist.MetadataChangesTable, artist.MetadataChangesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -375,6 +399,7 @@ func (_q *ArtistQuery) Clone() *ArtistQuery {
 		withMembers:         _q.withMembers.Clone(),
 		withDownloadRecords: _q.withDownloadRecords.Clone(),
 		withEvents:          _q.withEvents.Clone(),
+		withMetadataChanges: _q.withMetadataChanges.Clone(),
 		withCoAlbums:        _q.withCoAlbums.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
@@ -424,6 +449,17 @@ func (_q *ArtistQuery) WithEvents(opts ...func(*MediaEventQuery)) *ArtistQuery {
 		opt(query)
 	}
 	_q.withEvents = query
+	return _q
+}
+
+// WithMetadataChanges tells the query-builder to eager-load the nodes that are connected to
+// the "metadata_changes" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ArtistQuery) WithMetadataChanges(opts ...func(*MetadataChangeQuery)) *ArtistQuery {
+	query := (&MetadataChangeClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withMetadataChanges = query
 	return _q
 }
 
@@ -516,11 +552,12 @@ func (_q *ArtistQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Artis
 	var (
 		nodes       = []*Artist{}
 		_spec       = _q.querySpec()
-		loadedTypes = [5]bool{
+		loadedTypes = [6]bool{
 			_q.withAlbums != nil,
 			_q.withMembers != nil,
 			_q.withDownloadRecords != nil,
 			_q.withEvents != nil,
+			_q.withMetadataChanges != nil,
 			_q.withCoAlbums != nil,
 		}
 	)
@@ -570,6 +607,13 @@ func (_q *ArtistQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Artis
 		if err := _q.loadEvents(ctx, query, nodes,
 			func(n *Artist) { n.Edges.Events = []*MediaEvent{} },
 			func(n *Artist, e *MediaEvent) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withMetadataChanges; query != nil {
+		if err := _q.loadMetadataChanges(ctx, query, nodes,
+			func(n *Artist) { n.Edges.MetadataChanges = []*MetadataChange{} },
+			func(n *Artist, e *MetadataChange) { n.Edges.MetadataChanges = append(n.Edges.MetadataChanges, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -702,6 +746,37 @@ func (_q *ArtistQuery) loadEvents(ctx context.Context, query *MediaEventQuery, n
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "artist_events" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *ArtistQuery) loadMetadataChanges(ctx context.Context, query *MetadataChangeQuery, nodes []*Artist, init func(*Artist), assign func(*Artist, *MetadataChange)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*Artist)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.MetadataChange(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(artist.MetadataChangesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.artist_metadata_changes
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "artist_metadata_changes" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "artist_metadata_changes" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

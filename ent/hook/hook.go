@@ -261,6 +261,18 @@ func (f MediaFileFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MediaFileMutation", m)
 }
 
+// The MetadataChangeFunc type is an adapter to allow the use of ordinary
+// function as MetadataChange mutator.
+type MetadataChangeFunc func(context.Context, *ent.MetadataChangeMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f MetadataChangeFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.MetadataChangeMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MetadataChangeMutation", m)
+}
+
 // The MovieFunc type is an adapter to allow the use of ordinary
 // function as Movie mutator.
 type MovieFunc func(context.Context, *ent.MovieMutation) (ent.Value, error)

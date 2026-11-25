@@ -100,9 +100,11 @@ type BookEdges struct {
 	DownloadRecords []*DownloadRecord `json:"download_records,omitempty"`
 	// Events holds the value of the events edge.
 	Events []*MediaEvent `json:"events,omitempty"`
+	// MetadataChanges holds the value of the metadata_changes edge.
+	MetadataChanges []*MetadataChange `json:"metadata_changes,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [8]bool
+	loadedTypes [9]bool
 }
 
 // SeriesOrErr returns the Series value or an error if the edge
@@ -181,6 +183,15 @@ func (e BookEdges) EventsOrErr() ([]*MediaEvent, error) {
 		return e.Events, nil
 	}
 	return nil, &NotLoadedError{edge: "events"}
+}
+
+// MetadataChangesOrErr returns the MetadataChanges value or an error if the edge
+// was not loaded in eager-loading.
+func (e BookEdges) MetadataChangesOrErr() ([]*MetadataChange, error) {
+	if e.loadedTypes[8] {
+		return e.MetadataChanges, nil
+	}
+	return nil, &NotLoadedError{edge: "metadata_changes"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -466,6 +477,11 @@ func (_m *Book) QueryDownloadRecords() *DownloadRecordQuery {
 // QueryEvents queries the "events" edge of the Book entity.
 func (_m *Book) QueryEvents() *MediaEventQuery {
 	return NewBookClient(_m.config).QueryEvents(_m)
+}
+
+// QueryMetadataChanges queries the "metadata_changes" edge of the Book entity.
+func (_m *Book) QueryMetadataChanges() *MetadataChangeQuery {
+	return NewBookClient(_m.config).QueryMetadataChanges(_m)
 }
 
 // Update returns a builder for updating this Book.

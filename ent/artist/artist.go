@@ -65,6 +65,8 @@ const (
 	EdgeDownloadRecords = "download_records"
 	// EdgeEvents holds the string denoting the events edge name in mutations.
 	EdgeEvents = "events"
+	// EdgeMetadataChanges holds the string denoting the metadata_changes edge name in mutations.
+	EdgeMetadataChanges = "metadata_changes"
 	// EdgeCoAlbums holds the string denoting the co_albums edge name in mutations.
 	EdgeCoAlbums = "co_albums"
 	// Table holds the table name of the artist in the database.
@@ -97,6 +99,13 @@ const (
 	EventsInverseTable = "media_events"
 	// EventsColumn is the table column denoting the events relation/edge.
 	EventsColumn = "artist_events"
+	// MetadataChangesTable is the table that holds the metadata_changes relation/edge.
+	MetadataChangesTable = "metadata_changes"
+	// MetadataChangesInverseTable is the table name for the MetadataChange entity.
+	// It exists in this package in order to avoid circular dependency with the "metadatachange" package.
+	MetadataChangesInverseTable = "metadata_changes"
+	// MetadataChangesColumn is the table column denoting the metadata_changes relation/edge.
+	MetadataChangesColumn = "artist_metadata_changes"
 	// CoAlbumsTable is the table that holds the co_albums relation/edge. The primary key declared below.
 	CoAlbumsTable = "artist_co_albums"
 	// CoAlbumsInverseTable is the table name for the Album entity.
@@ -374,6 +383,20 @@ func ByEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByMetadataChangesCount orders the results by metadata_changes count.
+func ByMetadataChangesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newMetadataChangesStep(), opts...)
+	}
+}
+
+// ByMetadataChanges orders the results by metadata_changes terms.
+func ByMetadataChanges(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newMetadataChangesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByCoAlbumsCount orders the results by co_albums count.
 func ByCoAlbumsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -413,6 +436,13 @@ func newEventsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(EventsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
+	)
+}
+func newMetadataChangesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(MetadataChangesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, MetadataChangesTable, MetadataChangesColumn),
 	)
 }
 func newCoAlbumsStep() *sqlgraph.Step {

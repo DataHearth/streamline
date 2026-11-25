@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/track"
@@ -620,6 +621,21 @@ func (_u *AlbumUpdate) AddEvents(v ...*MediaEvent) *AlbumUpdate {
 	return _u.AddEventIDs(ids...)
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (_u *AlbumUpdate) AddMetadataChangeIDs(ids ...uint32) *AlbumUpdate {
+	_u.mutation.AddMetadataChangeIDs(ids...)
+	return _u
+}
+
+// AddMetadataChanges adds the "metadata_changes" edges to the MetadataChange entity.
+func (_u *AlbumUpdate) AddMetadataChanges(v ...*MetadataChange) *AlbumUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddMetadataChangeIDs(ids...)
+}
+
 // AddPackRecordIDs adds the "pack_records" edge to the DownloadRecord entity by IDs.
 func (_u *AlbumUpdate) AddPackRecordIDs(ids ...uint32) *AlbumUpdate {
 	_u.mutation.AddPackRecordIDs(ids...)
@@ -743,6 +759,27 @@ func (_u *AlbumUpdate) RemoveEvents(v ...*MediaEvent) *AlbumUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearMetadataChanges clears all "metadata_changes" edges to the MetadataChange entity.
+func (_u *AlbumUpdate) ClearMetadataChanges() *AlbumUpdate {
+	_u.mutation.ClearMetadataChanges()
+	return _u
+}
+
+// RemoveMetadataChangeIDs removes the "metadata_changes" edge to MetadataChange entities by IDs.
+func (_u *AlbumUpdate) RemoveMetadataChangeIDs(ids ...uint32) *AlbumUpdate {
+	_u.mutation.RemoveMetadataChangeIDs(ids...)
+	return _u
+}
+
+// RemoveMetadataChanges removes "metadata_changes" edges to MetadataChange entities.
+func (_u *AlbumUpdate) RemoveMetadataChanges(v ...*MetadataChange) *AlbumUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveMetadataChangeIDs(ids...)
 }
 
 // ClearPackRecords clears all "pack_records" edges to the DownloadRecord entity.
@@ -1231,6 +1268,51 @@ func (_u *AlbumUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.MetadataChangesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.MetadataChangesTable,
+			Columns: []string{album.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedMetadataChangesIDs(); len(nodes) > 0 && !_u.mutation.MetadataChangesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.MetadataChangesTable,
+			Columns: []string{album.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.MetadataChangesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.MetadataChangesTable,
+			Columns: []string{album.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1935,6 +2017,21 @@ func (_u *AlbumUpdateOne) AddEvents(v ...*MediaEvent) *AlbumUpdateOne {
 	return _u.AddEventIDs(ids...)
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (_u *AlbumUpdateOne) AddMetadataChangeIDs(ids ...uint32) *AlbumUpdateOne {
+	_u.mutation.AddMetadataChangeIDs(ids...)
+	return _u
+}
+
+// AddMetadataChanges adds the "metadata_changes" edges to the MetadataChange entity.
+func (_u *AlbumUpdateOne) AddMetadataChanges(v ...*MetadataChange) *AlbumUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddMetadataChangeIDs(ids...)
+}
+
 // AddPackRecordIDs adds the "pack_records" edge to the DownloadRecord entity by IDs.
 func (_u *AlbumUpdateOne) AddPackRecordIDs(ids ...uint32) *AlbumUpdateOne {
 	_u.mutation.AddPackRecordIDs(ids...)
@@ -2058,6 +2155,27 @@ func (_u *AlbumUpdateOne) RemoveEvents(v ...*MediaEvent) *AlbumUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearMetadataChanges clears all "metadata_changes" edges to the MetadataChange entity.
+func (_u *AlbumUpdateOne) ClearMetadataChanges() *AlbumUpdateOne {
+	_u.mutation.ClearMetadataChanges()
+	return _u
+}
+
+// RemoveMetadataChangeIDs removes the "metadata_changes" edge to MetadataChange entities by IDs.
+func (_u *AlbumUpdateOne) RemoveMetadataChangeIDs(ids ...uint32) *AlbumUpdateOne {
+	_u.mutation.RemoveMetadataChangeIDs(ids...)
+	return _u
+}
+
+// RemoveMetadataChanges removes "metadata_changes" edges to MetadataChange entities.
+func (_u *AlbumUpdateOne) RemoveMetadataChanges(v ...*MetadataChange) *AlbumUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveMetadataChangeIDs(ids...)
 }
 
 // ClearPackRecords clears all "pack_records" edges to the DownloadRecord entity.
@@ -2576,6 +2694,51 @@ func (_u *AlbumUpdateOne) sqlSave(ctx context.Context) (_node *Album, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.MetadataChangesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.MetadataChangesTable,
+			Columns: []string{album.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedMetadataChangesIDs(); len(nodes) > 0 && !_u.mutation.MetadataChangesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.MetadataChangesTable,
+			Columns: []string{album.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.MetadataChangesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   album.MetadataChangesTable,
+			Columns: []string{album.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/schema"
@@ -944,6 +945,39 @@ type Store interface {
 		ctx context.Context,
 		limit, offset uint32,
 	) ([]*ent.DownloadRecord, uint32, error)
+
+	// ReportChange records a provider change waiting on an admin: a new one
+	// is pending, a pending one takes the new fingerprint and payload, and a
+	// kept one stays kept for the same fingerprint and is pending again for
+	// another.
+	ReportChange(
+		ctx context.Context,
+		owner ChangeOwner,
+		kind metadatachange.Kind,
+		fingerprint string,
+		payload map[string]any,
+	) error
+	// ClearChange forgets the owner's changes of these kinds, pending or
+	// kept: the condition is gone, so its coming back is a new change.
+	ClearChange(
+		ctx context.Context,
+		owner ChangeOwner,
+		kinds ...metadatachange.Kind,
+	) error
+	// ListChanges pages the pending changes, newest first, owners loaded
+	// (an album with its artist).
+	ListChanges(
+		ctx context.Context,
+		f ChangeFilter,
+		limit, offset uint32,
+	) ([]*ent.MetadataChange, uint32, error)
+	CountChanges(ctx context.Context) (ChangeCounts, error)
+	// FindChange loads one change, pending or kept, with its owner.
+	FindChange(ctx context.Context, id uint32) (*ent.MetadataChange, error)
+	// KeepChange marks a pending change kept; not found when there is no
+	// pending change with that id.
+	KeepChange(ctx context.Context, id uint32) error
+	DeleteChange(ctx context.Context, id uint32) error
 	// DeleteStalePendingAdoptions prunes pending proposals for a client whose
 	// torrent_hash is absent from its current managed torrents (liveHashes).
 	DeleteStalePendingAdoptions(

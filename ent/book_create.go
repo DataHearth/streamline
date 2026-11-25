@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/metadatachange"
 )
 
 // BookCreate is the builder for creating a Book entity.
@@ -526,6 +527,21 @@ func (_c *BookCreate) AddEvents(v ...*MediaEvent) *BookCreate {
 	return _c.AddEventIDs(ids...)
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (_c *BookCreate) AddMetadataChangeIDs(ids ...uint32) *BookCreate {
+	_c.mutation.AddMetadataChangeIDs(ids...)
+	return _c
+}
+
+// AddMetadataChanges adds the "metadata_changes" edges to the MetadataChange entity.
+func (_c *BookCreate) AddMetadataChanges(v ...*MetadataChange) *BookCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddMetadataChangeIDs(ids...)
+}
+
 // Mutation returns the BookMutation object of the builder.
 func (_c *BookCreate) Mutation() *BookMutation {
 	return _c.mutation
@@ -925,6 +941,22 @@ func (_c *BookCreate) createSpec() (*Book, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.MetadataChangesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.MetadataChangesTable,
+			Columns: []string{book.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

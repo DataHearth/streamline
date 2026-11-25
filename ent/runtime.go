@@ -26,6 +26,7 @@ import (
 	"github.com/datahearth/streamline/ent/invite"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/oidcidentity"
@@ -586,6 +587,25 @@ func init() {
 	mediafileDescTagFailures := mediafileFields[35].Descriptor()
 	// mediafile.DefaultTagFailures holds the default value on creation for the tag_failures field.
 	mediafile.DefaultTagFailures = mediafileDescTagFailures.Default.(uint8)
+	metadatachangeMixin := schema.MetadataChange{}.Mixin()
+	metadatachangeMixinFields1 := metadatachangeMixin[1].Fields()
+	_ = metadatachangeMixinFields1
+	metadatachangeFields := schema.MetadataChange{}.Fields()
+	_ = metadatachangeFields
+	// metadatachangeDescCreateTime is the schema descriptor for create_time field.
+	metadatachangeDescCreateTime := metadatachangeMixinFields1[0].Descriptor()
+	// metadatachange.DefaultCreateTime holds the default value on creation for the create_time field.
+	metadatachange.DefaultCreateTime = metadatachangeDescCreateTime.Default.(func() time.Time)
+	// metadatachangeDescUpdateTime is the schema descriptor for update_time field.
+	metadatachangeDescUpdateTime := metadatachangeMixinFields1[1].Descriptor()
+	// metadatachange.DefaultUpdateTime holds the default value on creation for the update_time field.
+	metadatachange.DefaultUpdateTime = metadatachangeDescUpdateTime.Default.(func() time.Time)
+	// metadatachange.UpdateDefaultUpdateTime holds the default value on update for the update_time field.
+	metadatachange.UpdateDefaultUpdateTime = metadatachangeDescUpdateTime.UpdateDefault.(func() time.Time)
+	// metadatachangeDescFingerprint is the schema descriptor for fingerprint field.
+	metadatachangeDescFingerprint := metadatachangeFields[2].Descriptor()
+	// metadatachange.DefaultFingerprint holds the default value on creation for the fingerprint field.
+	metadatachange.DefaultFingerprint = metadatachangeDescFingerprint.Default.(string)
 	movieMixin := schema.Movie{}.Mixin()
 	movieMixinFields1 := movieMixin[1].Fields()
 	_ = movieMixinFields1

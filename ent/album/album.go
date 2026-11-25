@@ -85,6 +85,8 @@ const (
 	EdgeCredits = "credits"
 	// EdgeEvents holds the string denoting the events edge name in mutations.
 	EdgeEvents = "events"
+	// EdgeMetadataChanges holds the string denoting the metadata_changes edge name in mutations.
+	EdgeMetadataChanges = "metadata_changes"
 	// EdgePackRecords holds the string denoting the pack_records edge name in mutations.
 	EdgePackRecords = "pack_records"
 	// EdgeCoArtists holds the string denoting the co_artists edge name in mutations.
@@ -126,6 +128,13 @@ const (
 	EventsInverseTable = "media_events"
 	// EventsColumn is the table column denoting the events relation/edge.
 	EventsColumn = "album_events"
+	// MetadataChangesTable is the table that holds the metadata_changes relation/edge.
+	MetadataChangesTable = "metadata_changes"
+	// MetadataChangesInverseTable is the table name for the MetadataChange entity.
+	// It exists in this package in order to avoid circular dependency with the "metadatachange" package.
+	MetadataChangesInverseTable = "metadata_changes"
+	// MetadataChangesColumn is the table column denoting the metadata_changes relation/edge.
+	MetadataChangesColumn = "album_metadata_changes"
 	// PackRecordsTable is the table that holds the pack_records relation/edge. The primary key declared below.
 	PackRecordsTable = "download_record_albums"
 	// PackRecordsInverseTable is the table name for the DownloadRecord entity.
@@ -492,6 +501,20 @@ func ByEvents(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByMetadataChangesCount orders the results by metadata_changes count.
+func ByMetadataChangesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newMetadataChangesStep(), opts...)
+	}
+}
+
+// ByMetadataChanges orders the results by metadata_changes terms.
+func ByMetadataChanges(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newMetadataChangesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByPackRecordsCount orders the results by pack_records count.
 func ByPackRecordsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -552,6 +575,13 @@ func newEventsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(EventsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, EventsTable, EventsColumn),
+	)
+}
+func newMetadataChangesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(MetadataChangesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, MetadataChangesTable, MetadataChangesColumn),
 	)
 }
 func newPackRecordsStep() *sqlgraph.Step {

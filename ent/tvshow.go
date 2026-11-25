@@ -74,11 +74,13 @@ type TVShowEdges struct {
 	Seasons []*Season `json:"seasons,omitempty"`
 	// Events holds the value of the events edge.
 	Events []*MediaEvent `json:"events,omitempty"`
+	// MetadataChanges holds the value of the metadata_changes edge.
+	MetadataChanges []*MetadataChange `json:"metadata_changes,omitempty"`
 	// Credits holds the value of the credits edge.
 	Credits []*Credit `json:"credits,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // SeasonsOrErr returns the Seasons value or an error if the edge
@@ -99,10 +101,19 @@ func (e TVShowEdges) EventsOrErr() ([]*MediaEvent, error) {
 	return nil, &NotLoadedError{edge: "events"}
 }
 
+// MetadataChangesOrErr returns the MetadataChanges value or an error if the edge
+// was not loaded in eager-loading.
+func (e TVShowEdges) MetadataChangesOrErr() ([]*MetadataChange, error) {
+	if e.loadedTypes[2] {
+		return e.MetadataChanges, nil
+	}
+	return nil, &NotLoadedError{edge: "metadata_changes"}
+}
+
 // CreditsOrErr returns the Credits value or an error if the edge
 // was not loaded in eager-loading.
 func (e TVShowEdges) CreditsOrErr() ([]*Credit, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[3] {
 		return e.Credits, nil
 	}
 	return nil, &NotLoadedError{edge: "credits"}
@@ -305,6 +316,11 @@ func (_m *TVShow) QuerySeasons() *SeasonQuery {
 // QueryEvents queries the "events" edge of the TVShow entity.
 func (_m *TVShow) QueryEvents() *MediaEventQuery {
 	return NewTVShowClient(_m.config).QueryEvents(_m)
+}
+
+// QueryMetadataChanges queries the "metadata_changes" edge of the TVShow entity.
+func (_m *TVShow) QueryMetadataChanges() *MetadataChangeQuery {
+	return NewTVShowClient(_m.config).QueryMetadataChanges(_m)
 }
 
 // QueryCredits queries the "credits" edge of the TVShow entity.

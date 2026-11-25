@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/datahearth/streamline/ent/credit"
 	"github.com/datahearth/streamline/ent/mediaevent"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/predicate"
 	"github.com/datahearth/streamline/ent/season"
 	"github.com/datahearth/streamline/ent/tvshow"
@@ -22,14 +23,15 @@ import (
 // TVShowQuery is the builder for querying TVShow entities.
 type TVShowQuery struct {
 	config
-	ctx         *QueryContext
-	order       []tvshow.OrderOption
-	inters      []Interceptor
-	predicates  []predicate.TVShow
-	withSeasons *SeasonQuery
-	withEvents  *MediaEventQuery
-	withCredits *CreditQuery
-	modifiers   []func(*sql.Selector)
+	ctx                 *QueryContext
+	order               []tvshow.OrderOption
+	inters              []Interceptor
+	predicates          []predicate.TVShow
+	withSeasons         *SeasonQuery
+	withEvents          *MediaEventQuery
+	withMetadataChanges *MetadataChangeQuery
+	withCredits         *CreditQuery
+	modifiers           []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -103,6 +105,28 @@ func (_q *TVShowQuery) QueryEvents() *MediaEventQuery {
 			sqlgraph.From(tvshow.Table, tvshow.FieldID, selector),
 			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, tvshow.EventsTable, tvshow.EventsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryMetadataChanges chains the current query on the "metadata_changes" edge.
+func (_q *TVShowQuery) QueryMetadataChanges() *MetadataChangeQuery {
+	query := (&MetadataChangeClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(tvshow.Table, tvshow.FieldID, selector),
+			sqlgraph.To(metadatachange.Table, metadatachange.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, tvshow.MetadataChangesTable, tvshow.MetadataChangesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -319,14 +343,15 @@ func (_q *TVShowQuery) Clone() *TVShowQuery {
 		return nil
 	}
 	return &TVShowQuery{
-		config:      _q.config,
-		ctx:         _q.ctx.Clone(),
-		order:       append([]tvshow.OrderOption{}, _q.order...),
-		inters:      append([]Interceptor{}, _q.inters...),
-		predicates:  append([]predicate.TVShow{}, _q.predicates...),
-		withSeasons: _q.withSeasons.Clone(),
-		withEvents:  _q.withEvents.Clone(),
-		withCredits: _q.withCredits.Clone(),
+		config:              _q.config,
+		ctx:                 _q.ctx.Clone(),
+		order:               append([]tvshow.OrderOption{}, _q.order...),
+		inters:              append([]Interceptor{}, _q.inters...),
+		predicates:          append([]predicate.TVShow{}, _q.predicates...),
+		withSeasons:         _q.withSeasons.Clone(),
+		withEvents:          _q.withEvents.Clone(),
+		withMetadataChanges: _q.withMetadataChanges.Clone(),
+		withCredits:         _q.withCredits.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -353,6 +378,17 @@ func (_q *TVShowQuery) WithEvents(opts ...func(*MediaEventQuery)) *TVShowQuery {
 		opt(query)
 	}
 	_q.withEvents = query
+	return _q
+}
+
+// WithMetadataChanges tells the query-builder to eager-load the nodes that are connected to
+// the "metadata_changes" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *TVShowQuery) WithMetadataChanges(opts ...func(*MetadataChangeQuery)) *TVShowQuery {
+	query := (&MetadataChangeClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withMetadataChanges = query
 	return _q
 }
 
@@ -445,9 +481,10 @@ func (_q *TVShowQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*TVSho
 	var (
 		nodes       = []*TVShow{}
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			_q.withSeasons != nil,
 			_q.withEvents != nil,
+			_q.withMetadataChanges != nil,
 			_q.withCredits != nil,
 		}
 	)
@@ -483,6 +520,13 @@ func (_q *TVShowQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*TVSho
 		if err := _q.loadEvents(ctx, query, nodes,
 			func(n *TVShow) { n.Edges.Events = []*MediaEvent{} },
 			func(n *TVShow, e *MediaEvent) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withMetadataChanges; query != nil {
+		if err := _q.loadMetadataChanges(ctx, query, nodes,
+			func(n *TVShow) { n.Edges.MetadataChanges = []*MetadataChange{} },
+			func(n *TVShow, e *MetadataChange) { n.Edges.MetadataChanges = append(n.Edges.MetadataChanges, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -553,6 +597,37 @@ func (_q *TVShowQuery) loadEvents(ctx context.Context, query *MediaEventQuery, n
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "tv_show_events" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *TVShowQuery) loadMetadataChanges(ctx context.Context, query *MetadataChangeQuery, nodes []*TVShow, init func(*TVShow), assign func(*TVShow, *MetadataChange)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*TVShow)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.MetadataChange(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(tvshow.MetadataChangesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.tv_show_metadata_changes
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "tv_show_metadata_changes" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "tv_show_metadata_changes" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

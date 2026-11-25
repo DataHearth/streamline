@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/artistmember"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
+	"github.com/datahearth/streamline/ent/metadatachange"
 )
 
 // ArtistCreate is the builder for creating a Artist entity.
@@ -360,6 +361,21 @@ func (_c *ArtistCreate) AddEvents(v ...*MediaEvent) *ArtistCreate {
 	return _c.AddEventIDs(ids...)
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (_c *ArtistCreate) AddMetadataChangeIDs(ids ...uint32) *ArtistCreate {
+	_c.mutation.AddMetadataChangeIDs(ids...)
+	return _c
+}
+
+// AddMetadataChanges adds the "metadata_changes" edges to the MetadataChange entity.
+func (_c *ArtistCreate) AddMetadataChanges(v ...*MetadataChange) *ArtistCreate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddMetadataChangeIDs(ids...)
+}
+
 // AddCoAlbumIDs adds the "co_albums" edge to the Album entity by IDs.
 func (_c *ArtistCreate) AddCoAlbumIDs(ids ...uint32) *ArtistCreate {
 	_c.mutation.AddCoAlbumIDs(ids...)
@@ -634,6 +650,22 @@ func (_c *ArtistCreate) createSpec() (*Artist, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.MetadataChangesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   artist.MetadataChangesTable,
+			Columns: []string{artist.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

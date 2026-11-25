@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
 )
@@ -30,6 +31,7 @@ type MovieQuery struct {
 	withDownloadRecords *DownloadRecordQuery
 	withMediaFiles      *MediaFileQuery
 	withEvents          *MediaEventQuery
+	withMetadataChanges *MetadataChangeQuery
 	withCredits         *CreditQuery
 	modifiers           []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
@@ -127,6 +129,28 @@ func (_q *MovieQuery) QueryEvents() *MediaEventQuery {
 			sqlgraph.From(movie.Table, movie.FieldID, selector),
 			sqlgraph.To(mediaevent.Table, mediaevent.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, movie.EventsTable, movie.EventsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryMetadataChanges chains the current query on the "metadata_changes" edge.
+func (_q *MovieQuery) QueryMetadataChanges() *MetadataChangeQuery {
+	query := (&MetadataChangeClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(movie.Table, movie.FieldID, selector),
+			sqlgraph.To(metadatachange.Table, metadatachange.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, movie.MetadataChangesTable, movie.MetadataChangesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -351,6 +375,7 @@ func (_q *MovieQuery) Clone() *MovieQuery {
 		withDownloadRecords: _q.withDownloadRecords.Clone(),
 		withMediaFiles:      _q.withMediaFiles.Clone(),
 		withEvents:          _q.withEvents.Clone(),
+		withMetadataChanges: _q.withMetadataChanges.Clone(),
 		withCredits:         _q.withCredits.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
@@ -389,6 +414,17 @@ func (_q *MovieQuery) WithEvents(opts ...func(*MediaEventQuery)) *MovieQuery {
 		opt(query)
 	}
 	_q.withEvents = query
+	return _q
+}
+
+// WithMetadataChanges tells the query-builder to eager-load the nodes that are connected to
+// the "metadata_changes" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *MovieQuery) WithMetadataChanges(opts ...func(*MetadataChangeQuery)) *MovieQuery {
+	query := (&MetadataChangeClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withMetadataChanges = query
 	return _q
 }
 
@@ -481,10 +517,11 @@ func (_q *MovieQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Movie,
 	var (
 		nodes       = []*Movie{}
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			_q.withDownloadRecords != nil,
 			_q.withMediaFiles != nil,
 			_q.withEvents != nil,
+			_q.withMetadataChanges != nil,
 			_q.withCredits != nil,
 		}
 	)
@@ -527,6 +564,13 @@ func (_q *MovieQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Movie,
 		if err := _q.loadEvents(ctx, query, nodes,
 			func(n *Movie) { n.Edges.Events = []*MediaEvent{} },
 			func(n *Movie, e *MediaEvent) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withMetadataChanges; query != nil {
+		if err := _q.loadMetadataChanges(ctx, query, nodes,
+			func(n *Movie) { n.Edges.MetadataChanges = []*MetadataChange{} },
+			func(n *Movie, e *MetadataChange) { n.Edges.MetadataChanges = append(n.Edges.MetadataChanges, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -628,6 +672,37 @@ func (_q *MovieQuery) loadEvents(ctx context.Context, query *MediaEventQuery, no
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "movie_events" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *MovieQuery) loadMetadataChanges(ctx context.Context, query *MetadataChangeQuery, nodes []*Movie, init func(*Movie), assign func(*Movie, *MetadataChange)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*Movie)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.MetadataChange(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(movie.MetadataChangesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.movie_metadata_changes
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "movie_metadata_changes" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "movie_metadata_changes" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

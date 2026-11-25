@@ -16,6 +16,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/predicate"
 )
@@ -474,6 +475,21 @@ func (_u *MovieUpdate) AddEvents(v ...*MediaEvent) *MovieUpdate {
 	return _u.AddEventIDs(ids...)
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (_u *MovieUpdate) AddMetadataChangeIDs(ids ...uint32) *MovieUpdate {
+	_u.mutation.AddMetadataChangeIDs(ids...)
+	return _u
+}
+
+// AddMetadataChanges adds the "metadata_changes" edges to the MetadataChange entity.
+func (_u *MovieUpdate) AddMetadataChanges(v ...*MetadataChange) *MovieUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddMetadataChangeIDs(ids...)
+}
+
 // AddCreditIDs adds the "credits" edge to the Credit entity by IDs.
 func (_u *MovieUpdate) AddCreditIDs(ids ...uint32) *MovieUpdate {
 	_u.mutation.AddCreditIDs(ids...)
@@ -555,6 +571,27 @@ func (_u *MovieUpdate) RemoveEvents(v ...*MediaEvent) *MovieUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearMetadataChanges clears all "metadata_changes" edges to the MetadataChange entity.
+func (_u *MovieUpdate) ClearMetadataChanges() *MovieUpdate {
+	_u.mutation.ClearMetadataChanges()
+	return _u
+}
+
+// RemoveMetadataChangeIDs removes the "metadata_changes" edge to MetadataChange entities by IDs.
+func (_u *MovieUpdate) RemoveMetadataChangeIDs(ids ...uint32) *MovieUpdate {
+	_u.mutation.RemoveMetadataChangeIDs(ids...)
+	return _u
+}
+
+// RemoveMetadataChanges removes "metadata_changes" edges to MetadataChange entities.
+func (_u *MovieUpdate) RemoveMetadataChanges(v ...*MetadataChange) *MovieUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveMetadataChangeIDs(ids...)
 }
 
 // ClearCredits clears all "credits" edges to the Credit entity.
@@ -907,6 +944,51 @@ func (_u *MovieUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.MetadataChangesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.MetadataChangesTable,
+			Columns: []string{movie.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedMetadataChangesIDs(); len(nodes) > 0 && !_u.mutation.MetadataChangesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.MetadataChangesTable,
+			Columns: []string{movie.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.MetadataChangesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.MetadataChangesTable,
+			Columns: []string{movie.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1421,6 +1503,21 @@ func (_u *MovieUpdateOne) AddEvents(v ...*MediaEvent) *MovieUpdateOne {
 	return _u.AddEventIDs(ids...)
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (_u *MovieUpdateOne) AddMetadataChangeIDs(ids ...uint32) *MovieUpdateOne {
+	_u.mutation.AddMetadataChangeIDs(ids...)
+	return _u
+}
+
+// AddMetadataChanges adds the "metadata_changes" edges to the MetadataChange entity.
+func (_u *MovieUpdateOne) AddMetadataChanges(v ...*MetadataChange) *MovieUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddMetadataChangeIDs(ids...)
+}
+
 // AddCreditIDs adds the "credits" edge to the Credit entity by IDs.
 func (_u *MovieUpdateOne) AddCreditIDs(ids ...uint32) *MovieUpdateOne {
 	_u.mutation.AddCreditIDs(ids...)
@@ -1502,6 +1599,27 @@ func (_u *MovieUpdateOne) RemoveEvents(v ...*MediaEvent) *MovieUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearMetadataChanges clears all "metadata_changes" edges to the MetadataChange entity.
+func (_u *MovieUpdateOne) ClearMetadataChanges() *MovieUpdateOne {
+	_u.mutation.ClearMetadataChanges()
+	return _u
+}
+
+// RemoveMetadataChangeIDs removes the "metadata_changes" edge to MetadataChange entities by IDs.
+func (_u *MovieUpdateOne) RemoveMetadataChangeIDs(ids ...uint32) *MovieUpdateOne {
+	_u.mutation.RemoveMetadataChangeIDs(ids...)
+	return _u
+}
+
+// RemoveMetadataChanges removes "metadata_changes" edges to MetadataChange entities.
+func (_u *MovieUpdateOne) RemoveMetadataChanges(v ...*MetadataChange) *MovieUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveMetadataChangeIDs(ids...)
 }
 
 // ClearCredits clears all "credits" edges to the Credit entity.
@@ -1884,6 +2002,51 @@ func (_u *MovieUpdateOne) sqlSave(ctx context.Context) (_node *Movie, err error)
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.MetadataChangesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.MetadataChangesTable,
+			Columns: []string{movie.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedMetadataChangesIDs(); len(nodes) > 0 && !_u.mutation.MetadataChangesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.MetadataChangesTable,
+			Columns: []string{movie.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.MetadataChangesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   movie.MetadataChangesTable,
+			Columns: []string{movie.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

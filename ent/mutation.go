@@ -32,6 +32,7 @@ import (
 	"github.com/datahearth/streamline/ent/invite"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/oidcidentity"
@@ -80,6 +81,7 @@ const (
 	TypeInvite             = "Invite"
 	TypeMediaEvent         = "MediaEvent"
 	TypeMediaFile          = "MediaFile"
+	TypeMetadataChange     = "MetadataChange"
 	TypeMovie              = "Movie"
 	TypeMusicCredit        = "MusicCredit"
 	TypeOIDCIdentity       = "OIDCIdentity"
@@ -151,6 +153,9 @@ type AlbumMutation struct {
 	events                  map[uint32]struct{}
 	removedevents           map[uint32]struct{}
 	clearedevents           bool
+	metadata_changes        map[uint32]struct{}
+	removedmetadata_changes map[uint32]struct{}
+	clearedmetadata_changes bool
 	pack_records            map[uint32]struct{}
 	removedpack_records     map[uint32]struct{}
 	clearedpack_records     bool
@@ -1920,6 +1925,60 @@ func (m *AlbumMutation) ResetEvents() {
 	m.removedevents = nil
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by ids.
+func (m *AlbumMutation) AddMetadataChangeIDs(ids ...uint32) {
+	if m.metadata_changes == nil {
+		m.metadata_changes = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.metadata_changes[ids[i]] = struct{}{}
+	}
+}
+
+// ClearMetadataChanges clears the "metadata_changes" edge to the MetadataChange entity.
+func (m *AlbumMutation) ClearMetadataChanges() {
+	m.clearedmetadata_changes = true
+}
+
+// MetadataChangesCleared reports if the "metadata_changes" edge to the MetadataChange entity was cleared.
+func (m *AlbumMutation) MetadataChangesCleared() bool {
+	return m.clearedmetadata_changes
+}
+
+// RemoveMetadataChangeIDs removes the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (m *AlbumMutation) RemoveMetadataChangeIDs(ids ...uint32) {
+	if m.removedmetadata_changes == nil {
+		m.removedmetadata_changes = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.metadata_changes, ids[i])
+		m.removedmetadata_changes[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedMetadataChanges returns the removed IDs of the "metadata_changes" edge to the MetadataChange entity.
+func (m *AlbumMutation) RemovedMetadataChangesIDs() (ids []uint32) {
+	for id := range m.removedmetadata_changes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// MetadataChangesIDs returns the "metadata_changes" edge IDs in the mutation.
+func (m *AlbumMutation) MetadataChangesIDs() (ids []uint32) {
+	for id := range m.metadata_changes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetMetadataChanges resets all changes to the "metadata_changes" edge.
+func (m *AlbumMutation) ResetMetadataChanges() {
+	m.metadata_changes = nil
+	m.clearedmetadata_changes = false
+	m.removedmetadata_changes = nil
+}
+
 // AddPackRecordIDs adds the "pack_records" edge to the DownloadRecord entity by ids.
 func (m *AlbumMutation) AddPackRecordIDs(ids ...uint32) {
 	if m.pack_records == nil {
@@ -2798,7 +2857,7 @@ func (m *AlbumMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AlbumMutation) AddedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.artist != nil {
 		edges = append(edges, album.EdgeArtist)
 	}
@@ -2813,6 +2872,9 @@ func (m *AlbumMutation) AddedEdges() []string {
 	}
 	if m.events != nil {
 		edges = append(edges, album.EdgeEvents)
+	}
+	if m.metadata_changes != nil {
+		edges = append(edges, album.EdgeMetadataChanges)
 	}
 	if m.pack_records != nil {
 		edges = append(edges, album.EdgePackRecords)
@@ -2855,6 +2917,12 @@ func (m *AlbumMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case album.EdgeMetadataChanges:
+		ids := make([]ent.Value, 0, len(m.metadata_changes))
+		for id := range m.metadata_changes {
+			ids = append(ids, id)
+		}
+		return ids
 	case album.EdgePackRecords:
 		ids := make([]ent.Value, 0, len(m.pack_records))
 		for id := range m.pack_records {
@@ -2873,7 +2941,7 @@ func (m *AlbumMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AlbumMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.removedtracks != nil {
 		edges = append(edges, album.EdgeTracks)
 	}
@@ -2885,6 +2953,9 @@ func (m *AlbumMutation) RemovedEdges() []string {
 	}
 	if m.removedevents != nil {
 		edges = append(edges, album.EdgeEvents)
+	}
+	if m.removedmetadata_changes != nil {
+		edges = append(edges, album.EdgeMetadataChanges)
 	}
 	if m.removedpack_records != nil {
 		edges = append(edges, album.EdgePackRecords)
@@ -2923,6 +2994,12 @@ func (m *AlbumMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case album.EdgeMetadataChanges:
+		ids := make([]ent.Value, 0, len(m.removedmetadata_changes))
+		for id := range m.removedmetadata_changes {
+			ids = append(ids, id)
+		}
+		return ids
 	case album.EdgePackRecords:
 		ids := make([]ent.Value, 0, len(m.removedpack_records))
 		for id := range m.removedpack_records {
@@ -2941,7 +3018,7 @@ func (m *AlbumMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AlbumMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 7)
+	edges := make([]string, 0, 8)
 	if m.clearedartist {
 		edges = append(edges, album.EdgeArtist)
 	}
@@ -2956,6 +3033,9 @@ func (m *AlbumMutation) ClearedEdges() []string {
 	}
 	if m.clearedevents {
 		edges = append(edges, album.EdgeEvents)
+	}
+	if m.clearedmetadata_changes {
+		edges = append(edges, album.EdgeMetadataChanges)
 	}
 	if m.clearedpack_records {
 		edges = append(edges, album.EdgePackRecords)
@@ -2980,6 +3060,8 @@ func (m *AlbumMutation) EdgeCleared(name string) bool {
 		return m.clearedcredits
 	case album.EdgeEvents:
 		return m.clearedevents
+	case album.EdgeMetadataChanges:
+		return m.clearedmetadata_changes
 	case album.EdgePackRecords:
 		return m.clearedpack_records
 	case album.EdgeCoArtists:
@@ -3017,6 +3099,9 @@ func (m *AlbumMutation) ResetEdge(name string) error {
 		return nil
 	case album.EdgeEvents:
 		m.ResetEvents()
+		return nil
+	case album.EdgeMetadataChanges:
+		m.ResetMetadataChanges()
 		return nil
 	case album.EdgePackRecords:
 		m.ResetPackRecords()
@@ -3835,6 +3920,9 @@ type ArtistMutation struct {
 	events                  map[uint32]struct{}
 	removedevents           map[uint32]struct{}
 	clearedevents           bool
+	metadata_changes        map[uint32]struct{}
+	removedmetadata_changes map[uint32]struct{}
+	clearedmetadata_changes bool
 	co_albums               map[uint32]struct{}
 	removedco_albums        map[uint32]struct{}
 	clearedco_albums        bool
@@ -5185,6 +5273,60 @@ func (m *ArtistMutation) ResetEvents() {
 	m.removedevents = nil
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by ids.
+func (m *ArtistMutation) AddMetadataChangeIDs(ids ...uint32) {
+	if m.metadata_changes == nil {
+		m.metadata_changes = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.metadata_changes[ids[i]] = struct{}{}
+	}
+}
+
+// ClearMetadataChanges clears the "metadata_changes" edge to the MetadataChange entity.
+func (m *ArtistMutation) ClearMetadataChanges() {
+	m.clearedmetadata_changes = true
+}
+
+// MetadataChangesCleared reports if the "metadata_changes" edge to the MetadataChange entity was cleared.
+func (m *ArtistMutation) MetadataChangesCleared() bool {
+	return m.clearedmetadata_changes
+}
+
+// RemoveMetadataChangeIDs removes the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (m *ArtistMutation) RemoveMetadataChangeIDs(ids ...uint32) {
+	if m.removedmetadata_changes == nil {
+		m.removedmetadata_changes = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.metadata_changes, ids[i])
+		m.removedmetadata_changes[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedMetadataChanges returns the removed IDs of the "metadata_changes" edge to the MetadataChange entity.
+func (m *ArtistMutation) RemovedMetadataChangesIDs() (ids []uint32) {
+	for id := range m.removedmetadata_changes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// MetadataChangesIDs returns the "metadata_changes" edge IDs in the mutation.
+func (m *ArtistMutation) MetadataChangesIDs() (ids []uint32) {
+	for id := range m.metadata_changes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetMetadataChanges resets all changes to the "metadata_changes" edge.
+func (m *ArtistMutation) ResetMetadataChanges() {
+	m.metadata_changes = nil
+	m.clearedmetadata_changes = false
+	m.removedmetadata_changes = nil
+}
+
 // AddCoAlbumIDs adds the "co_albums" edge to the Album entity by ids.
 func (m *ArtistMutation) AddCoAlbumIDs(ids ...uint32) {
 	if m.co_albums == nil {
@@ -5838,7 +5980,7 @@ func (m *ArtistMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ArtistMutation) AddedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.albums != nil {
 		edges = append(edges, artist.EdgeAlbums)
 	}
@@ -5850,6 +5992,9 @@ func (m *ArtistMutation) AddedEdges() []string {
 	}
 	if m.events != nil {
 		edges = append(edges, artist.EdgeEvents)
+	}
+	if m.metadata_changes != nil {
+		edges = append(edges, artist.EdgeMetadataChanges)
 	}
 	if m.co_albums != nil {
 		edges = append(edges, artist.EdgeCoAlbums)
@@ -5885,6 +6030,12 @@ func (m *ArtistMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case artist.EdgeMetadataChanges:
+		ids := make([]ent.Value, 0, len(m.metadata_changes))
+		for id := range m.metadata_changes {
+			ids = append(ids, id)
+		}
+		return ids
 	case artist.EdgeCoAlbums:
 		ids := make([]ent.Value, 0, len(m.co_albums))
 		for id := range m.co_albums {
@@ -5897,7 +6048,7 @@ func (m *ArtistMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ArtistMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.removedalbums != nil {
 		edges = append(edges, artist.EdgeAlbums)
 	}
@@ -5909,6 +6060,9 @@ func (m *ArtistMutation) RemovedEdges() []string {
 	}
 	if m.removedevents != nil {
 		edges = append(edges, artist.EdgeEvents)
+	}
+	if m.removedmetadata_changes != nil {
+		edges = append(edges, artist.EdgeMetadataChanges)
 	}
 	if m.removedco_albums != nil {
 		edges = append(edges, artist.EdgeCoAlbums)
@@ -5944,6 +6098,12 @@ func (m *ArtistMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case artist.EdgeMetadataChanges:
+		ids := make([]ent.Value, 0, len(m.removedmetadata_changes))
+		for id := range m.removedmetadata_changes {
+			ids = append(ids, id)
+		}
+		return ids
 	case artist.EdgeCoAlbums:
 		ids := make([]ent.Value, 0, len(m.removedco_albums))
 		for id := range m.removedco_albums {
@@ -5956,7 +6116,7 @@ func (m *ArtistMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ArtistMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 5)
+	edges := make([]string, 0, 6)
 	if m.clearedalbums {
 		edges = append(edges, artist.EdgeAlbums)
 	}
@@ -5968,6 +6128,9 @@ func (m *ArtistMutation) ClearedEdges() []string {
 	}
 	if m.clearedevents {
 		edges = append(edges, artist.EdgeEvents)
+	}
+	if m.clearedmetadata_changes {
+		edges = append(edges, artist.EdgeMetadataChanges)
 	}
 	if m.clearedco_albums {
 		edges = append(edges, artist.EdgeCoAlbums)
@@ -5987,6 +6150,8 @@ func (m *ArtistMutation) EdgeCleared(name string) bool {
 		return m.cleareddownload_records
 	case artist.EdgeEvents:
 		return m.clearedevents
+	case artist.EdgeMetadataChanges:
+		return m.clearedmetadata_changes
 	case artist.EdgeCoAlbums:
 		return m.clearedco_albums
 	}
@@ -6016,6 +6181,9 @@ func (m *ArtistMutation) ResetEdge(name string) error {
 		return nil
 	case artist.EdgeEvents:
 		m.ResetEvents()
+		return nil
+	case artist.EdgeMetadataChanges:
+		m.ResetMetadataChanges()
 		return nil
 	case artist.EdgeCoAlbums:
 		m.ResetCoAlbums()
@@ -7817,6 +7985,9 @@ type BookMutation struct {
 	events                       map[uint32]struct{}
 	removedevents                map[uint32]struct{}
 	clearedevents                bool
+	metadata_changes             map[uint32]struct{}
+	removedmetadata_changes      map[uint32]struct{}
+	clearedmetadata_changes      bool
 	done                         bool
 	oldValue                     func(context.Context) (*Book, error)
 	predicates                   []predicate.Book
@@ -9603,6 +9774,60 @@ func (m *BookMutation) ResetEvents() {
 	m.removedevents = nil
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by ids.
+func (m *BookMutation) AddMetadataChangeIDs(ids ...uint32) {
+	if m.metadata_changes == nil {
+		m.metadata_changes = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.metadata_changes[ids[i]] = struct{}{}
+	}
+}
+
+// ClearMetadataChanges clears the "metadata_changes" edge to the MetadataChange entity.
+func (m *BookMutation) ClearMetadataChanges() {
+	m.clearedmetadata_changes = true
+}
+
+// MetadataChangesCleared reports if the "metadata_changes" edge to the MetadataChange entity was cleared.
+func (m *BookMutation) MetadataChangesCleared() bool {
+	return m.clearedmetadata_changes
+}
+
+// RemoveMetadataChangeIDs removes the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (m *BookMutation) RemoveMetadataChangeIDs(ids ...uint32) {
+	if m.removedmetadata_changes == nil {
+		m.removedmetadata_changes = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.metadata_changes, ids[i])
+		m.removedmetadata_changes[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedMetadataChanges returns the removed IDs of the "metadata_changes" edge to the MetadataChange entity.
+func (m *BookMutation) RemovedMetadataChangesIDs() (ids []uint32) {
+	for id := range m.removedmetadata_changes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// MetadataChangesIDs returns the "metadata_changes" edge IDs in the mutation.
+func (m *BookMutation) MetadataChangesIDs() (ids []uint32) {
+	for id := range m.metadata_changes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetMetadataChanges resets all changes to the "metadata_changes" edge.
+func (m *BookMutation) ResetMetadataChanges() {
+	m.metadata_changes = nil
+	m.clearedmetadata_changes = false
+	m.removedmetadata_changes = nil
+}
+
 // Where appends a list predicates to the BookMutation builder.
 func (m *BookMutation) Where(ps ...predicate.Book) {
 	m.predicates = append(m.predicates, ps...)
@@ -10346,7 +10571,7 @@ func (m *BookMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *BookMutation) AddedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.series != nil {
 		edges = append(edges, book.EdgeSeries)
 	}
@@ -10370,6 +10595,9 @@ func (m *BookMutation) AddedEdges() []string {
 	}
 	if m.events != nil {
 		edges = append(edges, book.EdgeEvents)
+	}
+	if m.metadata_changes != nil {
+		edges = append(edges, book.EdgeMetadataChanges)
 	}
 	return edges
 }
@@ -10420,13 +10648,19 @@ func (m *BookMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case book.EdgeMetadataChanges:
+		ids := make([]ent.Value, 0, len(m.metadata_changes))
+		for id := range m.metadata_changes {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *BookMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.removededitions != nil {
 		edges = append(edges, book.EdgeEditions)
 	}
@@ -10441,6 +10675,9 @@ func (m *BookMutation) RemovedEdges() []string {
 	}
 	if m.removedevents != nil {
 		edges = append(edges, book.EdgeEvents)
+	}
+	if m.removedmetadata_changes != nil {
+		edges = append(edges, book.EdgeMetadataChanges)
 	}
 	return edges
 }
@@ -10479,13 +10716,19 @@ func (m *BookMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case book.EdgeMetadataChanges:
+		ids := make([]ent.Value, 0, len(m.removedmetadata_changes))
+		for id := range m.removedmetadata_changes {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *BookMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 8)
+	edges := make([]string, 0, 9)
 	if m.clearedseries {
 		edges = append(edges, book.EdgeSeries)
 	}
@@ -10510,6 +10753,9 @@ func (m *BookMutation) ClearedEdges() []string {
 	if m.clearedevents {
 		edges = append(edges, book.EdgeEvents)
 	}
+	if m.clearedmetadata_changes {
+		edges = append(edges, book.EdgeMetadataChanges)
+	}
 	return edges
 }
 
@@ -10533,6 +10779,8 @@ func (m *BookMutation) EdgeCleared(name string) bool {
 		return m.cleareddownload_records
 	case book.EdgeEvents:
 		return m.clearedevents
+	case book.EdgeMetadataChanges:
+		return m.clearedmetadata_changes
 	}
 	return false
 }
@@ -10581,6 +10829,9 @@ func (m *BookMutation) ResetEdge(name string) error {
 		return nil
 	case book.EdgeEvents:
 		m.ResetEvents()
+		return nil
+	case book.EdgeMetadataChanges:
+		m.ResetMetadataChanges()
 		return nil
 	}
 	return fmt.Errorf("unknown Book edge %s", name)
@@ -35020,6 +35271,933 @@ func (m *MediaFileMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown MediaFile edge %s", name)
 }
 
+// MetadataChangeMutation represents an operation that mutates the MetadataChange nodes in the graph.
+type MetadataChangeMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uint32
+	create_time    *time.Time
+	update_time    *time.Time
+	kind           *metadatachange.Kind
+	state          *metadatachange.State
+	fingerprint    *string
+	payload        *map[string]interface{}
+	clearedFields  map[string]struct{}
+	artist         *uint32
+	clearedartist  bool
+	album          *uint32
+	clearedalbum   bool
+	tv_show        *uint32
+	clearedtv_show bool
+	movie          *uint32
+	clearedmovie   bool
+	book           *uint32
+	clearedbook    bool
+	done           bool
+	oldValue       func(context.Context) (*MetadataChange, error)
+	predicates     []predicate.MetadataChange
+}
+
+var _ ent.Mutation = (*MetadataChangeMutation)(nil)
+
+// metadatachangeOption allows management of the mutation configuration using functional options.
+type metadatachangeOption func(*MetadataChangeMutation)
+
+// newMetadataChangeMutation creates new mutation for the MetadataChange entity.
+func newMetadataChangeMutation(c config, op Op, opts ...metadatachangeOption) *MetadataChangeMutation {
+	m := &MetadataChangeMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeMetadataChange,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withMetadataChangeID sets the ID field of the mutation.
+func withMetadataChangeID(id uint32) metadatachangeOption {
+	return func(m *MetadataChangeMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *MetadataChange
+		)
+		m.oldValue = func(ctx context.Context) (*MetadataChange, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().MetadataChange.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withMetadataChange sets the old MetadataChange of the mutation.
+func withMetadataChange(node *MetadataChange) metadatachangeOption {
+	return func(m *MetadataChangeMutation) {
+		m.oldValue = func(context.Context) (*MetadataChange, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m MetadataChangeMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m MetadataChangeMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of MetadataChange entities.
+func (m *MetadataChangeMutation) SetID(id uint32) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *MetadataChangeMutation) ID() (id uint32, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *MetadataChangeMutation) IDs(ctx context.Context) ([]uint32, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uint32{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().MetadataChange.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreateTime sets the "create_time" field.
+func (m *MetadataChangeMutation) SetCreateTime(t time.Time) {
+	m.create_time = &t
+}
+
+// CreateTime returns the value of the "create_time" field in the mutation.
+func (m *MetadataChangeMutation) CreateTime() (r time.Time, exists bool) {
+	v := m.create_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreateTime returns the old "create_time" field's value of the MetadataChange entity.
+// If the MetadataChange object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MetadataChangeMutation) OldCreateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreateTime: %w", err)
+	}
+	return oldValue.CreateTime, nil
+}
+
+// ResetCreateTime resets all changes to the "create_time" field.
+func (m *MetadataChangeMutation) ResetCreateTime() {
+	m.create_time = nil
+}
+
+// SetUpdateTime sets the "update_time" field.
+func (m *MetadataChangeMutation) SetUpdateTime(t time.Time) {
+	m.update_time = &t
+}
+
+// UpdateTime returns the value of the "update_time" field in the mutation.
+func (m *MetadataChangeMutation) UpdateTime() (r time.Time, exists bool) {
+	v := m.update_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdateTime returns the old "update_time" field's value of the MetadataChange entity.
+// If the MetadataChange object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MetadataChangeMutation) OldUpdateTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdateTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdateTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdateTime: %w", err)
+	}
+	return oldValue.UpdateTime, nil
+}
+
+// ResetUpdateTime resets all changes to the "update_time" field.
+func (m *MetadataChangeMutation) ResetUpdateTime() {
+	m.update_time = nil
+}
+
+// SetKind sets the "kind" field.
+func (m *MetadataChangeMutation) SetKind(value metadatachange.Kind) {
+	m.kind = &value
+}
+
+// Kind returns the value of the "kind" field in the mutation.
+func (m *MetadataChangeMutation) Kind() (r metadatachange.Kind, exists bool) {
+	v := m.kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKind returns the old "kind" field's value of the MetadataChange entity.
+// If the MetadataChange object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MetadataChangeMutation) OldKind(ctx context.Context) (v metadatachange.Kind, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKind: %w", err)
+	}
+	return oldValue.Kind, nil
+}
+
+// ResetKind resets all changes to the "kind" field.
+func (m *MetadataChangeMutation) ResetKind() {
+	m.kind = nil
+}
+
+// SetState sets the "state" field.
+func (m *MetadataChangeMutation) SetState(value metadatachange.State) {
+	m.state = &value
+}
+
+// State returns the value of the "state" field in the mutation.
+func (m *MetadataChangeMutation) State() (r metadatachange.State, exists bool) {
+	v := m.state
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldState returns the old "state" field's value of the MetadataChange entity.
+// If the MetadataChange object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MetadataChangeMutation) OldState(ctx context.Context) (v metadatachange.State, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldState is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldState requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldState: %w", err)
+	}
+	return oldValue.State, nil
+}
+
+// ResetState resets all changes to the "state" field.
+func (m *MetadataChangeMutation) ResetState() {
+	m.state = nil
+}
+
+// SetFingerprint sets the "fingerprint" field.
+func (m *MetadataChangeMutation) SetFingerprint(s string) {
+	m.fingerprint = &s
+}
+
+// Fingerprint returns the value of the "fingerprint" field in the mutation.
+func (m *MetadataChangeMutation) Fingerprint() (r string, exists bool) {
+	v := m.fingerprint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFingerprint returns the old "fingerprint" field's value of the MetadataChange entity.
+// If the MetadataChange object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MetadataChangeMutation) OldFingerprint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFingerprint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFingerprint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFingerprint: %w", err)
+	}
+	return oldValue.Fingerprint, nil
+}
+
+// ResetFingerprint resets all changes to the "fingerprint" field.
+func (m *MetadataChangeMutation) ResetFingerprint() {
+	m.fingerprint = nil
+}
+
+// SetPayload sets the "payload" field.
+func (m *MetadataChangeMutation) SetPayload(value map[string]interface{}) {
+	m.payload = &value
+}
+
+// Payload returns the value of the "payload" field in the mutation.
+func (m *MetadataChangeMutation) Payload() (r map[string]interface{}, exists bool) {
+	v := m.payload
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayload returns the old "payload" field's value of the MetadataChange entity.
+// If the MetadataChange object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MetadataChangeMutation) OldPayload(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayload is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayload requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayload: %w", err)
+	}
+	return oldValue.Payload, nil
+}
+
+// ClearPayload clears the value of the "payload" field.
+func (m *MetadataChangeMutation) ClearPayload() {
+	m.payload = nil
+	m.clearedFields[metadatachange.FieldPayload] = struct{}{}
+}
+
+// PayloadCleared returns if the "payload" field was cleared in this mutation.
+func (m *MetadataChangeMutation) PayloadCleared() bool {
+	_, ok := m.clearedFields[metadatachange.FieldPayload]
+	return ok
+}
+
+// ResetPayload resets all changes to the "payload" field.
+func (m *MetadataChangeMutation) ResetPayload() {
+	m.payload = nil
+	delete(m.clearedFields, metadatachange.FieldPayload)
+}
+
+// SetArtistID sets the "artist" edge to the Artist entity by id.
+func (m *MetadataChangeMutation) SetArtistID(id uint32) {
+	m.artist = &id
+}
+
+// ClearArtist clears the "artist" edge to the Artist entity.
+func (m *MetadataChangeMutation) ClearArtist() {
+	m.clearedartist = true
+}
+
+// ArtistCleared reports if the "artist" edge to the Artist entity was cleared.
+func (m *MetadataChangeMutation) ArtistCleared() bool {
+	return m.clearedartist
+}
+
+// ArtistID returns the "artist" edge ID in the mutation.
+func (m *MetadataChangeMutation) ArtistID() (id uint32, exists bool) {
+	if m.artist != nil {
+		return *m.artist, true
+	}
+	return
+}
+
+// ArtistIDs returns the "artist" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ArtistID instead. It exists only for internal usage by the builders.
+func (m *MetadataChangeMutation) ArtistIDs() (ids []uint32) {
+	if id := m.artist; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetArtist resets all changes to the "artist" edge.
+func (m *MetadataChangeMutation) ResetArtist() {
+	m.artist = nil
+	m.clearedartist = false
+}
+
+// SetAlbumID sets the "album" edge to the Album entity by id.
+func (m *MetadataChangeMutation) SetAlbumID(id uint32) {
+	m.album = &id
+}
+
+// ClearAlbum clears the "album" edge to the Album entity.
+func (m *MetadataChangeMutation) ClearAlbum() {
+	m.clearedalbum = true
+}
+
+// AlbumCleared reports if the "album" edge to the Album entity was cleared.
+func (m *MetadataChangeMutation) AlbumCleared() bool {
+	return m.clearedalbum
+}
+
+// AlbumID returns the "album" edge ID in the mutation.
+func (m *MetadataChangeMutation) AlbumID() (id uint32, exists bool) {
+	if m.album != nil {
+		return *m.album, true
+	}
+	return
+}
+
+// AlbumIDs returns the "album" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// AlbumID instead. It exists only for internal usage by the builders.
+func (m *MetadataChangeMutation) AlbumIDs() (ids []uint32) {
+	if id := m.album; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetAlbum resets all changes to the "album" edge.
+func (m *MetadataChangeMutation) ResetAlbum() {
+	m.album = nil
+	m.clearedalbum = false
+}
+
+// SetTvShowID sets the "tv_show" edge to the TVShow entity by id.
+func (m *MetadataChangeMutation) SetTvShowID(id uint32) {
+	m.tv_show = &id
+}
+
+// ClearTvShow clears the "tv_show" edge to the TVShow entity.
+func (m *MetadataChangeMutation) ClearTvShow() {
+	m.clearedtv_show = true
+}
+
+// TvShowCleared reports if the "tv_show" edge to the TVShow entity was cleared.
+func (m *MetadataChangeMutation) TvShowCleared() bool {
+	return m.clearedtv_show
+}
+
+// TvShowID returns the "tv_show" edge ID in the mutation.
+func (m *MetadataChangeMutation) TvShowID() (id uint32, exists bool) {
+	if m.tv_show != nil {
+		return *m.tv_show, true
+	}
+	return
+}
+
+// TvShowIDs returns the "tv_show" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// TvShowID instead. It exists only for internal usage by the builders.
+func (m *MetadataChangeMutation) TvShowIDs() (ids []uint32) {
+	if id := m.tv_show; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetTvShow resets all changes to the "tv_show" edge.
+func (m *MetadataChangeMutation) ResetTvShow() {
+	m.tv_show = nil
+	m.clearedtv_show = false
+}
+
+// SetMovieID sets the "movie" edge to the Movie entity by id.
+func (m *MetadataChangeMutation) SetMovieID(id uint32) {
+	m.movie = &id
+}
+
+// ClearMovie clears the "movie" edge to the Movie entity.
+func (m *MetadataChangeMutation) ClearMovie() {
+	m.clearedmovie = true
+}
+
+// MovieCleared reports if the "movie" edge to the Movie entity was cleared.
+func (m *MetadataChangeMutation) MovieCleared() bool {
+	return m.clearedmovie
+}
+
+// MovieID returns the "movie" edge ID in the mutation.
+func (m *MetadataChangeMutation) MovieID() (id uint32, exists bool) {
+	if m.movie != nil {
+		return *m.movie, true
+	}
+	return
+}
+
+// MovieIDs returns the "movie" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MovieID instead. It exists only for internal usage by the builders.
+func (m *MetadataChangeMutation) MovieIDs() (ids []uint32) {
+	if id := m.movie; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetMovie resets all changes to the "movie" edge.
+func (m *MetadataChangeMutation) ResetMovie() {
+	m.movie = nil
+	m.clearedmovie = false
+}
+
+// SetBookID sets the "book" edge to the Book entity by id.
+func (m *MetadataChangeMutation) SetBookID(id uint32) {
+	m.book = &id
+}
+
+// ClearBook clears the "book" edge to the Book entity.
+func (m *MetadataChangeMutation) ClearBook() {
+	m.clearedbook = true
+}
+
+// BookCleared reports if the "book" edge to the Book entity was cleared.
+func (m *MetadataChangeMutation) BookCleared() bool {
+	return m.clearedbook
+}
+
+// BookID returns the "book" edge ID in the mutation.
+func (m *MetadataChangeMutation) BookID() (id uint32, exists bool) {
+	if m.book != nil {
+		return *m.book, true
+	}
+	return
+}
+
+// BookIDs returns the "book" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// BookID instead. It exists only for internal usage by the builders.
+func (m *MetadataChangeMutation) BookIDs() (ids []uint32) {
+	if id := m.book; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetBook resets all changes to the "book" edge.
+func (m *MetadataChangeMutation) ResetBook() {
+	m.book = nil
+	m.clearedbook = false
+}
+
+// Where appends a list predicates to the MetadataChangeMutation builder.
+func (m *MetadataChangeMutation) Where(ps ...predicate.MetadataChange) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the MetadataChangeMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *MetadataChangeMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.MetadataChange, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *MetadataChangeMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *MetadataChangeMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (MetadataChange).
+func (m *MetadataChangeMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *MetadataChangeMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.create_time != nil {
+		fields = append(fields, metadatachange.FieldCreateTime)
+	}
+	if m.update_time != nil {
+		fields = append(fields, metadatachange.FieldUpdateTime)
+	}
+	if m.kind != nil {
+		fields = append(fields, metadatachange.FieldKind)
+	}
+	if m.state != nil {
+		fields = append(fields, metadatachange.FieldState)
+	}
+	if m.fingerprint != nil {
+		fields = append(fields, metadatachange.FieldFingerprint)
+	}
+	if m.payload != nil {
+		fields = append(fields, metadatachange.FieldPayload)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *MetadataChangeMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case metadatachange.FieldCreateTime:
+		return m.CreateTime()
+	case metadatachange.FieldUpdateTime:
+		return m.UpdateTime()
+	case metadatachange.FieldKind:
+		return m.Kind()
+	case metadatachange.FieldState:
+		return m.State()
+	case metadatachange.FieldFingerprint:
+		return m.Fingerprint()
+	case metadatachange.FieldPayload:
+		return m.Payload()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *MetadataChangeMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case metadatachange.FieldCreateTime:
+		return m.OldCreateTime(ctx)
+	case metadatachange.FieldUpdateTime:
+		return m.OldUpdateTime(ctx)
+	case metadatachange.FieldKind:
+		return m.OldKind(ctx)
+	case metadatachange.FieldState:
+		return m.OldState(ctx)
+	case metadatachange.FieldFingerprint:
+		return m.OldFingerprint(ctx)
+	case metadatachange.FieldPayload:
+		return m.OldPayload(ctx)
+	}
+	return nil, fmt.Errorf("unknown MetadataChange field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *MetadataChangeMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case metadatachange.FieldCreateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreateTime(v)
+		return nil
+	case metadatachange.FieldUpdateTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdateTime(v)
+		return nil
+	case metadatachange.FieldKind:
+		v, ok := value.(metadatachange.Kind)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKind(v)
+		return nil
+	case metadatachange.FieldState:
+		v, ok := value.(metadatachange.State)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetState(v)
+		return nil
+	case metadatachange.FieldFingerprint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFingerprint(v)
+		return nil
+	case metadatachange.FieldPayload:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayload(v)
+		return nil
+	}
+	return fmt.Errorf("unknown MetadataChange field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *MetadataChangeMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *MetadataChangeMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *MetadataChangeMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown MetadataChange numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *MetadataChangeMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(metadatachange.FieldPayload) {
+		fields = append(fields, metadatachange.FieldPayload)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *MetadataChangeMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *MetadataChangeMutation) ClearField(name string) error {
+	switch name {
+	case metadatachange.FieldPayload:
+		m.ClearPayload()
+		return nil
+	}
+	return fmt.Errorf("unknown MetadataChange nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *MetadataChangeMutation) ResetField(name string) error {
+	switch name {
+	case metadatachange.FieldCreateTime:
+		m.ResetCreateTime()
+		return nil
+	case metadatachange.FieldUpdateTime:
+		m.ResetUpdateTime()
+		return nil
+	case metadatachange.FieldKind:
+		m.ResetKind()
+		return nil
+	case metadatachange.FieldState:
+		m.ResetState()
+		return nil
+	case metadatachange.FieldFingerprint:
+		m.ResetFingerprint()
+		return nil
+	case metadatachange.FieldPayload:
+		m.ResetPayload()
+		return nil
+	}
+	return fmt.Errorf("unknown MetadataChange field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *MetadataChangeMutation) AddedEdges() []string {
+	edges := make([]string, 0, 5)
+	if m.artist != nil {
+		edges = append(edges, metadatachange.EdgeArtist)
+	}
+	if m.album != nil {
+		edges = append(edges, metadatachange.EdgeAlbum)
+	}
+	if m.tv_show != nil {
+		edges = append(edges, metadatachange.EdgeTvShow)
+	}
+	if m.movie != nil {
+		edges = append(edges, metadatachange.EdgeMovie)
+	}
+	if m.book != nil {
+		edges = append(edges, metadatachange.EdgeBook)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *MetadataChangeMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case metadatachange.EdgeArtist:
+		if id := m.artist; id != nil {
+			return []ent.Value{*id}
+		}
+	case metadatachange.EdgeAlbum:
+		if id := m.album; id != nil {
+			return []ent.Value{*id}
+		}
+	case metadatachange.EdgeTvShow:
+		if id := m.tv_show; id != nil {
+			return []ent.Value{*id}
+		}
+	case metadatachange.EdgeMovie:
+		if id := m.movie; id != nil {
+			return []ent.Value{*id}
+		}
+	case metadatachange.EdgeBook:
+		if id := m.book; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *MetadataChangeMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 5)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *MetadataChangeMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *MetadataChangeMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 5)
+	if m.clearedartist {
+		edges = append(edges, metadatachange.EdgeArtist)
+	}
+	if m.clearedalbum {
+		edges = append(edges, metadatachange.EdgeAlbum)
+	}
+	if m.clearedtv_show {
+		edges = append(edges, metadatachange.EdgeTvShow)
+	}
+	if m.clearedmovie {
+		edges = append(edges, metadatachange.EdgeMovie)
+	}
+	if m.clearedbook {
+		edges = append(edges, metadatachange.EdgeBook)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *MetadataChangeMutation) EdgeCleared(name string) bool {
+	switch name {
+	case metadatachange.EdgeArtist:
+		return m.clearedartist
+	case metadatachange.EdgeAlbum:
+		return m.clearedalbum
+	case metadatachange.EdgeTvShow:
+		return m.clearedtv_show
+	case metadatachange.EdgeMovie:
+		return m.clearedmovie
+	case metadatachange.EdgeBook:
+		return m.clearedbook
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *MetadataChangeMutation) ClearEdge(name string) error {
+	switch name {
+	case metadatachange.EdgeArtist:
+		m.ClearArtist()
+		return nil
+	case metadatachange.EdgeAlbum:
+		m.ClearAlbum()
+		return nil
+	case metadatachange.EdgeTvShow:
+		m.ClearTvShow()
+		return nil
+	case metadatachange.EdgeMovie:
+		m.ClearMovie()
+		return nil
+	case metadatachange.EdgeBook:
+		m.ClearBook()
+		return nil
+	}
+	return fmt.Errorf("unknown MetadataChange unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *MetadataChangeMutation) ResetEdge(name string) error {
+	switch name {
+	case metadatachange.EdgeArtist:
+		m.ResetArtist()
+		return nil
+	case metadatachange.EdgeAlbum:
+		m.ResetAlbum()
+		return nil
+	case metadatachange.EdgeTvShow:
+		m.ResetTvShow()
+		return nil
+	case metadatachange.EdgeMovie:
+		m.ResetMovie()
+		return nil
+	case metadatachange.EdgeBook:
+		m.ResetBook()
+		return nil
+	}
+	return fmt.Errorf("unknown MetadataChange edge %s", name)
+}
+
 // MovieMutation represents an operation that mutates the Movie nodes in the graph.
 type MovieMutation struct {
 	config
@@ -35065,6 +36243,9 @@ type MovieMutation struct {
 	events                  map[uint32]struct{}
 	removedevents           map[uint32]struct{}
 	clearedevents           bool
+	metadata_changes        map[uint32]struct{}
+	removedmetadata_changes map[uint32]struct{}
+	clearedmetadata_changes bool
 	credits                 map[uint32]struct{}
 	removedcredits          map[uint32]struct{}
 	clearedcredits          bool
@@ -36434,6 +37615,60 @@ func (m *MovieMutation) ResetEvents() {
 	m.removedevents = nil
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by ids.
+func (m *MovieMutation) AddMetadataChangeIDs(ids ...uint32) {
+	if m.metadata_changes == nil {
+		m.metadata_changes = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.metadata_changes[ids[i]] = struct{}{}
+	}
+}
+
+// ClearMetadataChanges clears the "metadata_changes" edge to the MetadataChange entity.
+func (m *MovieMutation) ClearMetadataChanges() {
+	m.clearedmetadata_changes = true
+}
+
+// MetadataChangesCleared reports if the "metadata_changes" edge to the MetadataChange entity was cleared.
+func (m *MovieMutation) MetadataChangesCleared() bool {
+	return m.clearedmetadata_changes
+}
+
+// RemoveMetadataChangeIDs removes the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (m *MovieMutation) RemoveMetadataChangeIDs(ids ...uint32) {
+	if m.removedmetadata_changes == nil {
+		m.removedmetadata_changes = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.metadata_changes, ids[i])
+		m.removedmetadata_changes[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedMetadataChanges returns the removed IDs of the "metadata_changes" edge to the MetadataChange entity.
+func (m *MovieMutation) RemovedMetadataChangesIDs() (ids []uint32) {
+	for id := range m.removedmetadata_changes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// MetadataChangesIDs returns the "metadata_changes" edge IDs in the mutation.
+func (m *MovieMutation) MetadataChangesIDs() (ids []uint32) {
+	for id := range m.metadata_changes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetMetadataChanges resets all changes to the "metadata_changes" edge.
+func (m *MovieMutation) ResetMetadataChanges() {
+	m.metadata_changes = nil
+	m.clearedmetadata_changes = false
+	m.removedmetadata_changes = nil
+}
+
 // AddCreditIDs adds the "credits" edge to the Credit entity by ids.
 func (m *MovieMutation) AddCreditIDs(ids ...uint32) {
 	if m.credits == nil {
@@ -37122,7 +38357,7 @@ func (m *MovieMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MovieMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.download_records != nil {
 		edges = append(edges, movie.EdgeDownloadRecords)
 	}
@@ -37131,6 +38366,9 @@ func (m *MovieMutation) AddedEdges() []string {
 	}
 	if m.events != nil {
 		edges = append(edges, movie.EdgeEvents)
+	}
+	if m.metadata_changes != nil {
+		edges = append(edges, movie.EdgeMetadataChanges)
 	}
 	if m.credits != nil {
 		edges = append(edges, movie.EdgeCredits)
@@ -37160,6 +38398,12 @@ func (m *MovieMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case movie.EdgeMetadataChanges:
+		ids := make([]ent.Value, 0, len(m.metadata_changes))
+		for id := range m.metadata_changes {
+			ids = append(ids, id)
+		}
+		return ids
 	case movie.EdgeCredits:
 		ids := make([]ent.Value, 0, len(m.credits))
 		for id := range m.credits {
@@ -37172,7 +38416,7 @@ func (m *MovieMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MovieMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removeddownload_records != nil {
 		edges = append(edges, movie.EdgeDownloadRecords)
 	}
@@ -37181,6 +38425,9 @@ func (m *MovieMutation) RemovedEdges() []string {
 	}
 	if m.removedevents != nil {
 		edges = append(edges, movie.EdgeEvents)
+	}
+	if m.removedmetadata_changes != nil {
+		edges = append(edges, movie.EdgeMetadataChanges)
 	}
 	if m.removedcredits != nil {
 		edges = append(edges, movie.EdgeCredits)
@@ -37210,6 +38457,12 @@ func (m *MovieMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case movie.EdgeMetadataChanges:
+		ids := make([]ent.Value, 0, len(m.removedmetadata_changes))
+		for id := range m.removedmetadata_changes {
+			ids = append(ids, id)
+		}
+		return ids
 	case movie.EdgeCredits:
 		ids := make([]ent.Value, 0, len(m.removedcredits))
 		for id := range m.removedcredits {
@@ -37222,7 +38475,7 @@ func (m *MovieMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MovieMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.cleareddownload_records {
 		edges = append(edges, movie.EdgeDownloadRecords)
 	}
@@ -37231,6 +38484,9 @@ func (m *MovieMutation) ClearedEdges() []string {
 	}
 	if m.clearedevents {
 		edges = append(edges, movie.EdgeEvents)
+	}
+	if m.clearedmetadata_changes {
+		edges = append(edges, movie.EdgeMetadataChanges)
 	}
 	if m.clearedcredits {
 		edges = append(edges, movie.EdgeCredits)
@@ -37248,6 +38504,8 @@ func (m *MovieMutation) EdgeCleared(name string) bool {
 		return m.clearedmedia_files
 	case movie.EdgeEvents:
 		return m.clearedevents
+	case movie.EdgeMetadataChanges:
+		return m.clearedmetadata_changes
 	case movie.EdgeCredits:
 		return m.clearedcredits
 	}
@@ -37274,6 +38532,9 @@ func (m *MovieMutation) ResetEdge(name string) error {
 		return nil
 	case movie.EdgeEvents:
 		m.ResetEvents()
+		return nil
+	case movie.EdgeMetadataChanges:
+		m.ResetMetadataChanges()
 		return nil
 	case movie.EdgeCredits:
 		m.ResetCredits()
@@ -43963,50 +45224,53 @@ func (m *SessionMutation) ResetEdge(name string) error {
 // TVShowMutation represents an operation that mutates the TVShow nodes in the graph.
 type TVShowMutation struct {
 	config
-	op                Op
-	typ               string
-	id                *uint32
-	create_time       *time.Time
-	update_time       *time.Time
-	title             *string
-	original_title    *string
-	year              *uint16
-	addyear           *int16
-	first_aired       *time.Time
-	overview          *string
-	series_status     *tvshow.SeriesStatus
-	_type             *tvshow.Type
-	monitored         *bool
-	tvdb_id           *uint32
-	addtvdb_id        *int32
-	imdb_id           *string
-	poster_path       *string
-	network           *string
-	certification     *string
-	creator           *string
-	runtime           *uint16
-	addruntime        *int16
-	rating            *float64
-	addrating         *float64
-	genres            *[]string
-	appendgenres      []string
-	aliases           *[]string
-	appendaliases     []string
-	last_refreshed_at *time.Time
-	quality_profile   *string
-	clearedFields     map[string]struct{}
-	seasons           map[uint32]struct{}
-	removedseasons    map[uint32]struct{}
-	clearedseasons    bool
-	events            map[uint32]struct{}
-	removedevents     map[uint32]struct{}
-	clearedevents     bool
-	credits           map[uint32]struct{}
-	removedcredits    map[uint32]struct{}
-	clearedcredits    bool
-	done              bool
-	oldValue          func(context.Context) (*TVShow, error)
-	predicates        []predicate.TVShow
+	op                      Op
+	typ                     string
+	id                      *uint32
+	create_time             *time.Time
+	update_time             *time.Time
+	title                   *string
+	original_title          *string
+	year                    *uint16
+	addyear                 *int16
+	first_aired             *time.Time
+	overview                *string
+	series_status           *tvshow.SeriesStatus
+	_type                   *tvshow.Type
+	monitored               *bool
+	tvdb_id                 *uint32
+	addtvdb_id              *int32
+	imdb_id                 *string
+	poster_path             *string
+	network                 *string
+	certification           *string
+	creator                 *string
+	runtime                 *uint16
+	addruntime              *int16
+	rating                  *float64
+	addrating               *float64
+	genres                  *[]string
+	appendgenres            []string
+	aliases                 *[]string
+	appendaliases           []string
+	last_refreshed_at       *time.Time
+	quality_profile         *string
+	clearedFields           map[string]struct{}
+	seasons                 map[uint32]struct{}
+	removedseasons          map[uint32]struct{}
+	clearedseasons          bool
+	events                  map[uint32]struct{}
+	removedevents           map[uint32]struct{}
+	clearedevents           bool
+	metadata_changes        map[uint32]struct{}
+	removedmetadata_changes map[uint32]struct{}
+	clearedmetadata_changes bool
+	credits                 map[uint32]struct{}
+	removedcredits          map[uint32]struct{}
+	clearedcredits          bool
+	done                    bool
+	oldValue                func(context.Context) (*TVShow, error)
+	predicates              []predicate.TVShow
 }
 
 var _ ent.Mutation = (*TVShowMutation)(nil)
@@ -45309,6 +46573,60 @@ func (m *TVShowMutation) ResetEvents() {
 	m.removedevents = nil
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by ids.
+func (m *TVShowMutation) AddMetadataChangeIDs(ids ...uint32) {
+	if m.metadata_changes == nil {
+		m.metadata_changes = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		m.metadata_changes[ids[i]] = struct{}{}
+	}
+}
+
+// ClearMetadataChanges clears the "metadata_changes" edge to the MetadataChange entity.
+func (m *TVShowMutation) ClearMetadataChanges() {
+	m.clearedmetadata_changes = true
+}
+
+// MetadataChangesCleared reports if the "metadata_changes" edge to the MetadataChange entity was cleared.
+func (m *TVShowMutation) MetadataChangesCleared() bool {
+	return m.clearedmetadata_changes
+}
+
+// RemoveMetadataChangeIDs removes the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (m *TVShowMutation) RemoveMetadataChangeIDs(ids ...uint32) {
+	if m.removedmetadata_changes == nil {
+		m.removedmetadata_changes = make(map[uint32]struct{})
+	}
+	for i := range ids {
+		delete(m.metadata_changes, ids[i])
+		m.removedmetadata_changes[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedMetadataChanges returns the removed IDs of the "metadata_changes" edge to the MetadataChange entity.
+func (m *TVShowMutation) RemovedMetadataChangesIDs() (ids []uint32) {
+	for id := range m.removedmetadata_changes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// MetadataChangesIDs returns the "metadata_changes" edge IDs in the mutation.
+func (m *TVShowMutation) MetadataChangesIDs() (ids []uint32) {
+	for id := range m.metadata_changes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetMetadataChanges resets all changes to the "metadata_changes" edge.
+func (m *TVShowMutation) ResetMetadataChanges() {
+	m.metadata_changes = nil
+	m.clearedmetadata_changes = false
+	m.removedmetadata_changes = nil
+}
+
 // AddCreditIDs adds the "credits" edge to the Credit entity by ids.
 func (m *TVShowMutation) AddCreditIDs(ids ...uint32) {
 	if m.credits == nil {
@@ -45991,12 +47309,15 @@ func (m *TVShowMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TVShowMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.seasons != nil {
 		edges = append(edges, tvshow.EdgeSeasons)
 	}
 	if m.events != nil {
 		edges = append(edges, tvshow.EdgeEvents)
+	}
+	if m.metadata_changes != nil {
+		edges = append(edges, tvshow.EdgeMetadataChanges)
 	}
 	if m.credits != nil {
 		edges = append(edges, tvshow.EdgeCredits)
@@ -46020,6 +47341,12 @@ func (m *TVShowMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case tvshow.EdgeMetadataChanges:
+		ids := make([]ent.Value, 0, len(m.metadata_changes))
+		for id := range m.metadata_changes {
+			ids = append(ids, id)
+		}
+		return ids
 	case tvshow.EdgeCredits:
 		ids := make([]ent.Value, 0, len(m.credits))
 		for id := range m.credits {
@@ -46032,12 +47359,15 @@ func (m *TVShowMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TVShowMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.removedseasons != nil {
 		edges = append(edges, tvshow.EdgeSeasons)
 	}
 	if m.removedevents != nil {
 		edges = append(edges, tvshow.EdgeEvents)
+	}
+	if m.removedmetadata_changes != nil {
+		edges = append(edges, tvshow.EdgeMetadataChanges)
 	}
 	if m.removedcredits != nil {
 		edges = append(edges, tvshow.EdgeCredits)
@@ -46061,6 +47391,12 @@ func (m *TVShowMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case tvshow.EdgeMetadataChanges:
+		ids := make([]ent.Value, 0, len(m.removedmetadata_changes))
+		for id := range m.removedmetadata_changes {
+			ids = append(ids, id)
+		}
+		return ids
 	case tvshow.EdgeCredits:
 		ids := make([]ent.Value, 0, len(m.removedcredits))
 		for id := range m.removedcredits {
@@ -46073,12 +47409,15 @@ func (m *TVShowMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TVShowMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.clearedseasons {
 		edges = append(edges, tvshow.EdgeSeasons)
 	}
 	if m.clearedevents {
 		edges = append(edges, tvshow.EdgeEvents)
+	}
+	if m.clearedmetadata_changes {
+		edges = append(edges, tvshow.EdgeMetadataChanges)
 	}
 	if m.clearedcredits {
 		edges = append(edges, tvshow.EdgeCredits)
@@ -46094,6 +47433,8 @@ func (m *TVShowMutation) EdgeCleared(name string) bool {
 		return m.clearedseasons
 	case tvshow.EdgeEvents:
 		return m.clearedevents
+	case tvshow.EdgeMetadataChanges:
+		return m.clearedmetadata_changes
 	case tvshow.EdgeCredits:
 		return m.clearedcredits
 	}
@@ -46117,6 +47458,9 @@ func (m *TVShowMutation) ResetEdge(name string) error {
 		return nil
 	case tvshow.EdgeEvents:
 		m.ResetEvents()
+		return nil
+	case tvshow.EdgeMetadataChanges:
+		m.ResetMetadataChanges()
 		return nil
 	case tvshow.EdgeCredits:
 		m.ResetCredits()

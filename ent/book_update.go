@@ -18,6 +18,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/predicate"
 )
 
@@ -655,6 +656,21 @@ func (_u *BookUpdate) AddEvents(v ...*MediaEvent) *BookUpdate {
 	return _u.AddEventIDs(ids...)
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (_u *BookUpdate) AddMetadataChangeIDs(ids ...uint32) *BookUpdate {
+	_u.mutation.AddMetadataChangeIDs(ids...)
+	return _u
+}
+
+// AddMetadataChanges adds the "metadata_changes" edges to the MetadataChange entity.
+func (_u *BookUpdate) AddMetadataChanges(v ...*MetadataChange) *BookUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddMetadataChangeIDs(ids...)
+}
+
 // Mutation returns the BookMutation object of the builder.
 func (_u *BookUpdate) Mutation() *BookMutation {
 	return _u.mutation
@@ -781,6 +797,27 @@ func (_u *BookUpdate) RemoveEvents(v ...*MediaEvent) *BookUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearMetadataChanges clears all "metadata_changes" edges to the MetadataChange entity.
+func (_u *BookUpdate) ClearMetadataChanges() *BookUpdate {
+	_u.mutation.ClearMetadataChanges()
+	return _u
+}
+
+// RemoveMetadataChangeIDs removes the "metadata_changes" edge to MetadataChange entities by IDs.
+func (_u *BookUpdate) RemoveMetadataChangeIDs(ids ...uint32) *BookUpdate {
+	_u.mutation.RemoveMetadataChangeIDs(ids...)
+	return _u
+}
+
+// RemoveMetadataChanges removes "metadata_changes" edges to MetadataChange entities.
+func (_u *BookUpdate) RemoveMetadataChanges(v ...*MetadataChange) *BookUpdate {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveMetadataChangeIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -1308,6 +1345,51 @@ func (_u *BookUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.MetadataChangesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.MetadataChangesTable,
+			Columns: []string{book.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedMetadataChangesIDs(); len(nodes) > 0 && !_u.mutation.MetadataChangesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.MetadataChangesTable,
+			Columns: []string{book.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.MetadataChangesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.MetadataChangesTable,
+			Columns: []string{book.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {
@@ -1957,6 +2039,21 @@ func (_u *BookUpdateOne) AddEvents(v ...*MediaEvent) *BookUpdateOne {
 	return _u.AddEventIDs(ids...)
 }
 
+// AddMetadataChangeIDs adds the "metadata_changes" edge to the MetadataChange entity by IDs.
+func (_u *BookUpdateOne) AddMetadataChangeIDs(ids ...uint32) *BookUpdateOne {
+	_u.mutation.AddMetadataChangeIDs(ids...)
+	return _u
+}
+
+// AddMetadataChanges adds the "metadata_changes" edges to the MetadataChange entity.
+func (_u *BookUpdateOne) AddMetadataChanges(v ...*MetadataChange) *BookUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddMetadataChangeIDs(ids...)
+}
+
 // Mutation returns the BookMutation object of the builder.
 func (_u *BookUpdateOne) Mutation() *BookMutation {
 	return _u.mutation
@@ -2083,6 +2180,27 @@ func (_u *BookUpdateOne) RemoveEvents(v ...*MediaEvent) *BookUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveEventIDs(ids...)
+}
+
+// ClearMetadataChanges clears all "metadata_changes" edges to the MetadataChange entity.
+func (_u *BookUpdateOne) ClearMetadataChanges() *BookUpdateOne {
+	_u.mutation.ClearMetadataChanges()
+	return _u
+}
+
+// RemoveMetadataChangeIDs removes the "metadata_changes" edge to MetadataChange entities by IDs.
+func (_u *BookUpdateOne) RemoveMetadataChangeIDs(ids ...uint32) *BookUpdateOne {
+	_u.mutation.RemoveMetadataChangeIDs(ids...)
+	return _u
+}
+
+// RemoveMetadataChanges removes "metadata_changes" edges to MetadataChange entities.
+func (_u *BookUpdateOne) RemoveMetadataChanges(v ...*MetadataChange) *BookUpdateOne {
+	ids := make([]uint32, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveMetadataChangeIDs(ids...)
 }
 
 // Where appends a list predicates to the BookUpdate builder.
@@ -2640,6 +2758,51 @@ func (_u *BookUpdateOne) sqlSave(ctx context.Context) (_node *Book, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(mediaevent.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.MetadataChangesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.MetadataChangesTable,
+			Columns: []string{book.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedMetadataChangesIDs(); len(nodes) > 0 && !_u.mutation.MetadataChangesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.MetadataChangesTable,
+			Columns: []string{book.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.MetadataChangesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   book.MetadataChangesTable,
+			Columns: []string{book.MetadataChangesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(metadatachange.FieldID, field.TypeUint32),
 			},
 		}
 		for _, k := range nodes {

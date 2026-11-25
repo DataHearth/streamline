@@ -49,6 +49,8 @@ tags:
     description: Book library, series and books backed by Hardcover
   - name: book-quality-profiles
     description: Format quality profiles covering the ebook and audiobook slots of the book library
+  - name: metadata-changes
+    description: Provider changes a metadata refresh left for an admin to decide
 
 servers:
   - url: /api/v1
@@ -6491,6 +6493,65 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /metadata-changes:
+    get:
+      operationId: listMetadataChanges
+      summary: Provider changes waiting on an admin (admin)
+      description: |
+        Changes a metadata refresh did not apply on its own, because they touch
+        what an item's files are matched against or would take the item out of
+        the library. Pending only, newest first; `total` counts every match.
+        A change kept as it is drops out of the list and is not asked again
+        until the provider changes the same thing differently.
+      tags: [metadata-changes]
+      parameters:
+        - $ref: "#/components/parameters/MetadataChangeMedia"
+        - $ref: "#/components/parameters/MetadataChangeKind"
+        - $ref: "#/components/parameters/RequestPage"
+        - $ref: "#/components/parameters/RequestLimit"
+      responses:
+        "200":
+          $ref: "#/components/responses/MetadataChangeList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /metadata-changes/counts:
+    get:
+      operationId: getMetadataChangeCounts
+      summary: Pending provider changes by media and kind (admin)
+      tags: [metadata-changes]
+      responses:
+        "200":
+          $ref: "#/components/responses/MetadataChangeCounts"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /metadata-changes/{id}/keep:
+    parameters:
+      - $ref: "#/components/parameters/ResourceID"
+    post:
+      operationId: keepMetadataChange
+      summary: Keep the item as it is (admin)
+      description: >-
+        The change leaves the list and is not asked again. Should the provider
+        later change the same thing differently, that is a new change.
+      tags: [metadata-changes]
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /calendar/upcoming:
     get:
       operationId: listUpcomingReleases
@@ -7279,6 +7340,20 @@ components:
         default: 1
         minimum: 1
         maximum: 65535
+    MetadataChangeMedia:
+      name: media
+      in: query
+      required: false
+      description: Only changes about this kind of media; `music` covers artists and albums.
+      schema:
+        type: string
+        enum: [music, series, movies, books]
+    MetadataChangeKind:
+      name: kind
+      in: query
+      required: false
+      schema:
+        $ref: "#/components/schemas/MetadataChangeKind"
     RequestLimit:
       name: limit
       in: query
@@ -8709,6 +8784,20 @@ components:
           schema:
             $ref: "#/components/schemas/PendingList"
 
+    MetadataChangeList:
+      description: Pending provider changes.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MetadataChangeList"
+
+    MetadataChangeCounts:
+      description: Pending provider changes counted by media and by kind.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MetadataChangeCounts"
+
     PendingPreview:
       description: What importing the proposal's torrent would do.
       content:
@@ -9279,6 +9368,117 @@ components:
         total:
           type: integer
           x-go-type: uint32
+
+    MetadataChangeKind:
+      type: string
+      description: |
+        `edition_removed`, `edition_merged`: the edition an album (or a book's
+        format) follows was deleted or merged upstream. `edition_preferred`:
+        MusicBrainz now prefers another edition of an album holding files.
+        `tracks_unlisted`: tracks holding files left the album's tracklist.
+        `album_removed`, `album_merged`, `artist_removed`, `artist_merged`,
+        `series_removed`, `movie_removed`, `book_removed`: the item itself was
+        deleted or merged upstream. `episodes_unlisted`: episodes holding files
+        are no longer listed.
+      enum:
+        - edition_removed
+        - edition_merged
+        - edition_preferred
+        - tracks_unlisted
+        - album_removed
+        - album_merged
+        - artist_removed
+        - artist_merged
+        - series_removed
+        - episodes_unlisted
+        - movie_removed
+        - book_removed
+
+    MetadataChangeOwner:
+      type: object
+      description: The item the change is about. An album names its artist, whose page it opens on.
+      required: [type, id, title]
+      properties:
+        type:
+          type: string
+          enum: [artist, album, tv_show, movie, book]
+        id:
+          type: integer
+          x-go-type: uint32
+        title:
+          type: string
+        artist_id:
+          type: integer
+          x-go-type: uint32
+        artist_name:
+          type: string
+        year:
+          type: integer
+          x-go-type: uint16
+
+    MetadataChange:
+      type: object
+      required: [id, kind, owner, details, detected_at]
+      properties:
+        id:
+          type: integer
+          x-go-type: uint32
+        kind:
+          $ref: "#/components/schemas/MetadataChangeKind"
+        owner:
+          $ref: "#/components/schemas/MetadataChangeOwner"
+        details:
+          type: object
+          additionalProperties: true
+          description: |
+            What the list shows, by kind. `files`: how many files the item
+            holds. `current` and `upstream`: the edition followed and the one
+            the provider has now (`title`, `country`, `date`, `formats`,
+            `tracks`). `items`: the tracks or episodes concerned (`id`,
+            `label`, `title`). `target`: what the item was merged into
+            (`title`, and `id` when it is already in the library). `slots`: a
+            book's formats concerned.
+        detected_at:
+          type: string
+          format: date-time
+
+    MetadataChangeList:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetadataChange"
+        total:
+          type: integer
+          x-go-type: uint32
+
+    MetadataChangeCounts:
+      type: object
+      required: [total, music, series, movies, books, kinds]
+      properties:
+        total:
+          type: integer
+          x-go-type: uint32
+        music:
+          type: integer
+          x-go-type: uint32
+        series:
+          type: integer
+          x-go-type: uint32
+        movies:
+          type: integer
+          x-go-type: uint32
+        books:
+          type: integer
+          x-go-type: uint32
+        kinds:
+          type: object
+          description: Pending changes per kind; a kind with none is absent.
+          additionalProperties:
+            type: integer
+            x-go-type: uint32
 
     ReplacePendingRequest:
       type: object

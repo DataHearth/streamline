@@ -19,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/predicate"
 )
 
@@ -37,6 +38,7 @@ type BookQuery struct {
 	withMediaFiles       *MediaFileQuery
 	withDownloadRecords  *DownloadRecordQuery
 	withEvents           *MediaEventQuery
+	withMetadataChanges  *MetadataChangeQuery
 	withFKs              bool
 	modifiers            []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
@@ -251,6 +253,28 @@ func (_q *BookQuery) QueryEvents() *MediaEventQuery {
 	return query
 }
 
+// QueryMetadataChanges chains the current query on the "metadata_changes" edge.
+func (_q *BookQuery) QueryMetadataChanges() *MetadataChangeQuery {
+	query := (&MetadataChangeClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(book.Table, book.FieldID, selector),
+			sqlgraph.To(metadatachange.Table, metadatachange.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, book.MetadataChangesTable, book.MetadataChangesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Book entity from the query.
 // Returns a *NotFoundError when no Book was found.
 func (_q *BookQuery) First(ctx context.Context) (*Book, error) {
@@ -451,6 +475,7 @@ func (_q *BookQuery) Clone() *BookQuery {
 		withMediaFiles:       _q.withMediaFiles.Clone(),
 		withDownloadRecords:  _q.withDownloadRecords.Clone(),
 		withEvents:           _q.withEvents.Clone(),
+		withMetadataChanges:  _q.withMetadataChanges.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -546,6 +571,17 @@ func (_q *BookQuery) WithEvents(opts ...func(*MediaEventQuery)) *BookQuery {
 	return _q
 }
 
+// WithMetadataChanges tells the query-builder to eager-load the nodes that are connected to
+// the "metadata_changes" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *BookQuery) WithMetadataChanges(opts ...func(*MetadataChangeQuery)) *BookQuery {
+	query := (&MetadataChangeClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withMetadataChanges = query
+	return _q
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -625,7 +661,7 @@ func (_q *BookQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Book, e
 		nodes       = []*Book{}
 		withFKs     = _q.withFKs
 		_spec       = _q.querySpec()
-		loadedTypes = [8]bool{
+		loadedTypes = [9]bool{
 			_q.withSeries != nil,
 			_q.withEditions != nil,
 			_q.withContributions != nil,
@@ -634,6 +670,7 @@ func (_q *BookQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Book, e
 			_q.withMediaFiles != nil,
 			_q.withDownloadRecords != nil,
 			_q.withEvents != nil,
+			_q.withMetadataChanges != nil,
 		}
 	)
 	if _q.withSeries != nil || _q.withEbookEdition != nil || _q.withAudiobookEdition != nil {
@@ -713,6 +750,13 @@ func (_q *BookQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Book, e
 		if err := _q.loadEvents(ctx, query, nodes,
 			func(n *Book) { n.Edges.Events = []*MediaEvent{} },
 			func(n *Book, e *MediaEvent) { n.Edges.Events = append(n.Edges.Events, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withMetadataChanges; query != nil {
+		if err := _q.loadMetadataChanges(ctx, query, nodes,
+			func(n *Book) { n.Edges.MetadataChanges = []*MetadataChange{} },
+			func(n *Book, e *MetadataChange) { n.Edges.MetadataChanges = append(n.Edges.MetadataChanges, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -965,6 +1009,37 @@ func (_q *BookQuery) loadEvents(ctx context.Context, query *MediaEventQuery, nod
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "book_events" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *BookQuery) loadMetadataChanges(ctx context.Context, query *MetadataChangeQuery, nodes []*Book, init func(*Book), assign func(*Book, *MetadataChange)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint32]*Book)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.MetadataChange(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(book.MetadataChangesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.book_metadata_changes
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "book_metadata_changes" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "book_metadata_changes" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

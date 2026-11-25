@@ -1719,6 +1719,29 @@ func HasEventsWith(preds ...predicate.MediaEvent) predicate.Book {
 	})
 }
 
+// HasMetadataChanges applies the HasEdge predicate on the "metadata_changes" edge.
+func HasMetadataChanges() predicate.Book {
+	return predicate.Book(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, MetadataChangesTable, MetadataChangesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasMetadataChangesWith applies the HasEdge predicate on the "metadata_changes" edge with a given conditions (other predicates).
+func HasMetadataChangesWith(preds ...predicate.MetadataChange) predicate.Book {
+	return predicate.Book(func(s *sql.Selector) {
+		step := newMetadataChangesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Book) predicate.Book {
 	return predicate.Book(sql.AndPredicates(predicates...))

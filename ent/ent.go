@@ -33,6 +33,7 @@ import (
 	"github.com/datahearth/streamline/ent/invite"
 	"github.com/datahearth/streamline/ent/mediaevent"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/musiccredit"
 	"github.com/datahearth/streamline/ent/oidcidentity"
@@ -128,6 +129,7 @@ func checkColumn(t, c string) error {
 			invite.Table:             invite.ValidColumn,
 			mediaevent.Table:         mediaevent.ValidColumn,
 			mediafile.Table:          mediafile.ValidColumn,
+			metadatachange.Table:     metadatachange.ValidColumn,
 			movie.Table:              movie.ValidColumn,
 			musiccredit.Table:        musiccredit.ValidColumn,
 			oidcidentity.Table:       oidcidentity.ValidColumn,

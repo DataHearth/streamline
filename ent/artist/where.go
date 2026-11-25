@@ -1457,6 +1457,29 @@ func HasEventsWith(preds ...predicate.MediaEvent) predicate.Artist {
 	})
 }
 
+// HasMetadataChanges applies the HasEdge predicate on the "metadata_changes" edge.
+func HasMetadataChanges() predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, MetadataChangesTable, MetadataChangesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasMetadataChangesWith applies the HasEdge predicate on the "metadata_changes" edge with a given conditions (other predicates).
+func HasMetadataChangesWith(preds ...predicate.MetadataChange) predicate.Artist {
+	return predicate.Artist(func(s *sql.Selector) {
+		step := newMetadataChangesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasCoAlbums applies the HasEdge predicate on the "co_albums" edge.
 func HasCoAlbums() predicate.Artist {
 	return predicate.Artist(func(s *sql.Selector) {

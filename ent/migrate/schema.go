@@ -1270,6 +1270,91 @@ var (
 			},
 		},
 	}
+	// MetadataChangesColumns holds the columns for the "metadata_changes" table.
+	MetadataChangesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint32, Increment: true},
+		{Name: "create_time", Type: field.TypeTime},
+		{Name: "update_time", Type: field.TypeTime},
+		{Name: "kind", Type: field.TypeEnum, Enums: []string{"edition_removed", "edition_merged", "edition_preferred", "tracks_unlisted", "album_removed", "album_merged", "artist_removed", "artist_merged", "series_removed", "episodes_unlisted", "movie_removed", "book_removed"}},
+		{Name: "state", Type: field.TypeEnum, Enums: []string{"pending", "kept"}, Default: "pending"},
+		{Name: "fingerprint", Type: field.TypeString, Default: ""},
+		{Name: "payload", Type: field.TypeJSON, Nullable: true},
+		{Name: "album_metadata_changes", Type: field.TypeUint32, Nullable: true},
+		{Name: "artist_metadata_changes", Type: field.TypeUint32, Nullable: true},
+		{Name: "book_metadata_changes", Type: field.TypeUint32, Nullable: true},
+		{Name: "movie_metadata_changes", Type: field.TypeUint32, Nullable: true},
+		{Name: "tv_show_metadata_changes", Type: field.TypeUint32, Nullable: true},
+	}
+	// MetadataChangesTable holds the schema information for the "metadata_changes" table.
+	MetadataChangesTable = &schema.Table{
+		Name:       "metadata_changes",
+		Columns:    MetadataChangesColumns,
+		PrimaryKey: []*schema.Column{MetadataChangesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "metadata_changes_albums_metadata_changes",
+				Columns:    []*schema.Column{MetadataChangesColumns[7]},
+				RefColumns: []*schema.Column{AlbumsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "metadata_changes_artists_metadata_changes",
+				Columns:    []*schema.Column{MetadataChangesColumns[8]},
+				RefColumns: []*schema.Column{ArtistsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "metadata_changes_books_metadata_changes",
+				Columns:    []*schema.Column{MetadataChangesColumns[9]},
+				RefColumns: []*schema.Column{BooksColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "metadata_changes_movies_metadata_changes",
+				Columns:    []*schema.Column{MetadataChangesColumns[10]},
+				RefColumns: []*schema.Column{MoviesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "metadata_changes_tv_shows_metadata_changes",
+				Columns:    []*schema.Column{MetadataChangesColumns[11]},
+				RefColumns: []*schema.Column{TvShowsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "metadatachange_kind_artist_metadata_changes",
+				Unique:  true,
+				Columns: []*schema.Column{MetadataChangesColumns[3], MetadataChangesColumns[8]},
+			},
+			{
+				Name:    "metadatachange_kind_album_metadata_changes",
+				Unique:  true,
+				Columns: []*schema.Column{MetadataChangesColumns[3], MetadataChangesColumns[7]},
+			},
+			{
+				Name:    "metadatachange_kind_tv_show_metadata_changes",
+				Unique:  true,
+				Columns: []*schema.Column{MetadataChangesColumns[3], MetadataChangesColumns[11]},
+			},
+			{
+				Name:    "metadatachange_kind_movie_metadata_changes",
+				Unique:  true,
+				Columns: []*schema.Column{MetadataChangesColumns[3], MetadataChangesColumns[10]},
+			},
+			{
+				Name:    "metadatachange_kind_book_metadata_changes",
+				Unique:  true,
+				Columns: []*schema.Column{MetadataChangesColumns[3], MetadataChangesColumns[9]},
+			},
+			{
+				Name:    "metadatachange_state",
+				Unique:  false,
+				Columns: []*schema.Column{MetadataChangesColumns[4]},
+			},
+		},
+	}
 	// MoviesColumns holds the columns for the "movies" table.
 	MoviesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint32, Increment: true},
@@ -1873,6 +1958,7 @@ var (
 		InvitesTable,
 		MediaEventsTable,
 		MediaFilesTable,
+		MetadataChangesTable,
 		MoviesTable,
 		MusicCreditsTable,
 		OidcIdentitiesTable,
@@ -1932,6 +2018,11 @@ func init() {
 	MediaFilesTable.ForeignKeys[1].RefTable = EpisodesTable
 	MediaFilesTable.ForeignKeys[2].RefTable = MoviesTable
 	MediaFilesTable.ForeignKeys[3].RefTable = TracksTable
+	MetadataChangesTable.ForeignKeys[0].RefTable = AlbumsTable
+	MetadataChangesTable.ForeignKeys[1].RefTable = ArtistsTable
+	MetadataChangesTable.ForeignKeys[2].RefTable = BooksTable
+	MetadataChangesTable.ForeignKeys[3].RefTable = MoviesTable
+	MetadataChangesTable.ForeignKeys[4].RefTable = TvShowsTable
 	MusicCreditsTable.ForeignKeys[0].RefTable = AlbumsTable
 	MusicCreditsTable.ForeignKeys[1].RefTable = TracksTable
 	OidcIdentitiesTable.ForeignKeys[0].RefTable = UsersTable

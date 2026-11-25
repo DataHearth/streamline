@@ -98,13 +98,15 @@ type AlbumEdges struct {
 	Credits []*MusicCredit `json:"credits,omitempty"`
 	// Events holds the value of the events edge.
 	Events []*MediaEvent `json:"events,omitempty"`
+	// MetadataChanges holds the value of the metadata_changes edge.
+	MetadataChanges []*MetadataChange `json:"metadata_changes,omitempty"`
 	// PackRecords holds the value of the pack_records edge.
 	PackRecords []*DownloadRecord `json:"pack_records,omitempty"`
 	// CoArtists holds the value of the co_artists edge.
 	CoArtists []*Artist `json:"co_artists,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [8]bool
 }
 
 // ArtistOrErr returns the Artist value or an error if the edge
@@ -154,10 +156,19 @@ func (e AlbumEdges) EventsOrErr() ([]*MediaEvent, error) {
 	return nil, &NotLoadedError{edge: "events"}
 }
 
+// MetadataChangesOrErr returns the MetadataChanges value or an error if the edge
+// was not loaded in eager-loading.
+func (e AlbumEdges) MetadataChangesOrErr() ([]*MetadataChange, error) {
+	if e.loadedTypes[5] {
+		return e.MetadataChanges, nil
+	}
+	return nil, &NotLoadedError{edge: "metadata_changes"}
+}
+
 // PackRecordsOrErr returns the PackRecords value or an error if the edge
 // was not loaded in eager-loading.
 func (e AlbumEdges) PackRecordsOrErr() ([]*DownloadRecord, error) {
-	if e.loadedTypes[5] {
+	if e.loadedTypes[6] {
 		return e.PackRecords, nil
 	}
 	return nil, &NotLoadedError{edge: "pack_records"}
@@ -166,7 +177,7 @@ func (e AlbumEdges) PackRecordsOrErr() ([]*DownloadRecord, error) {
 // CoArtistsOrErr returns the CoArtists value or an error if the edge
 // was not loaded in eager-loading.
 func (e AlbumEdges) CoArtistsOrErr() ([]*Artist, error) {
-	if e.loadedTypes[6] {
+	if e.loadedTypes[7] {
 		return e.CoArtists, nil
 	}
 	return nil, &NotLoadedError{edge: "co_artists"}
@@ -443,6 +454,11 @@ func (_m *Album) QueryCredits() *MusicCreditQuery {
 // QueryEvents queries the "events" edge of the Album entity.
 func (_m *Album) QueryEvents() *MediaEventQuery {
 	return NewAlbumClient(_m.config).QueryEvents(_m)
+}
+
+// QueryMetadataChanges queries the "metadata_changes" edge of the Album entity.
+func (_m *Album) QueryMetadataChanges() *MetadataChangeQuery {
+	return NewAlbumClient(_m.config).QueryMetadataChanges(_m)
 }
 
 // QueryPackRecords queries the "pack_records" edge of the Album entity.

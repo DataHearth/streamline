@@ -19,6 +19,7 @@ import (
 	"github.com/datahearth/streamline/ent/importscanfile"
 	"github.com/datahearth/streamline/ent/importscanshow"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/request"
 	"github.com/datahearth/streamline/ent/schema"
@@ -2533,6 +2534,82 @@ func (_c *MockStore_ClaimNextTranscodeJob_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// ClearChange provides a mock function for the type MockStore
+func (_mock *MockStore) ClearChange(ctx context.Context, owner db.ChangeOwner, kinds ...metadatachange.Kind) error {
+	// metadatachange.Kind
+	_va := make([]any, len(kinds))
+	for _i := range kinds {
+		_va[_i] = kinds[_i]
+	}
+	var _ca []any
+	_ca = append(_ca, ctx, owner)
+	_ca = append(_ca, _va...)
+	ret := _mock.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ClearChange")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ChangeOwner, ...metadatachange.Kind) error); ok {
+		r0 = returnFunc(ctx, owner, kinds...)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_ClearChange_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClearChange'
+type MockStore_ClearChange_Call struct {
+	*mock.Call
+}
+
+// ClearChange is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner db.ChangeOwner
+//   - kinds ...metadatachange.Kind
+func (_e *MockStore_Expecter) ClearChange(ctx any, owner any, kinds ...any) *MockStore_ClearChange_Call {
+	return &MockStore_ClearChange_Call{Call: _e.mock.On("ClearChange",
+		append([]any{ctx, owner}, kinds...)...)}
+}
+
+func (_c *MockStore_ClearChange_Call) Run(run func(ctx context.Context, owner db.ChangeOwner, kinds ...metadatachange.Kind)) *MockStore_ClearChange_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ChangeOwner
+		if args[1] != nil {
+			arg1 = args[1].(db.ChangeOwner)
+		}
+		var arg2 []metadatachange.Kind
+		variadicArgs := make([]metadatachange.Kind, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(metadatachange.Kind)
+			}
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ClearChange_Call) Return(err error) *MockStore_ClearChange_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_ClearChange_Call) RunAndReturn(run func(ctx context.Context, owner db.ChangeOwner, kinds ...metadatachange.Kind) error) *MockStore_ClearChange_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ClearMediaFilesMissing provides a mock function for the type MockStore
 func (_mock *MockStore) ClearMediaFilesMissing(ctx context.Context, ids []uint32) error {
 	ret := _mock.Called(ctx, ids)
@@ -2970,6 +3047,66 @@ func (_c *MockStore_CountActiveImportScans_Call) Return(v uint32, err error) *Mo
 }
 
 func (_c *MockStore_CountActiveImportScans_Call) RunAndReturn(run func(ctx context.Context) (uint32, error)) *MockStore_CountActiveImportScans_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CountChanges provides a mock function for the type MockStore
+func (_mock *MockStore) CountChanges(ctx context.Context) (db.ChangeCounts, error) {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountChanges")
+	}
+
+	var r0 db.ChangeCounts
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) (db.ChangeCounts, error)); ok {
+		return returnFunc(ctx)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context) db.ChangeCounts); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(db.ChangeCounts)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = returnFunc(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_CountChanges_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountChanges'
+type MockStore_CountChanges_Call struct {
+	*mock.Call
+}
+
+// CountChanges is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockStore_Expecter) CountChanges(ctx any) *MockStore_CountChanges_Call {
+	return &MockStore_CountChanges_Call{Call: _e.mock.On("CountChanges", ctx)}
+}
+
+func (_c *MockStore_CountChanges_Call) Run(run func(ctx context.Context)) *MockStore_CountChanges_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_CountChanges_Call) Return(changeCounts db.ChangeCounts, err error) *MockStore_CountChanges_Call {
+	_c.Call.Return(changeCounts, err)
+	return _c
+}
+
+func (_c *MockStore_CountChanges_Call) RunAndReturn(run func(ctx context.Context) (db.ChangeCounts, error)) *MockStore_CountChanges_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -5400,6 +5537,63 @@ func (_c *MockStore_DeleteBooks_Call) Return(err error) *MockStore_DeleteBooks_C
 }
 
 func (_c *MockStore_DeleteBooks_Call) RunAndReturn(run func(ctx context.Context, ids []uint32) error) *MockStore_DeleteBooks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteChange provides a mock function for the type MockStore
+func (_mock *MockStore) DeleteChange(ctx context.Context, id uint32) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteChange")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_DeleteChange_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteChange'
+type MockStore_DeleteChange_Call struct {
+	*mock.Call
+}
+
+// DeleteChange is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) DeleteChange(ctx any, id any) *MockStore_DeleteChange_Call {
+	return &MockStore_DeleteChange_Call{Call: _e.mock.On("DeleteChange", ctx, id)}
+}
+
+func (_c *MockStore_DeleteChange_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_DeleteChange_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_DeleteChange_Call) Return(err error) *MockStore_DeleteChange_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_DeleteChange_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockStore_DeleteChange_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -8327,6 +8521,74 @@ func (_c *MockStore_FindBooksByHardcoverIDs_Call) Return(uint32ToBook map[uint32
 }
 
 func (_c *MockStore_FindBooksByHardcoverIDs_Call) RunAndReturn(run func(ctx context.Context, ids []uint32) (map[uint32]*ent.Book, error)) *MockStore_FindBooksByHardcoverIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindChange provides a mock function for the type MockStore
+func (_mock *MockStore) FindChange(ctx context.Context, id uint32) (*ent.MetadataChange, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindChange")
+	}
+
+	var r0 *ent.MetadataChange
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) (*ent.MetadataChange, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) *ent.MetadataChange); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*ent.MetadataChange)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint32) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStore_FindChange_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindChange'
+type MockStore_FindChange_Call struct {
+	*mock.Call
+}
+
+// FindChange is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) FindChange(ctx any, id any) *MockStore_FindChange_Call {
+	return &MockStore_FindChange_Call{Call: _e.mock.On("FindChange", ctx, id)}
+}
+
+func (_c *MockStore_FindChange_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_FindChange_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_FindChange_Call) Return(metadataChange *ent.MetadataChange, err error) *MockStore_FindChange_Call {
+	_c.Call.Return(metadataChange, err)
+	return _c
+}
+
+func (_c *MockStore_FindChange_Call) RunAndReturn(run func(ctx context.Context, id uint32) (*ent.MetadataChange, error)) *MockStore_FindChange_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -11879,6 +12141,63 @@ func (_c *MockStore_IsAlbumMonitoredByMBID_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// KeepChange provides a mock function for the type MockStore
+func (_mock *MockStore) KeepChange(ctx context.Context, id uint32) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for KeepChange")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_KeepChange_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'KeepChange'
+type MockStore_KeepChange_Call struct {
+	*mock.Call
+}
+
+// KeepChange is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockStore_Expecter) KeepChange(ctx any, id any) *MockStore_KeepChange_Call {
+	return &MockStore_KeepChange_Call{Call: _e.mock.On("KeepChange", ctx, id)}
+}
+
+func (_c *MockStore_KeepChange_Call) Run(run func(ctx context.Context, id uint32)) *MockStore_KeepChange_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_KeepChange_Call) Return(err error) *MockStore_KeepChange_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_KeepChange_Call) RunAndReturn(run func(ctx context.Context, id uint32) error) *MockStore_KeepChange_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // KeepTorrentDataRemoval provides a mock function for the type MockStore
 func (_mock *MockStore) KeepTorrentDataRemoval(ctx context.Context, p db.TorrentDataRemovalParams) error {
 	ret := _mock.Called(ctx, p)
@@ -13026,6 +13345,92 @@ func (_c *MockStore_ListArtistsStaleSince_Call) Return(artists []*ent.Artist, er
 }
 
 func (_c *MockStore_ListArtistsStaleSince_Call) RunAndReturn(run func(ctx context.Context, cutoff time.Time) ([]*ent.Artist, error)) *MockStore_ListArtistsStaleSince_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListChanges provides a mock function for the type MockStore
+func (_mock *MockStore) ListChanges(ctx context.Context, f db.ChangeFilter, limit uint32, offset uint32) ([]*ent.MetadataChange, uint32, error) {
+	ret := _mock.Called(ctx, f, limit, offset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListChanges")
+	}
+
+	var r0 []*ent.MetadataChange
+	var r1 uint32
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ChangeFilter, uint32, uint32) ([]*ent.MetadataChange, uint32, error)); ok {
+		return returnFunc(ctx, f, limit, offset)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ChangeFilter, uint32, uint32) []*ent.MetadataChange); ok {
+		r0 = returnFunc(ctx, f, limit, offset)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*ent.MetadataChange)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ChangeFilter, uint32, uint32) uint32); ok {
+		r1 = returnFunc(ctx, f, limit, offset)
+	} else {
+		r1 = ret.Get(1).(uint32)
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, db.ChangeFilter, uint32, uint32) error); ok {
+		r2 = returnFunc(ctx, f, limit, offset)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// MockStore_ListChanges_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListChanges'
+type MockStore_ListChanges_Call struct {
+	*mock.Call
+}
+
+// ListChanges is a helper method to define mock.On call
+//   - ctx context.Context
+//   - f db.ChangeFilter
+//   - limit uint32
+//   - offset uint32
+func (_e *MockStore_Expecter) ListChanges(ctx any, f any, limit any, offset any) *MockStore_ListChanges_Call {
+	return &MockStore_ListChanges_Call{Call: _e.mock.On("ListChanges", ctx, f, limit, offset)}
+}
+
+func (_c *MockStore_ListChanges_Call) Run(run func(ctx context.Context, f db.ChangeFilter, limit uint32, offset uint32)) *MockStore_ListChanges_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ChangeFilter
+		if args[1] != nil {
+			arg1 = args[1].(db.ChangeFilter)
+		}
+		var arg2 uint32
+		if args[2] != nil {
+			arg2 = args[2].(uint32)
+		}
+		var arg3 uint32
+		if args[3] != nil {
+			arg3 = args[3].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ListChanges_Call) Return(metadataChanges []*ent.MetadataChange, v uint32, err error) *MockStore_ListChanges_Call {
+	_c.Call.Return(metadataChanges, v, err)
+	return _c
+}
+
+func (_c *MockStore_ListChanges_Call) RunAndReturn(run func(ctx context.Context, f db.ChangeFilter, limit uint32, offset uint32) ([]*ent.MetadataChange, uint32, error)) *MockStore_ListChanges_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -21052,6 +21457,81 @@ func (_c *MockStore_ReplaceMediaFile_Call) Return(mediaFile *ent.MediaFile, err 
 }
 
 func (_c *MockStore_ReplaceMediaFile_Call) RunAndReturn(run func(ctx context.Context, oldIDs []uint32, p db.CreateMediaFileParams) (*ent.MediaFile, error)) *MockStore_ReplaceMediaFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReportChange provides a mock function for the type MockStore
+func (_mock *MockStore) ReportChange(ctx context.Context, owner db.ChangeOwner, kind metadatachange.Kind, fingerprint string, payload map[string]any) error {
+	ret := _mock.Called(ctx, owner, kind, fingerprint, payload)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReportChange")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ChangeOwner, metadatachange.Kind, string, map[string]any) error); ok {
+		r0 = returnFunc(ctx, owner, kind, fingerprint, payload)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStore_ReportChange_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReportChange'
+type MockStore_ReportChange_Call struct {
+	*mock.Call
+}
+
+// ReportChange is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner db.ChangeOwner
+//   - kind metadatachange.Kind
+//   - fingerprint string
+//   - payload map[string]any
+func (_e *MockStore_Expecter) ReportChange(ctx any, owner any, kind any, fingerprint any, payload any) *MockStore_ReportChange_Call {
+	return &MockStore_ReportChange_Call{Call: _e.mock.On("ReportChange", ctx, owner, kind, fingerprint, payload)}
+}
+
+func (_c *MockStore_ReportChange_Call) Run(run func(ctx context.Context, owner db.ChangeOwner, kind metadatachange.Kind, fingerprint string, payload map[string]any)) *MockStore_ReportChange_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ChangeOwner
+		if args[1] != nil {
+			arg1 = args[1].(db.ChangeOwner)
+		}
+		var arg2 metadatachange.Kind
+		if args[2] != nil {
+			arg2 = args[2].(metadatachange.Kind)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 map[string]any
+		if args[4] != nil {
+			arg4 = args[4].(map[string]any)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStore_ReportChange_Call) Return(err error) *MockStore_ReportChange_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStore_ReportChange_Call) RunAndReturn(run func(ctx context.Context, owner db.ChangeOwner, kind metadatachange.Kind, fingerprint string, payload map[string]any) error) *MockStore_ReportChange_Call {
 	_c.Call.Return(run)
 	return _c
 }

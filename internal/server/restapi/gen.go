@@ -1948,6 +1948,81 @@ func (e MediaServerUpdateServerType) Valid() bool {
 	}
 }
 
+// Defines values for MetadataChangeKind.
+const (
+	MetadataChangeKindAlbumMerged      MetadataChangeKind = "album_merged"
+	MetadataChangeKindAlbumRemoved     MetadataChangeKind = "album_removed"
+	MetadataChangeKindArtistMerged     MetadataChangeKind = "artist_merged"
+	MetadataChangeKindArtistRemoved    MetadataChangeKind = "artist_removed"
+	MetadataChangeKindBookRemoved      MetadataChangeKind = "book_removed"
+	MetadataChangeKindEditionMerged    MetadataChangeKind = "edition_merged"
+	MetadataChangeKindEditionPreferred MetadataChangeKind = "edition_preferred"
+	MetadataChangeKindEditionRemoved   MetadataChangeKind = "edition_removed"
+	MetadataChangeKindEpisodesUnlisted MetadataChangeKind = "episodes_unlisted"
+	MetadataChangeKindMovieRemoved     MetadataChangeKind = "movie_removed"
+	MetadataChangeKindSeriesRemoved    MetadataChangeKind = "series_removed"
+	MetadataChangeKindTracksUnlisted   MetadataChangeKind = "tracks_unlisted"
+)
+
+// Valid indicates whether the value is a known member of the MetadataChangeKind enum.
+func (e MetadataChangeKind) Valid() bool {
+	switch e {
+	case MetadataChangeKindAlbumMerged:
+		return true
+	case MetadataChangeKindAlbumRemoved:
+		return true
+	case MetadataChangeKindArtistMerged:
+		return true
+	case MetadataChangeKindArtistRemoved:
+		return true
+	case MetadataChangeKindBookRemoved:
+		return true
+	case MetadataChangeKindEditionMerged:
+		return true
+	case MetadataChangeKindEditionPreferred:
+		return true
+	case MetadataChangeKindEditionRemoved:
+		return true
+	case MetadataChangeKindEpisodesUnlisted:
+		return true
+	case MetadataChangeKindMovieRemoved:
+		return true
+	case MetadataChangeKindSeriesRemoved:
+		return true
+	case MetadataChangeKindTracksUnlisted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MetadataChangeOwnerType.
+const (
+	MetadataChangeOwnerTypeAlbum  MetadataChangeOwnerType = "album"
+	MetadataChangeOwnerTypeArtist MetadataChangeOwnerType = "artist"
+	MetadataChangeOwnerTypeBook   MetadataChangeOwnerType = "book"
+	MetadataChangeOwnerTypeMovie  MetadataChangeOwnerType = "movie"
+	MetadataChangeOwnerTypeTvShow MetadataChangeOwnerType = "tv_show"
+)
+
+// Valid indicates whether the value is a known member of the MetadataChangeOwnerType enum.
+func (e MetadataChangeOwnerType) Valid() bool {
+	switch e {
+	case MetadataChangeOwnerTypeAlbum:
+		return true
+	case MetadataChangeOwnerTypeArtist:
+		return true
+	case MetadataChangeOwnerTypeBook:
+		return true
+	case MetadataChangeOwnerTypeMovie:
+		return true
+	case MetadataChangeOwnerTypeTvShow:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MissingFileOwnerKind.
 const (
 	MissingFileOwnerKindArtist MissingFileOwnerKind = "artist"
@@ -3670,6 +3745,30 @@ func (e ImportClassification) Valid() bool {
 	}
 }
 
+// Defines values for MetadataChangeMedia.
+const (
+	MetadataChangeMediaBooks  MetadataChangeMedia = "books"
+	MetadataChangeMediaMovies MetadataChangeMedia = "movies"
+	MetadataChangeMediaMusic  MetadataChangeMedia = "music"
+	MetadataChangeMediaSeries MetadataChangeMedia = "series"
+)
+
+// Valid indicates whether the value is a known member of the MetadataChangeMedia enum.
+func (e MetadataChangeMedia) Valid() bool {
+	switch e {
+	case MetadataChangeMediaBooks:
+		return true
+	case MetadataChangeMediaMovies:
+		return true
+	case MetadataChangeMediaMusic:
+		return true
+	case MetadataChangeMediaSeries:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MoviesMonitored.
 const (
 	MoviesMonitoredMonitored   MoviesMonitored = "monitored"
@@ -4159,6 +4258,30 @@ func (e AcceptLibraryRootMissingParamsRoot) Valid() bool {
 	case AcceptLibraryRootMissingParamsRootMusic:
 		return true
 	case AcceptLibraryRootMissingParamsRootSeries:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListMetadataChangesParamsMedia.
+const (
+	ListMetadataChangesParamsMediaBooks  ListMetadataChangesParamsMedia = "books"
+	ListMetadataChangesParamsMediaMovies ListMetadataChangesParamsMedia = "movies"
+	ListMetadataChangesParamsMediaMusic  ListMetadataChangesParamsMedia = "music"
+	ListMetadataChangesParamsMediaSeries ListMetadataChangesParamsMedia = "series"
+)
+
+// Valid indicates whether the value is a known member of the ListMetadataChangesParamsMedia enum.
+func (e ListMetadataChangesParamsMedia) Valid() bool {
+	switch e {
+	case ListMetadataChangesParamsMediaBooks:
+		return true
+	case ListMetadataChangesParamsMediaMovies:
+		return true
+	case ListMetadataChangesParamsMediaMusic:
+		return true
+	case ListMetadataChangesParamsMediaSeries:
 		return true
 	default:
 		return false
@@ -7198,6 +7321,74 @@ type MediaServerUpdate struct {
 
 // MediaServerUpdateServerType defines model for MediaServerUpdate.ServerType.
 type MediaServerUpdateServerType string
+
+// MetadataChange defines model for MetadataChange.
+type MetadataChange struct {
+	// Details What the list shows, by kind. `files`: how many files the item
+	// holds. `current` and `upstream`: the edition followed and the one
+	// the provider has now (`title`, `country`, `date`, `formats`,
+	// `tracks`). `items`: the tracks or episodes concerned (`id`,
+	// `label`, `title`). `target`: what the item was merged into
+	// (`title`, and `id` when it is already in the library). `slots`: a
+	// book's formats concerned.
+	Details    map[string]interface{} `json:"details"`
+	DetectedAt time.Time              `json:"detected_at"`
+	Id         uint32                 `json:"id"`
+
+	// Kind `edition_removed`, `edition_merged`: the edition an album (or a book's
+	// format) follows was deleted or merged upstream. `edition_preferred`:
+	// MusicBrainz now prefers another edition of an album holding files.
+	// `tracks_unlisted`: tracks holding files left the album's tracklist.
+	// `album_removed`, `album_merged`, `artist_removed`, `artist_merged`,
+	// `series_removed`, `movie_removed`, `book_removed`: the item itself was
+	// deleted or merged upstream. `episodes_unlisted`: episodes holding files
+	// are no longer listed.
+	Kind MetadataChangeKind `json:"kind"`
+
+	// Owner The item the change is about. An album names its artist, whose page it opens on.
+	Owner MetadataChangeOwner `json:"owner"`
+}
+
+// MetadataChangeCounts defines model for MetadataChangeCounts.
+type MetadataChangeCounts struct {
+	Books uint32 `json:"books"`
+
+	// Kinds Pending changes per kind; a kind with none is absent.
+	Kinds  map[string]uint32 `json:"kinds"`
+	Movies uint32            `json:"movies"`
+	Music  uint32            `json:"music"`
+	Series uint32            `json:"series"`
+	Total  uint32            `json:"total"`
+}
+
+// MetadataChangeKind `edition_removed`, `edition_merged`: the edition an album (or a book's
+// format) follows was deleted or merged upstream. `edition_preferred`:
+// MusicBrainz now prefers another edition of an album holding files.
+// `tracks_unlisted`: tracks holding files left the album's tracklist.
+// `album_removed`, `album_merged`, `artist_removed`, `artist_merged`,
+// `series_removed`, `movie_removed`, `book_removed`: the item itself was
+// deleted or merged upstream. `episodes_unlisted`: episodes holding files
+// are no longer listed.
+type MetadataChangeKind string
+
+// MetadataChangeList defines model for MetadataChangeList.
+type MetadataChangeList struct {
+	Items []MetadataChange `json:"items"`
+	Total uint32           `json:"total"`
+}
+
+// MetadataChangeOwner The item the change is about. An album names its artist, whose page it opens on.
+type MetadataChangeOwner struct {
+	ArtistId   *uint32                 `json:"artist_id,omitempty"`
+	ArtistName *string                 `json:"artist_name,omitempty"`
+	Id         uint32                  `json:"id"`
+	Title      string                  `json:"title"`
+	Type       MetadataChangeOwnerType `json:"type"`
+	Year       *uint16                 `json:"year,omitempty"`
+}
+
+// MetadataChangeOwnerType defines model for MetadataChangeOwner.Type.
+type MetadataChangeOwnerType string
 
 // MetadataConfigPatch Only provided fields are applied. A blank api key preserves the stored one — the current value is never echoed, so blank means "unchanged".
 type MetadataConfigPatch struct {
@@ -10717,6 +10908,9 @@ type ImportScanShowID = uint32
 // MBIDParam defines model for MBIDParam.
 type MBIDParam = string
 
+// MetadataChangeMedia defines model for MetadataChangeMedia.
+type MetadataChangeMedia string
+
 // MoviesMonitored defines model for MoviesMonitored.
 type MoviesMonitored string
 
@@ -11623,6 +11817,18 @@ type ListLibraryArrivalsParams struct {
 
 // AcceptLibraryRootMissingParamsRoot defines parameters for AcceptLibraryRootMissing.
 type AcceptLibraryRootMissingParamsRoot string
+
+// ListMetadataChangesParams defines parameters for ListMetadataChanges.
+type ListMetadataChangesParams struct {
+	// Media Only changes about this kind of media; `music` covers artists and albums.
+	Media *ListMetadataChangesParamsMedia `form:"media,omitempty" json:"media,omitempty"`
+	Kind  *MetadataChangeKind             `form:"kind,omitempty" json:"kind,omitempty"`
+	Page  *RequestPage                    `form:"page,omitempty" json:"page,omitempty"`
+	Limit *RequestLimit                   `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListMetadataChangesParamsMedia defines parameters for ListMetadataChanges.
+type ListMetadataChangesParamsMedia string
 
 // ListMoviesParams defines parameters for ListMovies.
 type ListMoviesParams struct {
@@ -12914,6 +13120,15 @@ type ServerInterface interface {
 	// TestMediaServer Run a connection test against a saved media server
 	// (POST /media-servers/{name}/test)
 	TestMediaServer(w http.ResponseWriter, r *http.Request, name ResourceName)
+	// ListMetadataChanges Provider changes waiting on an admin (admin)
+	// (GET /metadata-changes)
+	ListMetadataChanges(w http.ResponseWriter, r *http.Request, params ListMetadataChangesParams)
+	// GetMetadataChangeCounts Pending provider changes by media and kind (admin)
+	// (GET /metadata-changes/counts)
+	GetMetadataChangeCounts(w http.ResponseWriter, r *http.Request)
+	// KeepMetadataChange Keep the item as it is (admin)
+	// (POST /metadata-changes/{id}/keep)
+	KeepMetadataChange(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListMovies List all movies
 	// (GET /movies)
 	ListMovies(w http.ResponseWriter, r *http.Request, params ListMoviesParams)
@@ -14193,6 +14408,24 @@ func (_ Unimplemented) DiscoverSavedMediaServerSections(w http.ResponseWriter, r
 // TestMediaServer Run a connection test against a saved media server
 // (POST /media-servers/{name}/test)
 func (_ Unimplemented) TestMediaServer(w http.ResponseWriter, r *http.Request, name ResourceName) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ListMetadataChanges Provider changes waiting on an admin (admin)
+// (GET /metadata-changes)
+func (_ Unimplemented) ListMetadataChanges(w http.ResponseWriter, r *http.Request, params ListMetadataChangesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// GetMetadataChangeCounts Pending provider changes by media and kind (admin)
+// (GET /metadata-changes/counts)
+func (_ Unimplemented) GetMetadataChangeCounts(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// KeepMetadataChange Keep the item as it is (admin)
+// (POST /metadata-changes/{id}/keep)
+func (_ Unimplemented) KeepMetadataChange(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -19133,6 +19366,118 @@ func (siw *ServerInterfaceWrapper) TestMediaServer(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.TestMediaServer(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMetadataChanges operation middleware
+func (siw *ServerInterfaceWrapper) ListMetadataChanges(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMetadataChangesParams
+
+	// ------------- Optional query parameter "media" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "media", r.URL.Query(), &params.Media, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "media"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "media", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page", r.URL.Query(), &params.Page, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "page"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMetadataChanges(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMetadataChangeCounts operation middleware
+func (siw *ServerInterfaceWrapper) GetMetadataChangeCounts(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMetadataChangeCounts(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// KeepMetadataChange operation middleware
+func (siw *ServerInterfaceWrapper) KeepMetadataChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id ResourceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: r.URL.RawPath == ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.KeepMetadataChange(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -24547,6 +24892,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/activity/pending/{id}", wrapper.ForgetPending)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/metadata-changes", wrapper.ListMetadataChanges)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/metadata-changes/counts", wrapper.GetMetadataChangeCounts)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/metadata-changes/{id}/keep", wrapper.KeepMetadataChange)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/calendar/upcoming", wrapper.ListUpcomingReleases)
 	})
 	r.Group(func(r chi.Router) {
@@ -24726,6 +25080,10 @@ type MediaServerOKJSONResponse MediaServer
 
 type MediaServerTestOKResponse struct {
 }
+
+type MetadataChangeCountsJSONResponse MetadataChangeCounts
+
+type MetadataChangeListJSONResponse MetadataChangeList
 
 type MetadataConfigJSONResponse MetadataConfigView
 
@@ -35083,6 +35441,178 @@ func (response TestMediaServer500JSONResponse) VisitTestMediaServerResponse(w ht
 	return err
 }
 
+type ListMetadataChangesRequestObject struct {
+	Params ListMetadataChangesParams
+}
+
+type ListMetadataChangesResponseObject interface {
+	VisitListMetadataChangesResponse(w http.ResponseWriter) error
+}
+
+type ListMetadataChanges200JSONResponse struct{ MetadataChangeListJSONResponse }
+
+func (response ListMetadataChanges200JSONResponse) VisitListMetadataChangesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMetadataChanges400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListMetadataChanges400JSONResponse) VisitListMetadataChangesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMetadataChanges403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListMetadataChanges403JSONResponse) VisitListMetadataChangesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMetadataChanges500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response ListMetadataChanges500JSONResponse) VisitListMetadataChangesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMetadataChangeCountsRequestObject struct {
+}
+
+type GetMetadataChangeCountsResponseObject interface {
+	VisitGetMetadataChangeCountsResponse(w http.ResponseWriter) error
+}
+
+type GetMetadataChangeCounts200JSONResponse struct {
+	MetadataChangeCountsJSONResponse
+}
+
+func (response GetMetadataChangeCounts200JSONResponse) VisitGetMetadataChangeCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMetadataChangeCounts403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetMetadataChangeCounts403JSONResponse) VisitGetMetadataChangeCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMetadataChangeCounts500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response GetMetadataChangeCounts500JSONResponse) VisitGetMetadataChangeCountsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type KeepMetadataChangeRequestObject struct {
+	Id ResourceID `json:"id"`
+}
+
+type KeepMetadataChangeResponseObject interface {
+	VisitKeepMetadataChangeResponse(w http.ResponseWriter) error
+}
+
+type KeepMetadataChange204Response = NoContentResponse
+
+func (response KeepMetadataChange204Response) VisitKeepMetadataChangeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type KeepMetadataChange403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response KeepMetadataChange403JSONResponse) VisitKeepMetadataChangeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type KeepMetadataChange404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response KeepMetadataChange404JSONResponse) VisitKeepMetadataChangeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type KeepMetadataChange500JSONResponse struct{ InternalErrorJSONResponse }
+
+func (response KeepMetadataChange500JSONResponse) VisitKeepMetadataChangeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListMoviesRequestObject struct {
 	Params ListMoviesParams
 }
@@ -45080,6 +45610,15 @@ type StrictServerInterface interface {
 	// TestMediaServer Run a connection test against a saved media server
 	// (POST /media-servers/{name}/test)
 	TestMediaServer(ctx context.Context, request TestMediaServerRequestObject) (TestMediaServerResponseObject, error)
+	// ListMetadataChanges Provider changes waiting on an admin (admin)
+	// (GET /metadata-changes)
+	ListMetadataChanges(ctx context.Context, request ListMetadataChangesRequestObject) (ListMetadataChangesResponseObject, error)
+	// GetMetadataChangeCounts Pending provider changes by media and kind (admin)
+	// (GET /metadata-changes/counts)
+	GetMetadataChangeCounts(ctx context.Context, request GetMetadataChangeCountsRequestObject) (GetMetadataChangeCountsResponseObject, error)
+	// KeepMetadataChange Keep the item as it is (admin)
+	// (POST /metadata-changes/{id}/keep)
+	KeepMetadataChange(ctx context.Context, request KeepMetadataChangeRequestObject) (KeepMetadataChangeResponseObject, error)
 	// ListMovies List all movies
 	// (GET /movies)
 	ListMovies(ctx context.Context, request ListMoviesRequestObject) (ListMoviesResponseObject, error)
@@ -49666,6 +50205,82 @@ func (sh *strictHandler) TestMediaServer(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(TestMediaServerResponseObject); ok {
 		if err := validResponse.VisitTestMediaServerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMetadataChanges operation middleware
+func (sh *strictHandler) ListMetadataChanges(w http.ResponseWriter, r *http.Request, params ListMetadataChangesParams) {
+	var request ListMetadataChangesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMetadataChanges(ctx, request.(ListMetadataChangesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMetadataChanges")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMetadataChangesResponseObject); ok {
+		if err := validResponse.VisitListMetadataChangesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMetadataChangeCounts operation middleware
+func (sh *strictHandler) GetMetadataChangeCounts(w http.ResponseWriter, r *http.Request) {
+	var request GetMetadataChangeCountsRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMetadataChangeCounts(ctx, request.(GetMetadataChangeCountsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMetadataChangeCounts")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetMetadataChangeCountsResponseObject); ok {
+		if err := validResponse.VisitGetMetadataChangeCountsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// KeepMetadataChange operation middleware
+func (sh *strictHandler) KeepMetadataChange(w http.ResponseWriter, r *http.Request, id ResourceID) {
+	var request KeepMetadataChangeRequestObject
+
+	request.Id = id
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.KeepMetadataChange(ctx, request.(KeepMetadataChangeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "KeepMetadataChange")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(KeepMetadataChangeResponseObject); ok {
+		if err := validResponse.VisitKeepMetadataChangeResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
