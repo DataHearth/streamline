@@ -66,7 +66,11 @@ change an input:
 | `api/openapi.yaml`             | `go tool oapi-codegen --config api/oapi-codegen.yaml api/openapi.yaml` |
 | `ent/schema/`                  | `go generate ./ent`, then `task migrate:diff -- <name>` |
 | a mocked interface             | `go tool mockery`                            |
+| a generator's version          | `task generate`                              |
 | any of the above               | `task generate` does all three               |
+
+CI runs `task generate:check`, which fails when the committed files are not what
+`task generate` writes.
 
 `api/openapi.yaml` is the source of truth for the REST API — write the spec
 first, then implement the generated handler interface.
