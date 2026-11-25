@@ -2,7 +2,7 @@
 	import { BookOpen, ChevronRight, Film, Music, Tv } from "@lucide/svelte";
 	import { twMerge } from "tailwind-merge";
 	import { initials } from "@lib/people";
-	import { personPhotoUrl, posterUrl, tvPosterUrl } from "@lib/posters";
+	import { personPhotoUrl, moviePosterUrl, tvPosterUrl } from "@lib/posters";
 	import Poster from "@components/shared/Poster.svelte";
 	import {
 		isTitleItem,
@@ -42,7 +42,7 @@
 		{@const MediaIcon = item.kind === "movie" ? Film : Tv}
 		{@const poster =
 			item.kind === "movie"
-				? posterUrl({ id: item.id })
+				? moviePosterUrl({ id: item.id })
 				: tvPosterUrl(item.kind === "episode" ? item.seriesId : item.id)}
 		<div
 			class="relative h-[45px] w-[30px] shrink-0 overflow-hidden rounded-md bg-surface-2 ring-1 ring-border"

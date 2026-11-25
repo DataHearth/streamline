@@ -8,7 +8,7 @@
 	import { formatRelative } from "@lib/dates";
 	import { followChange, isItemRemoved, keepChange, ownerHref } from "@lib/metadata-changes";
 	import { NOUN_FILE } from "@lib/nouns";
-	import { albumPosterUrl, artistPosterUrl, bookPosterUrl, posterUrl, tvPosterUrl } from "@lib/posters";
+	import { albumPosterUrl, artistPosterUrl, bookPosterUrl, moviePosterUrl, tvPosterUrl } from "@lib/posters";
 	import type { MetadataChange, MetadataChangeEdition } from "@lib/types";
 	import Button from "@components/shared/Button.svelte";
 	import DeleteTitleDialog from "@components/shared/DeleteTitleDialog.svelte";
@@ -82,7 +82,7 @@
 				: c.owner.type === "tv_show"
 					? tvPosterUrl(c.owner.id)
 					: c.owner.type === "movie"
-						? posterUrl({ id: c.owner.id })
+						? moviePosterUrl({ id: c.owner.id })
 						: bookPosterUrl(c.owner.id),
 	);
 	const square = $derived(c.owner.type === "album" || c.owner.type === "artist");

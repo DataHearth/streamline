@@ -1,5 +1,5 @@
 import type { StatusKind } from "@components/shared/StatusPill.svelte";
-import { albumPosterUrl, bookPosterUrl, posterUrl, tvPosterUrl } from "./posters";
+import { albumPosterUrl, bookPosterUrl, moviePosterUrl, tvPosterUrl } from "./posters";
 import { releaseTypeLabel } from "./music-books";
 import type {
 	EpisodeStatus,
@@ -86,7 +86,7 @@ export function toCalendarEvents(movies: UpcomingMovie[]): CalendarEvent[] {
 			m.release_type === "theatrical"
 				? i18n.calendar_theatrical_release()
 				: i18n.calendar_digital_release(),
-		poster: posterUrl({ id: m.id }),
+		poster: moviePosterUrl({ id: m.id }),
 		href: `/movies/${m.id}`,
 		date: new Date(m.digital_release_date),
 		status: "wanted",
