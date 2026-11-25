@@ -160,7 +160,7 @@ func (s *Service) TagAlbum(ctx context.Context, albumID uint32) (bool, error) {
 		return false, otelx.RecordSpanError(span, err)
 	}
 	resolved := false
-	if (cfg.EmbedArt || cfg.SidecarArt) && s.posters != nil && len(all) > 0 {
+	if (cfg.EmbedArt || cfg.SidecarArt) && s.images != nil && len(all) > 0 {
 		// The cover first, so the files are written with it: an import's
 		// own art (embedded in its files, or a cover file beside them) is
 		// read now, and a remote cover fetched when none is cached.
@@ -377,8 +377,8 @@ func (a *albumTagging) artwork(ctx context.Context) albumArt {
 		return *a.art
 	}
 	art := albumArt{id: "art:none"}
-	if a.svc.posters != nil {
-		data, err := os.ReadFile(a.svc.posters.Posters().Path(coverKind, a.alb.ID))
+	if a.svc.images != nil {
+		data, err := os.ReadFile(a.svc.images.Posters().Path(coverKind, a.alb.ID))
 		if err == nil && len(data) > 0 {
 			art.cover = data
 		}

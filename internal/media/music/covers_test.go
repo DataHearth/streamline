@@ -84,7 +84,7 @@ var _ = Describe("Cover resolver", Label("unit", "music"), func() {
 		mgr, posters = imagecachetest.NewMocks(GinkgoT())
 		deezer = mockmeta.NewMockCoverProvider(GinkgoT())
 		cache = stubCoverPaths(posters)
-		svc = &Service{posters: mgr, covers: deezer}
+		svc = &Service{images: mgr, covers: deezer}
 		album = albumWithFiles()
 	})
 

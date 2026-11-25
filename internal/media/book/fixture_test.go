@@ -20,9 +20,9 @@ import (
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 )
 
-// fakePosters records what the service fetches and removes. A mock would fail
+// fakeImages records what the service fetches and removes. A mock would fail
 // the spec when the background fetch finishes after it.
-type fakePosters struct {
+type fakeImages struct {
 	mu      sync.Mutex
 	fetched []fetch
 	removed []fetch
@@ -34,7 +34,7 @@ type fetch struct {
 	src  string
 }
 
-func (p *fakePosters) Fetch(
+func (p *fakeImages) Fetch(
 	_ context.Context,
 	kind string,
 	id uint32,
@@ -46,7 +46,7 @@ func (p *fakePosters) Fetch(
 	return nil
 }
 
-func (p *fakePosters) Follow(
+func (p *fakeImages) Follow(
 	context.Context,
 	string,
 	uint32,
@@ -55,7 +55,7 @@ func (p *fakePosters) Follow(
 	return nil
 }
 
-func (p *fakePosters) Put(
+func (p *fakeImages) Put(
 	context.Context,
 	string,
 	uint32,
@@ -64,33 +64,33 @@ func (p *fakePosters) Put(
 	return nil
 }
 
-func (p *fakePosters) Serve(http.ResponseWriter, *http.Request, string, uint32) {}
+func (p *fakeImages) Serve(http.ResponseWriter, *http.Request, string, uint32) {}
 
-func (p *fakePosters) Path(
+func (p *fakeImages) Path(
 	kind string,
 	id uint32,
 ) string {
 	return "/posters/" + kind
 }
 
-func (p *fakePosters) Posters() imagecache.Store {
+func (p *fakeImages) Posters() imagecache.Store {
 	return p
 }
 
-func (p *fakePosters) Remove(kind string, id uint32) error {
+func (p *fakeImages) Remove(kind string, id uint32) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.removed = append(p.removed, fetch{kind: kind, id: id})
 	return nil
 }
 
-func (p *fakePosters) fetches() []fetch {
+func (p *fakeImages) fetches() []fetch {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return append([]fetch(nil), p.fetched...)
 }
 
-func (p *fakePosters) removals() []fetch {
+func (p *fakeImages) removals() []fetch {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return append([]fetch(nil), p.removed...)
@@ -106,15 +106,15 @@ func (b *budgetedProvider) Remaining() int   { return b.remaining }
 func (b *budgetedProvider) ScanReserve() int { return b.reserve }
 
 type fixture struct {
-	ctx     context.Context
-	client  *ent.Client
-	store   *db.DB
-	meta    *metamocks.MockBookProvider
-	posters *fakePosters
-	idx     *idxmocks.MockManager
-	dl      *dlmocks.MockDownloader
-	svc     *Service
-	dir     string
+	ctx    context.Context
+	client *ent.Client
+	store  *db.DB
+	meta   *metamocks.MockBookProvider
+	images *fakeImages
+	idx    *idxmocks.MockManager
+	dl     *dlmocks.MockDownloader
+	svc    *Service
+	dir    string
 }
 
 func bookConfig() map[string]any {
@@ -171,10 +171,10 @@ func newFixture() *fixture {
 	DeferCleanup(func() { f.client.Close() })
 	f.store = db.New(f.client)
 	f.meta = metamocks.NewMockBookProvider(GinkgoT())
-	f.posters = &fakePosters{}
+	f.images = &fakeImages{}
 	f.idx = idxmocks.NewMockManager(GinkgoT())
 	f.dl = dlmocks.NewMockDownloader(GinkgoT())
-	f.svc = NewService(f.store, f.meta, f.posters, f.idx, f.dl, nil, nil)
+	f.svc = NewService(f.store, f.meta, f.images, f.idx, f.dl, nil, nil)
 	return f
 }
 

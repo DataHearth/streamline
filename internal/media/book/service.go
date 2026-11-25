@@ -142,7 +142,7 @@ type Service struct {
 
 	db       db.Store
 	metadata metadata.BookProvider
-	posters  imagecache.Manager
+	images   imagecache.Manager
 	indexers indexer.Manager
 	download download.Downloader
 	ms       mediaserver.Refresher
@@ -162,7 +162,7 @@ func NewService(
 	mail mailer.Sender,
 ) *Service {
 	return &Service{
-		db: store, metadata: meta, posters: p, indexers: idx, download: dl, ms: ms,
+		db: store, metadata: meta, images: p, indexers: idx, download: dl, ms: ms,
 		mail: mail,
 	}
 }

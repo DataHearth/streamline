@@ -95,7 +95,7 @@ func (s *Service) enrichPerson(ctx context.Context, p db.Person) {
 // credits, which is what extensions read; Fetch skips one already cached.
 // A failed download is retried by the next pass.
 func (s *Service) fetchPeoplePhotos(ctx context.Context) {
-	if s.posters == nil {
+	if s.images == nil {
 		return
 	}
 	ctx, span := tracer.Start(ctx, "movie.fetch_people_photos")
@@ -108,7 +108,7 @@ func (s *Service) fetchPeoplePhotos(ctx context.Context) {
 	}
 	span.SetAttributes(attribute.Int("people.count", len(people)))
 	for _, p := range people {
-		if err := s.posters.Posters().
+		if err := s.images.Posters().
 			Fetch(ctx, "people", p.ID, p.ProfileURL); err != nil {
 			slog.WarnContext(ctx, "person photo fetch failed",
 				"person.id", p.ID, "error", err)
