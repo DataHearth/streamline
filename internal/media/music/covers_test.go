@@ -80,11 +80,11 @@ var _ = Describe("Cover resolver", Label("unit", "music"), func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		var mgr *mockimagecache.MockManager
-		mgr, posters = imagecachetest.NewMocks(GinkgoT())
+		var images *mockimagecache.MockManager
+		images, posters = imagecachetest.NewMocks(GinkgoT())
 		deezer = mockmeta.NewMockCoverProvider(GinkgoT())
 		cache = stubCoverPaths(posters)
-		svc = &Service{images: mgr, covers: deezer}
+		svc = &Service{images: images, covers: deezer}
 		album = albumWithFiles()
 	})
 

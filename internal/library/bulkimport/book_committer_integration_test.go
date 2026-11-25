@@ -18,12 +18,12 @@ import (
 	entimportscanbook "github.com/datahearth/streamline/ent/importscanbook"
 	entmediafile "github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/internal/db"
-	imagecachemocks "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
+	"github.com/datahearth/streamline/internal/testutil/imagecachetest"
 )
 
 func hardcoverBook(id uint32, title string) *metadata.BookRecord {
@@ -84,10 +84,11 @@ var _ = Describe(
 			DeferCleanup(client.Close)
 			store = db.New(client)
 			bookmeta = metamocks.NewMockBookProvider(GinkgoT())
+			images, _ := imagecachetest.NewMocks(GinkgoT())
 			bookSvc := book.NewService(
 				store,
 				bookmeta,
-				imagecachemocks.NewMockManager(GinkgoT()),
+				images,
 				nil,
 				nil,
 				nil,

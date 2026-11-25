@@ -72,7 +72,7 @@ var _ = Describe("imagecache.Manager", Label("unit", "imagecache"), func() {
 		})
 
 		It("refuses a body over the size cap and leaves no file", func() {
-			r := io.LimitReader(zeroReader{}, maxPosterSize+1024)
+			r := io.LimitReader(zeroReader{}, maxImageSize+1024)
 			err := svc.Posters().Put(context.Background(), "albums", 8, r)
 			Expect(err).To(MatchError(ContainSubstring("exceeds")))
 			_, statErr := os.Stat(svc.Posters().Path("albums", 8))
@@ -162,7 +162,7 @@ var _ = Describe("imagecache.Manager", Label("unit", "imagecache"), func() {
 			leftovers, err := filepath.Glob(
 				filepath.Join(
 					filepath.Dir(svc.Posters().Path("albums", 9)),
-					"poster-*.tmp",
+					"image-*.tmp",
 				),
 			)
 			Expect(err).NotTo(HaveOccurred())
@@ -256,7 +256,7 @@ var _ = Describe("imagecache.Manager", Label("unit", "imagecache"), func() {
 				oversized := httptest.NewServer(
 					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 						w.Header().Set("Content-Type", "image/jpeg")
-						_, _ = w.Write(make([]byte, maxPosterSize+1))
+						_, _ = w.Write(make([]byte, maxImageSize+1))
 					}),
 				)
 				DeferCleanup(oversized.Close)
