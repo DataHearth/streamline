@@ -95,9 +95,9 @@
 			"groupName": "node"
 		},
 		{
-			"description": "Both ffmpeg images in one PR, so the static build and the VAAPI variant move to the same ffmpeg together; renovate-pins.yaml fails a branch where the two differ. After the docker images group on purpose — the later rule wins.",
+			"description": "The VAAPI image leads ffmpeg, in a PR of its own. After the docker images group on purpose — the later rule wins.",
 			"matchManagers": ["dockerfile"],
-			"matchDepNames": ["docker.io/mwader/static-ffmpeg", "ghcr.io/linuxserver/ffmpeg"],
+			"matchDepNames": ["ghcr.io/linuxserver/ffmpeg"],
 			"groupName": "ffmpeg"
 		},
 		{
@@ -107,10 +107,10 @@
 			"versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)(?:\\.(?<patch>\\d+))?-cli-ls(?<build>\\d+)$"
 		},
 		{
-			"description": "static-ffmpeg tags `9.0`, then `9.0.2` and a rebuild `9.0.2-1`; docker versioning only moves a two-part tag to two-part tags, so `9.0` never reached a patch. The per-arch `-amd64`/`-arm64` tags do not match.",
+			"description": "The static image ships the VAAPI image's ffmpeg, and renovate cannot hold one image back until the other publishes the same version. renovate-pins.yaml writes its tag and digest on the ffmpeg branch: the newest static build of the ffmpeg the VAAPI image carries.",
 			"matchManagers": ["dockerfile"],
 			"matchDepNames": ["docker.io/mwader/static-ffmpeg"],
-			"versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)(?:\\.(?<patch>\\d+))?(?:-(?<build>\\d+))?$"
+			"enabled": false
 		},
 		{
 			"description": "The PR that moves the locked nixpkgs. It touches no toolchain version: nix/{go,node,pnpm}.nix override nixpkgs' package onto the declared patch while the two differ, and .github/workflows/renovate-pins.yaml drops the override's hashes from nix/toolchains.json once the lock catches up. After the major gate on purpose — the later rule wins, so this overrides the major-update dashboard gate above, which a nixpkgs revision would otherwise sit behind forever.",
