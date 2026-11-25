@@ -109,7 +109,7 @@ func (s *Service) applyRecord(
 	if err != nil {
 		return err
 	}
-	s.fetchArtInBackground(ctx, jobFor(fresh, rec.CoverURL))
+	s.fetchImagesInBackground(ctx, jobFor(fresh, rec.CoverURL))
 	return nil
 }
 
@@ -221,7 +221,7 @@ func (s *Service) RefreshSeries(
 		lead     *metadata.BookRecord
 		fresh    []db.BookSeed
 		freshRec = map[uint32]*metadata.BookRecord{}
-		jobs     []artJob
+		jobs     []imageJob
 	)
 	win := positionWinners(vols, byID)
 	heldAt := map[float64]bool{}
@@ -283,7 +283,7 @@ func (s *Service) RefreshSeries(
 			if err := s.settleVolume(ctx, b, row, rec); err != nil {
 				return nil, otelx.RecordSpanError(span, err)
 			}
-			jobs = append(jobs, artJob{bookID: b.ID, cover: rec.CoverURL})
+			jobs = append(jobs, imageJob{bookID: b.ID, cover: rec.CoverURL})
 		}
 	}
 
@@ -314,8 +314,8 @@ func (s *Service) RefreshSeries(
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	jobs = append(jobs, artJob{authors: creatorAuthors(out.Edges.Contributions)})
-	s.fetchArtInBackground(ctx, jobs...)
+	jobs = append(jobs, imageJob{authors: creatorAuthors(out.Edges.Contributions)})
+	s.fetchImagesInBackground(ctx, jobs...)
 	return out, nil
 }
 

@@ -201,7 +201,7 @@ func (s *Service) hydrateStubs(ctx context.Context, stubs []*ent.Book) (int, err
 
 	var (
 		done int
-		jobs []artJob
+		jobs []imageJob
 		drop []uint32
 	)
 	now := time.Now()
@@ -235,7 +235,7 @@ func (s *Service) hydrateStubs(ctx context.Context, stubs []*ent.Book) (int, err
 				return done, err
 			}
 		}
-		jobs = append(jobs, artJob{bookID: stub.ID, cover: rec.CoverURL})
+		jobs = append(jobs, imageJob{bookID: stub.ID, cover: rec.CoverURL})
 		done++
 		hydrations.Add(
 			ctx,
@@ -252,7 +252,7 @@ func (s *Service) hydrateStubs(ctx context.Context, stubs []*ent.Book) (int, err
 				"series.id", seriesID, "error", err)
 		}
 	}
-	s.fetchArtInBackground(ctx, jobs...)
+	s.fetchImagesInBackground(ctx, jobs...)
 	return done, nil
 }
 

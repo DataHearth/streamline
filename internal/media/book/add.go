@@ -150,7 +150,7 @@ func (s *Service) AddBook(ctx context.Context, p AddBookParams) (*ent.Book, erro
 	}
 	span.SetAttributes(attribute.Int("book.id", int(row.ID)))
 
-	s.fetchArtInBackground(ctx, jobFor(row, rec.CoverURL))
+	s.fetchImagesInBackground(ctx, jobFor(row, rec.CoverURL))
 	slog.InfoContext(ctx, "book added",
 		"book.id", row.ID, "hardcover_id", row.HardcoverID, "monitor", p.Monitor)
 	return row, nil
@@ -512,14 +512,14 @@ func (s *Service) AddSeries(
 	if err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	jobs := make([]artJob, 0, len(row.Edges.Volumes)+1)
-	jobs = append(jobs, artJob{authors: creatorAuthors(row.Edges.Contributions)})
+	jobs := make([]imageJob, 0, len(row.Edges.Volumes)+1)
+	jobs = append(jobs, imageJob{authors: creatorAuthors(row.Edges.Contributions)})
 	for _, v := range row.Edges.Volumes {
 		if url := covers[v.HardcoverID]; url != "" {
-			jobs = append(jobs, artJob{bookID: v.ID, cover: url})
+			jobs = append(jobs, imageJob{bookID: v.ID, cover: url})
 		}
 	}
-	s.fetchArtInBackground(ctx, jobs...)
+	s.fetchImagesInBackground(ctx, jobs...)
 	if len(stubsOf) > 0 {
 		s.HydrateSeriesInBackground(ctx)
 	}

@@ -14,9 +14,9 @@ const (
 	photoKind = "authors"
 )
 
-// artJob is the art one book or series brings: its cover, from the CDN
+// imageJob is the images one book or series brings: its cover, from the CDN
 // address the provider already returned, and the photos of its creators.
-type artJob struct {
+type imageJob struct {
 	bookID  uint32
 	cover   string
 	authors []*ent.Author
@@ -44,25 +44,25 @@ func creatorAuthors(rows []*ent.BookContribution) []*ent.Author {
 	return out
 }
 
-// jobFor builds the art of a freshly written book.
-func jobFor(b *ent.Book, cover string) artJob {
-	return artJob{
+// jobFor builds the images of a freshly written book.
+func jobFor(b *ent.Book, cover string) imageJob {
+	return imageJob{
 		bookID:  b.ID,
 		cover:   cover,
 		authors: creatorAuthors(b.Edges.Contributions),
 	}
 }
 
-// fetchArtInBackground is best effort and runs after the commit: a missing
+// fetchImagesInBackground is best effort and runs after the commit: a missing
 // cover or photo is routine and must not fail the add that triggered it. It
 // reaches the CDN only; no Hardcover request is spent on a picture.
-func (s *Service) fetchArtInBackground(ctx context.Context, jobs ...artJob) {
+func (s *Service) fetchImagesInBackground(ctx context.Context, jobs ...imageJob) {
 	if len(jobs) == 0 {
 		return
 	}
 	bg := context.WithoutCancel(ctx)
 	go func() {
-		defer observability.RecoverPanic(bg, "book.fetch_art", nil)
+		defer observability.RecoverPanic(bg, "book.fetch_images", nil)
 		for _, j := range jobs {
 			if j.cover != "" {
 				if err := s.posters.Fetch(
