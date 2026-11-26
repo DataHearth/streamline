@@ -135,10 +135,11 @@ func (w *Worker) AlbumTrackPlan(
 }
 
 // importAlbumRecord imports a completed album download: every audio file is
-// matched to a track by its tags, placed under the music library, and retagged
-// on the library copy. Tracks the release did not cover stay without a file and
-// the album stays wanted. Verification and probing are skipped, they are
-// video-specific.
+// matched to a track by its tags, checked against the album unless the record
+// bypasses verification (a doubt holds it for review), and placed under the
+// music library, where its tags are written unless library.music_tags.mode
+// is off. Tracks the release did not cover stay without a file and the album
+// stays wanted.
 func (w *Worker) importAlbumRecord(
 	ctx context.Context,
 	span trace.Span,

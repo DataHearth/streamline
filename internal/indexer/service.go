@@ -657,8 +657,8 @@ func filterProviderIDs(results []SearchResult, base SearchParams) []SearchResult
 	return out
 }
 
-// preferTitleMatches returns only the results whose parsed title names this
-// show, and every result when none does.
+// preferTitleMatches returns only the results whose parsed title names the
+// movie or show searched for, and every result when none does.
 //
 // The scope filters match on numbers alone, so an indexer answering a keyword
 // search offers every show sharing them: a search for one anime's S04E03 came
@@ -669,12 +669,12 @@ func filterProviderIDs(results []SearchResult, base SearchParams) []SearchResult
 // catch it.
 //
 // Dropping the non-matches outright is what this deliberately does not do.
-// titles is the show's own two names — TVShow stores no aliases and neither
-// caller loads TVDB's — so a library holding a show under a translated title
-// (`Moi, quand je me réincarne en Slime`, original `転生したらスライムだった件`)
-// matches none of its English releases, which are most of what its indexers
-// carry. Preferring keeps the wrong show from winning on score whenever the
-// right one is present, and costs nothing when it isn't.
+// titles is the work's own names and the aliases the library holds for it
+// (matchTitles), and a work its indexers carry under a name it has no alias
+// for (a library holding `Moi, quand je me réincarne en Slime`, original
+// `転生したらスライムだった件`, without its English title) matches none of
+// those releases. Preferring keeps the wrong work from winning on score
+// whenever the right one is present, and costs nothing when it isn't.
 //
 // The fallback set is stamped TitleMismatch so the automatic grabbers can
 // refuse what only a human should see: "prefer" is the right answer for a
