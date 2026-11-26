@@ -170,9 +170,10 @@ func (s *Service) refreshBooks(ctx context.Context, books []*ent.Book) error {
 
 // RefreshSeries re-reads a series: its skeleton, then every volume in batches
 // of twenty, which is one request for the skeleton plus one per twenty
-// volumes. Volumes new to the skeleton are added under the series policy and
-// edition, a volume already in the library as a standalone book is adopted, and
-// a volume of another series is skipped.
+// volumes, and one more when a held volume's file follows an edition. Volumes
+// new to the skeleton are added under the series policy and edition, a volume
+// already in the library as a standalone book is adopted, and a volume of
+// another series is skipped.
 func (s *Service) RefreshSeries(
 	ctx context.Context,
 	id uint32,
@@ -263,6 +264,9 @@ func (s *Service) RefreshSeries(
 		}))
 		freshRec[rec.HardcoverID] = rec
 	}
+	if err := s.reviewVolumes(ctx, prov, row.Edges.Volumes, ids, byID); err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
 	if len(fresh) > 0 {
 		counts, err := s.db.AddSeriesVolumes(ctx, id, row.QualityProfile, fresh)
 		if err != nil {
@@ -317,6 +321,46 @@ func (s *Service) RefreshSeries(
 	jobs = append(jobs, artJob{authors: creatorAuthors(out.Edges.Contributions)})
 	s.fetchArtInBackground(ctx, jobs...)
 	return out, nil
+}
+
+// reviewVolumes asks about the held volumes the skeleton still lists: one
+// Hardcover no longer returns is a book_removed change, and the editions the
+// others' files follow are checked as a standalone book's are. A volume that
+// left the skeleton is left alone.
+func (s *Service) reviewVolumes(
+	ctx context.Context,
+	prov metadata.BookProvider,
+	held []*ent.Book,
+	listed []uint32,
+	byID map[uint32]*metadata.BookRecord,
+) error {
+	var found []*ent.Book
+	for _, b := range held {
+		if !slices.Contains(listed, b.HardcoverID) {
+			continue
+		}
+		if byID[b.HardcoverID] == nil {
+			if err := s.db.ReportChange(
+				ctx, bookOwner(b.ID), metadatachange.KindBookRemoved, "", nil,
+			); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := s.db.ClearChange(
+			ctx,
+			bookOwner(b.ID),
+			metadatachange.KindBookRemoved,
+		); err != nil {
+			return err
+		}
+		full, err := s.db.FindBookByID(ctx, b.ID)
+		if err != nil {
+			return err
+		}
+		found = append(found, full)
+	}
+	return s.reviewEditions(ctx, prov, found)
 }
 
 func cmpOrString(a, b string) string {

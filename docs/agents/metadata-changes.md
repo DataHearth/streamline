@@ -14,7 +14,7 @@ A metadata refresh, for every type, writes what it can by itself: text, dates, l
 | artist | `artist_removed`, `artist_merged` | `music.RefreshOne` (`reviewArtist`): a 404, or an MBID other than the stored one |
 | tv_show | `series_removed`, `episodes_unlisted` | `tvshow.RefreshOne`: a TVDB 404, and the episodes holding files `ReconcileEpisodes(…, keepHeld=true)` kept |
 | movie | `movie_removed` | `movie.refreshOne`: a TMDB 404 |
-| book | `book_removed`, `edition_removed` | `book.RefreshBook` / `refreshBooks`: missing from the batch, and `reviewEditions` (`ExistingEditions`) |
+| book | `book_removed`, `edition_removed` | `book.RefreshBook` / `refreshBooks` / `RefreshSeries` (its held volumes): missing from the batch, and `reviewEditions` (`ExistingEditions`) |
 
 TMDB and TVDB answer a 404 as `metadata.ErrNotFound`; a merge is MusicBrainz answering a lookup with another id (`ResolveRelease` tells a merged release from a deleted one). Hardcover exposes no merges, so a book has no `*_merged` kind.
 

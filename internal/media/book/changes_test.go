@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -102,5 +103,107 @@ var _ = Describe(
 					Return(nil, errors.New("boom")).Once()
 			}),
 		)
+	},
+)
+
+var _ = Describe(
+	"Reviewing a series' volumes",
+	Label("unit", "integration", "books"),
+	func() {
+		var (
+			f   *fixture
+			s   *ent.BookSeries
+			vol *ent.Book
+		)
+
+		// Series 50 holds volumes 1001 and 1002; 1001 has an ebook file.
+		BeforeEach(func() {
+			f = newFixture()
+			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+				Return(seriesRecord("One Piece", 2), nil).Once()
+			f.meta.EXPECT().GetBooks(anyCtx, ids(1001, 1002)).
+				Return([]*metadata.BookRecord{volumeRec(1001), volumeRec(1002)}, nil).
+				Once()
+			var err error
+			s, err = f.svc.AddSeries(f.ctx, AddSeriesParams{HardcoverID: 50})
+			Expect(err).NotTo(HaveOccurred())
+			vol, err = f.store.FindBookByHardcoverID(f.ctx, 1001)
+			Expect(err).NotTo(HaveOccurred())
+			f.client.MediaFile.Create().
+				SetPath("/books/one-piece-1.epub").
+				SetSize(1).
+				SetBookID(vol.ID).
+				SetBookKind(mediafile.BookKindEbook).
+				ExecX(f.ctx)
+			vol = f.reloadBook(vol.ID)
+			Expect(vol.Edges.EbookEdition).NotTo(BeNil())
+		})
+
+		withoutSlot := func() *metadata.BookRecord {
+			r := volumeRec(1001)
+			r.Editions = slices.DeleteFunc(
+				r.Editions,
+				func(e metadata.EditionRecord) bool {
+					return e.HardcoverID == vol.Edges.EbookEdition.HardcoverEditionID
+				},
+			)
+			return r
+		}
+		changeOf := func(kind metadatachange.Kind) *ent.MetadataChange {
+			GinkgoHelper()
+			c := f.client.MetadataChange.Query().WithBook().OnlyX(f.ctx)
+			Expect(c.Kind).To(Equal(kind))
+			Expect(c.Edges.Book.ID).To(Equal(vol.ID))
+			return c
+		}
+
+		It("asks about a volume's format whose edition Hardcover removed", func() {
+			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+				Return(seriesRecord("One Piece", 2), nil).Once()
+			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1001, 1002)).
+				Return([]*metadata.BookRecord{withoutSlot(), volumeRec(1002)}, nil).
+				Once()
+			f.meta.EXPECT().
+				ExistingEditions(anyCtx, []uint32{vol.Edges.EbookEdition.HardcoverEditionID}).
+				Return(map[uint32]bool{}, nil).Once()
+
+			_, err := f.svc.RefreshSeries(f.ctx, s.ID)
+
+			Expect(err).NotTo(HaveOccurred())
+			c := changeOf(metadatachange.KindEditionRemoved)
+			Expect(c.Payload).To(HaveKeyWithValue("slots", ConsistOf("ebook")))
+		})
+
+		It(
+			"reports a volume the skeleton lists and Hardcover no longer returns",
+			func() {
+				f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+					Return(seriesRecord("One Piece", 2), nil).Once()
+				f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1001, 1002)).
+					Return([]*metadata.BookRecord{volumeRec(1002)}, nil).Once()
+
+				_, err := f.svc.RefreshSeries(f.ctx, s.ID)
+
+				Expect(err).NotTo(HaveOccurred())
+				changeOf(metadatachange.KindBookRemoved)
+			},
+		)
+
+		It("reviews the volumes of a stale series on the scheduled refresh", func() {
+			f.client.BookSeries.UpdateOneID(s.ID).
+				SetLastRefreshedAt(time.Now().Add(-48 * time.Hour)).
+				ExecX(f.ctx)
+			f.meta.EXPECT().GetSeries(anyCtx, uint32(50)).
+				Return(seriesRecord("One Piece", 2), nil).Once()
+			f.meta.EXPECT().GetBooksFresh(anyCtx, ids(1001, 1002)).
+				Return([]*metadata.BookRecord{withoutSlot(), volumeRec(1002)}, nil).
+				Once()
+			f.meta.EXPECT().ExistingEditions(anyCtx, mock.Anything).
+				Return(map[uint32]bool{}, nil).Once()
+
+			Expect(f.svc.RefreshStale(f.ctx)).To(Succeed())
+
+			changeOf(metadatachange.KindEditionRemoved)
+		})
 	},
 )
