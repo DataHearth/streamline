@@ -510,6 +510,49 @@ var _ = Describe("FilterTVShows", Label("unit", "db"), func() {
 			Expect(counts[soap.ID].Total).To(Equal(uint32(1)))
 			Expect(titles(rows)).To(Equal([]string{"Tracked", "Soap"}))
 		})
+
+		It(
+			"leaves an unmonitored show's monitored episodes out of the count",
+			func() {
+				// Unmonitoring a show writes only its own flag, so its three
+				// episodes stay monitored underneath; the card counts the one on
+				// disk.
+				off := seedShow("Off", 12, []EpisodeSeed{
+					{Number: 1, Title: "A"},
+					{Number: 2, Title: "B"},
+					{Number: 3, Title: "C"},
+				}, true)
+				Expect(
+					client.TVShow.UpdateOneID(off.ID).SetMonitored(false).Exec(ctx),
+				).
+					To(Succeed())
+				attachFile(
+					off.Edges.Seasons[0].Edges.Episodes[0].ID,
+					"/tv/o/S01E01.mkv",
+				)
+				on := seedShow("On", 13, []EpisodeSeed{
+					{Number: 1, Title: "A"},
+					{Number: 2, Title: "B"},
+				}, true)
+
+				for _, order := range []string{"desc", "asc"} {
+					rows, counts, _, err := store.FilterTVShows(
+						ctx,
+						FilterTVShowsParams{
+							Sort: "episodes", Order: order, Limit: 20, Now: now,
+						},
+					)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(counts[off.ID].Total).To(Equal(uint32(1)))
+					Expect(counts[on.ID].Total).To(Equal(uint32(2)))
+					want := []string{"On", "Off"}
+					if order == "asc" {
+						want = []string{"Off", "On"}
+					}
+					Expect(titles(rows)).To(Equal(want), order)
+				}
+			},
+		)
 	})
 
 	Describe("query", func() {
