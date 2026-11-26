@@ -296,29 +296,6 @@ func readMethod(m string) bool {
 	return m == http.MethodGet || m == http.MethodHead
 }
 
-// rejectAPI answers an /api/v1 request that failed to authenticate, and meters
-// the failure per client address so credential guessing against the API costs
-// the same as guessing against /auth/login.
-//
-// Only failures are charged, so a caller holding a working key is never metered
-// and needs no exemption: a bulk consumer, an e2e run and the SPA's own polling
-// all pass through untouched. That is also what makes the ceiling generous
-// enough to be safe — an expired session fires every query on the page at once,
-// and each of those 401s is charged, so a limit as tight as login's five would
-// turn one stale tab into a throttled address.
-//
-// Charging here rather than on the way in is what buys that, and it costs the
-// credential check itself: a request that is already over budget has had its key
-// hashed and looked up before this refuses it. That is affordable precisely
-// because nothing on the API path is bcrypt — ValidateAPIKey is a sha256 and one
-// indexed row, ValidateToken an HMAC verify — which is the whole reason
-// /auth/login could not be metered this way and needed the charge-then-refund
-// dance instead.
-//
-// A refused request never reaches the handler. It does not bound work by an
-// *authenticated* caller: anyone holding a valid key can still make requests as
-// fast as the server answers them, which is the same trust the API's RBAC
-// already extends. Metering that too is a per-user quota, not this.
 // sessionRejected reports whether a ValidateSession error is a verdict about
 // the session — missing, revoked, expired — rather than the query having
 // failed. The distinction matters because every authenticated request runs
@@ -344,6 +321,29 @@ func rejectUnavailable(
 	http.Error(w, "service unavailable", http.StatusServiceUnavailable)
 }
 
+// rejectAPI answers an /api/v1 request that failed to authenticate, and meters
+// the failure per client address so credential guessing against the API costs
+// the same as guessing against /auth/login.
+//
+// Only failures are charged, so a caller holding a working key is never metered
+// and needs no exemption: a bulk consumer, an e2e run and the SPA's own polling
+// all pass through untouched. That is also what makes the ceiling generous
+// enough to be safe — an expired session fires every query on the page at once,
+// and each of those 401s is charged, so a limit as tight as login's five would
+// turn one stale tab into a throttled address.
+//
+// Charging here rather than on the way in is what buys that, and it costs the
+// credential check itself: a request that is already over budget has had its key
+// hashed and looked up before this refuses it. That is affordable precisely
+// because nothing on the API path is bcrypt — ValidateAPIKey is a sha256 and one
+// indexed row, ValidateToken an HMAC verify — which is the whole reason
+// /auth/login could not be metered this way and needed the charge-then-refund
+// dance instead.
+//
+// A refused request never reaches the handler. It does not bound work by an
+// *authenticated* caller: anyone holding a valid key can still make requests as
+// fast as the server answers them, which is the same trust the API's RBAC
+// already extends. Metering that too is a per-user quota, not this.
 func rejectAPI(
 	limiter auth.Limiter,
 	w http.ResponseWriter,

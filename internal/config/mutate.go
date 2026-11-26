@@ -576,8 +576,10 @@ func UpdateDownload(
 // is the source of truth, and the loader would read straight past an inline
 // value anyway (see SecretValue).
 //
-// Nothing here applies before a restart: metadata.NewTMDB, NewTVDB and
-// NewHardcover read these six keys once, when wire.go constructs the clients.
+// The metadata clients read these keys once, when wire.go builds them, so a
+// change applies at the next start; the movie service also reads
+// tmdb_region on each lookup, so that one applies at once to movie release
+// dates.
 func UpdateMetadata(
 	ctx context.Context,
 	patch MetadataPatch,
