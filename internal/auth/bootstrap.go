@@ -134,7 +134,7 @@ func printGeneratedCredentials(email, password string) {
 
  default admin credentials — email: %s   password: %s
 
- Copy it now, then change it from Settings after logging in.
+ Copy it now, then change it from Account after logging in.
 =============================================================
 
 `, email, password)
@@ -142,7 +142,7 @@ func printGeneratedCredentials(email, password string) {
 
 // GeneratePassword returns a URL-safe random password (~22 chars from 16
 // crypto/rand bytes). Shared by the seed-admin bootstrap and the CLI's
-// `user set-password --generate`, so both mint credentials with the same
+// `auth set-password --generate`, so both mint credentials with the same
 // entropy and alphabet.
 func GeneratePassword() (string, error) {
 	b := make([]byte, 16)
