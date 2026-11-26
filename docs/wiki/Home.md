@@ -22,9 +22,10 @@ For anyone running Streamline for themselves, their family, or a handful of frie
 | **[First-Run Setup](First-Run-Setup)** | Logging in, metadata keys, indexers, download client, folders |
 | **[Adding Movies and TV](Adding-Movies-and-TV)** | Searching, monitoring, quality, manual grabs |
 | **[Importing an Existing Library](Importing-an-Existing-Library)** | Pointing Streamline at files you already have |
-| **[Activity and Calendar](Activity-and-Calendar)** | The queue, history, stuck downloads, what's coming |
+| **[Activity and Calendar](Activity-and-Calendar)** | The queue, history, stuck downloads, metadata changes, what's coming |
 | **[Requests and Users](Requests-and-Users)** | Inviting people, roles, approving requests |
 | **[Music and Books](Music-and-Books)** | Artists, albums and discography packs; books, series and their two slots; tags and covers |
+| **[Uploading files](Uploading-files)** | Sending albums, tracks, discographies and books from the browser or the API |
 | **[Extensions](Extensions)** | Adding the player, Subsonic and OPDS extensions, and writing your own ([Writing an extension](Writing-an-extension)) |
 | **[Send to Kindle](Send-to-Kindle)** | Emailing an ebook to your e-reader |
 | **[NixOS and Nix](NixOS)** | The flake, the NixOS module and the home-manager module |
@@ -66,7 +67,7 @@ For operators who want the whole surface: every config key, declarative deploys,
 
 ## What Streamline does today
 
-Movies, TV, music and books are all shipped, each with adoption of an existing library, automatic searching and grabbing, and requests — alongside the built-in torrent client, quality scoring, transcoding, the Subsonic and OPDS extensions, send-to-e-reader, database backups and the REST API. The player is in progress and Usenet is planned.
+Movies, TV, music and books are all shipped, each with adoption of an existing library, automatic searching and grabbing, and requests — alongside the built-in torrent client and indexers, quality scoring, transcoding, the Subsonic and OPDS extensions, send-to-e-reader, database backups and the REST API. The player is in progress and Usenet is planned.
 
 The full picture — every media type, download path, playback option and platform feature, marked Shipped, In progress or Planned — is on the **[Roadmap](Roadmap)**.
 

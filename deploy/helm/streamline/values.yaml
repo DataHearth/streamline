@@ -63,9 +63,9 @@ podSecurityContext:
 # Two ways to trip the checked set without touching config at all:
 #   * persistence.enabled: false while config.data_dir still points at /data,
 #     which is then a plain directory in the image.
-#   * library.shared.enabled: false with neither library.media nor
-#     library.downloads on, which drops config.library.{movie,series}_path back
-#     to the binary defaults /media/movies and /media/series.
+#   * library.shared.enabled: false with library.media off, or mounted anywhere
+#     but /media, which drops config.library.{movie,series}_path back to the
+#     binary defaults /media/movies and /media/series.
 # Fix either by pointing the path at a persistent volume that IS mounted, or by
 # setting readOnlyRootFilesystem: false to opt out. Setting this whole block to
 # null also opts out — it drops the container securityContext entirely. `{}`
@@ -148,7 +148,7 @@ networkPolicy:
     #
     # TRAP: the ingress controller is not the only thing that opens this port,
     # and the other two are easy to forget because neither is an app client:
-    #   * the kubelet's liveness/readiness httpGet on the SAME port. Its source
+    #   * the kubelet's startup/liveness/readiness httpGet on the SAME port. Its source
     #     is the NODE IP, not a pod, so no namespaceSelector/podSelector matches
     #     it. Whether a namespace-only `from` still admits it is CNI-dependent —
     #     Calico ships a "failsafe" for host traffic, Cilium needs
@@ -156,7 +156,7 @@ networkPolicy:
     #     CiliumNetworkPolicy. Get it wrong and probes fail, the pod is marked
     #     NotReady and restarted: a crashloop that looks like an app bug.
     #   * the `helm test` pod (templates/tests/test-health.yaml), which curls
-    #     http://<release>:8080/health from the SAME namespace. A `from` naming
+    #     http://<service>:8080/health from the SAME namespace. A `from` naming
     #     only the ingress namespace makes `helm test` hang and fail.
     # Add an explicit peer for each rather than assuming they are exempt, e.g.
     #   from:
@@ -208,7 +208,7 @@ networkPolicy:
     # rule renders, kubeconform passes, and DNS still times out silently: the
     # very mode this knob exists to prevent. On Cilium you need a
     # CiliumNetworkPolicy with `toEntities: [host]` instead (apply it alongside
-    # via extraManifests/kustomize; a v1 NetworkPolicy cannot express it).
+    # the chart, which does not render one; a v1 NetworkPolicy cannot express it).
     # Calico and the reference CNI do match the VIP against ipBlock, so this
     # knob is sufficient there.
     nodeLocalDNS: [] # e.g. [169.254.20.10/32]
@@ -349,9 +349,10 @@ secretFiles:
 
 # OIDC redirect_uri is derived per-request from the host you connect on, so
 # multi-domain SSO works without config — just register each domain's
-# /auth/oidc/<name>/callback at the IdP. STREAMLINE_PUBLIC_URL only sets the
-# canonical base for invite links (cosmetic); otherwise they fall back to
-# http://<host>:<port>. Set it here when you want absolute invite URLs:
+# /auth/oidc/<name>/callback at the IdP. STREAMLINE_PUBLIC_URL sets the
+# canonical base for invite links (http://<host>:<port> without it), marks the
+# session cookie Secure when it is https://, and its host is trusted by the
+# same-origin and trusted-network checks. Set it here:
 #   extraEnv:
 #     - name: STREAMLINE_PUBLIC_URL
 #       value: https://streamline.example.com

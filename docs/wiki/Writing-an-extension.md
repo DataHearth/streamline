@@ -10,7 +10,7 @@ A guest is a Go program compiled to WebAssembly with the standard toolchain, usi
 GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o myext.wasm .
 ```
 
-`task build:extensions` does this for the ones in the repository. Keep `main` empty; the host calls two exports.
+In the Streamline repository, `task build:extensions` does this for the module its tests run (`internal/extension/testdata/echo`). Keep `main` empty; the host calls two exports.
 
 ```go
 package main
@@ -52,13 +52,13 @@ A fresh instance of the module handles **every** request, so nothing in memory s
 | `folders[]` | `music`, `movies`, `series`, `artwork`, `cache`, `store`, see [Folders](#folders) |
 | `services[]` | `serve_file`, `serve_poster`, `ffmpeg`, `library_scan`, `http` |
 | `hooks[]` | `library`, see [Library changes](#library-changes); `settings`, see [Settings and secrets from the config file](#settings-and-secrets-from-the-config-file). Not a grant: nothing to approve |
-| `account_cards[]` | `{id, kind, title, mount, username, fields}`. `kind: credential` is a credential the account page manages (`mount`, `username`). `mount` is the address the account page shows, the one a user pastes into their app, relative to your path like a mount (`/` is `/extensions/<name>` itself): name what the app expects to be given, never a path the app adds by itself. A Subsonic app appends `/rest` to its server address, so the Subsonic card is `/`; `/rest` there would send the app to `/rest/rest`; `kind: settings` is a set of per-user controls an admin edits (`fields`, see [Settings cards](#settings-cards)). Your module answers both at `/api/v1/extensions/<name>/cards/<id>` |
+| `account_cards[]` | `{id, kind, title, mount, username, fields}`. `kind: credential` is a credential the account page manages (`mount`, `username`, see [Credential cards](#credential-cards)). `username` is what the app signs in with: `email` (the account's email, shown on the card) or `none`. `mount` is the address the account page shows, the one a user pastes into their app, relative to your path like a mount (`/` is `/extensions/<name>` itself): name what the app expects to be given, never a path the app adds by itself. A Subsonic app appends `/rest` to its server address, so the Subsonic card is `/`; `/rest` there would send the app to `/rest/rest`; `kind: settings` is a set of per-user controls an admin edits (`fields`, see [Settings cards](#settings-cards)). Streamline calls your module at `/cards/<id>` for both |
 
-Whatever you list must be granted by the admin, exactly, hooks aside. A settings card that declares no field, two fields with one id, a field of another kind or a number whose `min` is above its `max` makes the manifest unusable, and the extension fails to start.
+Whatever you list must be granted by the admin, all of it, hooks aside. A settings card that declares no field, two fields with one id, a field of another kind or a number whose `min` is above its `max` makes the manifest unusable, and the extension fails to start.
 
 ## Requests and responses
 
-`sdk.Request` carries `Method`, `Path` (relative to your mount: on a `/` mount `/extensions/opds/authors` arrives as `/authors`, on a `/rest` one `/extensions/subsonic/rest/ping` as `/ping`), the raw `Query` string, `Headers`, the `Body` (at most 16 MiB; more is a 413), `Caller`, `Folders` and `TargetUser`. `Caller` is `{ID, Role, KeyID, KeyName}` (the last two name the API key the request came with and are zero for a browser session, so with one key per device the key is the device) and is set only on a `session` mount for a signed-in user; on a `self` mount it is nil and `Authorization` is passed through. The `Cookie` header never reaches you, and `Authorization` and `X-Api-Key` are removed on a `session` mount. `Folders` lists the granted folders this call has mounted, and `TargetUser` is set only on a settings card call from the admin endpoints.
+`sdk.Request` carries `Method`, `Path` (relative to your mount: on a `/` mount `/extensions/opds/authors` arrives as `/authors`, on a `/rest` one `/extensions/subsonic/rest/ping` as `/ping`), the raw `Query` string, `Headers`, the `Body` (at most 1 MiB; more is a 413), `Caller`, `Folders` and `TargetUser`. `Caller` is `{ID, Role, KeyID, KeyName}` (the last two name the API key the request came with and are zero for a browser session, so with one key per device the key is the device) and is set only on a `session` mount for a signed-in user; on a `self` mount it is nil and `Authorization` is passed through. The `Cookie` header never reaches you, and `Authorization` and `X-Api-Key` are removed on a `session` mount. `Folders` lists the granted folders this call has mounted, and `TargetUser` is set only on a settings card call from the admin endpoints.
 
 `sdk.Response` is `Status` (0 means 200; outside 100-599 is a 500), `Headers`, `Body` (at most 16 MiB) and, instead of a body, a directive. `Set-Cookie`, `Content-Length`, `Transfer-Encoding`, `Connection`, `Content-Security-Policy` and `X-Content-Type-Options` are dropped from what you send: Streamline sets the last two itself (`sandbox; default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'` and `nosniff`), so an HTML page you serve can carry inline styles, images and `<audio>` or `<video>` from Streamline's own address, but no script.
 
@@ -84,12 +84,13 @@ res, err := sdk.Query("SELECT id, title FROM streamline_books WHERE author_name 
 // res.Columns, res.Rows ([][]any: numbers are float64, text string, NULL nil)
 // res.Error is a statement SQLite refused; err is a failed host call
 
-_, err = sdk.Exec("INSERT INTO tokens(user_id, token_hash) VALUES(?, ?)", id, hash)
+res, err = sdk.Exec("INSERT INTO tokens(user_id, token_hash) VALUES(?, ?)", id, hash)
+// res.RowsAffected, res.LastInsertID
 
 sdk.Log("warn", "something odd", "user", id)
 ```
 
-`Query` and `Exec` run on one connection to **your** database, so a transaction (`BEGIN` ... `COMMIT`) within a request holds. Create your own tables in it freely. Core is attached read-only, and only through the views you were granted: any other read of core, any write to it, and any other `ATTACH` is refused. A statement that runs more than 5 seconds is interrupted. `Log` levels are `debug`, `info`, `warn`, `error`; the line carries your name.
+`Query` and `Exec` run on one connection to **your** database, so a transaction (`BEGIN` ... `COMMIT`) within a request holds. Create your own tables in it freely. Core is attached read-only, and only through the views you were granted: any other read of core, any write to it, and any other `ATTACH` is refused, and so are `PRAGMA`, temporary and virtual tables, and a view or trigger whose name starts with `streamline_`. A statement that runs more than 5 seconds is interrupted. `Log` levels are `debug`, `info`, `warn`, `error`; the line carries your name.
 
 ## Folders
 
@@ -112,7 +113,7 @@ p, ok := r.GuestPath(row.Path) // "/srv/music/A/B/01.flac" -> "/folders/music/A/
 b, err := os.ReadFile(p)
 ```
 
-No path leaves its folder: `..`, and a symbolic link pointing outside, are refused, and you cannot create a link in the cache. Streamline deletes the oldest files of the cache once it holds more than 1 GiB, checked every hour, so treat it as a cache: anything in it can be gone on the next request.
+No path leaves its folder: `..`, and a symbolic link pointing outside, are refused, and you cannot create a link in the cache or the store. Streamline deletes the oldest files of the cache once it holds more than 1 GiB, checked every hour, so treat it as a cache: anything in it can be gone on the next request.
 
 The store is for what must stay: Streamline never deletes from it. The admin sets how much it may hold with `store_bytes` on your entry in the config file, so say in your documentation how much you need; without that value you have no store, and `r.Folder("store")` answers false. Once it holds that much, a call gets it read-only (`Folder.ReadOnly` is true and writes fail) until you have deleted enough, so delete what you no longer need yourself.
 
@@ -174,7 +175,7 @@ res, err := sdk.Fetch(sdk.FetchRequest{
 // res.Status, res.Headers, res.Body
 ```
 
-The URL's `host:port` must be in the `hosts` list the admin wrote for your extension in the config file; your manifest cannot ask for a host, so say in your documentation which server to list. `err` is set when the service is not granted, the host is not listed, or no answer came back. A status of 400 or more is an answer, not an error, and so is a redirect: it is never followed. The call runs inside your request's 30 seconds and the answer is at most 16 MiB.
+The URL's `host:port` must be in the `hosts` list the admin wrote for your extension in the config file; your manifest cannot ask for a host, so say in your documentation which server to list. The match is on the URL as you write it, so give the port even when it is the scheme's own (`https://api.example.com:443/`). `err` is set when the service is not granted, the URL is not `http` or `https`, the host is not listed, or no answer came back. A status of 400 or more is an answer, not an error, and so is a redirect: it is never followed. The call runs inside your request's 30 seconds and the answer is at most 16 MiB.
 
 ## Library scan
 
@@ -222,11 +223,21 @@ extensions:
       engine: /etc/streamline/secrets/player-engine-secret
 ```
 
-Every call then carries them: `r.Settings` holds each setting as raw JSON, as written, and `r.Secrets` the content of each file by name. Streamline does not read the keys; they mean what you say they mean. Both are empty when the file gives none.
+Every call then carries them: `r.Settings` holds each setting as raw JSON, as written, and `r.Secrets` the content of each file by name, without its trailing line breaks. Streamline does not read the keys; they mean what you say they mean. Both are empty when the file gives none.
 
 - Treat a setting from the file as final: let it win over what you stored, and refuse to change it from your own UI.
 - A missing or empty secret file keeps the extension from starting.
 - To refuse a bad value before you run, list `settings` in `hooks`. Streamline then calls `POST /hooks/settings` (empty `Mount`, as for `library`) with `Settings`, `Secrets` and `Hosts`, the entry's hosts list, before the extension starts and whenever one of them changes. Any answer but a 2xx stops the extension, and the first 300 bytes of your body are the reason the admin sees. Never put a secret in it.
+
+## Credential cards
+
+A `credential` card is the secret each user's apps sign in with. The account page draws it, from the first `credential` card your manifest lists. Streamline calls your module at `/cards/<id>` with the signed-in user as `Caller`:
+
+- `GET`: answer `{"set": true, "created_at": ..., "last_used_at": ..., "last_client": ...}` for that user, `set` being whether they hold a secret; the last three are optional, the two dates RFC 3339.
+- `POST`: create the secret, or replace it, and answer `{"secret": "..."}`. It is shown to the user once and Streamline keeps no copy.
+- `DELETE`: remove it.
+
+After a `POST`, Streamline calls `GET` again before it shows the secret, so a `GET` that fails there loses it. A `GET` that answers 300 or more while the account page lists its cards leaves your card off the page; any other call answering 300 or more, or a `POST` with no secret, reaches the user as an extension that did not answer.
 
 ## Settings cards
 
@@ -287,7 +298,8 @@ The API groups views in bundles for the admin (`music`, `books`, `video`); your 
 | Memory per instance | 64 MiB |
 | Time per request | 30 s |
 | Time per SQL statement | 5 s |
-| Request and response body | 16 MiB each |
+| Request body | 1 MiB |
+| Response body | 16 MiB |
 | One SQL value, and one query's result | 16 MiB each; page a larger read |
 | Module size | 32 MiB |
 | Cache folder | 1 GiB, oldest files deleted past it (hourly) |
@@ -296,7 +308,7 @@ The API groups views in bundles for the admin (`music`, `books`, `video`); your 
 
 ## What a guest cannot do
 
-- Open a network connection, or read a file outside its granted folders: the only ways out are the host calls above (`Query`, `Exec`, `Log`, `FFmpeg`, `ScanStatus`, `StartScan`) and the four directives. An extension granted `ffmpeg` is the exception: ffmpeg itself can reach any file and the network.
+- Open a network connection, or read a file outside its granted folders: the only ways out are the host calls above (`Query`, `Exec`, `Log`, `FFmpeg`, `Fetch`, `ScanStatus`, `StartScan`) and the four directives. An extension granted `ffmpeg` is the exception: ffmpeg itself can reach any file and the network.
 - Read core outside its views, or write to core or to a read-only folder at all.
 - Keep memory between requests, or run in the background: it runs only while answering a request.
 - Set cookies, or see the visitor's cookies, bearer token or API key (except `Authorization` on a `self` mount).

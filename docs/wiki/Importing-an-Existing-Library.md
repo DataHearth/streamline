@@ -27,11 +27,13 @@ Streamline records the files at their current paths and starts tracking them. **
 
 Use this when your library is already organised the way you like it, and you want Streamline to manage it going forward rather than re-shape it. This is the right answer for most people migrating from Radarr/Sonarr, or from years of manual filing.
 
+The scan path must be inside the library folder of that media type (`library.movie_path`, `library.series_path`, `library.music_path`, or `library.ebook_path` / `library.audiobook_path`).
+
 ### Import & rename
 
 > Files are hardlinked, copied or moved into `library.movie_path` / `library.series_path` and renamed to match your naming template.
 
-Use this when files are sitting in a staging or downloads directory and you want them filed properly, or when you want to standardise a messy library onto one consistent scheme.
+Use this when files are sitting in a staging or downloads directory, or in an old library elsewhere on disk, and you want them filed under one consistent scheme. The scan path must be outside the library folder of that media type; to re-shape files already inside it, adopt them and rename afterwards.
 
 Each scan can override the global `library.import_mode` for that scan only:
 
@@ -59,7 +61,7 @@ Chose in-place and later changed your mind? Adopted files can be renamed afterwa
 | **Mode** | Adopt in place, or Import & rename. Music and Books adopt in place only |
 | **Import mode** | Only for rename mode; overrides the global setting for this scan |
 
-The scan runs in the background through four visible phases — **Scanning**, **Discovery**, **Parsing**, **Matching** — and you can watch progress, or leave and come back.
+The scan runs in the background and its page follows four steps — **Discovery**, **Parsing**, **Review**, **Commit** — so you can watch progress, or leave and come back. One scan runs at a time.
 
 The unit of work differs by media type, which trips people up:
 
@@ -69,9 +71,9 @@ The unit of work differs by media type, which trips people up:
 So for TV, point the scan at the directory *containing* your show folders — `/media/series`, not `/media/series/The Wire`.
 
 > [!NOTE]
-> The scanner does not recurse infinitely. For films, keep your files at a sane depth under the scan root rather than buried many levels down.
+> A film scan walks every folder under the path, however deep, and takes each file on its own, so a flat folder holding many films works as well as one folder per film. A series scan reads only the folders directly under the path, and looks for episodes at any depth inside each.
 
-Very small files are skipped as junk before anything is matched, along with anything whose name contains `sample`. The floor is **50 MB for a film** and **5 MB for an episode** — episodes get the lower one because short-form series are real (a three-minute episode is a few tens of MB, well under a film's floor). A show folder whose file count looks far too low in the review list is the symptom of files falling under it.
+Very small files are skipped as junk before anything is matched, along with anything whose name contains the word `sample`. The floor is **50 MB for a film** and **5 MB for an episode** — episodes get the lower one because short-form series are real (a three-minute episode is a few tens of MB, well under a film's floor). A show folder whose file count looks far too low in the review list is the symptom of files falling under it.
 
 You can cancel a running scan at any time. It stops; nothing has been changed yet.
 
@@ -99,7 +101,7 @@ For each entry you can:
 - **Exclude** it from the import (trailers, samples, extras, that one file you don't want)
 - **Restore** something you excluded
 
-Two bulk actions save a lot of clicking: **Auto-accept** (or **Auto-adopt** in place mode) accepts everything Confirmed in one go, leaving only the entries that genuinely need you.
+You don't have to accept the easy ones: a Confirmed entry is marked **Auto-accept** (**Auto-adopt** for a show) and commits without a decision, as an Existing one does, unless you exclude it. **Skip all unmatched** excludes everything still waiting for a decision in one go.
 
 Entries showing *"Nothing parsed from the filename"* have names Streamline couldn't extract anything usable from. There are no candidates to offer — search manually or exclude.
 
@@ -107,7 +109,7 @@ Entries showing *"Nothing parsed from the filename"* have names Streamline could
 
 ## Committing
 
-Once nothing is left awaiting a decision, **Commit**. The banner tells you exactly what's about to happen — *"Confirmed entries will be adopted in place"*, *"…will be hard-linked into the library"*, and so on. Read it; it's the last checkpoint.
+When you are done deciding, **Commit**; entries still awaiting a decision are left out of it. The banner tells you exactly what's about to happen — *"Confirmed entries will be adopted in place"*, *"…will be hard-linked into the library"*, and so on. Read it; it's the last checkpoint.
 
 Commit runs in the background and reports `{imported} imported, {failed} failed` when done. Each entry ends up as:
 
@@ -141,13 +143,13 @@ The orphan scans below cover movies and series only; music and books arrive thro
 
 Import scans are the manual, deliberate route. Streamline also watches for files that appear in your library without going through it.
 
-Two background jobs — `movie-orphan-scan` and `tv-orphan-scan`, every 6 hours by default — walk your library paths looking for untracked video files. Anything found is queued as a review item, so you get the same accept/match/exclude flow rather than a surprise import.
+Two background jobs — `movie-orphan-scan` and `tv-orphan-scan`, every 6 hours by default — walk your library paths looking for untracked video files. A film file that confidently matches a film already in your library is adopted where it lies when that film has no file, and left alone when it has one. Any other film file, and any show folder holding an untracked episode, is queued as a review item, so you get the same accept/match/exclude flow rather than a surprise import.
 
 This is what catches files you dropped in by hand, or a title that arrived through some route Streamline didn't manage.
 
 A third job, `drift-check` (every 15 minutes), does the reverse: it notices files Streamline *thinks* exist but which have vanished from disk. To survive a briefly-unavailable network mount, a file has to be missing for `library.drift_grace_ticks` consecutive checks (default 3, so 45 minutes) before it counts as missing from disk. Its record then stays until `library.missing_file_redownload_after` has passed (default 7 days), and a file that comes back before that heals by itself. If an NFS blip has ever wiped your library metadata in another tool, these are the settings that exist to prevent that.
 
-All three are retimeable and pausable at **Settings → Schedules**.
+All three can be paused or run on demand at **Settings → Schedules**; their intervals are the `schedules.movie_orphan_scan`, `schedules.tv_orphan_scan` and `schedules.drift_check` config keys.
 
 ---
 

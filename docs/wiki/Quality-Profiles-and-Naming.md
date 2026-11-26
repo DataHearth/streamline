@@ -21,9 +21,9 @@ Everything starts here. Streamline extracts structured fields from a release tit
 | --- | --- |
 | **Title** | Everything before the year / season marker |
 | **Year** | `(19\|20)\d\d` |
-| **Season / Episode** | `S01E02` |
-| **Season pack** | `S01` with no episode marker |
-| **Multi-season / complete** | `S01-S05`, `S01.S02`, `complete`, `intégrale` |
+| **Season / Episode** | `S01E02`, `S01E100` |
+| **Season pack** | `S01`, `Season 1` or `Saison 1` with no episode marker |
+| **Multi-season / complete** | `S01-S05`, `S01.S02`, `S01 & S02`, `complete`, `complète`, `intégrale` |
 | **Absolute number** | ` - 18 ` style anime numbering. Deliberately conservative; used only as a fallback for anime |
 | **Air date** | `2024.03.15` and separator variants, for dailies |
 | **Resolution** | `720p`, `1080p`, `2160p`, `4K` |
@@ -139,7 +139,7 @@ Templates include directory separators — the whole relative path under `movie_
 | `{tmdb_id}` | TMDB ID | `603` |
 | `{quality}` | Parsed resolution | `1080p` |
 | `{source}` | Parsed source | `BluRay` |
-| `{codec}` | Parsed codec | `x265` |
+| `{codec}` | Parsed codec: `x264` for every H.264 spelling, `HEVC` for every H.265 one, `AV1`, `MPEG2` or `VC-1` | `HEVC` |
 | `{group}` | Release group | `GROUP` |
 | `{ext}` | File extension | `mkv` |
 
@@ -156,7 +156,7 @@ Templates include directory separators — the whole relative path under `movie_
 | `{source}` | Parsed source | `WEB-DL` |
 | `{codec}` | Parsed codec | `x264` |
 | `{group}` | Release group | `GROUP` |
-| `{absolute}` | Absolute episode number, when parsed | `018` |
+| `{absolute}` | Absolute episode number, when parsed | `18` |
 | `{air_date}` | `YYYY-MM-DD`, when parsed | `2024-03-15` |
 | `{ext}` | File extension | `mkv` |
 
@@ -164,9 +164,9 @@ Templates include directory separators — the whole relative path under `movie_
 
 Write `{tvdb_id}` as `{tvdb-{tvdb_id}}` for the same Plex/Jellyfin ID hint the movie default gets from `{tmdb-{tmdb_id}}`. Streamline reads that marker back when scanning an existing library, so a folder carrying it is matched by ID rather than by title.
 
-**Where `{quality}`, `{source}`, `{codec}` and `{group}` come from.** On import, from the release name. On a **rename**, from what Streamline recorded about the file — not from the name on disk, which the previous rename wrote and which carries only the tokens your template kept. `{quality}` additionally falls back to the probed video width, so a file whose release name never stated a resolution still gets one once [ffmpeg](Configuration-Reference#ffmpeg) has probed it. The name on disk is consulted last, for a file adopted in place that Streamline never parsed at import time.
+**Where `{quality}`, `{source}`, `{codec}` and `{group}` come from.** On import, from the release name. On a **rename**, from what Streamline recorded about the file — not from the name on disk, which the previous rename wrote and which carries only the tokens your template kept. `{quality}` takes the probed video dimensions first, so a file whose release name never stated a resolution still gets one once [ffmpeg](Configuration-Reference#ffmpeg) has probed it. The name on disk is consulted last, for a file adopted in place that Streamline never parsed at import time.
 
-`{codec}` keeps the release's spelling (`x265`) where there is one and only falls back to the probe's (`hevc`) when nothing claimed a codec — the two are different vocabularies and a template means the first.
+`{codec}` keeps the codec parsed from the release name (`HEVC`) where there is one and only falls back to the probe's (`hevc`) when nothing claimed a codec — the two are different vocabularies and a template means the first.
 
 ### Zero-padding
 
@@ -227,7 +227,7 @@ movie_naming: '{title} ({year}) {tmdb-{tmdb_id}}/{title} ({year}) [{quality}].{e
 
 # Flat, quality-rich
 movie_naming: '{title} ({year}) [{quality}] [{source}] [{codec}]-{group}.{ext}'
-# → The Matrix (1999) [1080p] [BluRay] [x265]-GROUP.mkv
+# → The Matrix (1999) [1080p] [BluRay] [HEVC]-GROUP.mkv
 
 # Anime, absolute numbering
 series_naming: '{title}/{title} - {absolute:3} - {episode_title} [{quality}].{ext}'
@@ -289,7 +289,7 @@ Sanitisation and the empty-token rule above apply to both.
 
 ## Renaming existing files
 
-Changing a template does **not** rewrite files already on disk. Apply it with the per-title **Rename files…** action, or across a selection: pick titles on the Movies or Series page, then **⋯ → Rename files…** in the bulk bar. The bulk action skips titles with nothing on disk and applies without a preview — use the per-title action when you want to see the exact moves first. Or over the API:
+Changing a template does **not** rewrite files already on disk. Apply it with the per-title **Rename files…** action, or across a selection: pick titles on the Movies, Series, Music or Books page, then **⋯ → Rename files…** in the bulk bar. The bulk action skips titles with nothing on disk and applies without a preview — use the per-title action when you want to see the exact moves first. Or over the API:
 
 ```bash
 curl -X POST -H "X-API-Key: $KEY" \
@@ -298,6 +298,8 @@ curl -X POST -H "X-API-Key: $KEY" \
 curl -X POST -H "X-API-Key: $KEY" \
   https://streamline.example.com/api/v1/series/7/rename
 ```
+
+The files beside a movie or episode that share its name (subtitles, `.nfo`, thumbnails) and Jellyfin's `.trickplay` folder move with it.
 
 This is also how you normalise files adopted in place by an [import scan](Importing-an-Existing-Library) — adoption records paths as-is; renaming is a deliberate, separate step.
 

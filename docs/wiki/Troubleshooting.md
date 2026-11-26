@@ -6,6 +6,7 @@ Find what you're seeing in the table below, then jump straight to the fix. Order
 | --- | --- | --- |
 | Title search returns nothing at all, not just no releases | No metadata API key configured | [Searching finds nothing at all](#searching-finds-nothing-at-all) |
 | Titles sit at **Wanted** forever | No working indexer/client, or quality profile rejecting every release | [Nothing ever gets grabbed](#nothing-ever-gets-grabbed) |
+| A built-in indexer's card says **login failed**, or a search says `blocked by a browser challenge` | Wrong settings, a captcha to type, or no challenge solver | [A built-in indexer can't log in or is challenged](#a-built-in-indexer-cant-log-in-or-is-challenged) |
 | Torrent completes in the client but Streamline does nothing with it | Held for review, or a path/mount mismatch | [Downloads finish but never import](#downloads-finish-but-never-import) |
 | Container exits on first start: `config file … does not exist and cannot be created` | The config directory is not writable by Streamline's uid/gid | [The config file cannot be created](#the-config-file-cannot-be-created) |
 | Import fails writing to disk | Streamline's uid/gid can't write to your media directories | [Permission denied on import](#permission-denied-on-import) |
@@ -16,10 +17,11 @@ Find what you're seeing in the table below, then jump straight to the fix. Order
 | Torrents show **Seeding** but upload is `0 B/s`, 0 peers | Nothing can open an inbound connection to you (NAT/port forward) | [Torrents seed forever but upload nothing](#torrents-seed-forever-but-upload-nothing) |
 | Plex/Jellyfin/Emby doesn't pick up new files | Refresh failed, wrong library section, or separate mounts | [My media server doesn't notice new files](#my-media-server-doesnt-notice-new-files) |
 | A library shows as offline, or looks empty after a mount/volume change | The volume is not there, or stored paths no longer match reality | [A library root is offline](#a-library-root-is-offline) |
-| Music or book search says a provider is limiting requests, or Books says Hardcover is not configured | MusicBrainz or Hardcover rate limits, or no Hardcover key | [Music and books](#music-and-books) |
+| Music or book search says a provider is limiting requests, or Books says no Hardcover API key is set | MusicBrainz or Hardcover rate limits, or no Hardcover key | [Music and books](#music-and-books) |
 | An album is **Failed**, or its files never get Streamline's tags | A CUE disc image, a seeding torrent, or file ownership | [Music and books](#music-and-books) |
 | Pod restarts before `streamline starting`, or boot takes minutes | A probe with no startup allowance, or the database or the download directory on slow storage | [Slow start or restarts during boot](#slow-start-or-restarts-during-boot) |
 | Won't start after an update: `back up the database before migrating` | The pre-migration backup could not be written | [Won't start: backup before migrating failed](#wont-start-backup-before-migrating-failed) |
+| Won't start: `the secret is empty` or `the secret is shorter than 16 bytes` | `auth.session_secret` or its `_file` is blank or too short | Set at least 16 bytes, or remove the key to have one generated ([The signing secret](Authentication-and-SSO#the-signing-secret)) |
 | `unable to open database file` / general DB errors | More than one writer, or the DB is on a network filesystem | [Database is locked](#database-is-locked) |
 | Need to see what's actually happening | — | [Where the logs are](#where-the-logs-are) |
 | Ready to report a bug | — | [Filing a good bug report](#filing-a-good-bug-report) |
@@ -49,10 +51,10 @@ Settings → Metadata takes the same keys. Restart afterwards either way. Keys a
 
 Titles sit at **Wanted** forever. Work down this list in order.
 
-**1. Is there an enabled indexer that passes its test?** Settings → Indexers → Test. A red result means Streamline can't reach it or the API key is wrong.
+**1. Is there an enabled indexer that passes its test?** Settings → Indexers → Test. A red result means Streamline can't reach it or the API key is wrong; for a built-in indexer, see [A built-in indexer can't log in](#a-built-in-indexer-cant-log-in-or-is-challenged).
 
 > [!TIP]
-> Check this one first: with no working download client, Streamline won't even search — all three automation jobs bail out immediately when there's nowhere to send a grab. It's the single most common cause of this symptom, and it's silent unless you read the logs.
+> Check this one first: with no working download client, Streamline won't even search — the RSS scans and the missing searches bail out immediately when there's nowhere to send a grab, logging `no enabled download client`. It's the single most common cause of this symptom, and it's silent unless you read the logs.
 
 **2. Is there an enabled download client that passes its test?** Settings → Download clients → Test.
 
@@ -70,11 +72,23 @@ Titles sit at **Wanted** forever. Work down this list in order.
 
 Loosen the profile, or grab the release manually — a manual grab bypasses the profile entirely.
 
-**5. Has it been long enough?** RSS sync runs every 15 minutes; missing search every 12 hours. A title that was searched and matched nothing is also on a `library.no_match_cooldown` (6h default) before it's searched again; a search no indexer answered does not start that cooldown. Force it with **Search now** on the title, or run the job from Settings → Schedules.
+**5. Has it been long enough?** RSS sync runs every 15 minutes, and skips Prowlarr indexers, which have no feed; missing search every 12 hours. A title that was searched and matched nothing is also on a `library.no_match_cooldown` (6h default) before it's searched again; a search no indexer answered does not start that cooldown. Force it from the title's actions menu (**Search for releases** on a film, **Search for wanted episodes** on a series), or run the job from Settings → Schedules.
 
-**6. Is it marked Failed?** After `library.max_grab_failures` (default 3) consecutive failures Streamline stops trying. **Search now** resets it. Episodes report the running count as `grab_failures` (absent when zero) on the series detail response, which is the only warning before an episode goes quiet — a retired episode is skipped by the search entirely, so it produces no log line and no activity entry.
+**6. Has it run out of attempts?** After `library.max_grab_failures` (default 3) failed grabs in a row the missing search passes the title over, though it still reads Wanted. A search from its actions menu ignores the count, and a successful grab clears it. A film marked **Failed** is another case: its import failed, or you deleted its held download, and nothing searches for it until you do. Episodes report the running count as `grab_failures` (absent when zero) on the series detail response, which is the only warning before an episode goes quiet — a retired episode is skipped by the search entirely, so it produces no log line and no activity entry.
 
 Failures that were never about the release do **not** count: an unreachable indexer or download client (a Prowlarr timeout, most often) is retried on the next pass with the counter untouched. If that were counted, three slow ticks would retire an episode that had a perfectly good release waiting.
+
+---
+
+## A built-in indexer can't log in or is challenged
+
+On Settings → Indexers, hover **login failed** on the indexer's card: it gives the tracker's own message and when the next automatic attempt is. Searches and feeds fail until then, so a wrong password is not retried into an account ban. The wait grows with each failure, from one minute up to a day.
+
+- **The settings are wrong.** Edit the indexer. Changed settings start over, with no wait left; **Log in** on the card tries at once whatever the wait.
+- **The message says the login form asks for a captcha.** Use **Log in** on the card, which shows the captcha, and type it. The login is then kept for 30 days from its last use.
+- **`tracker challenge not solved`**: the site is behind Cloudflare or DDoS-Guard, and the text after it says why. With no solver, set `cardigann.solver_url` in the config file and restart. `still challenged after solving` usually means the solver and Streamline reach the internet from different addresses: give the indexer the `proxy` its traffic leaves through, which the solver is told to use too.
+
+[Built-in indexers](Configuration-Reference#built-in-indexers-protocol-cardigann) has the details.
 
 ---
 
@@ -82,7 +96,7 @@ Failures that were never about the release do **not** count: an unreachable inde
 
 The torrent completes in your client, and then nothing.
 
-**Check the queue first — it may be waiting on you.** A finished download whose file disagrees with what the release claimed is [held](Activity-and-Calendar#the-queue), not failed: the Queue (**Queue & History**) shows it as **Held** with the checks it failed, and nothing moves until you choose import / delete / delete-and-search. From the outside this looks identical to a stall, so rule it out before reading a single log line. If holds aren't something you want, the checks are all configurable — see [Import verification](Configuration-Reference#import-verification).
+**Check the queue first — it may be waiting on you.** A finished download whose file disagrees with what the release claimed is [held](Activity-and-Calendar#the-queue), not failed: the Queue (**Queue & History**) shows it as **Held** with the checks it failed, and nothing moves until you choose **Import anyway** (or **Import**, once you have picked the tracks or albums), **Delete**, or **Delete & search again**. From the outside this looks identical to a stall, so rule it out before reading a single log line. If holds aren't something you want, the checks are all configurable — see [Import verification](Configuration-Reference#import-verification).
 
 Otherwise this is nearly always a **path problem**, and the logs will name it.
 
@@ -127,7 +141,7 @@ While qBittorrent is moving a torrent's files (switching it to Automatic Torrent
 
 ## An adopted torrent says "files not found"
 
-You added a torrent in your download client yourself, tagged it `streamline` so Streamline would pick it up, and it shows on **Queue & History** under *Needs attention* as a proposal reading `files not found — client reports /some/path`.
+You added a torrent in your download client yourself (in qBittorrent, under the `streamline` category so Streamline would pick it up), and it shows on **Queue & History** under *Needs attention* as a proposal reading `files not found — client reports /some/path`.
 
 **qBittorrent only moves files to a category's save path under Automatic Torrent Management.** A torrent added in Manual mode keeps whatever save path it was added with, forever. Setting its category changes the label and nothing else — so Streamline adopts it, looks under `library.download_path/<torrent name>`, and finds nothing.
 
@@ -198,10 +212,10 @@ Gone from the logs? Set a new one from the command line, with the service stoppe
 **Too many failed attempts.** Two separate limits apply. The account locks after 10 failures in 15 minutes; clear it with:
 
 ```bash
-streamline auth unlock you@example.com
+streamline -c /etc/streamline/config.yaml auth unlock you@example.com
 ```
 
-There's also a per-IP rate limit of 5 attempts per 15 minutes that is *not* clearable — wait it out.
+There's also a per-IP rate limit of 5 attempts per 15 minutes that no command clears: wait it out, or restart Streamline, which keeps it in memory.
 
 **You've genuinely lost the admin password.** `auth.seed_admin` only acts when the user table is empty, so you can't use it to reset an existing install. Another admin can reset the password from Settings → Users; with no other admin, the `auth set-password` command above is the way back in. It works on any account, opens the database directly and revokes the account's sessions. Forgot which email the admin uses? `streamline -c … auth list --role admin` prints them.
 
@@ -251,7 +265,7 @@ Edit your config file and restart, or set `read_only: false` if you'd rather man
 
 **OIDC providers are only discovered at process start.** Adding or editing one in the UI saves it, but the provider isn't live until you restart. The Settings → Single Sign-On page says so, but it's easy to miss.
 
-Also: **a provider whose discovery fails at startup is skipped silently.** If your IdP was down, or the issuer URL is wrong, the provider simply won't appear on the login page and no error is shown in the UI. Check the startup logs.
+Also: **a provider whose discovery fails at startup is unavailable until the next start.** If your IdP was down, or the issuer URL is wrong, its button is still on the login page but leads to a `404`. Look for `OIDC provider discovery failed; provider unavailable` in the startup logs.
 
 The redirect URI to register at your IdP is:
 
@@ -352,7 +366,16 @@ CRITICAL library root does not match any stored path — held offline if those f
 curl -sS -H "X-API-Key: $KEY" "$SL/api/v1/library/path-migration/roots"
 ```
 
-`tracked: 0` with a non-zero `total` is the divergence. Preview, then run:
+`tracked: 0` with a non-zero `total` is the divergence. Preview, then run, over the API or from Settings → Advanced:
+
+```bash
+curl -sS -X POST -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
+  -d '{"root":"movies","from":"/mnt/media-shared/movies","to":"/srv/streamline/movies"}' \
+  "$SL/api/v1/library/path-migration/preview"
+```
+
+> [!WARNING]
+> Always run the `/preview` call first and check the result before dropping it to apply. Add `"move_files": true` (movies and series only) if the files also need relocating: a wrong `from`/`to` pair then moves real files. Without it Streamline expects the files to already be at the new path, rewrites the records whose file it finds there, and leaves the others as they are, counted in `skipped`. Either way the configured root moves with the migration, however many records were skipped, unless the instance is `read_only` or the root lies outside `from`. Nothing on the server remembers the old prefix, so you have to name it yourself.
 
 **Only some files are outside the root.** `tracked` above zero but below `total` means part of the library is stored elsewhere. That is expected for files adopted where they lay, and a problem when an earlier move left rows behind on the old path. Streamline logs it at each start:
 
@@ -362,16 +385,6 @@ WARN some stored paths sit outside their configured root
 ```
 
 Settings → Advanced shows the same count and unlocks **From**: enter the folder the stray files are under as From and the root as To to bring them along. Leaving From empty moves the root itself, as usual.
-
-
-```bash
-curl -sS -X POST -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
-  -d '{"root":"movies","from":"/mnt/media-shared/movies","to":"/srv/streamline/movies"}' \
-  "$SL/api/v1/library/path-migration/preview"
-```
-
-> [!WARNING]
-> Always run the `/preview` call first and check the result before dropping it to apply. Add `"move_files": true` only if the files also need relocating; without it Streamline expects them to already be at the new path and just rewrites the records — pointing the migration at the wrong `from`/`to` pair moves or orphans real files. Nothing on the server remembers the old prefix, so you have to name it yourself.
 
 The `downloads` root is the softer case: nothing prunes download records on
 drift, so its warning reads `downloads cannot import` instead — the risk is
@@ -396,9 +409,9 @@ While a file is missing, nothing tries to tag, transcode, probe or rename it, an
 
 ## Music and books
 
-**"Rate limited" on a music search or add.** MusicBrainz allows one request a second, and when it is shedding load it refuses even that. Streamline answers `429` with a retry time and does not retry on its own; wait and search again. Background work (filling in tracks and credits, covers for search tiles) pauses for as long as MusicBrainz asked, so your own searches go first. The warning in the log names MusicBrainz's rate-limit zone: `global` means MusicBrainz is limiting everyone, not you. If this is constant, a [self-hosted MusicBrainz mirror](Configuration-Reference#metadata) (`metadata.musicbrainz_url`, with `metadata.musicbrainz_interval` lowered or `0s`) removes the limit.
+**"The metadata provider is limiting requests" on a music search or add.** MusicBrainz allows one request a second, and when it is shedding load it refuses even that. Streamline answers `429` with a retry time and does not retry on its own; wait and search again. Background work (filling in tracks and credits, covers for search tiles) pauses for as long as MusicBrainz asked, so your own searches go first. The warning in the log names MusicBrainz's rate-limit zone: `global` means MusicBrainz is limiting everyone, not you. If this is constant, a [self-hosted MusicBrainz mirror](Configuration-Reference#metadata) (`metadata.musicbrainz_url`, with `metadata.musicbrainz_interval` lowered or `0s`) removes the limit. *MusicBrainz is not answering; try again shortly.* is another case: MusicBrainz, or your mirror, could not serve the request (`musicbrainz unavailable` in the log), and nothing is paused for it.
 
-**"Hardcover is not configured" or "key rejected" on Books.** Book search, add, refresh, request approval and book import scans all need `metadata.hardcover_api_key`. *Not configured* means no key is set; *key rejected* means Hardcover answered `401` to the one you set — make a new token on Hardcover and set it again on Settings → Metadata, then restart. A `429` from Hardcover is its own limit (60 requests a minute, 5,000 a day, with 500 held back for adds); see [Hardcover limits](Music-and-Books#hardcover-limits).
+**"No Hardcover API key is set" or "Hardcover rejected the API key" on Books.** Book search, add, refresh, request approval and book import scans all need `metadata.hardcover_api_key`. The first means no key is set; the second means Hardcover answered `401` to the one you set — make a new token on Hardcover and set it again on Settings → Metadata, then restart. A `429` from Hardcover is its own limit (60 requests a minute, 5,000 a day, with 500 held back for adds); see [Hardcover limits](Music-and-Books#hardcover-limits).
 
 **An album is marked Failed.** The import refused the download and the reason is on the album's panel. The usual one is a release that turned out to be one audio file per disc with a `.cue` sheet, which Streamline does not split. A failed album is not searched again automatically, so the same release is not grabbed twice: pick another with *Manual search*, or retry the download from History once the cause is fixed.
 
@@ -422,7 +435,7 @@ The database is `<data_dir>/streamline.db`, accompanied by `-wal` and `-shm` fil
 
 ## Slow start or restarts during boot
 
-Boot first reads the files it would otherwise read a page at a time into the page cache: the database and its WAL, and the built-in engine's piece completion (`.streamline-session/.torrent.bolt.db` in its download directory). Then it opens and migrates the database and re-adds the torrents. The log shows `reading boot files into the page cache` with their size, then `boot files read into the page cache` with how long it took. On local disks it takes a moment. On network storage it runs at the storage's throughput, about 24 s for a 130 MB database on a Ceph RBD volume reached over a WAN, and it saves much more than that: on such storage each cold page read is a round trip, and on CephFS each one also pulls a whole readahead window. The read stops after 2 minutes (`timed_out=true`); what it read by then stays cached. Keep the database itself on a block volume (Ceph RBD, EBS, iSCSI), not a network filesystem: see [Database is locked](#database-is-locked).
+Boot first reads the files it would otherwise read a page at a time into the page cache: the database and its WAL, and the built-in engine's piece completion (`.streamline-session/.torrent.bolt.db` in its download directory). Then it opens and migrates the database. The built-in engine's torrents are re-added in the background, and `torrent sessions restored` is logged once they are. The log shows `reading boot files into the page cache` with their size, then `boot files read into the page cache` with how long it took. On local disks it takes a moment. On network storage it runs at the storage's throughput, about 24 s for a 130 MB database on a Ceph RBD volume reached over a WAN, and it saves much more than that: on such storage each cold page read is a round trip, and on CephFS each one also pulls a whole readahead window. The read stops after 2 minutes (`timed_out=true`); what it read by then stays cached. Keep the database itself on a block volume (Ceph RBD, EBS, iSCSI), not a network filesystem: see [Database is locked](#database-is-locked).
 
 On Kubernetes, give boot a startup allowance or liveness kills the pod mid-boot. The Helm chart has a `startupProbe` from 3.1.0 (5 minutes by default); raise `startupProbe.failureThreshold` if the read or a migration needs longer.
 

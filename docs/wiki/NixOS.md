@@ -80,7 +80,7 @@ services.streamline = {
 };
 ```
 
-`settings` is a freeform attribute set rendered straight to YAML, so every key in the [Configuration Reference](Configuration-Reference) works here under its own name — `library.import_mode`, `schedules.movie_rss_sync`, `quality_profiles`, all of it. Only `data_dir`, `server.host` and `server.port` are declared with defaults; everything else falls through to Streamline's own.
+`settings` is a freeform attribute set rendered straight to YAML, so every key in the [Configuration Reference](Configuration-Reference) works here under its own name — `library.import_mode`, `schedules.movie_rss_sync`, `quality_profiles`, all of it. Only `data_dir` (`<stateDir>/data`), `server.host` (`127.0.0.1`) and `server.port` (`8080`) are declared with defaults; everything else falls through to Streamline's own. The loopback default is why the example sets `server.host`: `openFirewall` alone does not make the service listen on the network.
 
 The service runs as the system user `streamline` with state under `/var/lib/streamline`. **That user must be able to read and write your media and download directories** — see [the folder rule](Installation#before-you-start-the-folder-rule), which applies here exactly as it does under Docker.
 
@@ -114,7 +114,7 @@ services.streamline = {
 };
 ```
 
-The credential is readable by the service alone, and the path is always `/run/credentials/streamline.service/<name>`.
+The credential is readable by the service alone, and the path is always `/run/credentials/streamline.service/<name>` for the NixOS unit. The home-manager unit belongs to your user manager, so its credentials are under `$XDG_RUNTIME_DIR` instead: `/run/user/<uid>/credentials/streamline.service/<name>`.
 
 For anything without a `*_file` twin, `environmentFile` takes a file of `STREAMLINE_*` assignments read by systemd, which never enters the store:
 
@@ -183,7 +183,7 @@ For running Streamline under your own account — the usual reason being a libra
 }
 ```
 
-It is the same option set minus the system-only ones (`user`, `group`, `openFirewall`, `hardwareAcceleration`, `extraReadWritePaths`), and it produces a systemd **user** unit with state under `$XDG_DATA_HOME/streamline`. `ProtectHome` is deliberately not set — hiding `$HOME` would hide the library the whole arrangement exists to reach.
+It is the same option set minus the system-only ones (`user`, `group`, `openFirewall`, `hardwareAcceleration`, `extraReadWritePaths`), and it produces a systemd **user** unit with state under `$XDG_DATA_HOME/streamline`. `ProtectHome` is deliberately not set — hiding `$HOME` would hide the library the whole arrangement exists to reach. The package default is `pkgs.streamline` here too, so apply `streamline.overlays.default` to the nixpkgs home-manager uses, or set `package`.
 
 A user unit stops when you log out unless you enable lingering: `loginctl enable-linger $USER`.
 
@@ -195,7 +195,7 @@ A user unit stops when you log out unless you enable lingering: `loginctl enable
 | `package` | `pkgs.streamline` | Which build to run |
 | `settings` | `{ }` | Freeform config, rendered to YAML |
 | `mutableSettings` | `true` | Seed the config into the state dir instead of serving it from the store |
-| `stateDir` | `/var/lib/streamline` | Database, and the seeded config file |
+| `stateDir` | `/var/lib/streamline` (home-manager: `$XDG_DATA_HOME/streamline`) | Database, and the seeded config file |
 | `credentials` | `{ }` | `name = path` pairs passed via `LoadCredential` |
 | `environmentFile` | `null` | File of `STREAMLINE_*` assignments |
 | `user` / `group` | `streamline` | Identity the unit runs as (NixOS only) |
@@ -204,4 +204,4 @@ A user unit stops when you log out unless you enable lingering: `loginctl enable
 | `ffmpeg.enable` | `true` | Put ffmpeg/ffprobe on the unit's `PATH` |
 | `ffmpeg.package` | `pkgs.ffmpeg-headless` | Which ffmpeg build |
 | `hardwareAcceleration.enable` | `false` | Open `/dev/dri` and join `render`/`video` (NixOS only) |
-| `hardwareAcceleration.device` | `/dev/dri/renderD128` | Render node, also used for `transcoding.hw_device` |
+| `hardwareAcceleration.device` | `/dev/dri/renderD128` | Render node, also used for `transcoding.hw_device` (NixOS only) |

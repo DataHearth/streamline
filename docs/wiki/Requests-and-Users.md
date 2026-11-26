@@ -19,13 +19,15 @@ Streamline has a built-in request system, so you don't need to run Overseerr/Jel
 | --- | --- | --- | --- |
 | Settings, indexers, download clients, imports | Yes | No | No |
 | Manage users | Yes | No | No |
-| Add and search titles, manage downloads | Yes | Yes | No |
+| Add, search, grab, upload, rename and delete titles | Yes | Yes | No |
+| Pause, cancel or resolve downloads, adopted torrents, metadata changes | Yes | No | No |
+| Browse the library, the calendar and the download queue | Yes | Yes | Yes |
 | Search for titles and submit requests | Yes | Yes | Yes |
 | See everyone's requests | Yes | Yes | No (own only) |
 | Approve requests | Yes | Yes | No |
-| Deny or reopen requests | Yes | Yes | No |
+| Reject or reopen requests | Yes | Yes | No |
 
-**Request only** is the role for the people you're running this *for* — housemates, family, the friend who keeps asking for films. They get a search box and a request button, and none of the machinery.
+**Request only** is the role for the people you're running this *for* — housemates, family, the friend who keeps asking for films. They get the library to browse, a search box and a request button, and can change nothing in it.
 
 **Member** is for someone you trust to help run the library but not to reconfigure it.
 
@@ -50,9 +52,9 @@ The mode governs **both** ways a new account gets created — the registration f
 
 ### Invites
 
-**Settings → Users → Invites → Create.**
+**Settings → Users → Invites → Create invite.**
 
-You choose the email address and the role the invite grants. Streamline generates a token and shows you the registration link — **once**. It is not stored in a retrievable form; if you lose it, revoke the invite and make another.
+You choose the email address, the role the invite grants and how long it stays valid (1, 3, 7 or 30 days). Streamline generates a token and shows you the registration link — **once**. It is not stored in a retrievable form; if you lose it, revoke the invite and make another.
 
 Send the link. When they open it, the registration form is pre-filled with the bound email address (read-only), and the account is created with the role you picked. Signing up with a different email than the invite was bound to is rejected.
 
@@ -73,7 +75,7 @@ If you'd rather not manage passwords at all, Streamline speaks OIDC — Authenti
 
 ## Making a request
 
-From a request-only user's side, this is the entire app: search, find, ask.
+From a request-only user's side, this is what there is to do besides browsing: search, find, ask.
 
 Search returns titles from TMDB (films), TVDB (shows), MusicBrainz (artists and albums) and Hardcover (books and series, when a Hardcover key is configured), including things not in the library. Pick one, optionally state a quality preference, and submit.
 
@@ -83,7 +85,7 @@ Their **Requests** page lists what they've asked for and where each one stands. 
 
 ---
 
-Music and books can be requested too: an artist, a single album, a single book or a whole series of books. A requester never chooses what to monitor: approving an artist monitors all of its albums, approving an album adds its artist unmonitored (if the library lacks it) and monitors just that album, a book is added with both its ebook and audiobook slots, and a series with every volume monitored (placeholders for the later volumes fill in afterwards); change that on the title's page afterwards. The profile you pick at approval comes from that medium's own profiles (music, or books); one from another medium is refused and the request stays pending. A music or book request turns *available* when its first file lands. See [Music and Books](Music-and-Books).
+Music and books can be requested too: an artist, a single album, a single book or a whole series of books. A requester never chooses what to monitor: approving an artist monitors all of its albums of the types ticked under Settings → Music, approving an album adds its artist unmonitored (if the library lacks it) and monitors just that album, a book is added with both its ebook and audiobook slots, and a series with every volume's ebook monitored (placeholders for the later volumes fill in afterwards); change that on the title's page afterwards. The profile you pick at approval comes from that medium's own profiles (music, or books); one from another medium is refused and the request stays pending. A music or book request turns *available* when its first file lands. See [Music and Books](Music-and-Books).
 
 ## Reviewing requests
 
@@ -95,14 +97,14 @@ Each request shows the title, poster, synopsis, who asked, when, and any quality
 | --- | --- |
 | **Pending** | Waiting on you |
 | **Approved** | Added to the library; being searched for and downloaded |
-| **Denied** | Refused, with a reason the requester can see |
+| **Rejected** | Refused, with any reason you gave shown to the requester (`denied` in the API) |
 | **Available** | Downloaded and imported — ready to watch |
 
 **Approve & add** creates the library item there and then. You pick the quality profile at approval time; leaving it blank uses your server default, and you're free to override whatever the requester asked for.
 
-**Deny** requires a reason, and that reason is shown to the requester — the placeholder text suggests the tone: *"Still in cinemas — let's revisit when it's on digital."* It's a message, not a log entry.
+**Reject** asks for a reason, which is shown to the requester — the placeholder text suggests the tone: *"Still in cinemas — let's revisit when it's on digital."* It's a message, not a log entry.
 
-**Reopen as pending** undoes a denial when circumstances change.
+**Reopen as pending** undoes a rejection when circumstances change.
 
 Filter by status and media type, or search by title or requester.
 
@@ -117,6 +119,7 @@ Filter by status and media type, or search by title or requester.
 - **Clear a lockout** — resets the failed-login counter after too many bad password attempts
 - **Revoke individual sessions** — kick a specific device without touching the others
 - **Revoke their API keys**
+- **Set what an extension keeps for them**: the settings card of an extension that has one
 - **Delete the account** — permanently removes it and every resource they own
 
 Two guard rails: you can't delete your own account, and Streamline refuses to remove or demote the last remaining admin. It will not let you lock yourself out of your own instance.
@@ -124,16 +127,20 @@ Two guard rails: you can't delete your own account, and Streamline refuses to re
 You can also clear a lockout from the command line if the UI is unreachable:
 
 ```bash
-streamline auth unlock user@example.com
+streamline --config /etc/streamline/config.yaml auth unlock user@example.com
 ```
+
+`--config` must name the file the server runs with, since that is where the database path comes from. In Docker, prefix the command with `docker exec streamline`.
 
 ---
 
 ## Your own account
 
-The avatar menu, top right → **Account settings**.
+Click your name at the bottom of the sidebar (on a phone, under **More** in the bottom bar).
 
+- **Profile**: your display name
 - **Change your password**
+- **Language**: of the web UI, for this browser only
 - **Sessions** — every device you're logged in on, with the option to revoke any of them
 - **API keys** — create keys for scripts and mobile apps, each **read-only** or **full** and lasting 30, 90 or 365 days, or never expiring. Shown once at creation; store it immediately
 - **Players & readers** — a separate credential for each app an extension serves, such as the OPDS token an e-reader signs in with (see the [OPDS extension](Extensions) and [Music and Books](Music-and-Books#reading-from-other-apps))

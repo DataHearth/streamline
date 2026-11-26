@@ -19,7 +19,7 @@ useful things you can send.
 
 ## Setup
 
-Requires Go >= 1.27.3 (the `go` directive in `go.mod`), Node >= 24.22.2,
+Requires Go >= 1.27.4 (the `go` directive in `go.mod`), Node >= 26.13.1,
 [pnpm](https://pnpm.io) 12 (the `packageManager` in `package.json`) and
 [Task](https://taskfile.dev). Nix users get all of it, at exactly those
 versions, from the flake devshell (`nix develop`, or direnv).
@@ -38,7 +38,8 @@ The frontend is `//go:embed`-ed into the binary, so `task build:go` depends on
 For development:
 
 ```bash
-streamline config init --output ./tmp/config.yaml    # or ./streamline config init …
+mkdir -p tmp
+./streamline config init --output ./tmp/config.yaml  # then set the library.*_path keys to folders you can write
 task dev                # live reload via air, serves http://localhost:8080
 ```
 
@@ -51,10 +52,11 @@ task test               # all suites
 task test:unit -- ./internal/metadata/...   # one package
 ```
 
-CI runs `task test` and all three linters: `task lint:go`, `task lint:frontend`
-and `task lint:ts` (svelte-check, with warnings counted as failures, since
-nothing else type-checks the Svelte app). If `task lint` and `task test` pass
-locally, the PR should be green.
+CI runs `task test`, the format check (`task fmt:check`, through the flake) and
+all three linters: `task lint:go`, `task lint:frontend` and
+`task lint:ts -- --fail-on-warnings` (svelte-check, with warnings counted as
+failures, since nothing else type-checks the Svelte app). If `task fmt:check`,
+those three and `task test` pass locally, the PR should be green.
 
 ## Code generation
 
@@ -169,7 +171,8 @@ git-cliff, so don't hand-edit `CHANGELOG.md`.
 Keep the PR to one topic. Rebase on `main` rather than merging it in. Fill in
 the PR template checklist.
 
-A PR from a branch of this repository is published as an image,
+A PR from a branch of this repository that changes something the image is built
+from is published as a `linux/amd64` image,
 `ghcr.io/datahearth/streamline-pr:pr-<number>` (`-vaapi` for the VAAPI
 flavor), so you and a reviewer can try it on a real deployment. The tags are
 deleted when the PR closes. A PR from a fork gets no image: its workflow token

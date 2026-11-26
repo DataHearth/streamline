@@ -12,17 +12,19 @@ Where to look when you want to know what Streamline is doing, what it did, and w
 - [The queue](#the-queue)
 - [History](#history)
 - [Adopted torrents](#adopted-torrents)
+- [Metadata changes](#metadata-changes)
 - [Torrents (built-in client)](#torrents-built-in-client)
 - [Transcoding](#transcoding)
 - [Calendar](#calendar)
+- [Stats](#stats)
 
 ---
 
 ## Dashboard
 
-The landing page, across all four libraries. **Needs you** lists what is waiting on a decision (held downloads, pending requests, import scans awaiting review, failed imports), the arrivals shelf shows what landed most recently — movies, episodes, albums and books alike, newest first — beside the library counts, what's downloading right now, what's coming up, and the state of your own requests.
+The landing page, across all four libraries. **Needs you** lists what is waiting on a decision (held downloads, pending requests, import scans awaiting review, metadata changes, movies marked failed), the arrivals shelf shows what landed most recently — movies, episodes, albums and books alike, newest first — beside the library counts, what's downloading right now and what's coming up. A request-only account sees the state of its own requests in place of *Needs you* and the queue.
 
-The health indicator in the top bar reflects real state — disk usage on your data and media volumes, and whether you're serving over plain HTTP. If it's not green, something on the [Troubleshooting](Troubleshooting) page probably applies.
+The health indicator in the top bar (admins, not on a phone) reflects real state — disk usage on the data and database volumes, serving over plain HTTP, ffprobe not found while `ffmpeg.enabled` is on, a Hardcover key that was refused, and a [library root that looks gone](Troubleshooting#a-library-root-is-offline). If it's not green, something on the [Troubleshooting](Troubleshooting) page probably applies.
 
 ---
 
@@ -48,7 +50,7 @@ The **Events** view of the Queue & History page, and `GET /api/v1/activity` behi
 | `drift_reverted` | The wait ended with the file still missing: its record went and the title went back to wanted |
 | `drift_recovered` | A file confirmed missing came back and healed |
 | `reidentified` | A title was re-pointed at different metadata |
-| `metadata_refreshed` | A provider refresh actually changed something — a new title, or episodes added or pruned |
+| `metadata_refreshed` | A provider refresh gave a movie a new title or year, or a series a new title |
 | `monitoring_changed` | Monitoring was turned on or off, or an artist or book series got a new monitor policy |
 | `request_approved` | Someone's request was approved and the title was added |
 | `transcode_completed` / `transcode_failed` / `transcode_rejected` | A transcode finished, gave up, or produced output that failed verification |
@@ -72,9 +74,9 @@ Rows are purged by the `cleanup` job after `events.retention` (default 90 days).
 
 ## The queue
 
-**Queue & History → Queue.** A live snapshot of everything currently downloading, refreshed every 30 seconds by the `download-monitor` job. Each row shows progress, speed, ETA, size, which download client is handling it, and what it's for. Imports come first, then held and errored entries waiting on you, then downloads furthest along first, then paused ones.
+**Queue & History → Queue.** A live snapshot of everything currently downloading, read from your download clients every 2 seconds while the page is open. Each row shows progress, speed, ETA, size, which download client is handling it, and what it's for. Held and errored entries waiting on you come first, then imports, then downloads furthest along first, then stalled and paused ones.
 
-You can **pause**, **resume** and **remove** items directly — these act on your actual download client, so pausing here pauses in qBittorrent. Removing asks whether to delete the downloaded data too.
+An admin can **pause**, **resume** and **cancel** items directly — these act on your actual download client, so pausing here pauses in qBittorrent. Cancelling asks first, then removes the torrent and its partial files from the client; the title goes back to wanted if it has no file yet. Members see the queue without these actions.
 
 To act on several at once, tick their checkboxes (or the header box for every row the filters show) and use the bar that appears at the bottom: **Pause**, **Resume** or **Cancel download**. On a phone, press and hold a row to start selecting, then tap the others. Each action only touches the entries it applies to — Pause skips what is already paused, Resume takes only paused entries, and **held** entries are left out of all three, since resolving them is a decision per entry.
 
@@ -91,7 +93,9 @@ A queue entry is in one of six states:
 | **Paused** | Suspended, by you or by the client |
 | **Error** | Something failed — the entry carries a failure reason |
 
-**Held** entries are the only ones whose next move is yours. Streamline probed the finished file and it disagrees with what the release claimed — a 720p file sold as 1080p, a truncated runtime, a codec your profile doesn't allow, or a file ffprobe cannot read at all. Nothing was moved into your library. Open the entry and choose: **import anyway**, or delete it — with or without searching for a replacement. Deleting it marks the release as rejected for that title: the automatic searches and the RSS feeds skip it from then on and take the next-best release, while a manual search still lists it if you want it after all. Retrying or removing the entry in **History** lifts the rejection. A season pack is held whole, listing every file that failed.
+**Held** entries are the only ones whose next move is yours. Streamline probed the finished file and it disagrees with what the release claimed — a 720p file sold as 1080p, a truncated runtime, a codec your profile doesn't allow, or a file ffprobe cannot read at all. An album is also held when its files don't line up with its tracks, and a discography pack when its folders don't line up with its albums (see [Searching and grabbing](Music-and-Books#searching-and-grabbing)). Nothing was moved into your library. Open the entry and choose: **import anyway**, or delete it — with or without searching for a replacement. Deleting it marks the release as rejected for that title: the automatic searches and the RSS feeds skip it from then on and take the next-best release, while a manual search still lists it if you want it after all. Retrying or removing the entry in **History** lifts the rejection. A season pack is held whole, listing every file that failed.
+
+A download whose files are at neither of the paths Streamline looks in is held too, with the reason `location` and both paths. That one can't be imported as it is: it imports by itself once the files are at either path, so fix the client's save path or add a download path mapping.
 
 See [Configuration Reference](Configuration-Reference#import-verification) for the checks and how to turn them up or off (including `always_ask`, which holds every import for review).
 
@@ -102,15 +106,15 @@ See [Configuration Reference](Configuration-Reference#import-verification) for t
 
 ## History
 
-**Queue & History → History.** Everything that's happened, newest first: grabs, imports, failures, deletions, renames, metadata refreshes.
+**Queue & History → History.** Every finished download, completed or failed, newest first. What else happened to a title (renames, deletions, metadata refreshes) is in the [Events](#the-event-feed) view.
 
-Filter by event type or by title, and page back through time. This is where you find *why* something failed — an import error records the actual reason (permission denied, cross-device link, destination exists), which is far more useful than the status word on the queue.
+Filter by status, or by title or release name, and scroll back through time. This is where you find *why* something failed — an import error records the actual reason (permission denied, cross-device link, destination exists), which is far more useful than the status word on the queue.
 
-**Retry import** is on any failed entry: expand the row and it hands the record back to the importer with a clean attempt counter. Use it once you've fixed whatever the failure reason names — it reads the same files as before, so retrying an unchanged failure just fails again. The movie or episode comes back to *importing* with it.
+**Retry import** is on any failed entry: expand the row and it hands the record back to the importer with a clean attempt counter. Use it once you've fixed whatever the failure reason names — it reads the same files as before, so retrying an unchanged failure just fails again. The movie or episode comes back to *importing* with it, an album to *downloading*.
 
 Select entries the same way as on the queue to **remove** several history records at once; the titles and their files are not touched.
 
-**Clear completed** tidies out successful entries and leaves the failures. An entry whose torrent is still seeding stays, completed or failed, both here and in the automatic clean-up (completed entries after 30 days, failed ones after 14): without it, Streamline would no longer recognise the torrent as its own and list it under *Needs attention*. Events also age out on their own after `events.retention` (default 90 days).
+**Clear completed** tidies out successful entries and leaves the failures. An entry whose torrent is still seeding stays, completed or failed, both here and in the automatic clean-up (completed entries after 30 days, failed ones after 14, rejected ones never): without it, Streamline would no longer recognise the torrent as its own and list it under *Needs attention*. Events also age out on their own after `events.retention` (default 90 days).
 
 ---
 
@@ -118,7 +122,7 @@ Select entries the same way as on the queue to **remove** several history record
 
 This one is worth understanding because it looks like a bug the first time you see it.
 
-Streamline only manages torrents tagged with the category/label `streamline`. If you add a torrent to that category **yourself**, Streamline notices it and tries to work out what it is.
+Every finished torrent in an enabled download client that Streamline has no record of is a candidate: in qBittorrent only those in the `streamline` category, in Transmission, Deluge and the built-in client all of them. If you add a torrent **yourself**, Streamline notices it once it has finished and tries to work out what it is.
 
 When it can safely tell — and the file is a clean upgrade or a straightforward addition — it just imports it. When it *can't* be sure, it doesn't guess. It parks it as a **proposal** awaiting your decision, and the sidebar flags *"Adopted torrents need attention"*.
 
@@ -130,26 +134,30 @@ Proposals come up when:
 - A different file already exists for that title
 - The match is ambiguous
 - It's a season pack that doesn't map cleanly onto what you're missing
-- **Streamline can't find the files** — the reason reads `files not found — client reports <path>`. The torrent is in the `streamline` category but its data is somewhere else, which is what tagging a qBittorrent torrent without Automatic Torrent Management does. See [Troubleshooting](Troubleshooting#an-adopted-torrent-says-files-not-found)
+- **Streamline can't find the files** — the reason reads `files not found — client reports <path>`. Streamline sees the torrent but its data is somewhere else, which is what tagging a qBittorrent torrent without Automatic Torrent Management does. See [Troubleshooting](Troubleshooting#an-adopted-torrent-says-files-not-found)
 
 Three actions per proposal:
 
 | Action | Effect |
 | --- | --- |
 | **Import** | Accept it and import as-is |
-| **Replace** | Delete the existing file, then import this one |
+| **Replace** | Import this one in place of the existing file, which is deleted. Optionally also remove the old torrent from your download client |
 | **Ignore** | Dismiss it. Optionally also remove the torrent from your download client |
+
+A row offers Import or Replace, whichever applies. A pack that both fills gaps and beats files you have offers the two: Import takes only the gaps, Replace also the episodes it beats.
 
 Ignore is permanent for that proposal — it won't be offered again.
 
 ### Torrents for something you don't track yet
 
-You don't have to add the title first. A torrent matching nothing in your library shows up as a proposal too, marked *unidentified*, with a single **Identify** action:
+You don't have to add the title first. A torrent matching nothing in your library shows up as a proposal too, marked *unidentified*, with an **Identify** action:
 
 1. Say whether it's a movie, a series, an album or a book — Streamline guesses from the release name.
 2. Pick the title from the usual search — TMDB/TVDB for video, MusicBrainz for an album, Hardcover for a book — pre-filled from the name.
 
 The title is added to your library if it isn't there already, and the download is matched to it. Nothing is imported at that point — the proposal stays put, now showing Import or Replace like any other.
+
+**Forget** drops an unidentified proposal and leaves the torrent alone, so the next pass matches it again: use it after adding the title yourself. When there are several, one button above the list forgets them all.
 
 Adding a series this way monitors it, exactly as adding it by hand would, so Streamline will start looking for its other missing episodes. Unmonitor the seasons you don't want if that's not what you're after. An album's artist is added under the *manual* policy instead, so nothing else in its discography is monitored, and a book is added with only the slot the download fills (ebook, or audiobook when the name says so) monitored. Identifying a book needs a Hardcover key.
 
@@ -159,7 +167,7 @@ Adding a series this way monitors it, exactly as adding it by hand would, so Str
 
 **Metadata changes** (in the sidebar's Operations group, at `/metadata-changes`). Admin only.
 
-Every scheduled metadata refresh updates your library from TMDB, TVDB, MusicBrainz and Hardcover on its own: titles, dates, lengths, artwork, credits, and anything you hold no files for. It stops and asks you only when a change would alter what your files are matched against, or take something out of your library:
+Every metadata refresh, scheduled or asked for on a title's page, updates your library from TMDB, TVDB, MusicBrainz and Hardcover on its own: titles, dates, lengths, artwork, credits, and anything you hold no files for. It stops and asks you only when a change would alter what your files are matched against, or take something out of your library:
 
 - **Music** — the edition an album follows was merged or removed, MusicBrainz now prefers another edition of an album you have files for, a track holding a file left the tracklist, an album or artist was merged or removed.
 - **Series** — episodes or a season you have files for are no longer listed by TVDB, or TVDB no longer knows the series.
@@ -176,13 +184,17 @@ An item waiting on a decision carries a **Changed** (amber) or **Removed** (red)
 
 **Torrents** (in the sidebar's Operations group, at `/torrents`). Admin only, and only relevant if you're running Streamline's built-in torrent engine (`client_type: builtin`). The entry appears in the navigation only while an enabled built-in client is configured.
 
+**Add torrent** takes a magnet link or a `.torrent` file; what you add that way is matched to your library like any [adopted torrent](#adopted-torrents).
+
 Live view of the engine's torrents: peers, pieces, ratio, up/down rates. You can pause and resume individual torrents, and toggle individual **files** within a torrent on and off — handy for a season pack where you only want three episodes.
 
 A torrent is listed under the name inside its `.torrent` file, which the uploader chose and which can differ from the release name shown in Queue and History — a RuTracker upload of an album is often just the artist's name. For a torrent Streamline grabbed, the release name appears under the torrent's own, and the search box matches either one (or the infohash).
 
 A torrent marked **Checking** is re-reading data it already has, to make sure it is intact. This happens to every unfinished download after Streamline restarts: its percentage climbs back to where it was, nothing is downloaded meanwhile, and it then carries on (or shows **Stalled** if no peer is connected).
 
-Tick several torrents (or press and hold one on a phone) to **pause**, **resume** or **remove** them together. Removing asks once whether to delete the downloaded files too, and any download Streamline was tracking for a removed torrent goes back to wanted.
+Tick several torrents (or press and hold one on a phone) to **pause**, **resume** or **remove** them together. Removing asks once whether to delete the downloaded files too, and any download Streamline was tracking for a removed torrent goes back to wanted. Removing a single tracked torrent also offers to blocklist its release, so the automatic searches and feeds don't grab it again for that title.
+
+When the files of a removed torrent could not be deleted, a banner on the page lists them with the error; Streamline tries again every minute and when it starts.
 
 On a phone, swipe a torrent right to **pause** or **resume** it, or left to **remove** it, which asks the same question about its files.
 
@@ -203,9 +215,9 @@ Each row names the movie or episode, the file on disk, and where the job got to:
 
 | Status | Meaning |
 | --- | --- |
-| **Queued** | Waiting for a free slot. `max_concurrent` decides how many run at once. A deferred job — waiting for seeding to end when `transcoding.defer_seeding` is on — shows the next re-check time as a hint |
+| **Queued** | Waiting for a free slot. `max_concurrent` decides how many run at once. A deferred job shows the next re-check time as a hint, an hour away: one waiting for seeding to end when `transcoding.defer_seeding` is on, for the hardware under `hw_accel: vaapi`, or for a file that is missing or whose library root is offline |
 | **Running** | Encoding now, with a live percentage, speed and ETA |
-| **Succeeded** | The file on disk has been replaced. The row shows the size before and after |
+| **Succeeded** | The file on disk has been replaced, and the row shows the size before and after. A new import that already complied ends here too, untouched, with both sizes equal |
 | **Failed** | Out of attempts, or failed once in a way no retry can fix. The row carries the tail of ffmpeg's own error output |
 | **Rejected** | The encode finished but failed verification (size band, health check, VMAF); the original is untouched. Terminal until retried |
 | **Canceled** | You stopped it, it was queued when you did, or the file changed under the encode. Terminal — see below |
@@ -221,7 +233,7 @@ Each row names the movie or episode, the file on disk, and where the job got to:
 
 A running job's progress comes from the encoder inside the running process, so it disappears if Streamline restarts mid-encode. That job is put back in the queue on the next boot and starts over; the half-written file it left behind is cleaned up automatically.
 
-**Scan library** (on this page and on Settings → Transcoding) re-probes every file whose profile has a `transcode` block and queues the ones that don't comply. Files that arrived before you turned transcoding on — or before you wrote the rules — are only reachable this way; new imports queue themselves. It's a full pass over your library, so it's a deliberate button rather than a schedule.
+**Scan library** (on this page and on Settings → Transcoding) re-probes every file whose profile has a `transcode` block and queues the ones that don't comply, leaving out files it already transcoded and those with a rejected job. Files that arrived before you turned transcoding on — or before you wrote the rules — are only reachable this way; new imports queue themselves. It's a full pass over your library, so it's a deliberate button rather than a schedule.
 
 ---
 
@@ -234,7 +246,7 @@ A running job's progress comes from the encoder inside the running process, so i
 - **Album releases** — monitored albums of the artists you follow, on their MusicBrainz release date.
 - **Book releases** — books with either slot monitored, series volumes included, on their Hardcover release date.
 
-Filter chips switch between all / movies / episodes / albums / books. Click any day to see what lands on it; click an entry to jump to the title.
+Filter chips switch between all / movies / episodes / albums / books. A day holding more than three entries opens the rest from its **+N more**; on a phone, tap a day to list what lands on it. Click an entry to jump to the title.
 
 > [!NOTE]
 > The calendar is a *forecast*, not a queue. An entry appearing today doesn't mean Streamline has grabbed it — it means the release date has arrived and the next RSS sync or missing search is now likely to find something.
@@ -242,8 +254,6 @@ Filter chips switch between all / movies / episodes / albums / books. Click any 
 Weeks start on Monday regardless of locale.
 
 ---
-
-**Next:** [Requests and Users](Requests-and-Users), or [Troubleshooting](Troubleshooting) if something's stuck.
 
 ## Stats
 
@@ -254,3 +264,7 @@ Admins get a **Stats** page, under Operations in the sidebar. The 7, 30 and 90 d
 - **Users and requests**: how many requests came in, what still waits, how long a decision and an arrival take, and every account with its requests and when it was last seen.
 
 The pipeline counts what grabs brought in, so a bulk import or an adopted file is not in its imports. Dynamic range is what ffprobe read in the file: Dolby Vision, HDR10, HLG or SDR. A file it has not read for this yet counts as Unknown, and video files it has never read are counted apart.
+
+---
+
+**Next:** [Requests and Users](Requests-and-Users), or [Troubleshooting](Troubleshooting) if something's stuck.

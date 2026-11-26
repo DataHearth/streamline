@@ -20,7 +20,7 @@ TMDB and TVDB answer a 404 as `metadata.ErrNotFound`; a merge is MusicBrainz ans
 
 ## The row
 
-`MetadataChange`: `kind`, `state` (`pending|kept`), `fingerprint`, `payload` (what the SPA shows: `files`, `current`/`upstream` edition summaries, `items` with `id`/`label`/`title`, `target`, `slots`, `seasons`), one owner edge, cascading with its owner. **One row per owner and kind** (a unique index per owner edge). `db.ReportChange` inserts a pending row, refreshes a pending one, leaves a kept one alone **for the same fingerprint** and makes it pending again for another — that is "Keep as is, asked again only when the provider changes the same thing differently". `db.ClearChange` deletes the row whatever its state once the condition is gone, so its return is a new change. The fingerprint is what identifies the change: the target MBID of a merge, the canonical release, the sorted track or episode ids, `kind:edition` pairs for a book.
+`MetadataChange`: `kind`, `state` (`pending|kept`), `fingerprint`, `payload` (what the SPA shows: `files`, `albums` for an artist, `current`/`upstream` edition summaries, `items` with `id`/`label`/`title`, `target`, `slots`, `seasons`), one owner edge, cascading with its owner. **One row per owner and kind** (a unique index per owner edge). `db.ReportChange` inserts a pending row, refreshes a pending one, leaves a kept one alone **for the same fingerprint** and makes it pending again for another — that is "Keep as is, asked again only when the provider changes the same thing differently". `db.ClearChange` deletes the row whatever its state once the condition is gone, so its return is a new change. The fingerprint is what identifies the change: the target MBID of a merge, the canonical release, the followed release an `edition_removed` is about, the track ids in disc and position order or the episode ids in season and number order, `kind:edition` pairs for a book, empty for an item removed.
 
 ## Following
 
@@ -32,7 +32,7 @@ TMDB and TVDB answer a 404 as `metadata.ErrNotFound`; a merge is MusicBrainz ans
 - book: `edition_removed` → `SetBookSlotEdition(…, 0)` for each format, then `RefreshBook` picks a new one.
 - every `*_removed` of an item: `409 not_followable` — find it again (re-identify, movies and series), remove it, or keep it.
 
-Picking an edition, re-identifying and removing go through the existing endpoints; `SetAlbumEdition` (`hydrateFollow`) and the re-identify paths clear the owner's changes. Admins only, everywhere.
+Picking an edition, re-identifying and removing go through the existing endpoints; `SetAlbumEdition` (`hydrateFollow`) and the re-identify paths clear the owner's changes; a `hydrateFollow` that leaves files on tracks the release does not list records `tracks_unlisted` again. Admins only, everywhere.
 
 ## SPA
 

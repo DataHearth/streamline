@@ -17,7 +17,7 @@ flowchart TD
   E -->|no| G[Grabbed]
   E -->|yes| F{upgrade_allowed?}
   F -->|no| I[File left alone]
-  F -->|yes| H{Current file in band<br/>and resolvable?}
+  F -->|yes| H{Current file not above the band<br/>and resolvable?}
   H -->|no| I
   H -->|yes| J{Current score below cap<br/>and new score higher?}
   J -->|no| I
@@ -69,10 +69,10 @@ Both of these are *examples*, not defaults — nothing like them ships built in,
 | Condition type | Fields | Evaluated against |
 | --- | --- | --- |
 | `release_title` | `pattern` (regex) | The raw release title |
-| `resolution` | `value` (`720p`\|`1080p`\|`2160p`) | Parsed resolution, or probed width for on-disk files |
+| `resolution` | `value` (`720p`\|`1080p`\|`2160p`) | Parsed resolution, or probed dimensions for on-disk files |
 | `source` | `value` | Parsed source (`BluRay`, `WEB-DL`, `WEBRip`, `HDTV`, `DVDRip`, `Remux`) — matched case-insensitively but not otherwise fuzzed, so it must equal the parser's normalized spelling. A bare `WEB` tag normalizes to `WEB-DL`, so write `WEB-DL` to catch both spellings; `WEBRip` stays distinct, since that one really is a re-encode |
 | `release_group` | `pattern` (regex) | Parsed release group — the UI edits this one as a chip list, see below |
-| `codec` | `value` | Parsed codec, or probed video codec for on-disk files |
+| `codec` | `value` | Parsed codec, or probed video codec for on-disk files, matched case-insensitively. A release name's H.264 spellings parse to `x264` and its H.265 ones to `HEVC`, while the probe says `h264` and `hevc`, so `h264` never matches a release name and `x264` never matches a probed file |
 | `size` | `min_gb` / `max_gb` | Indexer size, or the file's size on disk — **per episode**, see below |
 
 <details>
@@ -82,7 +82,7 @@ Both of these are *examples*, not defaults — nothing like them ships built in,
 | --- | --- | --- |
 | `seeders` | `min` | Indexer seeders — always absent for an on-disk file, so this condition can never match a file |
 | `audio_tracks` | `min` | Number of audio streams: probed for a file, inferred from a `MULTi`/`DUAL AUDIO` tag for a release |
-| `audio_language` | `value` (ISO 639 code) | Audio stream languages: probed for a file, inferred from a `VFF`/`VFQ`/`TRUEFRENCH`/`VF2`/`VOF` tag for a release |
+| `audio_language` | `value` (ISO 639 code) | Audio stream languages: probed for a file, inferred from a `VFF`/`VFQ`/`VFI`/`VF2`/`VOF`/`VQ`/`TRUEFRENCH` tag for a release |
 | `subtitle_language` | `value` (ISO 639 code) | Non-forced subtitle stream languages: probed for a file, inferred from a `VOSTFR`/`SUBFRENCH` tag for a release |
 
 </details>
@@ -106,7 +106,7 @@ ffprobe records more than the conditions expose. These are stored and shown on t
 | Overall bitrate | ❌ |
 | Audio codec (`eac3`, `dts`) | ❌ — only the *count* and the languages are matchable, not what the default track is encoded in |
 | Audio channel count (5.1, 7.1) | ❌ |
-| HDR / colour metadata | ❌ — not recorded at all. It is decidable for ~85% of files but only ~1–2% of releases advertise it, so a condition could almost never compare the two sides |
+| HDR / dynamic range | ❌ — recorded, for the [Stats](Activity-and-Calendar#stats) page, but not shown on the detail panels. It is decidable for ~85% of files but only ~1–2% of releases advertise it, so a condition could almost never compare the two sides |
 
 Write a `release_title` regex if you need one of these from the release side — just don't expect it to score the file you already have.
 
@@ -167,7 +167,7 @@ matches a release that says "x265" in the title *or* one whose probed codec is `
 
 ## The built-in library
 
-Ten formats compiled into the binary — not seeded into YAML, so they can't be half-edited and stay current across upgrades. They're always available to score in a profile, they're read-only through the API (`builtin: true`; `PUT`/`DELETE` against one is `409`), and a `custom_formats` entry may not reuse a built-in name (`config.Validate` rejects the collision).
+Ten formats compiled into the binary — not seeded into YAML, so they can't be half-edited and stay current across upgrades. They're always available to score in a profile, they're read-only through the API (`builtin: true`; `PUT`/`DELETE` against one is `409`), and a `custom_formats` entry may not reuse a built-in name (`config.Validate` rejects the collision). A custom format a quality profile still scores can't be deleted either (`409`): drop it from the profile first.
 
 | Name | Catches |
 | --- | --- |
@@ -181,9 +181,9 @@ Ten formats compiled into the binary — not seeded into YAML, so they can't be 
 
 | Name | Catches |
 | --- | --- |
-| `hdr` | HDR10/HDR10+/HDR/DV/Dolby Vision in the title |
+| `hdr` | HDR10/HDR10+/HDR/DV/DoVi/Dolby Vision in the title |
 | `av1` | "av1" in the title, or probed codec `av1` |
-| `multi-audio` | "multi" or "dual audio" in the title |
+| `multi-audio` | "multi" or "dual audio" in the title, or two or more probed audio tracks |
 | `dubbed` | "dubbed" in the title |
 
 </details>
@@ -243,7 +243,7 @@ Two idioms fall out of this:
 - **"Never grab this"** is a very negative score (`-1000`) on a custom format like the `scene-junk` example above, combined with `min_score: 0` — there's no separate blocklist feature, the arithmetic *is* the blocklist.
 - **`upgrade_until_score` is "the score I'd be happy to stop at"**, not a target to aim for. `0` means no cap — any strictly higher-scoring release keeps upgrading. A cap nothing can reach just means upgrades never turn off for that profile; see [Upgrades](#upgrades).
 
-**Selection**, among the releases that pass both checks: highest total score wins. Ties are broken by seeders.
+**Selection**, among the releases that pass both checks: highest total score wins. Ties are broken by seeders. An automatic pick also passes over a release that names another title, one its indexer reports with [zero seeders](Adding-Movies-and-TV#how-automatic-grabbing-works), and one you rejected before; if the best release can't be grabbed, it tries the next one.
 
 Scores are relative order *within one profile* — there is no global scale, and comparing a score of 150 under one profile against a score of 150 under another means nothing.
 
@@ -256,7 +256,7 @@ A profile can replace a file already on disk with a better release, but it never
 Whichever path found the release, the grading is the same. For a monitored movie or episode that already has a file (`upgrade_allowed` on, nothing already in flight for it — an item mid-re-grab isn't re-grabbed again every tick), the incoming release is graded against the current file:
 
 1. The release must pass the profile's band + minimum checks like any other candidate.
-2. **The current file's resolution must be in-band** (`Profile.UpgradableFrom`) — at or below `preferred_resolution`, and not unresolvable. A file *above* the band, or one whose resolution can't be determined at all, is never touched: both cases score `0` for the same mechanical reason (the band rejected them before any format was summed), and `0` is not evidence the file is bad — it's evidence the file is untouchable. Replacing it would delete exactly what the profile was protecting.
+2. **The current file's resolution must not be above the band** (`Profile.UpgradableFrom`): at or below `preferred_resolution`, and not unresolvable. A file *below* `min_resolution` qualifies. A file *above* the band, or one whose resolution can't be determined at all, is never touched: both cases score `0` for the same mechanical reason (the band rejected them before any format was summed), and `0` is not evidence the file is bad — it's evidence the file is untouchable. Replacing it would delete exactly what the profile was protecting.
 3. **The current file's score must be below `upgrade_until_score`** (or the cap is `0`, meaning no cap), and the new release's score must be strictly higher.
 
 Only then does Streamline grab the replacement, mark the new download record's replace mode `upgrades`, and let the existing import-verification/replace flow do the rest — the same path a manual "replace" grab uses. No new download states, no separate upgrade queue.
@@ -271,7 +271,7 @@ A single-episode release is judged against that one episode alone.
 
 Series upgrades reuse the identical import path: verification runs before anything on disk is touched, scoped to the episodes the import actually plans to replace (see [Import verification](Configuration-Reference#import-verification)) — a season pack doesn't verify episodes it isn't going to touch. That per-episode plan, and the probe re-check behind it, is a season-pack thing: a single-episode release was already judged once by the scanner, and the importer's import just carries that decision through.
 
-**On-disk scores are never stored.** Every comparison rebuilds a `ReleaseContext` from the file's row on demand — basename parsed the same way a release title is, resolution from the probed width (falling back to the filename parse), codec from the probe, size from the row. Editing a profile re-ranks your whole library instantly, with no migration and no cached score to invalidate.
+**On-disk scores are never stored.** Every comparison rebuilds a `ReleaseContext` from the file's row on demand — source and release group as parsed at import, resolution and codec from the probe (falling back to the ones parsed at import), size from the row. See [What a file can be scored on](#what-a-file-can-be-scored-on). Editing a profile re-ranks your whole library instantly, with no migration and no cached score to invalidate.
 
 ---
 
@@ -301,7 +301,7 @@ quality_profiles:
         audio_passthrough: [truehd, eac3, dts]   # optional; see below
 ```
 
-**`if` is the compliance test, `to` is the destination.** Each new import on this profile is probed, checked against `if`, and queued when it fails. Files that were already in the library when you wrote the rules aren't reached automatically — **Scan library** on the [Transcoding page](Activity-and-Calendar#transcoding) is the pass that catches them up.
+**`if` is the compliance test, `to` is the destination.** Each new import on this profile is queued; when its turn comes the file is probed and checked against `if`, and one that passes is left as it is. Files that were already in the library when you wrote the rules aren't reached automatically — **Scan library** on the [Transcoding page](Activity-and-Calendar#transcoding) is the pass that catches them up.
 
 **Failing only the container is a remux, not a re-encode.** The streams are copied into the new container untouched: seconds instead of hours, and no quality lost. Only a codec or bitrate failure re-encodes.
 
@@ -311,7 +311,7 @@ quality_profiles:
 
 **`audio_passthrough` keeps lossless and object-based audio intact.** Listed source codecs are copied instead of being re-encoded to `to.audio_codec`, per track. The default when you name none is `truehd eac3 ac3 dts aac opus flac`: TrueHD and E-AC-3 carry Atmos, and DTS-HD can't survive a re-encode losslessly, so copying is the only way they come out the other side. Set it explicitly to a shorter list if you'd rather trade that for the space.
 
-**The swap is atomic and verified.** The encode is written beside the original, probed to confirm the duration matches and the audio survived, and only then renamed over the file — so an interrupted or failed transcode never leaves you with a broken library file. A container change moves the file to the new extension and the old one is deleted; the database row follows it. `size_before` is kept, which is what the detail page's "35 GB → 12 GB" line reads.
+**The swap is atomic and verified.** The encode is written beside the original, probed to confirm the duration and resolution match and the audio and subtitle tracks survived, and only then renamed over the file — so an interrupted or failed transcode never leaves you with a broken library file. A container change moves the file to the new extension and the old one is deleted; the database row follows it. `size_before` is kept, which is what the detail page's "35 GB → 12 GB" line reads.
 
 **A file's [`media_info`](REST-API#media-probe) is rewritten by the transcode, not cleared.** The encode is probed to verify it before the swap, and that probe is what the row keeps — so the file's codec, bitrate and track counts describe the new bytes immediately. Nothing has to wait for the media-probe backfill, and nothing scores the file off the release name it was originally imported under.
 
@@ -324,7 +324,7 @@ quality_profiles:
 
 **Scan library skips files this pipeline already produced.** A row with a transcode behind it is left alone — re-encoding an encode loses quality for nothing.
 
-Failed jobs retry up to `transcoding.max_failures` times and then park in the queue with ffmpeg's own error, for you to look at. Nothing is deleted on failure — the original file is still there.
+Failed jobs retry up to `transcoding.max_failures` times and then park in the queue with ffmpeg's own error, for you to look at. An encode that fails its verification, or lands outside the `transcoding.verify` size band, is **rejected** at once and not retried: the same input gives the same output. **Retry** on the Transcoding page runs either again. Nothing is deleted on failure — the original file is still there.
 
 **Hardware encoding.** On Linux the encode can run on an Intel or AMD GPU through VAAPI: `transcoding.hw_accel` (default `auto`) probes `transcoding.hw_device` once and uses it whenever the policy's `to.video_codec` has a VAAPI encoder, falling back to the CPU for that job otherwise. `crf` is handed to the GPU as a constant QP and `preset` maps onto its compression level, so a policy needs no rewriting to move between the two. A constant QP holds quality steady rather than size, so the same `crf` that shrinks a CPU encode can *grow* a low-bitrate source on the GPU — qp 22 measured 203 % of a 5 Mbps BluRay rip and 57 % of a 10 Mbps WEB source, where libx265 at crf 22 gave 98 % of the first. On VAAPI start at 26–28 rather than the value you would use on the CPU, and use `if.min_video_bitrate` to keep already-lean sources out of the queue. Setting `hw_accel: vaapi` instead of `auto` also means a job is held for an hour rather than encoded on the CPU when the device is unavailable. Hardware encoders are fast but routinely produce a larger file than x265 at the same quality, which is what the `transcoding.verify` size band and VMAF check are for. It needs an ffmpeg built with VAAPI, and the default Docker image does not have one: see [Hardware encoding](Installation#hardware-encoding-vaapi) for the `-vaapi` image and the device passthrough, and [Configuration Reference](Configuration-Reference#transcoding) for the two keys.
 
@@ -378,7 +378,7 @@ Applying one never saves — it fills the form and you edit from there, includin
 [![Manual search](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/manual-search.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/manual-search.png)
 
 - **Browse releases** (`/movies/{id}/search`, the series browse endpoints, and the RSS/missing-search paths that feed them) sort by score descending, ties by seeders — not by seeders alone. Every `SearchResult` carries `score`, `rejected`, `reject_reason`, and `matched_formats`, all relative to the queried item's own profile. Rejected releases are still listed (the SPA mutes them) — an operator can grab one deliberately; `score`/`rejected`/etc. are ignored if present on a grab request body.
-- **Movie detail** (`GET /movies/{id}`) reports `file_score` on each entry of `media_files` — the file's score against the movie's current profile, computed at response time. It's list-response-omitted (the same eager-loaded `media_files` edge that also carries file size and quality elsewhere), and absent entirely when no quality profile is configured at all. There's no `rejected` flag on a file — a file outside the band or below `min_score` simply shows `file_score: 0`, the same number the upgrade decision reads.
+- **Movie detail** (`GET /movies/{id}`) reports `file_score` on each entry of `media_files` — the file's score against the movie's current profile, computed at response time. It's list-response-omitted (the same eager-loaded `media_files` edge that also carries file size and quality elsewhere), and absent entirely when no quality profile is configured at all. There's no `rejected` flag on a file — a file outside the band simply shows `file_score: 0`, the same number the upgrade decision reads, and one below `min_score` shows its own total.
 - **Series detail** (`GET /series/{id}`) reports `file_score` on each episode that has a file, against the series' profile, on the same terms. The series *list* never carries episodes at all, so there is no list/detail split to think about there.
 - `min_score` is omitted from API responses when it's `0` — the handler only sets the pointer when the value is non-zero, not a signal that the profile has no minimum. Absent means `0`.
 
@@ -423,7 +423,7 @@ Two consequences remain for those:
 - A `file_score` is a floor, not the score the release originally earned. A REMUX on disk under a profile scoring `remux` at +250 reports 250 less than the release it came from.
 - Those formats take no part in upgrade decisions at all — neither for nor against.
 
-Probing has to be on for any of this: with `ffmpeg.enabled: false` the stream conditions are unanswerable too, and upgrades fall back to comparing only the parsed columns. Files not probed yet are filled in by the `media-probe` backfill job (25 rows every 15 minutes), so an existing library converges on its own.
+Probing has to be on for any of this: with `ffmpeg.enabled: false` the stream conditions are unanswerable too, and upgrades fall back to comparing only the parsed columns. Files not probed yet are filled in by the `media-probe` backfill job (25 video files every 15 minutes), so an existing library converges on its own.
 
 ---
 
@@ -431,7 +431,7 @@ Probing has to be on for any of this: with `ffmpeg.enabled: false` the stream co
 
 Three consequences of score-then-select, worth checking against profiles written for "first release that passes":
 
-1. **`pickBest` is score-ranked, then seeders-ranked** — not whichever release the indexer listed first. A profile with an empty `formats` list is seeders-ranked.
+1. **The pick is score-ranked, then seeders-ranked** — not whichever release the indexer listed first. A profile with an empty `formats` list is seeders-ranked.
 2. **A profile with `upgrade_allowed: false` and `min_resolution` below `preferred_resolution` grabs anywhere in that band.** "Upgrades off" means "accept the whole band, just don't replace a file already there", not "accept only exactly `preferred_resolution`".
 3. **`preferred_resolution` is a hard ceiling, everywhere a profile is evaluated** — including the RSS/missing-search feed scanners, not just interactive search. An install whose `preferred_resolution` sits below its media's actual resolution grabs nothing above it until the profile is raised.
 

@@ -20,7 +20,7 @@ smtp:
 2. Approve the `from` address in Amazon's **Content & Devices > Preferences > Personal Document Settings > Approved Personal Document E-mail List**. Amazon drops mail from any other sender without telling you.
 3. Copy your Kindle's address (`name_xxxx@kindle.com`) into the **Send to Kindle / e-reader** card on the Account page (**Device email**).
 
-A **Send** button then appears on a book's page, and on a series page for all its volumes. The button is disabled, with the reason as its tooltip, when the book cannot be sent.
+A **Send to Kindle** button then works on a book's page, and **Send series** on a series page for all its volumes. The button is disabled, with the reason as its tooltip, when your account has no device email or, on a book's page, when the file cannot be sent. Until `smtp` is configured the book's button is disabled for everyone and the series one is not shown.
 
 ## Which files can be sent
 
@@ -31,7 +31,7 @@ A **Send** button then appears on a book's page, and on a series page for all it
 | CBZ, CBR | No |
 | AZW3, MOBI | No |
 
-A book holding both EPUB and PDF sends the EPUB. Streamline does not convert anything, and Amazon does not take CBZ, AZW3 or MOBI by email. Read those through the [OPDS catalogue](Music-and-Books) in a reader app instead. Converting CBZ to PDF is on the [Roadmap](Roadmap).
+A book holding both EPUB and PDF sends the EPUB. Streamline does not convert anything, and Amazon does not take CBZ, AZW3 or MOBI by email. Read those through the [OPDS extension](Extensions) in a reader app instead. Converting CBZ to PDF is on the [Roadmap](Roadmap).
 
 ## Size limits
 

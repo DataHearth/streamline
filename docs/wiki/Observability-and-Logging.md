@@ -31,6 +31,8 @@ log:
 
 `rotate` only applies when `output` is a file path; rotating stderr is meaningless.
 
+`level` and `format` govern this output only. With an OTel endpoint set, the [log pipeline](#logs) carries every level, `debug` included.
+
 Beyond the four standard levels there's one more: **`CRITICAL`** (rendered as such, ranked above `error`). It's reserved for panics, invariant violations and unrecoverable conditions.
 
 > [!TIP]
@@ -53,7 +55,7 @@ log:
 
 `combined` approximates the Apache combined format with one deliberate deviation: **timestamps are RFC3339**, not Apache's `02/Jan/2006:15:04:05 -0700`. Log parsers expecting strict Apache format need adjusting.
 
-The access logger is mounted as the outermost middleware, so it records every request — including 404s and panics.
+The access logger sits outside panic recovery and authentication, so it records refused requests, 404s and panics too. `/health`, `/static/*` and `/api/docs` are left out. With an OTel endpoint set, the same lines also go to the [log pipeline](#logs).
 
 ---
 
@@ -64,13 +66,13 @@ Every log line made with a request context is enriched automatically. You don't 
 | Field | Source |
 | --- | --- |
 | `request_id` | chi's request ID middleware |
-| `user.id`, `user.email`, `user.roles` | Auth claims, following OTel semantic conventions v1.40.0 |
+| `user.id`, `user.email`, `user.roles` | Auth claims of the caller, following OTel semantic conventions v1.40.0. A line about another account (an admin editing or unlocking one) names it `target.user.*` |
 | `http.route` | The chi route *pattern* — `/api/v1/movies/{id}`, not `/api/v1/movies/42` |
-| `trace_id`, `span_id` | The active OTel span |
+| `trace_id`, `span_id` | The active OTel span. On records exported over OTLP and on access log lines, when an endpoint is set; application lines on stderr or in a file carry `request_id` instead |
 
 `http.route` carrying the pattern rather than the concrete path is what makes aggregation useful — you can group by route without high-cardinality explosion.
 
-`trace_id` on every line is the important one: it links a log entry to the trace that produced it, so you can pivot from "this request errored" to the full span tree in one click.
+`trace_id` on every exported record is the important one: it links a log entry to the trace that produced it, so you can pivot from "this request errored" to the full span tree in one click.
 
 ---
 
@@ -93,7 +95,7 @@ Traces, metrics and logs are all batch-exported to that single endpoint.
 
 `otel.sample_ratio` is the head sampling rate for root spans, `0`–`1`, defaulting to `0.05`. The DB driver is instrumented, so `1.0` exports every SQL statement. Setting `OTEL_TRACES_SAMPLER` overrides it — Streamline stands aside and lets the SDK read the standard variables.
 
-`otel.environment` fills `deployment.environment` on the resource. Two installs exporting to one collector are otherwise indistinguishable; the resource also carries host and OS attributes, and honours `OTEL_RESOURCE_ATTRIBUTES`.
+`otel.environment` fills `deployment.environment.name` on the resource. Two installs exporting to one collector are otherwise indistinguishable; the resource also carries host and OS attributes, and honours `OTEL_RESOURCE_ATTRIBUTES`.
 
 > [!NOTE]
 > `log.app.enabled: false` disables the **stderr sink only**. Traces, metrics and OTLP-exported logs continue as long as `otel.endpoint` is set. (Before v3.1 it disabled the whole pipeline.)
@@ -109,7 +111,7 @@ download.grab
 rss.process_movie
 indexer.query
 metadata.tmdb.search_movie
-importer.import
+importer.run
 ```
 
 Service methods add domain attributes to their spans, so a trace tells you *which* movie, *which* indexer, *which* client — not just that a grab happened.
@@ -118,7 +120,7 @@ Outbound HTTP is instrumented via a shared `otelhttp`-wrapped client, so calls t
 
 ### Metrics
 
-The database layer is auto-instrumented — SQL queries are traced via `otelsql`, and connection-pool statistics are registered as metrics. Go runtime metrics (goroutine count, GC pause, heap size) are exported too.
+The database layer is auto-instrumented — SQL queries are traced via `otelsql`, and the statistics of its two connection pools (`db.client.connection.pool.name` is `write` or `read`) are registered as metrics. Go runtime metrics (goroutine count, memory used and allocated, GC heap goal) are exported too.
 
 Beyond those, the series worth building alerts on:
 
@@ -127,18 +129,20 @@ Beyond those, the series worth building alerts on:
 | `streamline.scheduler.job.last_success_unixtime` | "Has this background job stopped running?" A job that silently dies produces no errors to count — only a timestamp that stops advancing. |
 | `streamline.download.client_reachable` | Whether each download client answered its last call. `0` for more than a few minutes means the client is down. |
 | `streamline.bittorrent.stalled_torrents` | Incomplete torrents with no peers, not counting one that is checking its data. |
+| `streamline.bittorrent.pending_data_removals` | Removed torrents whose files could not be deleted yet. Retried every minute; a value that stays up is a permission or storage problem. |
 | `streamline.transcoding.running` vs `.max_concurrent` | Saturated or stalled. Queue depth is `streamline_transcode_jobs_by_status{status="queued"}`. |
 | `streamline.importer.outcomes` | Imports by `held` / `failed` / `terminal` / `succeeded`; `streamline.importer.queued` is the backlog. |
-| `streamline.indexer.queries` / `.feeds` | Per-indexer outcome, split into `unauthorized`, `unreachable`, `bad_response`, `bad_request` — an expired API key and a dead tracker are different problems. `bad_request` is a tracker refusing the search itself (Jackett does this for an id its tracker cannot search by); Streamline then asks again with a wider search, and a retry that fails is counted as `retry_<outcome>`. |
+| `streamline.indexer.queries` / `.feeds` | Per-indexer outcome, split into `unauthorized`, `timeout`, `unreachable`, `bad_response`, `bad_request`, `unexpected_status`, `misconfigured` and, for built-in indexers, `login_failed` and `challenge` — an expired API key and a dead tracker are different problems. `bad_request` is a tracker refusing the search itself (Jackett does this for an id its tracker cannot search by); Streamline then asks again with a wider search, and a retry that fails is counted as `retry_<outcome>`. |
 | `streamline.mediaserver.refreshes` | Per-server refresh outcome; catches Plex failing while Jellyfin works. `scope` says whether the server rescanned the changed folders or its whole library — a steady `library` usually means a missing path mapping. |
 | `streamline.auth.api_rejections` | Rejected `/api/v1` authentication by method and reason. |
 | `streamline.auth.ratelimit.table_full` | **Any non-zero rate means the login rate limiter has stopped limiting.** |
-| `streamline_requests_by_status{status="pending"}` | Request backlog. `streamline_movies_by_status` and `streamline_episodes_by_status` cover wanted/downloading counts. |
+| `streamline_requests_by_status{status="pending"}` | Request backlog. `streamline_movies_by_status` covers the wanted count, `streamline_episodes_by_status` wanted and downloading. |
 | `streamline.metadata.hardcover.requests` | Hardcover calls by `outcome` — a climbing rate-limited count means the day's budget is going to scans or refreshes. |
 | `streamline.music.hydrations` / `streamline.books.hydrations` | Background filling-in of albums and series volumes by outcome; a stuck artist page shows up here as failures. |
 | `streamline.music.tag_writes` | Music tag writes by outcome — failures are usually file ownership, see [Tags and artwork](Music-and-Books#tags-and-artwork). |
 | `streamline.music.cover_resolutions` | Which source each album cover came from (`source`). |
 | `streamline.mailer.sends` | [Send to Kindle](Send-to-Kindle) emails by outcome — the only signal a background series send failed, besides its `WARN` line. |
+| `streamline.extension.requests` | Requests served by each extension (`extension`) and their `outcome`. |
 
 ### Logs
 
@@ -179,7 +183,7 @@ observability:
 It installs into the `observability` namespace, auto-sets `otel.endpoint` to the in-cluster Alloy service with `otel.insecure: true`, and provisions the Streamline dashboard into its Grafana. Two gotchas are already handled in the chart, but worth knowing if you're adapting it:
 
 - **Cross-namespace DNS needs an FQDN.** `alloy:4318` won't resolve from the `streamline` namespace; `alloy.observability.svc.cluster.local:4318` will.
-- **The VictoriaMetrics/Logs/Traces charts** (v0.35 / 0.12 / 0.0.7) have a selector/label mismatch — the selector uses `app: server` but templates drop it. The workaround is `server.podLabels.app: server` in each subchart's values.
+- **The VictoriaMetrics/Logs/Traces charts** at v0.35 / 0.12 / 0.0.7 have a selector/label mismatch — the selector uses `app: server` but templates drop it. The workaround is `server.podLabels.app: server` in each subchart's values, which the observability subchart sets.
 
 ### Using your own Grafana and collector
 
@@ -215,7 +219,7 @@ Reasonable starting points:
 | Signal | Why |
 | --- | --- |
 | Any `CRITICAL` log line | Panic or invariant violation. Always real |
-| `/health` non-200 | Process is up but unhealthy |
+| `/health` not answering 200 | The process is down or not serving requests. It checks nothing else |
 | Scheduled job `status: error` | Something broke; `last_error` says what |
 | Scheduled job `status: skipped`, sustained | The job keeps running past its next tick: it takes longer than its interval |
 | Rising `last_duration_ms` on `drift-check` | Storage getting slow |

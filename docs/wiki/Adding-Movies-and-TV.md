@@ -21,19 +21,16 @@ How a title gets from "I'd like to watch that" to a file on disk. Artists, album
 
 ## Adding a movie
 
-Click the **+** button (or press it in the bottom bar on mobile) → **Movie**. Type a title. Results come from TMDB.
+Click the **+** button (it floats above the bottom bar on a phone) → **Movie**. Type a title. Results come from TMDB.
 
 You can also start from search: the search bar at the top of the page (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>), or the search icon on a phone. Whatever in your library matches is listed first. Once you have typed two characters, a **Not in your library? Add** strip stays pinned below the results (above them on a phone or tablet) with a button per kind: **Movie** and **Series** (and **Artist** and **Book**) open the add screen already searching what you typed. The strip is there whether or not your library matched, however long the list; it steps aside only while what you type is the start of an "Add movie…"-style action, which is then the answer. Nothing is looked up outside your library until you pick one.
 
-Pick the right one — check the year, posters help — and you'll be asked for two things:
+Pick the right one — check the year, posters help — and choose a **Quality profile**: leave it on the default unless this particular film deserves different treatment.
 
-- **Quality profile** — leave it on the default unless this particular film deserves different treatment
-- **Monitored** — on by default. A monitored film is one Streamline actively hunts for
-
-Confirm, and the film lands in your library as **Wanted**. Streamline searches on a schedule, not on the spot, so nothing happens instantly.
+Confirm, and the film lands in your library as **Wanted** and monitored, which means Streamline actively hunts for it; switch that off with the bookmark on its page. Streamline searches on a schedule, not on the spot, so nothing happens instantly.
 
 > [!TIP]
-> Impatient? Open the film and hit **Search now** to search right away instead of waiting for the next scheduled pass.
+> Impatient? Open the film and pick **Search for releases** in its actions menu to search right away instead of waiting for the next scheduled pass.
 
 ---
 
@@ -50,11 +47,12 @@ Shows have one extra decision, and it's the one worth reading carefully — **wh
 | **Existing episodes** | Only episodes you already have — useful for upgrades, not acquisition |
 | **Future episodes** | Nothing aired yet; only what airs from now on |
 | **Pilot only** | Season 1 Episode 1, to try a show before committing |
+| **None** | Nothing |
 
 > [!NOTE]
-> Specials (season 0) are not monitored by default. Most people don't want them, and they're the most poorly-named releases on any tracker. Turn them on globally at Settings → Series (`library.monitor_specials`), or per show from the show's page.
+> Specials (season 0) follow the option you pick, like any other season: **All episodes**, the one selected when you add a show, monitors them too. Most people don't want them, and they're the most poorly-named releases on any tracker: switch season 0 off on the show's page. A show that arrives without an option (an approved request, an import) and a season 0 discovered by a later refresh are left unmonitored, unless Settings → Series (`library.monitor_specials`) says otherwise.
 
-The Settings → Series page also holds the defaults applied to *new* shows and to seasons discovered later. Changing it doesn't retroactively touch shows already in your library — there's an explicit **Apply to existing series** action for that. It leaves alone any special season or episode you monitored or unmonitored by hand; switching a show's monitoring off and on, or picking a monitoring preset for it, starts that show over.
+Changing that setting doesn't retroactively touch shows already in your library — there's an explicit **Apply to existing series** action for that. It leaves alone any special season or episode you monitored or unmonitored by hand; switching a show's monitoring off and on, or picking a monitoring preset for it, starts that show over.
 
 Once added, the show page shows every season and episode, what's on disk, what's missing, and what's still to air:
 
@@ -72,9 +70,11 @@ Once added, the show page shows every season and episode, what's on disk, what's
 | **Downloading** | A release was grabbed and is in your download client |
 | **Importing** | The download finished; the file is being verified and moved into your library |
 | **Available** | Imported and sitting in your library |
-| **Failed** | Grabs kept failing — see below |
+| **Failed** | Its import failed, or its held download was deleted — see below |
 
-**Episodes** have a sixth, **Paused**, for episodes deliberately held back, and **Skipped** for ones you've told Streamline to ignore.
+A film or episode with no file that isn't monitored reads **Missing**, since nothing is looking for it.
+
+**Episodes** use the same states except **Failed**, and add **Paused** (the download is paused in its client) and **Unaired** (no air date yet, or one still ahead).
 
 A series card in the library shows the same states, read from its episodes: **Downloading** while any episode has a grab in flight, then **Importing**. Instead of the usual `have/total eps`, the card names what is landing — `S03E04` for a single episode, `S03 pack` for a season, `Full series` for a complete pack — and shows a progress bar underneath. An import has no percentage to report, so its bar runs indeterminate.
 
@@ -84,7 +84,9 @@ Every view you set up is in the page's address, so you can bookmark it, send it 
 
 Cards and detail pages name a **release day** rather than a year once one is known (`2 Feb 2024`) — a film's theatrical release, a show's first air date. An existing library fills these in gradually: the value arrives with the next metadata refresh of each title, and until then the year is shown as before.
 
-A film goes **Failed** after `library.max_grab_failures` (default 3) consecutive failed grab attempts. This is a circuit breaker, not a permanent verdict — it stops Streamline hammering a tracker for something that isn't working. Open the film and hit **Search now** to try again. A timeout reaching your indexer or download client doesn't count toward it: that says nothing about the release, so it is retried on the next pass instead of spending a strike.
+A film goes **Failed** when its import fails `library.import_max_attempts` (default 3) times, at once when trying again cannot help (no video in the download, several, only a sample, a file already at the destination, a film that already has a file), or when you delete a held download without searching for another. Nothing searches for it on its own after that: retry the import from **History**, or open the film and pick **Search for releases** in its actions menu.
+
+A grab that fails leaves the title Wanted and counts a strike. After `library.max_grab_failures` (default 3) strikes in a row the scheduled missing search passes it over. This is a circuit breaker, not a permanent verdict — it stops Streamline hammering a tracker for something that isn't working. **Search for releases** ignores it, and a successful grab clears the count. A timeout reaching your indexer or download client doesn't count toward it: that says nothing about the release, so it is retried on the next pass instead of spending a strike.
 
 Separately, when a search finds *nothing acceptable*, that title goes quiet for `library.no_match_cooldown` (default 6 hours) before being searched again. That's why a just-added obscure film may sit at Wanted for a while without visible activity.
 
@@ -98,7 +100,7 @@ The detail page is where all of this comes together — cast, artwork, and once 
 
 Two independent jobs hunt for things, and it helps to know which one is doing what.
 
-**RSS sync** (every 15 minutes by default) reads the newest releases from your indexers and checks whether any match something you want. This is what catches new releases quickly — usually within minutes of them being posted.
+**RSS sync** (every 15 minutes by default) reads the newest releases from your indexers and checks whether any match something you want. This is what catches new releases quickly — usually within minutes of them being posted. A Prowlarr indexer has no feed, so this job skips it: releases from trackers that are only behind Prowlarr wait for the missing search. A Torznab or built-in indexer is read.
 
 For TV, a release is matched to a show by name: its title, its original title or one of its alternative and translated titles. Case, punctuation and accents don't matter (`Shogun.2024.S01E01` matches *Shōgun*), and titles in other scripts match releases written in that script. A show's own title always beats another show's alternative title, and a year after a title is ignored (*Foundation (2021)* matches `Foundation.2021.S01E01`). When two shows of your library share a name, a release goes to the one whose year it states (`Doctor.Who.2005.S01E01` to *Doctor Who (2005)*); one that states no year, or a year neither has, matches neither — those releases are left to the missing search, which looks for each show on its own.
 
@@ -119,7 +121,7 @@ flowchart LR
   G --> H[Media server refresh]
 ```
 
-When a release passes the quality bar, Streamline sends it to the highest-priority enabled download client, tagged `streamline`. When it finishes, the download monitor (every 30 seconds) notices, and the importer hardlinks it into your library under the naming template, then nudges your media server to rescan.
+When a release passes the quality bar, Streamline sends it to the highest-priority enabled download client (in qBittorrent under the `streamline` category, in Transmission with that label). When it finishes, the download monitor (every 30 seconds) notices, and the importer hardlinks it into your library under the naming template, then nudges your media server to rescan.
 
 So the expected latency for a brand-new release is *minutes*, and for something obscure and old it can be *hours* — that's not a fault, it's the missing-search interval.
 
@@ -127,7 +129,7 @@ So the expected latency for a brand-new release is *minutes*, and for something 
 
 ## Searching manually
 
-Automation not finding it? Open the title and click **Search** — this runs a live query against every enabled indexer and shows you what came back:
+Automation not finding it? Open the title and click **Manual search** — this runs a live query against every enabled indexer and shows you what came back:
 
 [![Manual search](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/manual-search.png)](https://raw.githubusercontent.com/DataHearth/streamline/main/docs/assets/manual-search.png)
 
@@ -135,7 +137,7 @@ By default the results read in plain words: which language you will hear (**FR +
 
 Each release also says whether its indexer is a private or public tracker — the **Private** setting on the indexer, since trackers don't report it themselves — and whether you have grabbed that exact release before for this title (for TV, for any episode of the show), with when. "That exact release" means the same info hash when both the release and the earlier download have one, and otherwise the same release name. Earlier grabs that failed count too, which is the point: it stops you re-grabbing something that already went wrong.
 
-When the title (or, for a season or whole-series search, any episode in that scope) already has a file on disk, **Select** asks first, showing what is there next to what you picked. Confirming grabs with replace on, so the import overwrites the existing file(s); cancelling grabs nothing. When a season or whole-series search also has aired episodes still missing, the question offers *Download missing episodes only* as well: the import then fills only the episodes without a file and leaves yours in place (a pack holding none of the missing episodes imports nothing). To know before choosing, *Files* on a season or whole-series result reads the release's torrent and lists which missing episodes it holds, with every file it contains; the same panel shows in the question. It reads episode numbers from the file names exactly as the import does, but it costs one request to the indexer, so it only runs when you ask, and a magnet link has no file list until a download starts.
+When the title (or, for a season or whole-series search, any episode in that scope) already has a file on disk, **Select** asks first, showing what is there next to what you picked. Confirming grabs with replace on, so the import overwrites the existing file(s); cancelling grabs nothing. When a season or whole-series search also has aired episodes still missing, the question offers *Download missing episodes only* as well: the import then fills only the episodes without a file and leaves yours in place (a pack holding none of the missing episodes imports nothing). To know before choosing, *Files* on a season or whole-series result reads the release's torrent and lists which missing episodes it holds, with every file it contains; the same panel shows in the question. It reads episode numbers from the file names exactly as the import does, but it costs one request to the indexer, so it only runs when you ask. A magnet link has no file list of its own: the built-in client and Deluge fetch it from peers (up to 30 seconds), while with qBittorrent and Transmission it stays unknown until a download starts.
 
 For TV you can search at three levels:
 
@@ -157,13 +159,13 @@ From the **Episodes** tab, the season header has its own **Search season** butto
 
 ## Browsing by cast member
 
-Every name in a title's **Cast** tab is a link. Click one and you get that person's page: every movie and series in *your* library they are credited on, each poster labelled with the character they play there.
+Every name in a title's **Cast** tab is a link, the crew listed under the cast included. Click one and you get that person's page: every movie and series in *your* library they are credited on, each poster labelled with the character they play or the job they hold there. An episode's own guest stars and crew are under **Guests and crew** in its details sheet. Streamline reads them from TVDB once the episode has aired, during the series metadata refresh, so a show you just added has none at first.
 
-Cast members also show up in search — the command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>, or the search bar at the top of the page with a mouse) and the search page on phones and tablets both list matching people under the title hits, with the number of library titles each appears in.
+Cast and crew also show up in search — the command palette (<kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>K</kbd>, or the search bar at the top of the page with a mouse) and the search page on phones and tablets both list matching people under the title hits, with the number of library titles each appears in.
 
 The same search finds episodes by their title, each with its show and SxxExx code: picking one opens the series on that episode's season with its details sheet open. It also finds artists, albums and books (see [Music and Books](Music-and-Books#finding-an-artist-an-album-or-a-book)), and an admin can type the name of a settings section, such as *indexers* or *quality profiles*, to jump straight to it.
 
-There is no people database: a person exists exactly as long as a title crediting them does. Someone who appears in nothing you have is not findable, and delete their only title and their page goes with it.
+There is no people database to browse: a person is found exactly as long as a title in your library credits them. Someone who appears in nothing you have is not findable, and an episode's guest star is reached from that episode rather than from search.
 
 ---
 
@@ -191,6 +193,8 @@ Re-identifying a series also re-infers its **type** (standard/anime/daily). That
 
 **Change series type…** in the same menu sets that type by hand. It decides whether episode files match by season and episode or by absolute number, so a wrong inference mis-matches every file in the show — and anime released as a single continuous run is where it is usually wrong. The override survives a metadata refresh.
 
+When TMDB or TVDB no longer knows a title at all, the metadata refresh raises it under [Metadata changes](Activity-and-Calendar#metadata-changes), where **Find it again…** opens this same search. A refresh that finds episodes you have files for gone from TVDB's list keeps them and asks there too.
+
 There is no undo, because none is needed — changing the match back is the same action in reverse, files and all.
 
 > [!IMPORTANT]
@@ -200,11 +204,13 @@ There is no undo, because none is needed — changing the match back is the same
 
 ## Renaming and deleting
 
-**Rename** re-applies your naming template to files already on disk. Useful after you've changed `library.movie_naming` or `library.series_naming`, or after importing files under their original names. It's available per-title from the actions menu.
+**Rename files…** re-applies your naming template to files already on disk. Useful after you've changed `library.movie_naming` or `library.series_naming`, or after importing files under their original names. It's available per-title from the actions menu.
 
 **Delete** removes the title from Streamline. You'll be asked whether to also delete the files on disk — the two are separate decisions, and Streamline will happily forget about a film while leaving the file exactly where it is.
 
-Deleting a title also clears its cached posters and any related download records.
+Deleting a title also clears its cached posters and any related download records. Deleting it *with* its files also takes the torrents those files came from out of the download client, season packs included; the data the client downloaded stays where it is.
+
+To act on many titles at once, tick their posters (hover for the checkbox; on a phone, press and hold one, then tap the others), or use the toolbar's **Select all** for everything the current filters match. The bar that appears monitors, unmonitors, searches, changes the quality profile, renames, refreshes or removes the whole selection. The Music and Books pages select the same way, except that Books has no monitor buttons, a book following two formats.
 
 ---
 

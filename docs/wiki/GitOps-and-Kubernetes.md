@@ -44,7 +44,7 @@ Two values are normally generated on first boot and persisted back into the conf
 | --- | --- |
 | **`auth.session_secret`** | Falls back to an ephemeral secret regenerated at every start — every user is logged out on every restart and every pod reschedule |
 | **`media_server.plex_client_id`** | A new client identity per restart; Plex sees a new device each time |
-| **`auth.seed_admin.password`** | A generated password is printed once to the pod's stdout (`kubectl logs … \| grep 'default admin'`) and never persisted |
+| **`auth.seed_admin.password`** | With `seed_admin.email` unset, a generated password for `admin@streamline.local` is printed once to the pod's stdout (`kubectl logs … \| grep 'default admin'`) and never persisted. With an email of your own and no password, no admin is created at all |
 
 > [!WARNING]
 > `auth.session_secret` is the one that will actually bite you — it's the row above, but easy to skip past in a table. Generate one and store it:
@@ -58,7 +58,7 @@ secrets:
   STREAMLINE_AUTH__SESSION_SECRET: "..."
 ```
 
-Also note: **`registration_mode`, `session_ttl`, schedule intervals, indexers, download clients, media servers and every quality-profile family (movie/series, music, book) all become file-only** under read-only mode. Every change is a commit. Per-title state lives in the database, not the config, so adding titles, monitoring, requests, users and API keys keep working.
+Also note: **`registration_mode`, `session_ttl`, schedule intervals, indexers, download clients, media servers, extensions and every quality-profile family (movie/series, music, book) all become file-only** under read-only mode. Every change is a commit. Per-title state lives in the database, not the config, so adding titles, monitoring, requests, users and API keys keep working.
 
 ---
 
@@ -91,6 +91,8 @@ podSecurityContext:
 
 **`server.port` must equal `service.port`.** Probes and the container port both target it.
 
+**Every path the app writes must be on a mounted volume.** The container's root filesystem is read-only, so the chart refuses to render when `config.data_dir`, `config.library.movie_path` or `series_path`, an enabled built-in client's `download_dir` or an absolute log output falls outside the data PVC and the library volumes, or on `/tmp`. Paths set through `extraEnv` or `secrets` are not checked.
+
 **Give boot a startup allowance.** `/health` answers once boot is wired (the database read, opened and migrated, then every service, the built-in torrent engine included), which on a large database and slow storage can take minutes. The chart's `startupProbe` (from chart 3.1.0) holds liveness off for `startupProbe.periodSeconds` × `startupProbe.failureThreshold`, 5 minutes by default; raise `failureThreshold` if a boot needs longer. See [Slow start or restarts during boot](Troubleshooting#slow-start-or-restarts-during-boot).
 
 ### The config block
@@ -113,8 +115,11 @@ config:
 Add any other key and koanf merges it over the defaults. Check your result before rolling it out:
 
 ```bash
-helm template streamline ... | yq '.data."config.yaml"' | streamline config validate
+helm template streamline ... --show-only templates/configmap.yaml \
+  | yq '.data."config.yaml"' | STREAMLINE_DATA_DIR="$(mktemp -d)" streamline config validate
 ```
+
+Validation creates `data_dir` and reads every `*_file` the config names, so override `data_dir` as above, and expect an error for secret files that only exist in the pod.
 
 ---
 
@@ -284,7 +289,7 @@ Path migration rewrites those stored paths.
 curl -sS -H "X-API-Key: $KEY" $SL/api/v1/library/path-migration/roots
 ```
 
-Each root reports `tracked`, the number of stored paths currently under its configured prefix. **`tracked: 0` on a non-empty library means the config was re-pointed without the stored paths following** — which is exactly the situation migration fixes, and it means you must supply the old prefix explicitly via `from`.
+Each root reports `tracked`, the number of stored paths currently under its configured prefix, and `total`, the number stored for that kind of media wherever they sit. **`tracked: 0` on a non-empty library means the config was re-pointed without the stored paths following** — which is exactly the situation migration fixes, and it means you must supply the old prefix explicitly via `from`.
 
 **Preview before committing:**
 
@@ -309,11 +314,13 @@ curl -sS -X POST -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
 | `to` | New prefix |
 | `move_files` | If true, relocate each file first — a rename when both sides share a filesystem, a copy when they don't. **Only for `movies` and `series`.** `downloads` data belongs to your download client, and music and book folders hold lyrics and cover art with no record of their own, so move those yourself and re-point |
 
+Without `move_files`, the files must already be at the new path: a stored path whose file is not found there is left alone and counted in `skipped` (a record already marked missing from disk is rewritten all the same). `preview` reports that count first.
+
 Returns `202`; it runs in the background. Poll `GET /library/path-migration` for progress. Only one migration runs at a time (`409` otherwise).
 
 It's also available in the UI at **Settings → Advanced** — *"Maintenance tools that rewrite stored data. Preview before you run anything here."* Take that literally: preview first.
 
-Migration also re-points the config at the new root, which under `read_only: true` will be refused — so in a GitOps deploy, update the path in git and let the migration handle only the stored rows.
+Migration also re-points the config at the new root, however many records it skipped, unless the configured root lies outside `from`. Under `read_only: true` it leaves the configured root untouched and rewrites only the stored rows, so in a GitOps deploy, update the path in git and let the migration handle the rows.
 
 ---
 
@@ -332,13 +339,13 @@ Streamline backs the database up itself, into **`<data_dir>/backups`**:
 
 Each backup is one self-contained file written with SQLite's `VACUUM INTO`: consistent, safe to take while Streamline runs, and with no `-wal`/`-shm` to carry along. It is named `streamline-<kind>-<schema version>-<UTC time>.db`, owner-only (`0600`, in a `0700` directory), since it holds password hashes, API key hashes and sessions.
 
-[Extensions](Extensions) keep their own databases at `<data_dir>/extensions/<name>/data.db`. The daily `scheduled` job snapshots each running one into `<data_dir>/backups/extensions/<name>` (same retention), after Streamline's own and only when that backup is not skipped. `streamline restore` does not touch them: to restore one, stop Streamline, copy the snapshot over its `data.db`, start it. Extension data lives under `data_dir`, so a PVC or volume that holds `data_dir` already carries it.
+[Extensions](Extensions) keep their own databases at `<data_dir>/extensions/<name>/data.db`. The daily `scheduled` job snapshots each configured one into `<data_dir>/backups/extensions/<name>` (same retention), after Streamline's own and only when that backup is not skipped. `streamline restore` does not touch them: to restore one, stop Streamline, copy the snapshot over its `data.db`, start it. Extension data lives under `data_dir`, so a PVC or volume that holds `data_dir` already carries it.
 
 **The pre-migration backup is what makes automated updates safe.** With Renovate, Flux or Argo CD rolling out new images, a new version boots and migrates with nobody there to take a copy. Streamline takes it first; if the copy fails (a full disk, most often) it **refuses to migrate** and the pod fails to start with the reason in its log, rather than migrating without a way back. For a database too large to copy on every upgrade, set `backup.pre_migration: false` and back up some other way.
 
 ### From the command line
 
-Both commands need the same configuration as the server — pass the same `--config` (or the same `STREAMLINE_*` environment), since that is where `data_dir` comes from.
+These commands need the same configuration as the server — pass the same `--config` (or the same `STREAMLINE_*` environment), since that is where `data_dir` comes from.
 
 ```bash
 streamline --config config.yaml backup          # a manual backup; prints its path

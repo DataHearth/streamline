@@ -8,9 +8,10 @@ Streamline's API is the same one its own web UI uses — there's no privileged i
 - [Endpoint map](#endpoint-map)
   - [Movies](#movies) · [Series](#series) · [Music](#music) · [Books](#books) · [People (cast)](#people-cast) · [Activity](#activity) · [Requests](#requests)
   - [Config-backed resources](#config-backed-resources) · [Torrents](#torrents-built-in-client) · [Transcoding endpoints](#transcoding-endpoints) · [Library](#library)
-  - [Auth and users](#auth-and-users) · [Config, schedules, system](#config-schedules-system) · [Calendar](#calendar) · [Outside `/api/v1`](#outside-apiv1)
+  - [Auth and users](#auth-and-users) · [Extensions](#extensions) · [Config, schedules, system](#config-schedules-system) · [Calendar](#calendar) · [Outside `/api/v1`](#outside-apiv1)
 - [Media probe](#media-probe)
 - [Transcoding](#transcoding)
+- [Editing config](#editing-config)
 - [Quality scoring](#quality-scoring)
 - [Worked examples](#worked-examples)
 - [Generating a client](#generating-a-client)
@@ -44,10 +45,10 @@ curl -H "Authorization: Bearer $JWT" https://streamline.example.com/api/v1/movie
 
 Cookies are ignored on `/api/v1` **except** for same-origin browser requests (`Sec-Fetch-Site: same-origin`, or with that header absent a matching `Origin`, or for `GET`/`HEAD` a matching `Referer`) — that's how the SPA authenticates without holding a second credential. Anything outside a browser needs a key or a token.
 
-Failures return `401` with a JSON body. No redirects on the API surface.
+Failures return `401` with a plain-text body, and `429` with `Retry-After` once one address has failed 20 times in 15 minutes. No redirects on the API surface.
 
 > [!WARNING]
-> API keys are **read-only on the identity surface**: any non-GET request under `/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, `/account`, `/users`, `/config/auth` or `/config/oidc` returns `403` with a key — those actions need a session (Bearer JWT or the SPA cookie). The two credentials are otherwise equal on media and settings endpoints. That's why the key-creation example below authenticates with a JWT, not a key.
+> API keys are **read-only on the identity surface**: any non-GET request under `/auth/me`, `/auth/password`, `/auth/invites`, `/auth/jwt`, `/account`, `/users`, `/config/auth`, `/config/oidc` or `/extensions` (an extension's own `/extensions/{name}/api/...` excepted) returns `403` with a key — those actions need a session (Bearer JWT or the SPA cookie). `/account/extensions` needs one for its reads too, answering `401` to a key. The two credentials are otherwise equal on media and settings endpoints. That's why the key-creation example below authenticates with a JWT, not a key.
 
 ### Getting an API key
 
@@ -82,7 +83,7 @@ A browser blocks a page on one address from reading an API on another unless the
 
 ## Conventions
 
-**Pagination.** Collection endpoints take `?page=` (default 1) and `?limit=` (default 20) and return an envelope:
+**Pagination.** Collection endpoints take `?page=` (default 1) and `?limit=` (default 20; 50 for requests, import rows, adoption proposals, metadata changes and missing files) and return an envelope (imports, adoption proposals, metadata changes and missing files answer `items` and `total` alone):
 
 ```json
 { "items": [ ... ], "total": 137, "page": 1, "limit": 20 }
@@ -100,9 +101,9 @@ curl ".../movies?page=2&limit=100"
 # ...
 ```
 
-Activity feeds use cursor pagination instead (`?cursor=`, `?limit=`), since they're append-only and time-ordered.
+Activity feeds use cursor pagination instead (`?cursor=`, `?limit=`), since they're append-only and time-ordered. `/users` (default limit 25), `/people`, `/episodes`, `/music/albums` and `/music/tracks` take a zero-based `?offset=` in place of `page`.
 
-**Filtering and sorting.** `GET /movies` and `GET /series` filter, search and sort server-side — `?status=`, `?query=` (substring over the titles, ignoring case and accents — `detective` finds `Détective Conan`), `?sort=` and `?order=`. `/series` additionally takes `?type=`. Doing this client-side means pulling the whole library first; these params exist so you don't have to.
+**Filtering and sorting.** `GET /movies` and `GET /series` filter, search and sort server-side — `?status=`, `?monitored=monitored|unmonitored`, `?query=` (substring over the titles, ignoring case and accents — `detective` finds `Détective Conan`), `?sort=` and `?order=`. `/series` additionally takes `?type=`. Doing this client-side means pulling the whole library first; these params exist so you don't have to.
 
 **Movie list responses carry `file_summary`, not `media_files`.** The rollup gives you `file_count`, `size_bytes` and the largest file's parsed `resolution`/`codec` — enough for a list view, without a page of movies dragging in every file row it owns. Use `GET /movies/{id}` when you need the files themselves.
 
@@ -130,7 +131,7 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 Each facet carries its own `*_total` "all" row (`status_total`, `type_total`, `monitored_total`); the three diverge as soon as two facets are filtered, so read each from its own. `total` is separate again: the library, filtered by nothing. So are `wanted_episodes`, `downloading_episodes` and the movie `trend`. Called with no parameters the whole response is the unfiltered library, which is the shape older clients already expected.
 
-**Errors** are `{"message": "..."}` with a conventional status: `400` bad request, `401` unauthenticated, `403` forbidden (usually not an admin), `404`, `409` conflict (already exists), `422` unprocessable, `500`. Some carry a stable `code` alongside the message when the caller needs to branch on the specific reason — `last_admin`, `email_exists`, `connection_failed` (a connection test's upstream diagnostic), `invalid_condition` (a custom-format condition that would not compile), `grab_rejected` (a grab the server refused — an untrusted download host, a release whose files match no wanted episode, a built-in client already holding its maximum of 500 torrents, a release that would not fit on the download client's disk (the [free-space check](First-Run-Setup#free-space-check)), a `.torrent` whose name the built-in engine refuses, an album `.torrent` that is one CUE disc image, a release the download client already holds, or a search result whose handle expired when the session secret rotated), `upload_rejected`, `upload_conflict` and `no_space` (an [upload](Uploading-files) the server refused, found busy or had no room for), `no_quality_profile`, `rate_limited` (a metadata provider's limit, with `Retry-After`), `hardcover_not_configured` / `hardcover_key_rejected`, `indexers_unavailable` (a release search no enabled indexer answered: `504` when every one timed out, `502` otherwise; an indexer that fails while another answers only costs its own results). `connection_failed`, `grab_rejected`, `indexers_unavailable` and the three upload codes carry a message composed for display, which the web UI shows verbatim (an `upload_conflict` also carries a `reason`, which the web UI translates instead); a coded error's `message` is otherwise still advisory.
+**Errors** are `{"message": "..."}` with a conventional status: `400` bad request, `401` unauthenticated, `403` forbidden (usually not an admin), `404`, `409` conflict (already exists), `413` (`code: body_too_large`: a body over 1 MiB, or 24 MiB when an admin adds a torrent; the upload endpoints have no cap), `422` unprocessable, `500`. Some carry a stable `code` alongside the message when the caller needs to branch on the specific reason — `last_admin`, `self_delete_forbidden`, `email_exists`, `connection_failed` (a connection test's upstream diagnostic), `invalid_condition` (a custom-format condition that would not compile), `grab_rejected` (a grab the server refused — an untrusted download host, a release whose files match no wanted episode, a built-in client already holding its maximum of 500 torrents with no imported one left to remove, a release that would not fit on the download client's disk (the [free-space check](First-Run-Setup#free-space-check)), a `.torrent` whose name the built-in engine refuses, an album `.torrent` that is one CUE disc image, a release the download client already holds, or a search result whose handle expired when the session secret rotated), `upload_rejected`, `upload_conflict` and `no_space` (an [upload](Uploading-files) the server refused, found busy or had no room for), `no_quality_profile`, `rate_limited` (a metadata provider's limit, with `Retry-After`), `provider_unavailable` (`502`, MusicBrainz cannot answer), `hardcover_not_configured` / `hardcover_key_rejected`, `indexers_unavailable` (a release search no enabled indexer answered: `504` when every one timed out, `502` otherwise; an indexer that fails while another answers only costs its own results). `connection_failed`, `invalid_condition`, `grab_rejected`, `indexers_unavailable`, `provider_unavailable`, `library_offline`, `library_online`, `library_accept_running`, `files_unknown`, `send_failed`, `not_sendable`, `no_device_email`, `assignment_rejected`, `edition_not_found`, `extension_unreadable` and the three upload codes carry a message composed for display, which the web UI shows verbatim (an `upload_conflict` also carries a `reason`, which the web UI translates instead); a coded error's `message` is otherwise still advisory.
 
 A change to the files of an offline library root (rename, delete with files, upload, re-identify, applying album tags, import commit) answers `409` with `code: library_offline`. A book or series is refused only when a root holding its files is offline.
 
@@ -138,7 +139,7 @@ A change to the files of an offline library root (rename, delete with files, upl
 
 ## Endpoint map
 
-207 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential, `request_only` included), `Member` (`admin` or `member` — a `request_only` caller gets 403) or `🔒 Admin`; the Requests group spells out the exact roles.
+227 paths, grouped below. **Auth** is `Authenticated` (any logged-in user or valid credential, `request_only` included), `Member` (`admin` or `member` — a `request_only` caller gets 403) or `🔒 Admin`; the Requests group spells out the exact roles.
 
 ### Movies
 
@@ -149,29 +150,29 @@ A change to the files of an offline library root (rename, delete with files, upl
 | `GET` | `/movies/counts` | Faceted counts (same filter params as the list) | Authenticated |
 | `GET` | `/movies/selection` | Every movie `/movies` would list under the same filters (`?status=`, `?monitored=`, `?query=`), unpaged: `{ "items": [{ "id", "monitored", "file_count", "size_bytes" }] }`. What "select all" picks | Authenticated |
 | `GET` | `/movies/{id}` | Fetch a movie | Authenticated |
-| `PATCH` `DELETE` | `/movies/{id}` | Update / delete a movie | Member |
-| `POST` | `/movies/{id}/search` · `/search-now` · `/grab` · `/refresh-metadata` · `/rename` | Search, force a search (`/search-now` runs in the background and answers `202`; the outcome lands in the movie's history), grab, refresh metadata, or rename to the naming template | Member |
+| `PATCH` `DELETE` | `/movies/{id}` | Update / delete a movie (`?delete_files=true` also deletes its files) | Member |
+| `POST` | `/movies/{id}/search` · `/search-now` · `/grab` · `/refresh-metadata` · `/rename` | Search, force a search (`/search-now` runs in the background and answers `202`; the outcome lands in the movie's history), grab, refresh metadata, or rename to the naming template (`?preview=true` returns the plan without applying it) | Member |
 | `GET` | `/movies/{id}/play-on` | Links to play the movie on a media server | Member |
 | `POST` | `/movies/{id}/reidentify` | Point the entry at a different TMDB title | 🔒 Admin |
 | `GET` | `/movies/{id}/recommendations` | TMDB recommendations | Authenticated |
-| `DELETE` | `/movies/{id}/files/{fileId}` | Delete a file (`409` `outside_library` when its stored path is outside the library root: nothing is deleted) | Member |
-| `GET` | `/search/movie` · `/search/movie/{tmdb_id}` | TMDB title lookup | Authenticated |
+| `DELETE` | `/movies/{id}/files/{fileId}` | Delete a file (`409` `outside_library` when its stored path is outside the library root: nothing is deleted); a `{"remove_torrent": true}` body also removes the torrent it came from | Member |
+| `GET` | `/search/movie?q=&year=` · `/search/movie/{tmdb_id}` | TMDB title lookup | Authenticated |
 
 ### Series
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` | `/series` | List (`?status=`, `?type=`, `?query=`, `?sort=`, `?order=`; `?with_total=false` skips counting the matches and leaves `total` out) | Authenticated |
+| `GET` | `/series` | List (`?status=`, `?type=`, `?monitored=`, `?query=`, `?sort=`, `?order=`; `?with_total=false` skips counting the matches and leaves `total` out) | Authenticated |
 | `POST` | `/series` | Add a series | Member |
-| `GET` | `/series/counts` · `/series/lookup` · `/series/lookup/{tvdb_id}` | Faceted counts (same filter params as the list), TVDB lookup | Authenticated |
+| `GET` | `/series/counts` · `/series/lookup?query=` · `/series/lookup/{tvdb_id}` | Faceted counts (same filter params as the list), TVDB lookup | Authenticated |
 | `GET` | `/series/selection` | Every show `/series` would list under the same filters (`?status=`, `?type=`, `?monitored=`, `?query=`), unpaged: `{ "items": [{ "id", "monitored", "have_episodes", "wanted_episodes" }] }`, specials left out of the counts. What "select all" picks | Authenticated |
 | `GET` | `/episodes` | Episodes whose title holds `?query=` (accent-, case- and punctuation-folded), each naming its show, season and number; the exact title first, then titles starting with the query, then the rest, and within each the ones holding a file first, then most recently aired (`?limit=` 1-100, `?offset=`; no total, since only the search surfaces list them) | Authenticated |
 | `POST` | `/series/specials/apply` | Apply `library.monitor_specials` to season 0 of every series, skipping seasons and episodes toggled by hand | 🔒 Admin |
 | `GET` | `/series/{id}` | Fetch a series | Authenticated |
-| `PATCH` `DELETE` | `/series/{id}` | Update (`monitored`, `quality_profile`, `preset`, `type`) / delete a series | Member |
+| `PATCH` `DELETE` | `/series/{id}` | Update (`monitored`, `quality_profile`, `preset`, `type`) / delete a series (`?delete_files=true` also deletes its files) | Member |
 | `POST` | `/series/{id}/browse` · `/grab` | Search for complete/multi-season packs, or grab one | Member |
 | `POST` | `/series/{id}/release-files` · `/series/{id}/seasons/{number}/release-files` | List a search item's files before grabbing it: the body is the item, unchanged. Fetches the `.torrent` from its indexer (one request) and answers each video file of at least 5 MiB with the `episode_id` its name points at (the matcher the import and file selection use), and every episode of the scope with `has_file`, `wanted` (what a grab without `replace_existing` fetches) and `in_release`. `404` for an unknown show or season; `422 code: files_unavailable` for a magnet whose file list could not be fetched from its peers (the built-in engine and Deluge ask them, for up to 30 seconds; qBittorrent and Transmission cannot), `torrent_unreadable` when the indexer does not hand the `.torrent` over | Member |
-| `POST` | `/series/{id}/search` · `/refresh-metadata` · `/rename` | Search the wanted episodes in the background (`202`), refresh metadata, or rename | Member |
+| `POST` | `/series/{id}/search` · `/refresh-metadata` · `/rename` | Search the wanted episodes in the background (`202`), refresh metadata, or rename (`?preview=true` as for movies) | Member |
 | `GET` | `/series/{id}/play-on` | Links to play the series on a media server | Member |
 | `POST` | `/series/{id}/reidentify` | Point the entry at a different TVDB show | 🔒 Admin |
 | `PATCH` | `/series/{id}/seasons/{number}` | Update a season | Member |
@@ -179,7 +180,7 @@ A change to the files of an offline library root (rename, delete with files, upl
 | `PATCH` | `/series/{id}/episodes/{episodeId}` | Update an episode | Member |
 | `GET` | `/series/{id}/episodes/{episodeId}/credits` | The episode's guest stars and crew, read by the `tv-metadata-refresh` job | Authenticated |
 | `POST` | `/series/{id}/episodes/{episodeId}/search` · `/grab` | Search or grab an episode | Member |
-| `DELETE` | `/series/{id}/episodes/{episodeId}/file` | Delete the episode's file (`409` `outside_library` as for movies) | Member |
+| `DELETE` | `/series/{id}/episodes/{episodeId}/file` | Delete the episode's file (`409` `outside_library` and `remove_torrent` as for movies) | Member |
 
 Each of the three search scopes filters the indexer's answer to its own scope — an episode search returns that episode, a season search returns season packs of that season, a series search returns complete/multi-season packs. The episode search additionally carries `hidden_packs` (present only when non-zero): how many packs covering that episode it excluded, so an empty `items` can be told apart from "it only exists inside a pack".
 
@@ -190,16 +191,16 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | `GET` | `/music/search?query=` | Search MusicBrainz for artists; each hit carries `already_added`, `library_id`, `genre`, `area`, `since`. `429` (`code: rate_limited`, `Retry-After`) when MusicBrainz is limiting, `502` (`code: provider_unavailable`) when it cannot answer | Authenticated |
 | `GET` | `/music/search/releases?query=&limit=` | Search MusicBrainz release groups by title or artist (2 to 200 characters, `limit` 1 to 20, `400` outside); each hit carries `mbid`, `title`, `artist`, `artist_mbid`, `year`, `type` and `already_added`. Memoised for 10 minutes. `429` (`code: rate_limited`) when MusicBrainz limits, `502` (`code: provider_unavailable`) when it cannot answer | Authenticated |
 | `GET` | `/music/search/{mbid}` | The hit fields and the detail of one MusicBrainz artist: `overview` (`?lang=en\|fr`, English when that language has no article), `genres`, current `members`, `releases` | Authenticated |
-| `GET` | `/music/artists` | Paginated list (`?page=`, `?limit=` 1-100, `?status=wanted\|downloading\|available`, `?monitored=monitored\|unmonitored`, `?query=` accent-folded over name, sort name, genre and album titles, `?sort=recent\|name`, `?order=`); items carry their albums as tiles with no tracks; `?with_total=false` skips counting the matches and leaves `total` out | Authenticated |
+| `GET` | `/music/artists` | Paginated list (`?page=`, `?limit=` 1-100, `?status=wanted\|downloading\|available`, `?monitored=monitored\|unmonitored`, `?genre=` as `/music/artists/counts` lists it, `?query=` accent-folded over name, sort name, genre and album titles, `?sort=recent\|name`, `?order=`); items carry their albums as tiles with no tracks; `?with_total=false` skips counting the matches and leaves `total` out | Authenticated |
 | `GET` | `/music/artists/counts` | Faceted counts for the list's toolbar: each facet is counted with the other facets' filters applied, status and monitoring with their own `*_total` row; `genres` and `letters` (artists per letter under every filter) alongside; with no parameters, the whole library | Authenticated |
-| `POST` | `/music/artists` | Add an artist by `mbid` (`monitor` defaults to `all`, optional `quality_profile`); `409` if already added, `422` for an unknown profile or policy, `429` when MusicBrainz is limiting | Member |
+| `POST` | `/music/artists` | Add an artist by `mbid` (`monitor` defaults to `all`, optional `quality_profile`); `409` if already added, `422` for an unknown profile or policy, `429` when MusicBrainz is limiting, `502` (`code: provider_unavailable`) when it cannot answer | Member |
 | `GET` | `/music/artists/{id}` | Fetch an artist with its discography: members, and every album with tracks, credits and personnel (a track's `artists` and `writers` come from `GET /music/artists/{id}/track-credits` or `GET /music/albums/{id}`) (`?lang=en\|fr` picks the overview) | Authenticated |
 | `GET` | `/music/artists/{id}/track-credits` | The artists and writers of every track of the artist's discography, the per-track credits its detail leaves out; a track with neither is left out | Authenticated |
 | `PATCH` | `/music/artists/{id}` | Update `monitor` (`all`, `future`, `manual`, `none`; re-applied to the existing albums, never touching their status; `all` and `future` monitor only the types in `library.music_monitored_types`) and `quality_profile` (`422` for an unknown name; empty clears to the default) | Member |
-| `POST` | `/music/tags/retag` | Queue every music file for a full rewrite of its tags by the `music-tag-sync` job (`202 {queued}`); `409 code: music_tags_off` when `library.music_tags.mode` is `off` | 🔒 Admin |
+| `POST` | `/music/tags/retag` | Queue every file of every album with `tags_managed` on for a full rewrite of its tags by the `music-tag-sync` job (`202 {queued}`); `409 code: music_tags_off` when `library.music_tags.mode` is `off` | 🔒 Admin |
 | `POST` | `/music/monitored-types/apply` | Re-apply every `all`/`future` artist's monitor policy under the current `library.music_monitored_types`, skipping albums whose flag was set by hand; answers `monitored`, `unmonitored` (albums changed) and `types` | 🔒 Admin |
 | `DELETE` | `/music/artists/{id}` | Remove an artist; `?delete_files=true` also deletes files from disk | Member |
-| `POST` | `/music/artists/{id}/refresh-metadata` | Re-fetch the artist and its discography from MusicBrainz; new release groups follow the monitor policy and are hydrated in the background | Member |
+| `POST` | `/music/artists/{id}/refresh-metadata` | Re-fetch the artist and its release-group list from MusicBrainz, then every album in the background; new release groups follow the monitor policy, and a change that touches what an album's files are matched against is left for an admin under `/metadata-changes`. `429` and `502` as for an add | Member |
 | `POST` | `/music/artists/{id}/rename` | Rename every track file of the artist to `library.music_naming` from database metadata (`?preview=true` returns the plan without applying it); `{artist_id, operations}` | Member |
 | `POST` | `/music/artists/{id}/search-now` | Search and grab the artist's wanted, released albums in the background. `202` | Member |
 | `POST` | `/music/artists/{id}/browse` | Search the indexers for the artist's discography packs; items are plain search results | Member |
@@ -208,7 +209,8 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | `GET` | `/music/albums` | Albums whose title holds `?query=` (accent-, case- and punctuation-folded), each with its artist's id and name; the exact title first, then titles starting with the query, then the rest, and within each the ones holding a file first, then monitored, then newest (`?limit=` 1-100, `?offset=`; no total, since only the search surfaces list them; `?type=` keeps only those release types, repeated for several, `400` for an unknown one) | Authenticated |
 | `GET` | `/music/tracks` | Tracks whose title holds `?query=` (accent-, case- and punctuation-folded), each with its album's id, title and type and its artist's id and name; the exact title first, then titles starting with the query, then the rest, and within each the ones holding a file first, then those of a monitored album, then the newest album (`?limit=` 1-100, `?offset=`; no total, since only the search surfaces list them) | Authenticated |
 | `GET` | `/music/albums/{id}` | Fetch an album with its tracks, credits and personnel (the object an artist detail embeds) | Authenticated |
-| `PATCH` | `/music/albums/{id}` | Update `monitored`; never changes the artist's policy, and `/music/monitored-types/apply` leaves the album alone afterwards until the artist's `monitor` is next changed. Also the album's tag settings: `tags_managed`, and `tag_overrides` (tag name to values, written over the library's tags in every file; an empty list removes the tag; `422` for a key that is not a tag name), either of which queues the album's files | Member |
+| `PATCH` | `/music/albums/{id}` | Update `monitored`; never changes the artist's policy, and `/music/monitored-types/apply` leaves the album alone afterwards until the artist's `monitor` is next changed. Also the album's tag settings: `tags_managed`, and `tag_overrides` (tag name to values, written over the library's tags in every file; an empty list removes the tag; `422` for a key that is not a tag name); turning the first on, or sending the second, queues the album's files unless tagging is off | Member |
+| `GET` `PUT` | `/music/albums/{id}/editions` | The releases the album can follow, oldest first, with `current` (the one its tracks came from) and `chosen` (the one a person picked, empty when Streamline picks) / make it follow one: `{release_mbid}`, empty for the automatic pick. The tracks are fetched again before the `204`, and a track holding a file is kept even when the release does not list it; `422 code: edition_not_found` for a release outside the album. Both ask MusicBrainz: `429`, or `502` when it cannot answer | Member |
 | `GET` | `/music/albums/{id}/tags` | Read every file of the album and compare it, key by key, with what Streamline would write (`same`, `differs`, or `kept` for a key it leaves alone), in the format's own keys; with the file's writer state, the album's and track's overrides, and the instance's mode | Member |
 | `POST` | `/music/albums/{id}/tags/apply` | Rewrite every file of the album now, managed or not (`202 {queued}`; a file a torrent still holds waits); `409 code: music_tags_off` when tagging is off | Member |
 | `PATCH` | `/music/tracks/{id}` | Replace the track's `tag_overrides`, written over the album's and the library's tags for its files (`204`) | Member |
@@ -216,9 +218,9 @@ Each of the three search scopes filters the indexer's answer to its own scope �
 | `POST` | `/music/albums/{id}/release-files` | List a search item's files before grabbing it: the body is the item, unchanged. Fetches the `.torrent` from its indexer (one request) and answers each file with the `track_id` its name points at, and every track of the album with `has_file` and `in_release`. Matched by name, where the import matches by tags, so a preview. `422 code: files_unavailable` for a magnet whose file list could not be fetched from its peers (the built-in engine and Deluge ask them, for up to 30 seconds; qBittorrent and Transmission cannot), `torrent_unreadable` when the indexer does not hand the `.torrent` over | Member |
 | `POST` | `/music/albums/{id}/upload/preview` | Preview an upload before sending it: the body is `{files: [{path, size}]}` (at most 5000). Answers like `release-files`: each file with the `track_id` its name points at, and every track with `has_file` and `in_release`. `tracks_pending: true` and no per-track match for an album not hydrated yet. Matched by name, where the import matches by tags. Answers what the upload would refuse before anything is sent: `409 upload_conflict`, `422 no_space`, `422 upload_rejected` | Member |
 | `POST` | `/music/artists/{id}/upload/preview` | Same for a discography: files grouped by album folder, each folder matched to any album of the artist (monitored or not, any type), or skipped | Member |
-| `POST` | `/music/albums/{id}/upload` · `/music/tracks/{id}/upload` · `/music/artists/{id}/upload` | Upload files, `multipart/form-data` with one `file` part per file (its filename the path relative to the folder). Query: `replace_existing`, `title` (default `Upload`). A track takes exactly one audio file and needs `replace_existing` when it already has one. `202 {record_id, skipped_folders}`; `409 upload_conflict`, `422 upload_rejected`, `422 no_space`, `422 no_quality_profile`. See [Uploading files](Uploading-files) | Member |
+| `POST` | `/music/albums/{id}/upload` · `/music/tracks/{id}/upload` · `/music/artists/{id}/upload` | Upload files, `multipart/form-data` with one `file` part per file (its filename the path relative to the folder). Query: `replace_existing`, `title` (default `Upload`). A track takes exactly one audio file and needs `replace_existing` when it already has one. `202 {record_id}`, with `skipped_folders` for an artist; `409 upload_conflict`, `422 upload_rejected`, `422 no_space`. See [Uploading files](Uploading-files) | Member |
 | `POST` | `/music/albums/{id}/grab` | Grab a chosen release: an item of a search, unchanged. Without `replace_existing` the import fills only the tracks that have no file and leaves the others in place; with it, the tracks the release covers are replaced once the new files are verified. `202` with no body | Member |
-| `POST` | `/music/albums/{id}/search-now` · `/music/tracks/{id}/search-now` | Run one search-and-grab pass for the album (a track searches its album). `202`; a no-op for an album that is available, upcoming or already downloading | Member |
+| `POST` | `/music/albums/{id}/search-now` · `/music/tracks/{id}/search-now` | Run one search-and-grab pass for the album (a track searches its album). `202`; a no-op for an album that is not wanted (available, failed or already downloading) or is upcoming | Member |
 | `DELETE` | `/music/tracks/{id}/file` | Delete the track's files from disk and the library, and put an available album back to wanted; `409` when a path is outside the music root | Member |
 | `GET` `POST` | `/music/quality-profiles` | List / create music quality profiles | Authenticated / 🔒 Admin |
 | `PUT` `DELETE` | `/music/quality-profiles/{name}` | Update / delete a music quality profile | 🔒 Admin |
@@ -248,7 +250,7 @@ A music release in a search result carries `source` as a display label (`FLAC 24
 | `POST` | `/books/{id}/rename?preview=` | The rename plan of a book's files, applied unless `preview=true` | Member |
 | `POST` | `/books/{id}/search?kind=ebook\|audiobook` | Interactive search; `kind` omitted searches both slots and merges them. Flat releases (`slot`, the upper-case container in `source`, `bitrate_kbps` for an audiobook), rejected ones kept at the end with `rejected` and `reject_reason`. The language tag of a release is shown, never filtered on | Member |
 | `POST` | `/books/{id}/upload/preview` | Which of the files would be kept: `{files: [{path, size, outcome}]}` with `outcome` `kept`, `ignored` or `refused`. An ebook keeps the one file the quality profile prefers. The body is `{files: [{path, size}]}` and the `slot` query parameter is required | Member |
-| `POST` | `/books/{id}/upload?slot=ebook\|audiobook` | Upload the slot's files, `multipart/form-data`; `slot` is required, `replace_existing` and `title` as on a music upload. `202 {record_id}`; same errors as the music upload, plus `422 upload_rejected` for a book not hydrated yet | Member |
+| `POST` | `/books/{id}/upload?slot=ebook\|audiobook` | Upload the slot's files, `multipart/form-data`; `slot` is required, `replace_existing` and `title` as on a music upload. `202 {record_id}`; same errors as the music upload, plus `422 upload_rejected` for a book not hydrated yet and `422 no_quality_profile` | Member |
 | `POST` | `/books/{id}/grab` | Grab a release: a search item, unchanged (`slot` included). The slot is read from the release's container; a `slot` that disagrees answers `422` `code: grab_rejected`, and `?kind=` disagreeing with the body's `slot` answers `400`. `replace_existing: true` removes the slot's old files once the new ones are placed. `202` with no body | Member |
 | `POST` | `/books/{id}/search-now?kind=` | Search the monitored wanted slots in the background and grab the best release; `202 {queued}` is how many slots, `400` for an unknown `kind` | Member |
 | `POST` | `/books/series` | Add a series by `hardcover_id` (optional `monitor` `all\|future\|none`, `quality_profile`). Two Hardcover requests on the HTTP request, the first 20 volumes hydrated and a stub for every other position; the answer has `hydrating: true` and the rest is filled in the background | Member |
@@ -274,10 +276,10 @@ Books come from Hardcover, which needs `metadata.hardcover_api_key`. Without it 
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` | `/people` | List cast members credited anywhere in the library (`?query=`, `?limit=`, `?offset=`) | Authenticated |
+| `GET` | `/people` | List the cast and crew credited on a movie or series of the library (`?query=`, `?limit=`, `?offset=`) | Authenticated |
 | `GET` | `/people/{id}` | One person's movie and series credits | Authenticated |
 
-People are rows of their own, related to titles through a `credits` table — one row per person-on-a-title, carrying the character and the billing order. **`id` is that person row, and the only key `/people/{id}` accepts.** It is not a provider id: series cast comes from TVDB and carries no TMDB id at all, so keying the endpoint on `tmdb_id` merged every such actor into a single fictitious person. `tmdb_id` and `tvdb_id` both ride along on the person as data — either is `0` when that provider never named them.
+People are rows of their own, related to titles through a `credits` table — one row per person-on-a-title, carrying the character (or the `job` of a crew member) and the billing order. **`id` is that person row, and the only key `/people/{id}` accepts.** It is not a provider id: series cast comes from TVDB and carries no TMDB id at all, so keying the endpoint on `tmdb_id` merged every such actor into a single fictitious person. `tmdb_id` and `tvdb_id` both ride along on the person as data — either is `0` when that provider never named them.
 
 A person is listed only while something credits them. `credits` counts library items — movies plus series — not credit rows, so a person listed twice on one title counts once. The list is ordered by `credits` descending, then by name; `query` folds accents, case and punctuation on both sides, so `?query=beatrice` finds "Béatrice Dalle".
 
@@ -330,26 +332,27 @@ The fetch happens **once per person, ever**. An actor credited on thirty titles 
 }
 ```
 
-`character` belongs to the pairing, not to the person: the same actor carries a different one per title. An `id` no person row occupies is a `404`.
+`character` belongs to the pairing, not to the person: the same actor carries a different one per title. A crew credit carries `job` beside an empty `character`. An `id` no person row occupies is a `404`.
 
 The series objects carry no `seasons` array — the credit query leaves the episode tree unloaded — but they do carry the same pre-aggregated rollup the series list sends (`total_seasons`, `have_episodes`, `total_episodes`, `wanted_episodes`, `downloading_episodes`, `importing_episodes`). Those counts are what a client badges a credit with, and sending the show without them is not the same as sending zeros: a client reading an absent count as zero labels a complete show as missing.
 
-The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{id}`) is served from the same credits, in billing order, and each entry carries `person_id` — the key to `/people/{id}`. A cast entry from a **provider lookup** of a title the library does not hold (`/movies/lookup/{tmdbId}`, `/series/lookup/{tvdbId}`, an expanded request row) has no person row behind it and so omits `person_id`; it still carries `person_url` to the provider's own page.
+The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{id}`), and the `crew` array beside it (`job` and `department` in place of `character`), are served from the same credits, in billing order, and each entry carries `person_id` — the key to `/people/{id}`. A cast entry from a **provider lookup** of a title the library does not hold (`/search/movie/{tmdb_id}`, `/series/lookup/{tvdb_id}`, an expanded request row) has no person row behind it and so omits `person_id`; it still carries `person_url` to the provider's own page.
 
 ### Activity
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` | `/activity` | Event feed (movies, episodes, series, artists, albums, books and book series; filter with `?movie_id=`, `?series_id=`, `?artist_id=`, `?book_id=` or `?book_series_id=` — a series, artist or book series also matches its episodes', albums' or volumes' events) | Authenticated |
-| `GET` | `/activity/queue` · `/activity/history` | Queue and history views (history is cursor-paged and carries `total`, every terminal record). Each entry names what it is for: `movie`, `episode` (show + season/episode), `album` (with its artist), `artist` (a discography pack, with the number of albums it covers) or `book` (with the slot it fills and, for a volume, its series); `movie` is always present and is an empty placeholder on every non-movie record. `torrent_hash` is the record's lower-case info hash in its `download_client`, absent when it has none; under the built-in client it is the key of `/torrents/{hash}` | Authenticated |
+| `GET` | `/activity` | Event feed (movies, episodes, series, artists, albums, books and book series; filter with `?movie_id=`, `?series_id=`, `?artist_id=`, `?book_id=` or `?book_series_id=` — a series, artist or book series also matches its episodes', albums' or volumes' events; also `?type=`, `?since=` and `?before=`) | Authenticated |
+| `GET` | `/activity/queue` · `/activity/history` | Queue and history views (history is cursor-paged and carries `total`, every terminal record). Each entry names what it is for: `movie`, `episode` (show + season/episode), `album` (with its artist), `track` (beside its `album`, for an upload to one track), `artist` (a discography pack, with the number of albums it covers) or `book` (with the slot it fills and, for a volume, its series); `movie` is always present and is an empty placeholder on every non-movie record. `torrent_hash` is the record's lower-case info hash in its `download_client`, absent when it has none; under the built-in client it is the key of `/torrents/{hash}` | Authenticated |
 | `DELETE` | `/activity/queue/{id}` · `/activity/history/{id}` | Remove a queue or history entry | 🔒 Admin |
-| `POST` | `/activity/queue/{id}/pause` · `/resume` · `/activity/history/clear-completed` | Pause/resume a download, or clear completed history | 🔒 Admin |
+| `POST` | `/activity/queue/{id}/pause` · `/resume` · `/activity/history/clear-completed` | Pause/resume a download, or clear completed history (a record whose torrent a client still seeds is kept; `503` and nothing cleared when a client cannot be listed) | 🔒 Admin |
 | `GET` | `/activity/pending` | List adoption proposals (`page`, `limit` 1–100, default 50; `total` counts them all) | Authenticated |
-| `GET` | `/activity/pending/{id}/preview` | Preview a proposal | Authenticated |
+| `GET` | `/activity/pending/{id}/preview` | What importing a series proposal would do, file by file (`409` for any other, `422` `code: connection_failed` when its download client cannot list the files) | Authenticated |
 | `POST` | `/activity/pending/{id}/import` · `/replace` · `/ignore` | Decide a proposal | 🔒 Admin |
-| `POST` | `/activity/pending/{id}/identify` | Identify a proposal against metadata | 🔒 Admin |
+| `POST` | `/activity/pending/{id}/identify` | Name the title behind an unidentified proposal: `kind` (`movie`, `series`, `album`, `book`) with `provider_id`, or `mbid` for an album; the title is added when the library lacks it. `409` when the proposal is already matched | 🔒 Admin |
 | `DELETE` | `/activity/pending/{id}` | Forget a proposal so its torrent can be adopted again | 🔒 Admin |
-| `POST` | `/downloads/{id}/resolve` | Release a held download | 🔒 Admin |
+| `POST` | `/downloads/{id}/resolve` | Release a held download (see [Resolving a held download](#resolving-a-held-download)) | 🔒 Admin |
+| `GET` | `/downloads/{id}/track-plan` · `/folder-plan` | A held album's files, each with the track it would most likely fill / a held discography pack's folders, each with the album it names. `409` for a record that is not held or not of that kind | 🔒 Admin |
 | `POST` | `/activity/history/{id}/retry` | Re-run a failed import — clears the attempt counter and re-queues the record (409 unless it failed) | 🔒 Admin |
 | `GET` | `/metadata-changes` | Provider changes a refresh left for you (`media=music\|series\|movies\|books`, `kind`, `page`, `limit` 1–100); each names its item (`owner`) and what changed (`details`) | 🔒 Admin |
 | `GET` | `/metadata-changes/counts` | Pending changes by media and by kind | 🔒 Admin |
@@ -360,7 +363,7 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` `POST` | `/requests` | List / create requests. `?media_type=` takes a comma list (`book,book_series`; an unknown member is a `400`). A request is a `movie`, `tvshow`, `artist` (by `media_mbid`), `album` (by the release-group `media_mbid`, with `artist_mbid` and `artist_name` as display hints; the response carries the requester's wording as `requested_as` and the verified artist after approval, and approving answers `422` `code: album_not_found` when the release group is not on its artist), `book` or `book_series` (by Hardcover `media_id`) | Any (scoped for `request_only`) |
+| `GET` `POST` | `/requests` | List (`?status=`, `?page=`, `?limit=` 1–100, default 50) / create requests (`409` `code: duplicate` for a title already requested or in the library). `?media_type=` takes a comma list (`book,book_series`; an unknown member is a `400`). A request is a `movie`, `tvshow`, `artist` (by `media_mbid`), `album` (by the release-group `media_mbid`, with `artist_mbid` and `artist_name` as display hints; the response carries the requester's wording as `requested_as` and the verified artist after approval, and approving answers `422` `code: album_not_found` when the release group is not on its artist), `book` or `book_series` (by Hardcover `media_id`) | Any (scoped for `request_only`) |
 | `GET` | `/requests/counts` · `/requests/{id}/metadata` | Counts, request metadata (an artist, book or series request answers the same detail as its lookup; `429` / `503` mean the provider is out of budget or unconfigured) | Any (scoped for `request_only`) |
 | `POST` | `/requests/{id}/approve` | Approve a request with the reviewer's `quality_profile` (empty means the medium's default; a name outside the medium's profiles is a `422`; `429` with `Retry-After` when a book or series request hits Hardcover's limit, `503` without a Hardcover key; the request stays pending). An artist is added monitored `all`, a book `both`, a series `all`; the request turns `available` on the first imported album, or the first imported slot or volume | admin, member |
 | `POST` | `/requests/{id}/deny` · `/reopen` | Deny or reopen a request | admin, member |
@@ -372,11 +375,12 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 | `GET` `POST` | `/indexers` · `/download-clients` · `/media-servers` | List / create | 🔒 Admin |
 | `GET` | `/quality-profiles` · `/custom-formats` | List | Authenticated |
 | `POST` | `/quality-profiles` · `/custom-formats` | Create | 🔒 Admin |
-| `GET` `DELETE` | `/{resource}/{name}` | Fetch / delete by name | 🔒 Admin |
+| `GET` | `/media-servers/{name}` · `/custom-formats/{name}` | Fetch by name; the other resources are read from their list | 🔒 Admin / Authenticated |
+| `DELETE` | `/{resource}/{name}` | Delete by name | 🔒 Admin |
 | `PUT` | `/indexers/{name}` · `/download-clients/{name}` · `/quality-profiles/{name}` · `/custom-formats/{name}` | Replace | 🔒 Admin |
 | `PATCH` | `/media-servers/{name}` | Update | 🔒 Admin |
-| `POST` | `/{resource}/test` | Test an unsaved config | 🔒 Admin |
-| `POST` | `/{resource}/{name}/test` | Test a saved one | 🔒 Admin |
+| `POST` | `/indexers/test` · `/download-clients/test` · `/media-servers/test` | Test an unsaved config | 🔒 Admin |
+| `POST` | `/indexers/{name}/test` · `/download-clients/{name}/test` · `/media-servers/{name}/test` | Test a saved one | 🔒 Admin |
 | `POST` | `/custom-formats/test` | Evaluate a draft condition set against a sample release | 🔒 Admin |
 | `POST` | `/media-servers/discover` | List libraries/sections for a draft (body carries the token) | 🔒 Admin |
 | `POST` | `/media-servers/{name}/discover` | Same, for a saved server, using its stored token | 🔒 Admin |
@@ -384,23 +388,23 @@ The `cast` array on a stored movie or series (`GET /movies/{id}`, `GET /series/{
 | `GET` | `/cardigann/catalog` · `/cardigann/catalog/{file}` | The built-in tracker definitions read from Prowlarr/Indexers, and one definition with the settings an indexer running it takes (`?indexer=<name>` describes the version that indexer is pinned to). `503 catalog_unavailable` when GitHub cannot be reached | 🔒 Admin |
 | `POST` | `/indexers/{name}/captcha` · `/indexers/{name}/login` | Load a built-in indexer's login captcha (`204` when none is shown), then log it in with `{token, answer}` — or log in straight away with no body | 🔒 Admin |
 | `GET` | `/cardigann/updates` | Definition updates held for approval, each with its diff | 🔒 Admin |
-| `POST` | `/cardigann/updates/{file}/approve` · `/reject` | Pin the indexers a held update is for to its commit, or keep the version they have. `403` on a read-only configuration: set the update's `commit` as their `cardigann.commit` in the file instead | 🔒 Admin |
+| `POST` | `/cardigann/updates/{file}/approve` · `/reject` | Pin the indexers a held update is for to its commit, or keep the version they have. Approving answers `403` on a read-only configuration: set the update's `commit` as their `cardigann.commit` in the file instead | 🔒 Admin |
 
-A built-in indexer (`protocol: cardigann`) is created with `definition` and `settings` instead of host, port and API key; Streamline pins it to the catalog's version of the definition (`definition_commit` in the response names the commit). Its secret settings never come back: the response lists their names under `secrets_set`, and an update that leaves one empty keeps it. Changing its definition, site, proxy or settings retires its tracker session, so the next search logs in with what was saved.
+A built-in indexer (`protocol: cardigann`) is created with `definition` and `settings` instead of host, port and API key; Streamline pins it to the catalog's version of the definition (`definition_commit` in the response names the commit). Its secret settings never come back: the response lists their names under `secrets_set`, and an update that leaves one empty keeps it, unless it moves the indexer to another site or proxy (`422` `code: secret_required`). Changing its definition, site, proxy or settings retires its tracker session, so the next search logs in with what was saved.
 
 Built-in custom formats are listed alongside user-defined ones (`builtin: true`); `PUT`/`DELETE` against a built-in, or a delete of a format still scored by a quality profile, is `409`. See [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats).
 
-`is_default` on a quality profile marks the one a movie or series with an empty `quality_profile` resolves to. Deleting it is a `409` while it holds the role, so `POST /quality-profiles/{name}/default` is both how you change the default and how you free the old one for deletion.
+`default_for` on a quality profile lists the media (`movie`, `series`) whose titles with an empty `quality_profile` resolve to it, and `is_default` is true when that list is not empty. Deleting it is a `409` while it holds either role, so `POST /quality-profiles/{name}/default` is both how you change the default and how you free the old one for deletion.
 
 ### Torrents (built-in client)
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` | `/torrents` · `/torrents/{hash}` | List / fetch a torrent (files, trackers, peers). The list also carries `pending_removals`: removed torrents whose files could not be deleted yet, each with its path and the last error | 🔒 Admin |
+| `GET` | `/torrents` · `/torrents/{hash}` | List / fetch a torrent (files, trackers, peers). The list also carries `pending_removals`: removed torrents whose files could not be deleted yet, each with its path and the last error. Every `/torrents` endpoint answers `404` without a built-in client | 🔒 Admin |
 | `POST` | `/torrents` | Add a torrent by magnet link or base64 `.torrent` (body cap 24 MiB, `413` past it) | 🔒 Admin |
-| `DELETE` | `/torrents/{hash}` | Remove a torrent, optionally with its data. Also drops the download record tracking it and puts its media back to wanted at once, without waiting for the monitor's orphan sweep | 🔒 Admin |
+| `DELETE` | `/torrents/{hash}` | Remove a torrent, with its data under `?delete_files=true` (`409` `code: files_unknown` for a torrent whose metadata was never fetched, which is left in place). Also drops the download record tracking it and puts its media back to wanted at once, without waiting for the monitor's orphan sweep; `?blocklist=true` keeps the record, rejected, so the automatic searches skip that release for the title | 🔒 Admin |
 | `POST` | `/torrents/{hash}/pause` · `/resume` | Pause / resume | 🔒 Admin |
-| `PATCH` | `/torrents/{hash}/files/{index}` | Toggle a file | 🔒 Admin |
+| `PATCH` | `/torrents/{hash}/files/{index}` | Set a file's `priority`: `skip`, `normal` or `high` | 🔒 Admin |
 | `PUT` | `/torrents/listen-port` | Move the running engine's peer sockets; not persisted | 🔒 Admin |
 
 ### Transcoding endpoints
@@ -417,19 +421,19 @@ All four answer `409` while `transcoding.enabled` is false.
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` | `/library/recent?limit=` | What landed in the library, newest first (`limit` 1–100, default 24): one `items` entry per import of a movie (`resolution`), a show (`addition`, the episodes it added), an album (`artist_id`, `artist_name`, `release_type`) or one format of a book (`author`, `book_kind`, `format`, and `series_id`/`volume` for a volume). An import is a title's files that landed within an hour of the newest of them; `at` is that newest file's import time. Bulk-import adoptions count | Authenticated |
+| `GET` | `/library/recent?limit=` | What landed in the library, newest first (`limit` 1–100, default 24): one `items` entry per import of a movie (`resolution`), a show (`addition`, the episodes it added), an album (`artist_id`, `artist_name`, `release_type`, `tracks`, and `track_title` when the import placed exactly one) or one format of a book (`author`, `book_kind`, `format`, and `series_id`/`volume` for a volume). An import is a title's files that landed within an hour of the newest of them; `at` is that newest file's import time. Bulk-import adoptions count | Authenticated |
 | `GET` `POST` | `/library/imports` | List / start an import scan | 🔒 Admin |
 | `GET` `DELETE` | `/library/imports/{id}` | Fetch / delete a scan | 🔒 Admin |
 | `POST` | `/library/imports/{id}/cancel` · `/commit` | Cancel or commit a scan. A music commit takes an optional `{"write_tags": bool}` (default off: without it the adopted files are left exactly as they are) | 🔒 Admin |
-| `GET` | `/library/imports/{id}/files` · `/shows` · `/albums` · `/books` | List scanned rows; an album row carries `seeding_files`, its files a torrent still serves | 🔒 Admin |
+| `GET` | `/library/imports/{id}/files` · `/shows` · `/albums` · `/books` | List scanned rows (`?classification=`, `?q=`, `?page=`, `?limit=`); an album row carries `seeding_files`, its files a torrent still serves | 🔒 Admin |
 | `PATCH` | `/library/imports/{id}/files/{fileId}` · `/shows/{showId}` · `/albums/{albumId}` · `/books/{bookId}` | Update a row's match | 🔒 Admin |
 | `POST` | `/library/imports/{id}/decisions` | Bulk decision | 🔒 Admin |
-| `GET` `POST` | `/library/path-migration` | List / start a path migration | 🔒 Admin |
-| `GET` | `/library/path-migration/roots` | List roots | 🔒 Admin |
+| `GET` `POST` | `/library/path-migration` | State of the running (or last) path migration / start one | 🔒 Admin |
+| `GET` | `/library/path-migration/roots` | List the configured roots and how many stored paths sit under each | 🔒 Admin |
 | `POST` | `/library/path-migration/preview` | Preview a migration | 🔒 Admin |
 | `GET` | `/library/missing-files` | List the files confirmed missing from disk (`limit` 1–100, default 50, and `page`) | 🔒 Admin |
 | `POST` | `/library/missing-files/forget` | Forget files deleted on purpose: `{ids}`, 1–100, answers `{forgotten}`. Each row goes and its title stops being monitored. A file back on disk, or not confirmed missing, keeps its row and is not counted. `409` `library_offline` when its root is offline | 🔒 Admin |
-| `POST` | `/library/roots/{root}/accept-missing` | Remove the records of an offline root whose files are not found (`200 {removed}`; `409` `library_online` when the root is online, `409` `library_accept_running` during another walk). The request stays open for the whole walk, and the walk finishes even if the client leaves | 🔒 Admin |
+| `POST` | `/library/roots/{root}/accept-missing` | Remove the records of an offline root (`movies`, `series`, `music`, `ebooks` or `audiobooks`, `400` for any other) whose files are not found (`200 {removed}`; `409` `library_online` when the root is online, `409` `library_accept_running` during another walk). The request stays open for the whole walk, and the walk finishes even if the client leaves | 🔒 Admin |
 
 An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` and `book` adopt in place only and reject `mode=rename` with `422`. `music` scans album folders against MusicBrainz; each row carries `tagged_year`, `format` (`FLAC 24/96`, `MP3 320`; the extension when ffprobe is off), `size`, `file_count` and a live `artist_id` (absent when the library lacks the artist, which a commit then adds), and each candidate its `type`. `book` scans ebook and audiobook items against Hardcover; each row carries `parsed_year`, `format`, `size`, `file_count` and `source_path`; starting or committing one without a Hardcover API key answers `503`. A row whose files joined an album or book the library already held ends `attached` rather than `created`. A scan that fails because Hardcover refused the key mid-run carries `failure_code: hardcover_key_rejected` (`hardcover_not_configured` if the key vanished before it ran); every other failure has the free-text `failure_reason` alone.
 
@@ -445,8 +449,8 @@ An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` and 
 | `POST` | `/auth/jwt/rotate` | Rotate the JWT signing secret (logs everyone out) | 🔒 Admin |
 | `GET` `POST` | `/auth/invites` | List / create invites | 🔒 Admin |
 | `DELETE` | `/auth/invites/{id}` | Revoke an invite | 🔒 Admin |
-| `GET` `POST` | `/users` | List / create users | 🔒 Admin |
-| `GET` `PATCH` `DELETE` | `/users/{uid}` | Fetch / update / delete a user; a `PATCH` may send any subset of `email`, `role`, `display_name` and `auth_method` | 🔒 Admin |
+| `GET` `POST` | `/users` | List (`?q=`, `?role=`, `?sort=name\|role\|auth\|created`, `?order=`, `?limit=` 1–100, default 25, `?offset=`) / create users | 🔒 Admin |
+| `GET` `PATCH` `DELETE` | `/users/{uid}` | Fetch / update / delete a user; a `PATCH` may send any subset of `email`, `role`, `display_name` and `auth_method`. `409` with `code: email_exists` for a taken address, `last_admin` for demoting or deleting the last admin, `self_delete_forbidden` for deleting yourself | 🔒 Admin |
 | `POST` | `/users/{uid}/password-reset` · `/unlock` | Reset a password or clear a lockout | 🔒 Admin |
 | `DELETE` | `/users/{uid}/api-keys/{kid}` · `/sessions/{sid}` | Revoke another user's key or session | 🔒 Admin |
 
@@ -456,7 +460,7 @@ See [Extensions](Extensions) for what these manage. The six on `/extensions` nee
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` `POST` | `/extensions` | List `items`, each entry with its `state` (`running`, `disabled`, `needs_approval`, `failed`, `starting`), `reason`, `version`, what its manifest `requested` and what the entry holds (`granted`), both as mounts with their `auth`, views with their description and `bundle` (`music`, `books`), services and folders, and the account `card` it declares / add an entry (`name`, `source`, `sha256`, `enabled`, `grants`: `mounts`, `views`, `services` and, optionally, `folders`). An unreadable source is saved and shown as `failed`, not refused | 🔒 Admin |
+| `GET` `POST` | `/extensions` | List `items`, each entry with its `state` (`running`, `disabled`, `needs_approval`, `failed`, `starting`), `reason`, `version`, what its manifest `requested` and what the entry holds (`granted`), both as mounts with their `auth`, views with their description and `bundle` (`music`, `books`, `video`), services and folders, and the account `card` it declares / add an entry (`name`, `source`, `sha256`, `enabled`, `grants`: `mounts`, `views`, `services` and, optionally, `folders`). An unreadable source is saved and shown as `failed`, not refused | 🔒 Admin |
 | `POST` | `/extensions/inspect` | Read a module without saving anything: `name`, `version`, what it asks for (`requested`) and its `card`. `422 extension_unreadable` when it cannot be fetched or read | 🔒 Admin |
 | `PATCH` `DELETE` | `/extensions/{name}` | Update `source`, `sha256`, `enabled` or `grants` / remove the entry; `?purge=true` also deletes its data directory | 🔒 Admin |
 | `POST` | `/extensions/{name}/approve` | Set the grants to exactly what the module's manifest asks for; a body is ignored. `422 extension_unreadable` when it cannot be read | 🔒 Admin |
@@ -476,8 +480,8 @@ An extension serves its own routes beside these: `/api/v1/extensions/{name}/card
 | `GET` `PATCH` `DELETE` | `/config/oidc/{name}` | Fetch / update / remove a provider | 🔒 Admin |
 | `GET` | `/schedules` · `/schedules/{name}` | List / fetch a schedule | 🔒 Admin |
 | `GET` | `/schedules/events` | Server-sent events: the full list on connect and on every change (see [Scheduled Jobs](Scheduled-Jobs#live-updates)) | 🔒 Admin |
-| `PATCH` | `/schedules/{name}` | Update a schedule | 🔒 Admin |
-| `POST` | `/schedules/{name}/pause` · `/resume` · `/run` | Pause, resume, or run a schedule now | 🔒 Admin |
+| `PATCH` | `/schedules/{name}` | Set a schedule's interval; `404` for a job whose interval is set in the config file only (see [Scheduled Jobs](Scheduled-Jobs)), `403` for a system job, `422` under `10s` | 🔒 Admin |
+| `POST` | `/schedules/{name}/pause` · `/resume` · `/run` | Pause, resume, or run a schedule now; `409` when it is already paused, not paused or already running, `403` for a system job | 🔒 Admin |
 | `GET` | `/system/info` | Server info | 🔒 Admin |
 | `GET` | `/stats` | The stats page: what the library holds, how the pipeline filled it, who asked for what, over `range=7d`, `30d` or `90d` | 🔒 Admin |
 
@@ -492,11 +496,14 @@ An extension serves its own routes beside these: `/api/v1/extensions/{name}/card
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
 | `GET` | `/health` | Unauthenticated probe. Bare JSON, deliberately not in the spec | None |
-| `POST` | `/auth/login` · `/auth/register` · `/auth/logout` | Cookie-based, `204` on success | None |
+| `POST` | `/auth/login` · `/auth/register` | Cookie-based, `204` on success; a JSON body is required (`415` otherwise) | None |
+| `POST` | `/auth/logout` | Revoke the session and clear its cookie, `204` | Session |
 | `GET` | `/auth/config` · `/auth/invite/{token}` | Pre-auth SPA bootstrap | None |
 | `GET` | `/auth/oidc/{name}/start` · `/callback` | The OIDC flow | None |
-| `GET` | `/posters/{kind}/{id}/poster.jpg` | Poster proxy; `kind` is `movies`, `tvshows`, `artists`, `albums`, `books` or `authors` | — |
+| `GET` | `/posters/{kind}/{id}/poster.jpg` | Poster proxy; `kind` is `movies`, `tvshows`, `artists`, `albums`, `books`, `authors` or `people` | Session |
 | `GET` | `/posters/lookup/{kind}/{key}/poster.jpg` | Art for a title that is not in the library yet: `kind` is `artists` or `albums` (a MusicBrainz id, a release-group id for albums) or `books` (a Hardcover book id). The server fetches it from a source it remembered while serving the lookup, so a tile listed before a restart answers `404` until its search runs again | Session |
+| `POST` | `/settings/media-servers/plex/pin` | Start a Plex sign-in: `flow_id`, `auth_url` to open and `client_id` | 🔒 Admin session |
+| `GET` | `/settings/media-servers/plex/pin/{flowID}` | Poll it: `auth_token` once the user signed in, `expired` when they did not in time | 🔒 Admin session |
 
 ---
 
@@ -602,7 +609,7 @@ Background re-encoding of imported files, driven by the `transcode` block on a [
 
 `status` is `queued` · `running` · `succeeded` · `failed` · `canceled` · `rejected`. `movie_id`, or `series_id` + `episode_id`, links the row back to the item — exactly one pair is set. `error` carries the tail of ffmpeg's stderr from the last failed attempt. `rejected` means the output failed verification — a verdict on the encode, terminal, with `error` naming the check and its numbers.
 
-**`attempts` counts claims, not failures**, so a `running` row is always at 1 or more — the claim that started it is what incremented it. **`size_before` and `size_after` are written together, only when a job succeeds or is rejected**, so neither is present on a queued, running, failed or canceled row; the size of a file mid-encode is not in this payload. `finished_at` likewise appears only once the job reaches a terminal status.
+**`attempts` counts claims, not failures**, so a `running` row is always at 1 or more — the claim that started it is what incremented it. **`size_before` and `size_after` are written together, only when a job succeeds or is rejected**, so neither is present on a queued, running, failed or canceled row; the size of a file mid-encode is not in this payload. `finished_at` likewise appears only once the job reaches a terminal status. `deferred_until` is when a job held back can be claimed again: by `transcoding.defer_seeding`, by `hw_accel: vaapi` without its device, or by a file that is missing or whose library root is offline.
 
 **`percent`, `eta_seconds` and `speed` are live and in-memory only.** They come from the encoder running in *this* process, so they are absent for every status but `running` — and absent for a `running` row whose encode belonged to a process that has since restarted (that row is reset to `queued` on the next boot anyway). Don't treat their absence as zero progress.
 
@@ -610,7 +617,7 @@ Background re-encoding of imported files, driven by the `transcode` block on a [
 
 Both answer `409` for a job in the wrong state, **and there is no `404`**: each is a single conditional update, so an id naming no job at all is indistinguishable from one that has already finished.
 
-**`POST /transcoding/scan`** (202) walks the library, re-probes every file whose profile carries a `transcode` block, and queues the non-compliant ones. It returns as soon as the scan is dispatched — there is no scan-status endpoint; watch the queue. `409` while a scan is already running, and `409` with `code: worker_unavailable` when the worker could not run the jobs anyway (`ffmpeg.enabled: false`, or the ffmpeg binary not found in this process) rather than queueing work nothing would drain — the code is how a client tells the two refusals apart.
+**`POST /transcoding/scan`** (202) walks the library, re-probes every file whose profile carries a `transcode` block (files already transcoded, and those with a rejected job, left out), and queues the non-compliant ones. It returns as soon as the scan is dispatched — there is no scan-status endpoint; watch the queue. `409` while a scan is already running, and `409` with `code: worker_unavailable` when the worker could not run the jobs anyway (`ffmpeg.enabled: false`, or the ffmpeg binary not found in this process) rather than queueing work nothing would drain — the code is how a client tells the two refusals apart.
 
 **`transcoded_at` and `size_before`** appear on `MediaFile` and flat on `Episode` once a file has been re-encoded — `size` names the file as it is now, so the pair is what renders "35 GB → 12 GB". Both are absent for a file that has never been transcoded. The file's [`media_info`](#media-probe) is rewritten in the same update, from the probe the worker took to verify the encode — so it describes the new bytes right away rather than going missing until the backfill catches up.
 
@@ -618,14 +625,16 @@ Both answer `409` for a job in the wrong state, **and there is no `404`**: each 
 
 ```bash
 api "$SL/api/v1/config/transcoding"
-# {"enabled":false,"max_concurrent":1,"max_failures":3,"defer_seeding":false,"verify":{"max_size_percent":100,"min_size_percent":5,"health_check":false,"min_vmaf":0}}
+# {"enabled":false,"max_concurrent":1,"max_failures":3,"hw_accel":"auto",
+#  "hw_device":"/dev/dri/renderD128","hw_status":"ready","defer_seeding":false,
+#  "verify":{"max_size_percent":100,"min_size_percent":5,"health_check":false,"min_vmaf":0}}
 
 api -X PATCH -d '{"enabled":true,"max_concurrent":2}' "$SL/api/v1/config/transcoding"
 
 api -X PATCH -d '{"verify":{"max_size_percent":110,"health_check":true}}' "$SL/api/v1/config/transcoding"
 ```
 
-Every key here, the `verify` block included, takes effect on the next worker tick — no restart. The binaries come from [`/config/ffmpeg`](#media-probe); this section carries no path of its own.
+Every key here, the `verify` block included, takes effect on the next worker tick — no restart. `hw_status` (`off`, `ready` or `unavailable`, the last with a `hw_reason`) is the live hardware probe and read-only. The binaries come from [`/config/ffmpeg`](#media-probe); this section carries no path of its own.
 
 ---
 
@@ -639,7 +648,7 @@ api -X PATCH -d '{"selective_files":true}'                     "$SL/api/v1/confi
 api -X PATCH -d '{"lockout":{"threshold":5}}'                  "$SL/api/v1/config/auth"
 ```
 
-**`/config/library`** also returns `movie_path`, `series_path` and `download_path` — read-only, because a root only moves through [path migration](GitOps-and-Kubernetes#library-path-migration), which rewrites every stored path before it repoints the config. Sending them in the body has no effect. `missing_file_redownload_after` takes a Go duration, `0` or `off`, and answers `422` for anything else. The bounded counters (`max_grab_failures`, `import_max_attempts` 1–255; `drift_grace_ticks` 1–20) answer `422` outside their range rather than wrapping.
+**`/config/library`** also returns `movie_path`, `series_path`, `music_path`, `ebook_path`, `audiobook_path` and `download_path` — read-only, because a root only moves through [path migration](GitOps-and-Kubernetes#library-path-migration), which rewrites every stored path before it repoints the config. Sending them in the body has no effect. `missing_file_redownload_after` takes a Go duration, `0` or `off`, and answers `422` for anything else. The bounded counters (`max_grab_failures`, `import_max_attempts` 1–255; `drift_grace_ticks` 1–20) answer `422` outside their range rather than wrapping.
 
 **`/config/metadata`** never echoes an api key. The read view carries `tmdb_api_key_set`/`tvdb_api_key_set`/`hardcover_api_key_set` and, when the key comes from a `*_file` path, `tmdb_api_key_file_managed`/`tvdb_api_key_file_managed`/`hardcover_api_key_file_managed`. On a `PATCH`, a blank or omitted key **keeps the stored one** — there's no way to clear a key over the API — and setting one inline while the matching `*_file` is configured is a `422`: the file is the source of truth. `musicbrainz_url` (an http(s) server root, without `/ws/2`) and `musicbrainz_interval` (a non-negative Go duration, `0s` for no limit) are plain fields; anything else for either is a `422`. Every field here is read once at boot, so a real change comes back with `restart_required: true`.
 
@@ -670,7 +679,7 @@ api -X PATCH -d '{"log":{"app":{"level":"debug"}}}' "$SL/api/v1/config/system"
 
 Full mental model, condition types and the built-in format library: [Quality Profiles and Custom Formats](Quality-Profiles-and-Custom-Formats). This section is the API shape only.
 
-**`QualityProfile`** gained four fields alongside the pre-existing `preferred_resolution`/`min_resolution`/`upgrade_allowed`/`allowed_codecs`:
+**`QualityProfile`** carries `formats`, `min_score` and `upgrade_until_score` beside `preferred_resolution`/`min_resolution`/`upgrade_allowed`/`allowed_codecs`, the default markers and an optional [`transcode`](Quality-Profiles-and-Custom-Formats#transcoding-a-profiles-files) block:
 
 <details>
 <summary><b>Example <code>QualityProfile</code></b></summary>
@@ -685,14 +694,16 @@ Full mental model, condition types and the built-in format library: [Quality Pro
     { "name": "x265", "score": 100 },
     { "name": "hdr", "score": 50 }
   ],
-  "min_score": 0,
-  "upgrade_until_score": 500
+  "min_score": 100,
+  "upgrade_until_score": 500,
+  "is_default": true,
+  "default_for": ["movie", "series"]
 }
 ```
 
 </details>
 
-`formats[].name` accepts either a built-in name or a `custom_formats` entry name; an unresolvable name is `422`. `min_score` is **omitted from the response when it's `0`** — the handler only sets the field when the value is non-zero (`*int`), not a signal it's unset; absent reads as `0`.
+`formats[].name` accepts either a built-in name or a `custom_formats` entry name; an unresolvable name is `422`. `min_score` and `upgrade_until_score` are each **omitted from the response when `0`**; absent reads as `0`.
 
 **Browse-releases responses** (`POST /movies/{id}/search`, the series browse endpoints) annotate each `SearchResult` with the item's own profile:
 
@@ -723,7 +734,7 @@ Every browse result also carries two history-and-source facts, both ignored on a
 
 A result's `download_url` is **not** the indexer's link: that link carries the indexer's API key, so search responses return an opaque handle (`slr1.…`) instead, and `info_url` comes back with its query string stripped. Send the result back unchanged to grab it. Handles stop working when the session secret rotates, so search again after a rotation. A grab body may still carry a plain magnet or a link to one of your configured indexers.
 
-**`MediaFile.file_score`** is the file's computed score against its movie's current profile — **movie detail responses only**, omitted from list responses same as the rest of that eager-loaded shape. A file outside the profile's band, or below `min_score`, reports `file_score: 0` — the same number the automatic-upgrade decision reads, and there's no separate `rejected` flag on a file. The key is absent entirely when no quality profile is configured at all. `Episode` carries the same field flat (`Episode.file_score`), against the series' profile, on `GET /series/{id}` — the series list response has no `seasons`/`episodes` at all.
+**`MediaFile.file_score`** is the file's computed score against its movie's current profile — **movie detail responses only**, omitted from list responses same as the rest of that eager-loaded shape. A file outside the profile's band reports `file_score: 0`, the same number the automatic-upgrade decision reads. One below `min_score` reports its own total. There's no separate `rejected` flag on a file. The key is absent entirely when no quality profile is configured at all. `Episode` carries the same field flat (`Episode.file_score`), against the series' profile, on `GET /series/{id}` — the series list response has no `seasons`/`episodes` at all.
 
 **`/custom-formats/test`** evaluates an unsaved condition set against a synthetic sample — `POST /api/v1/custom-formats/test` with `{conditions, sample: {title, size, seeders, episodes}}` (`episodes` defaults to 1 and scales the size bounds). Worked example: [Quality Profiles and Custom Formats § The tester](Quality-Profiles-and-Custom-Formats#the-tester).
 
@@ -781,10 +792,10 @@ is never silently undone. `422` for a value outside the three.
 alongside `path`, so presence does not have to be inferred from an empty string
 or from `status`.
 
-**Approve every pending request:**
+**Approve the pending requests, up to 100 at a time** (run it again while any are left):
 
 ```bash
-api "$SL/api/v1/requests?status=pending" \
+api "$SL/api/v1/requests?status=pending&limit=100" \
   | jq -r '.items[].id' \
   | xargs -I{} curl -sS -X POST -H "X-API-Key: $KEY" -H 'Content-Type: application/json' \
       -d '{}' "$SL/api/v1/requests/{}/approve"
@@ -810,10 +821,14 @@ A download that fails import verification sits in the queue with
 each naming the file, what was expected and what was found. `corrupt`,
 `resolution`, `duration`, `codec` and `always_ask` are the video checks; `tier`
 (a measured audio tier the profile does not tick), `album` (files tagged as
-another album) and `track` (a file titled differently from the track its number
-lands on) hold a music download; `format`, `bitrate` and `metadata` (a
-series placeholder, or a book with no author yet) hold a book. See
-[Configuration Reference](Configuration-Reference#import-verification) for the
+another album), `track` (a file titled differently from the track its number
+lands on, or matching no track), `missing` (tracks the album would be left
+without a file for) and `folder` (a pack folder that names no album of the
+artist, or one another folder already took) hold a music download; `format`,
+`bitrate` and `metadata` (a series placeholder, or a book with no author yet)
+hold a book. `location` holds any completed download whose files are not where
+Streamline looks: it is released on its own once they appear, and `import`
+answers `409` until then. See [Configuration Reference](Configuration-Reference#import-verification) for the
 rules and the knobs.
 
 ```bash
@@ -821,7 +836,7 @@ api "$SL/api/v1/activity/queue" \
   | jq '.items[] | select(.status=="held") | {id, title, hold_reasons}'
 ```
 
-Every held record needs a decision:
+Every other hold needs a decision:
 
 ```bash
 # Import it anyway — verification is skipped on the re-run
@@ -833,6 +848,13 @@ api -X POST -d '{"action":"regrab"}' "$SL/api/v1/downloads/42/resolve"
 # Bin it and stop
 api -X POST -d '{"action":"delete"}' "$SL/api/v1/downloads/42/resolve"
 ```
+
+On a held album, `import` can carry `track_assignments` (`file` and `track_id`,
+read from `GET /downloads/{id}/track-plan`); on a held discography pack,
+`folder_assignments` (`folder` and `album_id`, read from
+`GET /downloads/{id}/folder-plan`). The list is the whole plan: a file or folder
+left out is not imported. One naming anything outside the download, or one track
+or album twice, answers `422` with `code: assignment_rejected`.
 
 `regrab` and `delete` both remove the torrent **and its files** from the download
 client; they differ only in whether the title goes back to wanted for another
@@ -878,21 +900,21 @@ api -X POST "$SL/api/v1/library/imports/$scan/commit"
 ```
 
 `POST .../decisions` returns `{"updated": N}` and dispatches on the scan's kind,
-so the same call covers movie files and series shows. Omit `classification` to
+so the same call covers movie files, series shows, albums and books. Omit `classification` to
 hit the whole scan, or pass `ids` to name specific rows; both together are an
 AND. The ambiguous rows are the ones that still need a human — resolve those
-with the per-row `PATCH`, supplying `tmdb_id`/`tvdb_id`.
+with the per-row `PATCH`, supplying `tmdb_id`, `tvdb_id`, `release_group_mbid` or
+`book_hardcover_id`.
 
-**Finding files that sit outside your library roots:**
+**Finding files that are not where the naming template puts them:**
 
-`POST /movies/{id}/rename` is a safe probe — it returns
+`POST /movies/{id}/rename?preview=true` is a safe probe — it returns
 `{"movie_id":N,"operations":[]}` when the file is already where the naming
-template says it belongs, and a non-empty `operations` array (having moved it)
-when it was not. It is currently the only way to discover a file that was
-attached in place under some other root.
+template says it belongs, and a non-empty `operations` array, with nothing
+moved, when it is not.
 
 ```bash
-api -X POST "$SL/api/v1/movies/105/rename" | jq '.operations | length'
+api -X POST "$SL/api/v1/movies/105/rename?preview=true" | jq '.operations | length'
 ```
 
 **Add an indexer:**

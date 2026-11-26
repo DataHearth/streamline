@@ -127,12 +127,13 @@ Open <http://localhost:8080>.
 
 ### Image tags
 
-| Tag | What it tracks |
-| --- | --- |
-| `latest` | Most recent stable release |
-| `X.Y.Z`, `X.Y`, `X` | Pinned release / minor line / major line (no `v`: release `v3.3.0` is image `3.3.0`) |
-| `edge` | Every push to `main` — expect breakage |
-| `sha-<short>` | An exact commit |
+| Default image | [VAAPI image](#hardware-encoding-vaapi) | What it tracks |
+| --- | --- | --- |
+| `latest` | `latest-vaapi` | Most recent stable release |
+| `X.Y.Z` | `X.Y.Z-vaapi` | One release (no `v`: release `v4.0.0` is image `4.0.0`) |
+| `X.Y`, `X` | `X.Y-vaapi`, `X-vaapi` | Most recent stable release of that minor or major line |
+| `main` | `main-vaapi` | Every push to `main`: expect breakage |
+| `sha-<short>` | `sha-<short>-vaapi` | An exact commit of `main`, or the commit of a release |
 
 > [!TIP]
 > Pin to `X.Y.Z` or at least `X.Y` for anything you care about.
@@ -298,7 +299,7 @@ Set the container path identical to the host path so paths reported by your torr
 
 **Synology specifics.** Container Manager (or Docker on older DSM) works fine. Create one shared folder holding both `media` and `downloads` subfolders. Note that Synology's Btrfs shares do support hardlinks, but only within a single shared folder — across two shared folders they'll fail.
 
-**TrueNAS SCALE specifics.** Either use the Docker/Apps custom-app flow with the same mounts, or install the [Helm chart](#kubernetes--helm) directly since SCALE runs Kubernetes underneath.
+**TrueNAS SCALE specifics.** Use the Apps custom-app flow with the same mounts. Releases before 24.10 run their apps on Kubernetes, where the [Helm chart](#kubernetes--helm) installs directly.
 
 You don't need to create a config file first: on its first start Streamline writes the defaults to `config/config.yaml`. Give it the six library folders as environment variables on that first start — `STREAMLINE_LIBRARY__DOWNLOAD_PATH`, `…__MOVIE_PATH`, `…__SERIES_PATH`, `…__MUSIC_PATH`, `…__EBOOK_PATH`, `…__AUDIOBOOK_PATH`, all under the shared folder — and they are written into the file; without them it writes the file and stops on `create library path /media/movies: permission denied` until you set them there. The container runs as uid/gid 1000, so the host folders must be writable by that user, or set the container's user to the one owning your share.
 
@@ -383,6 +384,8 @@ not found`, the missing `version` on Settings → Media probe (`GET /api/v1/conf
 Install the new version and start it: it updates the database on its own at boot, and backs it up into `<data_dir>/backups` first ([Backups](GitOps-and-Kubernetes#backups)). If that backup cannot be written — a full disk, most often — it refuses to update the database and stops, with the reason in its log.
 
 The update only goes forward. An older version will not start on a database a newer one has updated (it logs `no migration found for version …`); nothing is changed, but to go back you stop Streamline, restore the backup taken before the update with the older version (`streamline restore <file>`, see [Backups](GitOps-and-Kubernetes#backups)), and lose whatever happened since.
+
+**From 3.x to 4.x:** OPDS and Subsonic are [extensions](Extensions), served under `/extensions/opds` and `/extensions/subsonic`. Add them under **Settings → Extensions** after the update, then give each reader or music app the new address and a credential made on its card on the account page.
 
 ---
 

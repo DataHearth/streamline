@@ -15,7 +15,7 @@ Uploads go onto something **already in the library**. Add the artist or book fir
 
 Choose **Upload files** on the page, then drop a folder or files on the sheet, or use the folder or file picker. Before any byte is sent, Streamline shows which file goes where, so a multi-gigabyte upload is never sent for nothing. The preview matches by file name; the import itself matches by tags, so treat it as a preview. **Replace existing files** is offered when the target already has files.
 
-Only audio (for music) or the slot's formats (for a book) are kept, along with `.cue` files, which the importer reads to refuse a CUE disc image. Anything else, such as artwork, `.nfo` files and a PDF booklet in a music folder, is discarded. A file of the wrong kind (a video on an album, an MP3 on an ebook) refuses the whole upload and names the file, and so does a file named as audio that holds none, once everything has arrived. That check reads the file's headers, so it catches a file that was never audio, not one cut short partway through.
+Only audio (for music) or the slot's formats (for a book) are kept, along with `.cue` files, which the importer reads to refuse a CUE disc image. Anything else, such as artwork, `.nfo` files and a PDF booklet in a music folder, is discarded. A file of the wrong kind (a video on an album, an MP3 on an ebook) refuses the whole upload and names the file, and so does a file named as audio that holds none, once everything has arrived. That check reads the file's headers, so it catches a file that was never audio, not one cut short partway through. A WAV is converted to FLAC when it is imported, or refused when that conversion is unavailable: see [WAV releases](Music-and-Books#wav-releases). The web UI takes at most 5000 files at once.
 
 ## What happens next
 
@@ -40,7 +40,7 @@ Uploads can be large, and a proxy in front of Streamline will cut them by defaul
 - **Traefik**: turn request buffering off (remove the `buffering` middleware, or set `maxRequestBodyBytes` to 0) and raise the entrypoint's `readTimeout`, or set it to 0.
 - **Cloudflare and similar**: their body-size caps apply; upload over the LAN address for large files.
 
-Streamline itself keeps the normal 1 MiB body cap everywhere except these routes, and cuts an upload that stalls for two minutes.
+Streamline itself puts no body cap on these routes (it is 1 MiB everywhere else, 24 MiB for an admin adding a torrent), and cuts an upload that stalls for two minutes.
 
 ## From the API
 
