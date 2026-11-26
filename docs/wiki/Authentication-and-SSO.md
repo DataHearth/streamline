@@ -237,7 +237,7 @@ streamline --config /etc/streamline/config.yaml auth unlock user@example.com
 
 ## OIDC
 
-Multi-provider. Each entry is discovered at startup; **a provider whose discovery fails is unavailable until the next start**, and its button on the login page leads to a `404`. Look for `OIDC provider discovery failed; provider unavailable` in the boot log.
+Multi-provider. Each entry is discovered at startup; **a provider whose discovery fails is unavailable until the next start**, and the login page shows no button for it. Look for `OIDC provider discovery failed; provider unavailable` in the boot log.
 
 With at least one provider configured, the login page leads with the provider buttons (the first one listed in `auth.oidc` is the highlighted one) and folds the email and password form behind **Sign in with email**. The form opens on its own after a failed password attempt, and in a browser whose last sign-in used it. Local accounts keep working; with no provider, the form is all the page shows.
 
