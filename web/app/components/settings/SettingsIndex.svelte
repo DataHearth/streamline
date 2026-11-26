@@ -3,10 +3,9 @@
 	import { createSettingsNav } from "@lib/settings-nav.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// The touch settings navigation: /settings is a destination below lg instead
-	// of a redirect to General. Five group headings, eleven rows, each carrying
-	// the count it owns — the numbers a single native menu would flatten into
-	// "Indexers (2)", and the group names it would drop entirely.
+	// The settings navigation below lg, where /settings is a page of its own:
+	// one heading per group, one row per section, each with the count it owns.
+	// The top bar carries the page's h1.
 	const nav = createSettingsNav();
 </script>
 

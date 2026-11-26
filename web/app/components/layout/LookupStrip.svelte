@@ -4,12 +4,12 @@
 	import type { LookupItem } from "@lib/search-model.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 
-	// The way out of the library on all three search surfaces, pinned outside
-	// their scrolling lists so a full library cannot push it out of sight. One
-	// line at any width: it sheds the question as its own box narrows. The text
-	// never carries the query (it is in the field above, and in each button's
-	// accessible name): a sentence that grew with every keystroke pushed the
-	// buttons along as you typed, and crowded their icons out on a phone.
+	// The way out of the library on both search surfaces (the command palette
+	// and /search), pinned outside their scrolling lists so a full library
+	// cannot push it out of sight. One line at any width: it sheds the question
+	// as its own box narrows. The text never carries the query (it is in the
+	// field above, and in each button's accessible name), so the buttons hold
+	// still while you type and keep their icons on a phone.
 	let {
 		items,
 		onpick,

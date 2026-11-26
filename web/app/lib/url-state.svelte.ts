@@ -10,7 +10,7 @@ import { activeRoute } from "@roxi/routify";
 //   monitored  all | monitored | unmonitored
 //   kind       which family of media (books' shelves, quality profiles,
 //              requests); series `type` is another axis (standard/anime/daily)
-//   sort+order the sort key and its direction, always both
+//   sort+order the sort key and, where the page has one, its direction
 //   view       a layout or sub-view switch (grid/list, queue/history/events…)
 //   tab        a detail page's tab
 //

@@ -18,9 +18,9 @@
 		| "unaired"
 		| "skipped"
 		// Transcode job states. Each aliases an existing --status-* hue in
-		// tokens.css rather than reusing the kind itself, so the label reads
-		// "Queued" and not "Wanted" — the same reason `importing` exists beside
-		// `grabbing`.
+		// web/static/css/input.css rather than reusing the kind itself, so the
+		// label reads "Queued" and not "Wanted", the same reason `importing`
+		// exists beside `grabbing`.
 		| "queued"
 		| "running"
 		| "succeeded"
