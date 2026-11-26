@@ -4758,6 +4758,8 @@ paths:
 
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
   /auth/invites/{id}:
     parameters:
       - $ref: "#/components/parameters/ResourceID"

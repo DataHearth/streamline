@@ -3,6 +3,7 @@ package restapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/datahearth/streamline/ent"
@@ -66,9 +67,15 @@ func (s *Server) CreateInvite(
 
 	ttl := 7 * 24 * time.Hour
 	if req.Body.Ttl != nil && *req.Body.Ttl != "" {
-		if d, err := time.ParseDuration(*req.Body.Ttl); err == nil {
-			ttl = d
+		d, err := time.ParseDuration(*req.Body.Ttl)
+		if err != nil {
+			return CreateInvite422JSONResponse{
+				UnprocessableEntityJSONResponse: errUnprocessable(
+					fmt.Sprintf("invalid ttl: %v", err),
+				),
+			}, nil
 		}
+		ttl = d
 	}
 	raw, inv, err := s.auth.CreateInvite(
 		ctx,
