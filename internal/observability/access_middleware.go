@@ -33,9 +33,11 @@ func (l *HTTPLogger) Middleware(skip SkipFunc) func(http.Handler) http.Handler {
 			}
 			start := time.Now()
 			ww := chimw.NewWrapResponseWriter(w, r.ProtoMajor)
+			ctx, caller := auth.ContextWithClaimsSlot(r.Context())
+			r = r.WithContext(ctx)
 			next.ServeHTTP(ww, r)
 
-			l.emit(r, ww, time.Since(start))
+			l.emit(r, ww, time.Since(start), caller())
 		})
 	}
 }
@@ -44,6 +46,7 @@ func (l *HTTPLogger) emit(
 	r *http.Request,
 	ww chimw.WrapResponseWriter,
 	dur time.Duration,
+	claims *auth.Claims,
 ) {
 	ctx := r.Context()
 
@@ -62,7 +65,7 @@ func (l *HTTPLogger) emit(
 	if id := chimw.GetReqID(ctx); id != "" {
 		attrs = append(attrs, slog.String("request_id", id))
 	}
-	if claims := auth.ClaimsFromContext(ctx); claims != nil && claims.UserID != 0 {
+	if claims != nil && claims.UserID != 0 {
 		attrs = append(attrs,
 			slog.Uint64("user.id", uint64(claims.UserID)),
 			slog.String("user.email", claims.Email),

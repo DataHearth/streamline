@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
+	"github.com/datahearth/streamline/internal/auth"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/utils/httputil"
@@ -150,6 +151,58 @@ var _ = Describe("HTTPLogger.Middleware", Label("unit", "observability"), func()
 		Expect(json.Unmarshal(bytes.TrimSpace(buf.Bytes()), &entry)).To(Succeed())
 		return entry["remote_ip"].(string)
 	}
+
+	// The auth middleware runs inside the access log and attaches the claims
+	// to a request the log never sees, which is the case authAs stands in for.
+	logUser := func(authAs ...*auth.Claims) map[string]any {
+		GinkgoHelper()
+		l, buf := newLoggerWithBuf("json")
+
+		r := chi.NewRouter()
+		r.Use(l.Middleware(nil))
+		for _, c := range authAs {
+			r.Use(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(
+					func(w http.ResponseWriter, req *http.Request) {
+						next.ServeHTTP(
+							w,
+							req.WithContext(
+								auth.ContextWithClaims(req.Context(), c),
+							),
+						)
+					},
+				)
+			})
+		}
+		r.Get(
+			"/x",
+			func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) },
+		)
+		r.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/x", nil))
+
+		var entry map[string]any
+		Expect(json.Unmarshal(bytes.TrimSpace(buf.Bytes()), &entry)).To(Succeed())
+		return entry
+	}
+
+	It("names the caller auth found", func() {
+		entry := logUser(&auth.Claims{UserID: 7, Email: "a@b.c"})
+		Expect(entry).To(HaveKeyWithValue("user.id", float64(7)))
+		Expect(entry).To(HaveKeyWithValue("user.email", "a@b.c"))
+	})
+
+	It("names nobody on an anonymous request", func() {
+		Expect(logUser()).NotTo(HaveKey("user.id"))
+		Expect(logUser(&auth.Claims{Role: "member"})).NotTo(HaveKey("user.id"))
+	})
+
+	It("keeps the caller when later claims name another account", func() {
+		entry := logUser(
+			&auth.Claims{UserID: 7, Email: "a@b.c"},
+			&auth.Claims{UserID: 8, Email: "other@b.c"},
+		)
+		Expect(entry).To(HaveKeyWithValue("user.id", float64(7)))
+	})
 
 	It("populates remote_ip from X-Forwarded-For behind a trusted proxy", func() {
 		configtest.Setup(map[string]any{

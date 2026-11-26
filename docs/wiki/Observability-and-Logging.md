@@ -55,7 +55,7 @@ log:
 
 `combined` approximates the Apache combined format with one deliberate deviation: **timestamps are RFC3339**, not Apache's `02/Jan/2006:15:04:05 -0700`. Log parsers expecting strict Apache format need adjusting.
 
-The access logger sits outside panic recovery and authentication, so it records refused requests, 404s and panics too. `/health`, `/static/*` and `/api/docs` are left out. With an OTel endpoint set, the same lines also go to the [log pipeline](#logs).
+The access logger sits outside panic recovery and authentication, so it records refused requests, 404s and panics too. A request that authenticated as a user carries `user.id` and `user.email`. `/health`, `/static/*` and `/api/docs` are left out. With an OTel endpoint set, the same lines also go to the [log pipeline](#logs).
 
 ---
 
