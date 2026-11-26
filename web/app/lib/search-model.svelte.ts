@@ -28,6 +28,7 @@ import {
 	User,
 	LogOut,
 	RefreshCw,
+	ChartColumn,
 } from "@lucide/svelte";
 import { api } from "./api";
 import { albumPosterUrl, artistPosterUrl, bookPosterUrl } from "./posters";
@@ -207,6 +208,7 @@ const ADMIN_PAGES = new Set([
 	"/transcoding",
 	"/imports",
 	"/metadata-changes",
+	"/stats",
 	"/settings",
 ]);
 
@@ -223,6 +225,7 @@ const PAGES: PageItem[] = [
 	{ kind: "page", label: i18n.imports_label(), path: "/imports", icon: FolderInput },
 	{ kind: "page", label: i18n.nav_metadata_changes(), path: "/metadata-changes", icon: RefreshCw },
 	{ kind: "page", label: i18n.common_calendar(), path: "/calendar", icon: CalendarDays },
+	{ kind: "page", label: i18n.stats_label(), path: "/stats", icon: ChartColumn },
 	{ kind: "page", label: i18n.nav_settings(), path: "/settings", icon: Settings },
 	{ kind: "page", label: i18n.common_account(), path: "/account", icon: User },
 ];
