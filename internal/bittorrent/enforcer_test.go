@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	antorrent "github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -99,5 +100,54 @@ var _ = Describe("ratio", Label("unit", "bittorrent"), func() {
 		uploaded := wanted // fully seeded against what was actually wanted
 		Expect(ratio(uploaded, wanted)).To(BeNumerically(">=", target))
 		Expect(ratio(uploaded, t.Length())).To(BeNumerically("<", target))
+	})
+})
+
+var _ = Describe("enforceOnce", Label("unit", "bittorrent"), func() {
+	var (
+		t     *antorrent.Torrent
+		hash  string
+		store *dbmocks.MockStore
+		e     *Engine
+	)
+
+	BeforeEach(func() {
+		var client *antorrent.Client
+		client, t = newSelectionTestTorrent()
+		hash = t.InfoHash().HexString()
+		store = dbmocks.NewMockStore(GinkgoT())
+		paths := newContentPaths()
+		e = &Engine{
+			client:   client,
+			store:    store,
+			state:    map[string]*torrentState{},
+			paths:    paths,
+			removals: newDataRemovals(store, paths),
+		}
+	})
+
+	// Every file of the fixture is on disk and verified, but no file is
+	// wanted until the selection's priorities apply, so wantedMissing is
+	// already 0. The mock fails the spec on any write, which is the assertion.
+	DescribeTable("stamps no completion before the selection applies",
+		func(prioritize bool, mode string) {
+			e.setState(hash, func(s *torrentState) { s.selectionMode = mode })
+			if prioritize {
+				e.prioritize(t, mode, nil)
+			}
+			e.enforceOnce(context.Background())
+			Expect(e.getState(hash).completedAt).To(BeZero())
+		},
+		Entry("priorities not applied yet", false, "all"),
+		Entry("selection still pending", true, "pending"),
+	)
+
+	It("stamps completion once the wanted files are complete", func() {
+		e.prioritize(t, "all", nil)
+		store.EXPECT().
+			SetTorrentSessionCompleted(mock.Anything, hash, mock.Anything).
+			Return(nil).Once()
+		e.enforceOnce(context.Background())
+		Expect(e.getState(hash).completedAt).NotTo(BeZero())
 	})
 })
