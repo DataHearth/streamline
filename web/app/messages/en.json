@@ -52,6 +52,8 @@
 	"account_stat_api_keys": "API keys",
 	"account_stat_last_seen": "Last seen",
 	"account_stat_sessions": "Sessions",
+	"account_title_logos": "Title logos",
+	"account_title_logos_help": "Shows a movie's or series' logo in place of its title on its page, on a wide screen. Applies to your account on every device.",
 	"account_token_once": "It won't be shown again. Treat it like a password.",
 	"action_add_movie": "Add movie",
 	"action_add_series": "Add series",

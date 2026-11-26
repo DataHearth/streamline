@@ -441,7 +441,7 @@ An import scan's `kind` takes `movie`, `series`, `music` or `book`. `music` and 
 
 | Method | Path | What it does | Auth |
 | --- | --- | --- | --- |
-| `GET` `PATCH` | `/auth/me` | Fetch / update your profile (`display_name`, and `device_email`, the e-reader address [Send to Kindle](Send-to-Kindle) mails to; an empty string clears it) | Any |
+| `GET` `PATCH` | `/auth/me` | Fetch / update your profile (`display_name`, and `device_email`, the e-reader address [Send to Kindle](Send-to-Kindle) mails to; an empty string clears it; `title_logos`, whether movie and series pages show the title's logo in place of its text, `true` for a new account) | Any |
 | `POST` | `/auth/password` | Change your password; revokes your other sessions **and every API key you hold** | Any |
 | `GET` `POST` | `/auth/me/api-keys` | List / create your API keys | Any |
 | `GET` | `/auth/me/sessions` | List your sessions | Any |

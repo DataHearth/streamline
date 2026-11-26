@@ -82,6 +82,28 @@ var _ = Describe(
 				Expect(*u.DeviceEmail).To(Equal(dev))
 			})
 
+			It(
+				"UpdateMe turns title logos off and answers the stored value",
+				func() {
+					off := false
+					app.auth.EXPECT().
+						UpdateProfile(mock.Anything, app.adminID, auth.ProfilePatch{TitleLogos: &off}).
+						Return(&ent.User{ID: app.adminID, Email: "admin@test.com", Role: "admin", AuthMethod: "local", TitleLogos: false}, nil).
+						Once()
+
+					req := app.req(http.MethodPatch, "/api/v1/auth/me", app.adminKey,
+						strings.NewReader(`{"title_logos":false}`))
+					req.Header.Set("Content-Type", "application/json")
+					resp := app.do(req)
+					defer resp.Body.Close()
+					Expect(resp.StatusCode).To(Equal(http.StatusOK))
+
+					var body map[string]any
+					Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+					Expect(body).To(HaveKeyWithValue("title_logos", false))
+				},
+			)
+
 			It("UpdateMe answers 422 for an invalid device_email", func() {
 				bad := "nope"
 				app.auth.EXPECT().

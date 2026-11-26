@@ -1,17 +1,21 @@
 <script lang="ts">
 	import Img from "@components/shared/Img.svelte";
+	import { auth } from "@lib/auth.svelte";
 
 	// A detail hero's title: the title's logo from lg up, the text below it and
 	// wherever there is no logo. Under lg the poster column is too short for a
 	// logo's height, which would push the title block above it. The CSS picks,
 	// and a lazy image that is not displayed is never fetched, so a phone or a
-	// tablet downloads nothing.
+	// tablet downloads nothing. An account with "Title logos" off always
+	// gets the text.
 	let { title, logoSrc }: { title: string; logoSrc?: string } = $props();
 
 	// A logo that fails to load falls back to the text; another title on the
 	// same component, or the same one under a new match, gets its own try.
 	let failedSrc = $state<string | null>(null);
-	let shown = $derived(logoSrc && logoSrc !== failedSrc ? logoSrc : null);
+	let shown = $derived(
+		auth.user?.title_logos !== false && logoSrc && logoSrc !== failedSrc ? logoSrc : null,
+	);
 </script>
 
 {#if shown}

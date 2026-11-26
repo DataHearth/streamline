@@ -87,6 +87,19 @@ var _ = Describe("Account service unit", Label("unit", "auth"), func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("passes title_logos through", func() {
+			row := &ent.User{ID: 1}
+			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {
+				return p.DisplayName == nil && p.DeviceEmail == nil &&
+					p.TitleLogos != nil && !*p.TitleLogos
+			})).
+				Return(row, nil).
+				Once()
+
+			_, err := svc.UpdateProfile(ctx, 1, ProfilePatch{TitleLogos: new(false)})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("clears device_email on empty string", func() {
 			row := &ent.User{ID: 1}
 			storeMock.UpdateUser(mock.AnythingOfType(ctxType), uint32(1), mock.MatchedBy(func(p db.UpdateUserParams) bool {

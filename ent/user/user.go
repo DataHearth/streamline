@@ -37,6 +37,8 @@ const (
 	FieldLastFailedLoginAt = "last_failed_login_at"
 	// FieldLockedUntil holds the string denoting the locked_until field in the database.
 	FieldLockedUntil = "locked_until"
+	// FieldTitleLogos holds the string denoting the title_logos field in the database.
+	FieldTitleLogos = "title_logos"
 	// EdgeAPIKeys holds the string denoting the api_keys edge name in mutations.
 	EdgeAPIKeys = "api_keys"
 	// EdgeOidcIdentities holds the string denoting the oidc_identities edge name in mutations.
@@ -91,6 +93,7 @@ var Columns = []string{
 	FieldFailedLoginCount,
 	FieldLastFailedLoginAt,
 	FieldLockedUntil,
+	FieldTitleLogos,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -114,6 +117,8 @@ var (
 	EmailValidator func(string) error
 	// DefaultFailedLoginCount holds the default value on creation for the "failed_login_count" field.
 	DefaultFailedLoginCount uint8
+	// DefaultTitleLogos holds the default value on creation for the "title_logos" field.
+	DefaultTitleLogos bool
 )
 
 // Role defines the type for the "role" enum field.
@@ -231,6 +236,11 @@ func ByLastFailedLoginAt(opts ...sql.OrderTermOption) OrderOption {
 // ByLockedUntil orders the results by the locked_until field.
 func ByLockedUntil(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLockedUntil, opts...).ToFunc()
+}
+
+// ByTitleLogos orders the results by the title_logos field.
+func ByTitleLogos(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTitleLogos, opts...).ToFunc()
 }
 
 // ByAPIKeysCount orders the results by api_keys count.

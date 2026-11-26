@@ -936,6 +936,8 @@ export type User = {
 	display_name?: string;
 	// The e-reader's send-by-email address; empty when unset.
 	device_email?: string;
+	// Movie and series pages draw the title's logo in place of its text.
+	title_logos: boolean;
 	// Only /auth/me fills this; admin user lists leave it out.
 	send?: { configured: boolean; from: string };
 	created_at: string;

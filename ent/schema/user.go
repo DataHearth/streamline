@@ -31,6 +31,9 @@ func (User) Fields() []ent.Field {
 		field.Uint8("failed_login_count").Default(0),
 		field.Time("last_failed_login_at").Optional().Nillable(),
 		field.Time("locked_until").Optional().Nillable(),
+		field.Bool("title_logos").
+			Default(true).
+			Comment("Movie and series pages draw the title's logo in place of its text."),
 	}
 }
 

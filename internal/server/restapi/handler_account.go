@@ -24,6 +24,7 @@ func (s *Server) UpdateMe(
 	if req.Body != nil {
 		patch.DisplayName = req.Body.DisplayName
 		patch.DeviceEmail = req.Body.DeviceEmail
+		patch.TitleLogos = req.Body.TitleLogos
 	}
 	u, err := s.auth.UpdateProfile(ctx, claims.UserID, patch)
 	switch {

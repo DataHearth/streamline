@@ -202,6 +202,20 @@ func (_u *UserUpdate) ClearLockedUntil() *UserUpdate {
 	return _u
 }
 
+// SetTitleLogos sets the "title_logos" field.
+func (_u *UserUpdate) SetTitleLogos(v bool) *UserUpdate {
+	_u.mutation.SetTitleLogos(v)
+	return _u
+}
+
+// SetNillableTitleLogos sets the "title_logos" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableTitleLogos(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetTitleLogos(*v)
+	}
+	return _u
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the ApiKey entity by IDs.
 func (_u *UserUpdate) AddAPIKeyIDs(ids ...uint32) *UserUpdate {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -472,6 +486,9 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.LockedUntilCleared() {
 		_spec.ClearField(user.FieldLockedUntil, field.TypeTime)
+	}
+	if value, ok := _u.mutation.TitleLogos(); ok {
+		_spec.SetField(user.FieldTitleLogos, field.TypeBool, value)
 	}
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -844,6 +861,20 @@ func (_u *UserUpdateOne) ClearLockedUntil() *UserUpdateOne {
 	return _u
 }
 
+// SetTitleLogos sets the "title_logos" field.
+func (_u *UserUpdateOne) SetTitleLogos(v bool) *UserUpdateOne {
+	_u.mutation.SetTitleLogos(v)
+	return _u
+}
+
+// SetNillableTitleLogos sets the "title_logos" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableTitleLogos(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetTitleLogos(*v)
+	}
+	return _u
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the ApiKey entity by IDs.
 func (_u *UserUpdateOne) AddAPIKeyIDs(ids ...uint32) *UserUpdateOne {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -1144,6 +1175,9 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if _u.mutation.LockedUntilCleared() {
 		_spec.ClearField(user.FieldLockedUntil, field.TypeTime)
+	}
+	if value, ok := _u.mutation.TitleLogos(); ok {
+		_spec.SetField(user.FieldTitleLogos, field.TypeBool, value)
 	}
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{

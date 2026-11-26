@@ -1853,6 +1853,7 @@ var (
 		{Name: "failed_login_count", Type: field.TypeUint8, Default: 0},
 		{Name: "last_failed_login_at", Type: field.TypeTime, Nullable: true},
 		{Name: "locked_until", Type: field.TypeTime, Nullable: true},
+		{Name: "title_logos", Type: field.TypeBool, Default: true},
 	}
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{

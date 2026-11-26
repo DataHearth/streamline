@@ -7,6 +7,7 @@
 	import SessionsCard from "@components/account/SessionsCard.svelte";
 	import JWTRotateCard from "@components/account/JWTRotateCard.svelte";
 	import LanguageCard from "@components/account/LanguageCard.svelte";
+	import TitleLogosCard from "@components/account/TitleLogosCard.svelte";
 	import AppAccessCard from "@components/account/AppAccessCard.svelte";
 	import DeviceEmailCard from "@components/account/DeviceEmailCard.svelte";
 	import { createQuery } from "@tanstack/svelte-query";
@@ -106,7 +107,10 @@
 {/snippet}
 
 {#snippet prefsSection()}
-	<LanguageCard />
+	<div class="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
+		<LanguageCard />
+		<TitleLogosCard />
+	</div>
 {/snippet}
 
 {#snippet devicesSection()}
