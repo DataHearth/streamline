@@ -250,9 +250,10 @@ func (d *Deluge) AddTorrent(
 // FetchMagnetMetadata resolves a magnet's metainfo via
 // core.prefetch_magnet_metadata WITHOUT admitting the torrent into the
 // session — the RPC returns a (torrent_id, base64) pair where the base64
-// decodes to a bencoded info dict, not a full .torrent. It is wrapped into a
-// complete metainfo so the result can go through decodeTorrentFiles and
-// AddTorrent like any other .torrent-bytes source.
+// decodes to a bencoded info dict, not a full .torrent. It is wrapped, with
+// the magnet's trackers, into a complete metainfo so the result can go
+// through decodeTorrentFiles and AddTorrent like any other .torrent-bytes
+// source.
 func (d *Deluge) FetchMagnetMetadata(
 	ctx context.Context,
 	magnet string,
@@ -284,6 +285,12 @@ func (d *Deluge) FetchMagnetMetadata(
 		)
 	}
 	mi := metainfo.MetaInfo{InfoBytes: infoBytes}
+	// The grab adds these bytes in place of the magnet, so the magnet's
+	// trackers ride along as one tier, the way anacrolix reads a magnet.
+	if m, perr := metainfo.ParseMagnetUri(magnet); perr == nil &&
+		len(m.Trackers) > 0 {
+		mi.AnnounceList = metainfo.AnnounceList{m.Trackers}
+	}
 	var buf bytes.Buffer
 	if werr := mi.Write(&buf); werr != nil {
 		return nil, fmt.Errorf("deluge prefetch magnet metadata: %w", werr)

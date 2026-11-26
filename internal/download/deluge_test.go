@@ -467,8 +467,39 @@ var _ = Describe("Deluge Client", Label("unit", "downloads"), func() {
 				Expect(uerr).NotTo(HaveOccurred())
 				Expect(got.Name).To(Equal("Show"))
 				Expect(got.Files).To(HaveLen(2))
+				// "deadbeef" is no infohash, so the magnet does not parse and
+				// the metainfo carries no trackers; the fetch still succeeds.
+				Expect(mi.AnnounceList).To(BeEmpty())
 			},
 		)
+
+		It("keeps the magnet's trackers in the metainfo", func() {
+			info, err := bencode.Marshal(metainfo.Info{
+				Name: "Show", Length: 4, PieceLength: 32768,
+				Pieces: make([]byte, 20),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			srv := delugeServer(func(string, []json.RawMessage) (any, string) {
+				return []any{
+					"session-id",
+					base64.StdEncoding.EncodeToString(info),
+				}, ""
+			})
+			DeferCleanup(srv.Close)
+
+			raw, err := NewDeluge(srv.URL, "pw").FetchMagnetMetadata(
+				context.Background(),
+				"magnet:?xt=urn:btih:aabbccddeeff00112233445566778899aabbccdd"+
+					"&tr=udp%3A%2F%2Fa.example%3A1337&tr=https%3A%2F%2Fb.example%2Fannounce",
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			mi, err := metainfo.Load(bytes.NewReader(raw))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(mi.UpvertedAnnounceList()).To(Equal(metainfo.AnnounceList{{
+				"udp://a.example:1337", "https://b.example/announce",
+			}}))
+		})
 
 		It("propagates an RPC error", func() {
 			srv := delugeServer(func(string, []json.RawMessage) (any, string) {
