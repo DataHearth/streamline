@@ -157,14 +157,19 @@ func (db *DB) MovieCreateTimesSince(
 	return out, nil
 }
 
-// ListWantedMovies returns every movie with status = wanted, regardless of
-// cooldown or grab-failure state. Used by the rss-sync feed scanner to build
-// a per-tick title+year lookup map.
-func (db *DB) ListWantedMovies(ctx context.Context) ([]*ent.Movie, error) {
+// ListWantedMovies returns the monitored, wanted movies under the
+// grab-failure cap. The cooldown is not applied: the rss-sync feed scanner
+// builds its per-tick title+year lookup map from it and already holds the
+// release.
+func (db *DB) ListWantedMovies(
+	ctx context.Context,
+	maxGrabFailures uint8,
+) ([]*ent.Movie, error) {
 	return db.client.Movie.Query().
 		Where(
 			movie.StatusEQ(movie.StatusWanted),
 			movie.MonitoredEQ(true),
+			movie.GrabFailuresLT(maxGrabFailures),
 		).
 		All(ctx)
 }

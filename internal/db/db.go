@@ -627,7 +627,10 @@ type Store interface {
 		maxGrabFailures uint8,
 		notSearchedSince time.Time,
 	) ([]*ent.Movie, error)
-	ListWantedMovies(ctx context.Context) ([]*ent.Movie, error)
+	ListWantedMovies(
+		ctx context.Context,
+		maxGrabFailures uint8,
+	) ([]*ent.Movie, error)
 	// ListUpgradeCandidateMovies returns monitored movies that already have a
 	// file, with the files loaded — the feed scanner scores them to decide an
 	// upgrade grab.

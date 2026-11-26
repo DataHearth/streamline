@@ -160,7 +160,10 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 
 	upgradeCandidates := func(movies ...*ent.Movie) {
 		GinkgoHelper()
-		store.EXPECT().ListWantedMovies(mock.Anything).Return(nil, nil).Once()
+		store.EXPECT().
+			ListWantedMovies(mock.Anything, mock.Anything).
+			Return(nil, nil).
+			Once()
 		store.EXPECT().ListUpgradeCandidateMovies(mock.Anything).
 			Return(movies, nil).Once()
 	}
@@ -192,7 +195,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 			configtest.Setup(indexerConfig("a"))
 			newScanner()
 			roottest.Offline(db.RootMovies)
-			store.EXPECT().ListWantedMovies(mock.Anything).Return(
+			store.EXPECT().ListWantedMovies(mock.Anything, mock.Anything).Return(
 				[]*ent.Movie{{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}}, nil,
 			).Once()
 			noUpgrades()
@@ -215,7 +218,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 			configtest.Setup(indexerConfig("a"))
 			newScanner()
 			roottest.Offline(db.RootMusic)
-			store.EXPECT().ListWantedMovies(mock.Anything).Return(
+			store.EXPECT().ListWantedMovies(mock.Anything, mock.Anything).Return(
 				[]*ent.Movie{{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}}, nil,
 			).Once()
 			noUpgrades()
@@ -243,7 +246,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		cfg["download_clients"] = []map[string]any{}
 		configtest.Setup(cfg)
 		newScanner()
-		store.EXPECT().ListWantedMovies(mock.Anything).
+		store.EXPECT().ListWantedMovies(mock.Anything, mock.Anything).
 			Return([]*ent.Movie{{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}}, nil).
 			Once()
 		// No Feed call: the whole point is not to pull feeds we can't act on.
@@ -252,10 +255,26 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		Expect(scanner.Run(ctx)).To(Succeed())
 	})
 
+	It("reads the wanted movies under library.max_grab_failures", func() {
+		cfg := indexerConfig("a")
+		cfg["library"].(map[string]any)["max_grab_failures"] = 5
+		configtest.Setup(cfg)
+		newScanner()
+		store.EXPECT().ListWantedMovies(mock.Anything, uint8(5)).
+			Return(nil, nil).Once()
+		noUpgrades()
+		feeder.EXPECT().Feed(mock.Anything, "a").Return(nil, nil).Once()
+
+		Expect(scanner.Run(ctx)).To(Succeed())
+	})
+
 	It("continues to the next indexer on per-indexer error", func() {
 		configtest.Setup(indexerConfig("a", "b"))
 		newScanner()
-		store.EXPECT().ListWantedMovies(mock.Anything).Return(nil, nil).Once()
+		store.EXPECT().
+			ListWantedMovies(mock.Anything, mock.Anything).
+			Return(nil, nil).
+			Once()
 		noUpgrades()
 		feeder.EXPECT().Feed(mock.Anything, "a").
 			Return(nil, errors.New("boom")).Once()
@@ -267,7 +286,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()
 		wanted := &ent.Movie{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}
-		store.EXPECT().ListWantedMovies(mock.Anything).
+		store.EXPECT().ListWantedMovies(mock.Anything, mock.Anything).
 			Return([]*ent.Movie{wanted}, nil).Once()
 		noUpgrades()
 		feeder.EXPECT().Feed(mock.Anything, "a").
@@ -288,7 +307,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()
 		wanted := &ent.Movie{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}
-		store.EXPECT().ListWantedMovies(mock.Anything).
+		store.EXPECT().ListWantedMovies(mock.Anything, mock.Anything).
 			Return([]*ent.Movie{wanted}, nil).Once()
 		noUpgrades()
 		feeder.EXPECT().Feed(mock.Anything, "a").
@@ -306,7 +325,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 			ID: 7, TmdbID: 42, Title: "Dune", Year: 2021,
 			QualityProfile: uhdProfile,
 		}
-		store.EXPECT().ListWantedMovies(mock.Anything).
+		store.EXPECT().ListWantedMovies(mock.Anything, mock.Anything).
 			Return([]*ent.Movie{wanted}, nil).Once()
 		noUpgrades()
 		// 1080p clears the default profile but not the movie's 2160p floor.
@@ -321,7 +340,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()
 		wanted := &ent.Movie{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}
-		store.EXPECT().ListWantedMovies(mock.Anything).
+		store.EXPECT().ListWantedMovies(mock.Anything, mock.Anything).
 			Return([]*ent.Movie{wanted}, nil).Once()
 		noUpgrades()
 		feeder.EXPECT().Feed(mock.Anything, "a").
@@ -339,7 +358,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		configtest.Setup(indexerConfig("a"))
 		newScanner()
 		wanted := &ent.Movie{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}
-		store.EXPECT().ListWantedMovies(mock.Anything).
+		store.EXPECT().ListWantedMovies(mock.Anything, mock.Anything).
 			Return([]*ent.Movie{wanted}, nil).Once()
 		noUpgrades()
 		feeder.EXPECT().Feed(mock.Anything, "a").
@@ -353,7 +372,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		configtest.Setup(indexerConfig("a", "b"))
 		newScanner()
 		wanted := &ent.Movie{ID: 7, TmdbID: 42, Title: "Dune", Year: 2021}
-		store.EXPECT().ListWantedMovies(mock.Anything).
+		store.EXPECT().ListWantedMovies(mock.Anything, mock.Anything).
 			Return([]*ent.Movie{wanted}, nil).Once()
 		noUpgrades()
 		feeder.EXPECT().Feed(mock.Anything, "a").
@@ -477,7 +496,7 @@ var _ = Describe("FeedScanner.Run", Label("unit", "rss"), func() {
 		configtest.Setup(upgradeConfig("a"))
 		newScanner()
 		m := movieWithFile(upgradableProfile, plainFile)
-		store.EXPECT().ListWantedMovies(mock.Anything).
+		store.EXPECT().ListWantedMovies(mock.Anything, mock.Anything).
 			Return([]*ent.Movie{m}, nil).Once()
 		store.EXPECT().ListUpgradeCandidateMovies(mock.Anything).
 			Return([]*ent.Movie{m}, nil).Once()

@@ -75,7 +75,10 @@ var _ = Describe("FeedScanner book pass", Label("unit", "rss"), func() {
 
 	run := func(wanted []*ent.Book, items ...indexer.SearchResult) {
 		GinkgoHelper()
-		store.EXPECT().ListWantedMovies(mock.Anything).Return(nil, nil).Once()
+		store.EXPECT().
+			ListWantedMovies(mock.Anything, mock.Anything).
+			Return(nil, nil).
+			Once()
 		store.EXPECT().ListUpgradeCandidateMovies(mock.Anything).
 			Return(nil, nil).Once()
 		store.EXPECT().ListWantedAlbums(mock.Anything, uint8(3)).

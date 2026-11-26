@@ -358,7 +358,7 @@ var _ = Describe("MediaFile store", Label("integration", "db"), func() {
 				got := client.Movie.GetX(ctx, m.ID)
 				Expect(got.Status).To(Equal(entmovie.StatusWanted))
 				Expect(got.Monitored).To(BeFalse())
-				Expect(store.ListWantedMovies(ctx)).To(BeEmpty())
+				Expect(store.ListWantedMovies(ctx, 3)).To(BeEmpty())
 			},
 		)
 

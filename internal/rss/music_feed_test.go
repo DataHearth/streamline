@@ -55,7 +55,10 @@ var _ = Describe("FeedScanner music pass", Label("unit", "rss"), func() {
 
 	run := func(wanted []*ent.Album, items ...indexer.SearchResult) {
 		GinkgoHelper()
-		store.EXPECT().ListWantedMovies(mock.Anything).Return(nil, nil).Once()
+		store.EXPECT().
+			ListWantedMovies(mock.Anything, mock.Anything).
+			Return(nil, nil).
+			Once()
 		store.EXPECT().ListUpgradeCandidateMovies(mock.Anything).
 			Return(nil, nil).Once()
 		store.EXPECT().ListWantedAlbums(mock.Anything, uint8(3)).
@@ -97,7 +100,10 @@ var _ = Describe("FeedScanner music pass", Label("unit", "rss"), func() {
 
 	It("grabs nothing and reads no album while music is offline", func() {
 		roottest.Offline(db.RootMusic)
-		store.EXPECT().ListWantedMovies(mock.Anything).Return(nil, nil).Once()
+		store.EXPECT().
+			ListWantedMovies(mock.Anything, mock.Anything).
+			Return(nil, nil).
+			Once()
 		store.EXPECT().
 			ListUpgradeCandidateMovies(mock.Anything).
 			Return(nil, nil).

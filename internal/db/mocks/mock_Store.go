@@ -18308,8 +18308,8 @@ func (_c *MockStore_ListWantedBooks_Call) RunAndReturn(run func(ctx context.Cont
 }
 
 // ListWantedMovies provides a mock function for the type MockStore
-func (_mock *MockStore) ListWantedMovies(ctx context.Context) ([]*ent.Movie, error) {
-	ret := _mock.Called(ctx)
+func (_mock *MockStore) ListWantedMovies(ctx context.Context, maxGrabFailures uint8) ([]*ent.Movie, error) {
+	ret := _mock.Called(ctx, maxGrabFailures)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListWantedMovies")
@@ -18317,18 +18317,18 @@ func (_mock *MockStore) ListWantedMovies(ctx context.Context) ([]*ent.Movie, err
 
 	var r0 []*ent.Movie
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]*ent.Movie, error)); ok {
-		return returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint8) ([]*ent.Movie, error)); ok {
+		return returnFunc(ctx, maxGrabFailures)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) []*ent.Movie); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint8) []*ent.Movie); ok {
+		r0 = returnFunc(ctx, maxGrabFailures)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*ent.Movie)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, uint8) error); ok {
+		r1 = returnFunc(ctx, maxGrabFailures)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -18342,18 +18342,24 @@ type MockStore_ListWantedMovies_Call struct {
 
 // ListWantedMovies is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockStore_Expecter) ListWantedMovies(ctx any) *MockStore_ListWantedMovies_Call {
-	return &MockStore_ListWantedMovies_Call{Call: _e.mock.On("ListWantedMovies", ctx)}
+//   - maxGrabFailures uint8
+func (_e *MockStore_Expecter) ListWantedMovies(ctx any, maxGrabFailures any) *MockStore_ListWantedMovies_Call {
+	return &MockStore_ListWantedMovies_Call{Call: _e.mock.On("ListWantedMovies", ctx, maxGrabFailures)}
 }
 
-func (_c *MockStore_ListWantedMovies_Call) Run(run func(ctx context.Context)) *MockStore_ListWantedMovies_Call {
+func (_c *MockStore_ListWantedMovies_Call) Run(run func(ctx context.Context, maxGrabFailures uint8)) *MockStore_ListWantedMovies_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
+		var arg1 uint8
+		if args[1] != nil {
+			arg1 = args[1].(uint8)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -18364,7 +18370,7 @@ func (_c *MockStore_ListWantedMovies_Call) Return(movies []*ent.Movie, err error
 	return _c
 }
 
-func (_c *MockStore_ListWantedMovies_Call) RunAndReturn(run func(ctx context.Context) ([]*ent.Movie, error)) *MockStore_ListWantedMovies_Call {
+func (_c *MockStore_ListWantedMovies_Call) RunAndReturn(run func(ctx context.Context, maxGrabFailures uint8) ([]*ent.Movie, error)) *MockStore_ListWantedMovies_Call {
 	_c.Call.Return(run)
 	return _c
 }
