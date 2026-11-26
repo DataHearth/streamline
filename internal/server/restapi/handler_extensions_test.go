@@ -2,6 +2,7 @@ package restapi
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -312,6 +313,34 @@ var _ = Describe(
 
 			resp, _ = send(http.MethodGet, "/account/extensions/nope/credential", "")
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
+		})
+
+		It("answers a new secret even when the card cannot be read back", func() {
+			createEcho("")
+			resp, raw := send(http.MethodPost, "/extensions/echo/approve", "")
+			Expect(resp.StatusCode).To(Equal(http.StatusOK), string(raw))
+
+			store, err := sql.Open(
+				"sqlite",
+				"file:"+app.extensions.DataPaths()["echo"],
+			)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = store.Exec("CREATE TABLE card_unreadable(x)")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(store.Close()).To(Succeed())
+
+			const credential = "/account/extensions/echo/credential"
+			resp, _ = send(http.MethodGet, credential, "")
+			Expect(resp.StatusCode).To(Equal(http.StatusBadGateway))
+
+			resp, raw = send(http.MethodPost, credential, "")
+			Expect(resp.StatusCode).To(Equal(http.StatusOK), string(raw))
+			var created AppAccessCreated
+			Expect(json.Unmarshal(raw, &created)).To(Succeed())
+			Expect(created.Secret).To(Equal("echo-secret"))
+			Expect(created.Enabled).To(BeTrue())
+			Expect(created.Username).To(Equal("admin@test.com"))
+			Expect(created.CreatedAt).To(BeNil())
 		})
 
 		It("refuses a member", func() {

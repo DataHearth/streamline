@@ -4617,7 +4617,10 @@ paths:
       summary: Generate or rotate the caller's secret for an extension's card
       description: >-
         Requires session authentication (JWT). The only response that carries
-        the secret, in plaintext.
+        the secret, in plaintext. Once the extension has made the secret, the
+        answer is a 200 even when the card cannot be read back: `enabled` is
+        true, `username` is set as usual, and `created_at`, `last_used_at` and
+        `last_client` are absent.
       tags: [account]
       security:
         - BearerAuth: []
