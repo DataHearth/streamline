@@ -86,3 +86,9 @@ export const countAvailable = counted(
 	i18n.count_available_one,
 	i18n.count_available_other,
 );
+
+// A show's size on its detail page and card ("3 seasons").
+export const seasonCount = counted(
+	i18n.series_season_count_one,
+	i18n.series_season_count_other,
+);

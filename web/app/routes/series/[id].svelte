@@ -11,6 +11,7 @@
 		countMissing,
 		countUnaired,
 		countWanted,
+		seasonCount,
 	} from "@lib/nouns";
 	import { auth } from "@lib/auth.svelte";
 	import {
@@ -31,7 +32,7 @@
 	import MonitorToggle from "@components/shared/MonitorToggle.svelte";
 	import MonitorSplitButton from "@components/shared/MonitorSplitButton.svelte";
 	import { twMerge } from "tailwind-merge";
-	import { missingEpisodes, seasonTallies, sumTallies } from "@lib/status";
+	import { missingEpisodes, seasonTallies, seriesStatusLabel, sumTallies } from "@lib/status";
 	import { tvPosterUrl } from "@lib/posters";
 	import { listHref, SERIES_SEARCH } from "@lib/prefs";
 	import { formatDate } from "@lib/dates";
@@ -250,15 +251,15 @@
 	// The dotted line under the title, the status first.
 	let metaParts = $derived.by(() => {
 		if (!show) return [] as string[];
-		const p: string[] = [show.series_status];
+		const p: string[] = [seriesStatusLabel(show.series_status)];
 		if (show.network) p.push(show.network);
 		if (show.creator) p.push(show.creator);
 		// The date carries its own year, so the two never both appear.
 		p.push(airedText || String(show.year));
 		if (show.certification) p.push(show.certification);
 		const n = regularSeasons.length;
-		if (n > 0) p.push(`${n} season${n === 1 ? "" : "s"}`);
-		if (show.total_episodes) p.push(`${show.total_episodes} episodes`);
+		if (n > 0) p.push(seasonCount(n));
+		if (show.total_episodes) p.push(NOUN_EPISODE.count(show.total_episodes));
 		if (show.rating && show.rating > 0) p.push(`★ ${show.rating.toFixed(1)}`);
 		if (show.runtime) p.push(`${show.runtime}m`);
 		if (show.genres?.length) p.push(show.genres.join(" / "));
@@ -857,8 +858,8 @@
 							<dt class="text-fg-subtle">{i18n.quality_profile()}</dt>
 							<dd class="text-right font-mono text-fg">{qpName}</dd>
 							<dt class="text-fg-subtle">{i18n.common_status()}</dt>
-							<dd class="text-right font-mono text-fg capitalize">
-								{show.series_status}
+							<dd class="text-right font-mono text-fg">
+								{seriesStatusLabel(show.series_status)}
 							</dd>
 							<dt class="text-fg-subtle">{i18n.monitor_monitored()}</dt>
 							<dd class="text-right font-mono text-fg">

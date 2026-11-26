@@ -8,6 +8,7 @@
 	import { api } from "@lib/api";
 	import { createAction, monitorToast, SERIES, updateFailed } from "@lib/actions";
 	import { tvPosterUrl } from "@lib/posters";
+	import { seriesStatusLabel } from "@lib/status";
 	import Poster from "@components/shared/Poster.svelte";
 	import SelectBox from "@components/shared/SelectBox.svelte";
 	import SeriesActionsMenu from "./SeriesActionsMenu.svelte";
@@ -174,7 +175,7 @@
 								style:background-color={`var(--status-${avail})`}
 							></span>
 							<span class="font-mono text-xs text-fg-muted">
-								{show.series_status}
+								{seriesStatusLabel(show.series_status)}
 							</span>
 						</span>
 					</td>
