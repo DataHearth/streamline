@@ -15,6 +15,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/internal/sysinfo"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/upload"
 )
@@ -372,6 +373,21 @@ var _ = Describe("Receive", Label("unit"), func() {
 		Expect(upload.CheckSpace(1 << 62)).To(MatchError(upload.ErrNoSpace))
 		Expect(upload.CheckSpace(-1)).To(Succeed())
 		Expect(upload.CheckSpace(1)).To(Succeed())
+	})
+
+	It("keeps space_reserve_gb in 10^9-byte gigabytes, as grabs do", func() {
+		configtest.Setup(map[string]any{
+			"library":  map[string]any{"download_path": downloads},
+			"download": map[string]any{"space_reserve_gb": 10},
+		})
+		usage := sysinfo.DiskUsageFor(downloads)
+		Expect(usage).NotTo(BeNil())
+		if usage.FreeBytes < 11<<30 {
+			Skip("needs 11 GiB free on the temp volume")
+		}
+		// Halfway between a 10 GB and a 10 GiB reserve: 368 MB of slack either
+		// way for the disk moving between the two statfs calls.
+		Expect(upload.CheckSpace(usage.FreeBytes - 10_368_709_120)).To(Succeed())
 	})
 
 	It(
