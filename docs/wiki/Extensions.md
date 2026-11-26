@@ -72,7 +72,7 @@ Adding one from the web UI grants what the review lists. An entry without grants
 
 For a module that asks for folders, `grants` carries a `folders` list beside the others (`folders: [music, artwork, cache]`).
 
-A module holding the `http` service reaches only the servers named in `hosts`, which sits beside `grants` on the entry, each as `host:port` in lower case:
+A module holding the `http` service reaches only the servers named in `hosts`, which sits beside `grants` on the entry, each as `host:port` (case does not matter):
 
 ```yaml
     hosts: [engine.lan:8097]
