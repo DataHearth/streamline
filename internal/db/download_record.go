@@ -521,12 +521,12 @@ func (db *DB) UpdateDownloadRecordStatus(
 	return db.client.DownloadRecord.UpdateOneID(id).SetStatus(status).Exec(ctx)
 }
 
-// FailDownloadRecord finalizes a record that failed after the torrent was
-// already added to the client — the §6 magnet zero-match arm, where the
-// torrent is removed with its files and there is no held state to route
-// through FailHeldDownloadRecord. Episode/movie status is left alone: the
-// download-monitor reconcile sweep (RevertOrphanedDownloadingEpisodes) is
-// what un-strands it, same as any other record that goes away underneath it.
+// FailDownloadRecord fails a record whose torrent the client already took:
+// the selection pass's zero-match arm and a torrent the client refused
+// (failRefusedRecord). There is no held state to route through
+// FailHeldDownloadRecord. Media status is left alone: ReconcileStrandedMedia,
+// on the download-monitor tick, reverts the episodes, albums and book slots
+// no in-flight record covers.
 func (db *DB) FailDownloadRecord(
 	ctx context.Context,
 	id uint32,
@@ -648,28 +648,23 @@ type MediaFileRow struct {
 
 type RecordImportFailureParams struct {
 	RecordID uint32
-	// Exactly one of MovieID / EpisodeID is set, identifying the media this
-	// record imports. On terminal failure the movie flips to failed; the
-	// episode flips back to wanted so the next search re-grabs it — unless it
-	// already holds a media file, in which case "wanted" would be a lie and
-	// the episode is left as-is.
-	// An album record sets AlbumID instead: a terminal failure walks a
-	// downloading album back to wanted, unless it already holds a file.
-	// Requeue sends an incomplete album to wanted rather than failed. An upload's
-	// failure sets it: failed exists to keep the searches off a bad release, and
-	// a bad upload is no reason for them to stop looking.
+	// The ids name the media this record imports; a terminal failure settles
+	// it. A movie flips to failed. An episode flips back to wanted so the next
+	// search re-grabs it, unless it already holds a media file.
+	// AlbumID, and each of PackAlbumIDs for a discography pack: an album still
+	// downloading goes to available when it holds every track, else to failed.
+	// Requeue sends it to wanted instead. An upload's failure sets it: failed
+	// exists to keep the searches off a bad release, and a bad upload is no
+	// reason for them to stop looking.
 	Requeue   bool
 	MovieID   uint32
 	EpisodeID uint32
 	// BookID / BookKind identify the book slot a book record imports. On
-	// terminal failure the slot goes back to wanted unless it still holds a
-	// file of that kind.
-	BookID   uint32
-	BookKind mediafile.BookKind
-	AlbumID  uint32
-	// PackAlbumIDs are the albums a discography pack was linked to; on
-	// terminal failure each one still downloading and holding no file goes
-	// back to wanted.
+	// terminal failure a downloading slot goes back to wanted unless it still
+	// holds a file of that kind.
+	BookID       uint32
+	BookKind     mediafile.BookKind
+	AlbumID      uint32
 	PackAlbumIDs []uint32
 	Terminal     bool
 	Reason       string
