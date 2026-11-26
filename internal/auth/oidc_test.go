@@ -182,7 +182,7 @@ const (
 // whatever `<x>` turns out to be lets
 //
 //	type shadowRole struct{ r entuser.Role }
-//	func (f shadowRole) EntRolePtr() *entuser.Role { return &f.r }
+//	func (f shadowRole) EntPtr() *entuser.Role { return &f.r }
 //	params.Role = shadowRole{r: entuser.RoleAdmin}.EntPtr()
 //
 // dropped into syncOIDCProfile — not allow-listed, and on an OIDC login's path
@@ -439,7 +439,7 @@ func (a *authScan) vouched(e ast.Expr) bool {
 // below everything.
 //
 // Against a walker that never resolves the receiver, that same sentence is
-// backed by nothing: a shadowRole declared in this package spells EntRolePtr()
+// backed by nothing: a shadowRole declared in this package spells EntPtr()
 // and escalates an OIDC login to admin with every spec green. The claim is
 // worth what the compiler backs, and it is the type identity here that makes
 // the compiler back it.
@@ -447,7 +447,7 @@ func (a *authScan) vouched(e ast.Expr) bool {
 // take, and one only internal/role can fill in.
 //
 // It asks the type checker rather than matching a spelling. A call to
-// `.EntRole()`/`.EntRolePtr()` is a name and not a type: a five-line shadow
+// `.Ent()`/`.EntPtr()` is a name and not a type: a five-line shadow
 // struct carrying a method of that name satisfies a spelling match and lands
 // an admin row. Asking what the expression IS cannot be spelled around,
 // because the only way to obtain a non-zero role.Value is a constructor in
@@ -583,7 +583,7 @@ const (
 // claim a receiver the walker never resolves.
 var _ = Describe("OIDC role writes", Label("unit", "auth"), func() {
 	// A type error anywhere in the package leaves the checker guessing, and a
-	// guess resolves an EntRolePtr() receiver to invalid rather than to
+	// guess resolves an EntPtr() receiver to invalid rather than to
 	// role.Value. That direction fails closed — the write gets reported —
 	// but a package that stopped type-checking is a reason to stop reading the
 	// report, not to trust it.
@@ -686,6 +686,13 @@ var _ = Describe("OIDC role writes", Label("unit", "auth"), func() {
 				stmts:  stmts,
 				decls:  decls,
 			})
+			// A declared stand-in must resolve: a method the checker cannot
+			// find is caught as a type error, not as the shape it stands for.
+			if decls != "" {
+				for _, err := range scan.errs {
+					Expect(err.Error()).NotTo(ContainSubstring("undefined"))
+				}
+			}
 			var caught []string
 			for _, w := range scan.roleWrites() {
 				if w.fn == "syncOIDCProfile" && !w.ok {
@@ -709,12 +716,12 @@ var _ = Describe("OIDC role writes", Label("unit", "auth"), func() {
 		Entry("round 6's bypass: a foreign type spelling the blessed exit",
 			"\tparams.Role = shadowRole{r: entuser.RoleAdmin}.EntPtr()",
 			"type shadowRole struct{ r entuser.Role }\n\n"+
-				"func (f shadowRole) EntRolePtr() *entuser.Role { return &f.r }"),
+				"func (f shadowRole) EntPtr() *entuser.Role { return &f.r }"),
 		Entry(
 			"the same trick on the other exit, into a create",
 			"\t_ = db.CreateUserParams{Role: shadowRole{r: entuser.RoleAdmin}.Ent()}",
 			"type shadowRole struct{ r entuser.Role }\n\n"+
-				"func (f shadowRole) EntRole() entuser.Role { return f.r }",
+				"func (f shadowRole) Ent() entuser.Role { return f.r }",
 		),
 		Entry("a role mirrored off a constant instead of a row",
 			"\t_ = Claims{Role: string(entuser.RoleAdmin)}", ""),
