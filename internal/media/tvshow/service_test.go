@@ -720,12 +720,56 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			return filepath.Join(config.Get().Library.SeriesPath, name)
 		}
 
+		// showOf returns show 3 holding the given episodes in its first season.
+		showOf := func(episodeIDs ...uint32) *ent.TVShow {
+			se := &ent.Season{Number: 1}
+			for _, id := range episodeIDs {
+				se.Edges.Episodes = append(se.Edges.Episodes, &ent.Episode{ID: id})
+			}
+			return &ent.TVShow{
+				ID:    3,
+				Edges: ent.TVShowEdges{Seasons: []*ent.Season{se}},
+			}
+		}
+
+		BeforeEach(func() {
+			storeMk.FindTVShowByID(mock.Anything, uint32(3)).
+				Return(showOf(9), nil).Maybe()
+		})
+
+		It("refuses an episode of another series before touching any file", func() {
+			storeMk.FindTVShowByID(mock.Anything, uint32(5)).
+				Return(&ent.TVShow{ID: 5, Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+					{
+						Number: 1,
+						Edges:  ent.SeasonEdges{Episodes: []*ent.Episode{{ID: 10}}},
+					},
+				}}}, nil).
+				Once()
+
+			err := svc.DeleteEpisodeFile(
+				ctx,
+				5,
+				9,
+				DeleteFileOptions{RemoveTorrent: true},
+			)
+			Expect(err).To(MatchError(ErrEpisodeNotFound))
+		})
+
+		It("refuses an unknown series before touching any file", func() {
+			storeMk.FindTVShowByID(mock.Anything, uint32(7)).
+				Return(nil, &ent.NotFoundError{}).Once()
+
+			err := svc.DeleteEpisodeFile(ctx, 7, 9, DeleteFileOptions{})
+			Expect(err).To(MatchError(ContainSubstring("not found")))
+		})
+
 		It("refuses a file outside the library root and keeps its row", func() {
 			storeMk.FindMediaFileByEpisodeID(mock.Anything, uint32(9)).
 				Return(&ent.MediaFile{ID: 4, Path: "/elsewhere/escaped.mkv"}, nil).
 				Once()
 
-			err := svc.DeleteEpisodeFile(ctx, 9, DeleteFileOptions{})
+			err := svc.DeleteEpisodeFile(ctx, 3, 9, DeleteFileOptions{})
 			Expect(err).To(MatchError(library.ErrOutsideRoot))
 		})
 
@@ -748,6 +792,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 
 				err := svc.DeleteEpisodeFile(
 					ctx,
+					3,
 					9,
 					DeleteFileOptions{RemoveTorrent: true},
 				)
@@ -767,6 +812,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 
 			err := svc.DeleteEpisodeFile(
 				ctx,
+				3,
 				9,
 				DeleteFileOptions{RemoveTorrent: false},
 			)
@@ -778,7 +824,7 @@ var _ = Describe("TVShow service", Label("unit", "series"), func() {
 			storeMk.FindMediaFileByEpisodeID(mock.Anything, uint32(9)).
 				Return(nil, &ent.NotFoundError{}).Once()
 
-			err := svc.DeleteEpisodeFile(ctx, 9, DeleteFileOptions{})
+			err := svc.DeleteEpisodeFile(ctx, 3, 9, DeleteFileOptions{})
 			Expect(err).To(MatchError(ContainSubstring("no media file")))
 		})
 	})

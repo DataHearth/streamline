@@ -467,7 +467,7 @@ func (s *Server) DeleteEpisodeFile(
 	remove := request.Body != nil &&
 		request.Body.RemoveTorrent != nil &&
 		*request.Body.RemoveTorrent
-	err := s.tvshows.DeleteEpisodeFile(ctx, request.EpisodeId,
+	err := s.tvshows.DeleteEpisodeFile(ctx, request.Id, request.EpisodeId,
 		tvshow.DeleteFileOptions{RemoveTorrent: remove})
 	if errors.Is(err, library.ErrOutsideRoot) {
 		return DeleteEpisodeFile409JSONResponse{

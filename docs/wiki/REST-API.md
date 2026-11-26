@@ -180,7 +180,7 @@ A change to the files of an offline library root (rename, delete with files, upl
 | `PATCH` | `/series/{id}/episodes/{episodeId}` | Update an episode | Member |
 | `GET` | `/series/{id}/episodes/{episodeId}/credits` | The episode's guest stars and crew, read by the `tv-metadata-refresh` job | Authenticated |
 | `POST` | `/series/{id}/episodes/{episodeId}/search` · `/grab` | Search or grab an episode | Member |
-| `DELETE` | `/series/{id}/episodes/{episodeId}/file` | Delete the episode's file (`409` `outside_library` and `remove_torrent` as for movies) | Member |
+| `DELETE` | `/series/{id}/episodes/{episodeId}/file` | Delete the episode's file (`409` `outside_library` and `remove_torrent` as for movies; `404` when the episode is not one of series `{id}`'s) | Member |
 
 Each of the three search scopes filters the indexer's answer to its own scope — an episode search returns that episode, a season search returns season packs of that season, a series search returns complete/multi-season packs. The episode search additionally carries `hidden_packs` (present only when non-zero): how many packs covering that episode it excluded, so an empty `items` can be told apart from "it only exists inside a pack".
 
