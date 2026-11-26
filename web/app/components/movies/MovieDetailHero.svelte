@@ -2,7 +2,7 @@
 	import ClampedText from "@components/shared/ClampedText.svelte";
 	import type { Snippet } from "svelte";
 	import { Film, ArrowLeft } from "@lucide/svelte";
-	import { posterUrl } from "@lib/posters";
+	import { moviePosterUrl } from "@lib/posters";
 	import { listHref, MOVIES_SEARCH } from "@lib/prefs";
 	import { movieStatus } from "@lib/status";
 	import { formatDate } from "@lib/dates";
@@ -29,7 +29,7 @@
 	}
 
 	let primary = $derived(pickPrimary(movie.media_files));
-	let backdropSrc = $derived(posterUrl(movie));
+	let backdropSrc = $derived(moviePosterUrl(movie));
 	provideHeroHold();
 
 	// Single dotted meta line: release · runtime · rating · genres, then any

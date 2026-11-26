@@ -3,7 +3,7 @@
 	import { Film, Search } from "@lucide/svelte";
 	import MonitorToggle from "./MonitorToggle.svelte";
 	import { twMerge } from "tailwind-merge";
-	import { posterUrl } from "@lib/posters";
+	import { moviePosterUrl } from "@lib/posters";
 	import Poster from "./Poster.svelte";
 	import StatusPill from "./StatusPill.svelte";
 	import ProgressBar from "./ProgressBar.svelte";
@@ -74,7 +74,7 @@
 	} = $props();
 
 	let cardHref = $derived(href ?? `/movies/${movie.id}`);
-	let cardPoster = $derived(posterSrc ?? posterUrl(movie));
+	let cardPoster = $derived(posterSrc ?? moviePosterUrl(movie));
 	// The same medium date the heroes print — the caption shares its line with the
 	// rating, which is why it truncates rather than wrapping.
 	let releasedText = $derived(formatDate(movie.releaseDate));

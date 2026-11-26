@@ -1,6 +1,6 @@
 export type PosterRef = { id: number };
 
-export function posterUrl(movie: PosterRef): string {
+export function moviePosterUrl(movie: PosterRef): string {
 	return `/posters/movies/${movie.id}/poster.jpg`;
 }
 

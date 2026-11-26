@@ -4,7 +4,7 @@
 
 import { additionLabel } from "./additions";
 import { formatBytes } from "./format";
-import { albumPosterUrl, bookPosterUrl, posterUrl, tvPosterUrl } from "./posters";
+import { albumPosterUrl, bookPosterUrl, moviePosterUrl, tvPosterUrl } from "./posters";
 import {
 	artistTally,
 	kindLabel,
@@ -40,7 +40,7 @@ export function arrivalHref(a: LibraryArrival): string {
 }
 
 export function arrivalArt(a: LibraryArrival): string {
-	if (a.kind === "movie") return posterUrl({ id: a.id });
+	if (a.kind === "movie") return moviePosterUrl({ id: a.id });
 	if (a.kind === "series") return tvPosterUrl(a.id);
 	if (a.kind === "album") return albumPosterUrl(a.id);
 	return bookPosterUrl(a.id);

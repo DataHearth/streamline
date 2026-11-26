@@ -4,7 +4,7 @@
 	import { twMerge } from "tailwind-merge";
 	import { isPaletteShortcut } from "@lib/platform";
 	import { initials } from "@lib/people";
-	import { posterUrl, tvPosterUrl } from "@lib/posters";
+	import { moviePosterUrl, tvPosterUrl } from "@lib/posters";
 	import Poster from "@components/shared/Poster.svelte";
 	import { m as i18n } from "@lib/paraglide/messages.js";
 	import Img from "@components/shared/Img.svelte";
@@ -264,7 +264,7 @@
 								{@const MediaIcon = item.kind === "movie" ? Film : Tv}
 								{@const poster =
 									item.kind === "movie"
-										? posterUrl({ id: item.id })
+										? moviePosterUrl({ id: item.id })
 										: tvPosterUrl(item.kind === "episode" ? item.seriesId : item.id)}
 								<div
 									class="relative h-9 w-6 shrink-0 overflow-hidden rounded-md bg-surface-2"
