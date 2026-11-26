@@ -686,10 +686,11 @@ func (s *Service) refreshOne(ctx context.Context, m *ent.Movie) error {
 	if err := s.fetchReleaseInfo(ctx, m); err != nil {
 		return otelx.RecordSpanError(span, err)
 	}
-	// Fetch is a no-op when the file is already cached, so this costs nothing
-	// on a populated cache and is the only thing that refills a cleared one —
-	// the series path does it too, and without it dropping the poster
-	// directory would leave movies with placeholders permanently.
+	// Follow downloads only when the poster is missing or its address
+	// changed, so this costs nothing on a populated cache and is the only
+	// thing that refills a cleared one. The series path does it too; without
+	// it, dropping the poster directory would leave movies with placeholders
+	// permanently.
 	s.fetchPoster(ctx, m.ID, details.PosterPath)
 	// Only when the provider actually moved something. RefreshStale runs this
 	// over every stale row on a tick, and an unconditional event would bury a

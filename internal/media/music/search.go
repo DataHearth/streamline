@@ -250,7 +250,7 @@ func (s *Service) BrowseArtistReleases(
 
 // GrabArtistRelease grabs a discography pack for the artist. The download
 // manager links the record to every album of the artist that is monitored,
-// released, hydrated and wanted or paused, and marks them downloading.
+// released, hydrated and wanted, paused or failed, and marks them downloading.
 func (s *Service) GrabArtistRelease(
 	ctx context.Context,
 	artistID uint32,

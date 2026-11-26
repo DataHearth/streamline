@@ -38,8 +38,8 @@ import (
 // Strict-server generates a per-operation response type (e.g.
 // UpdateMe401JSONResponse) that embeds the shared payload struct (e.g.
 // UnauthorizedJSONResponse). Handlers assemble the wrapper at the call site;
-// these helpers cover the shared inner payload so the message lives in one
-// place per status code.
+// these helpers build the shared inner payload from the caller's message.
+// errors.go holds the err* builders, the coded errors among them.
 
 // optString renders an optional string field: empty becomes an absent key
 // rather than `""`. The SPA treats the two the same, so an empty string in a
