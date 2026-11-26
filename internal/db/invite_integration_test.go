@@ -75,6 +75,24 @@ var _ = Describe("Invite store", Label("integration", "db"), func() {
 			Expect(got.ID).To(Equal(a.ID))
 		})
 
+		It("goes by creation time, not by id", func() {
+			now := time.Now()
+			older, err := client.Invite.Create().SetID(10).SetTokenHash("h-old").
+				SetEmail("guest@example.com").SetRole(invite.RoleMember).
+				SetExpiresAt(now.Add(time.Hour)).SetCreatedByID(adminID).
+				SetCreateTime(now.Add(-time.Hour)).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.Invite.Create().SetID(5).SetTokenHash("h-new").
+				SetEmail("guest@example.com").SetRole(invite.RoleMember).
+				SetExpiresAt(now.Add(time.Hour)).SetCreatedByID(adminID).
+				SetCreateTime(now).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			got, err := store.FindUnusedInviteForEmail(ctx, "guest@example.com", now)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(got.ID).To(Equal(older.ID))
+		})
+
 		It("returns NotFound when none match", func() {
 			_, err := store.FindUnusedInviteForEmail(
 				ctx,
