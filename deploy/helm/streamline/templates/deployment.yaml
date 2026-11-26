@@ -104,8 +104,10 @@ spec:
                    sqlite VFS falls back to $TMPDIR (then /tmp) for its
                    temp-store spills — statement journals and large ORDER BY /
                    GROUP BY sorts. Those are bounded by query size, which is
-                   what makes 64Mi enough; the app runs no VACUUM (which would
-                   need roughly DB-sized scratch) and sets no temp_store pragma.
+                   what makes 64Mi enough. The app's only VACUUM is VACUUM
+                   INTO, for backups, which writes its copy under
+                   <data_dir>/backups rather than rebuilding the database in
+                   scratch space, and it sets no temp_store pragma.
                    The only other tenant is go-taglib's compilation cache
                    (go-taglib-wasm-<uid>, about 3 MB, written once on the first
                    tag read or write; music tags need it). NOT for config write-back: the
