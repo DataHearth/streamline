@@ -21,6 +21,7 @@ import (
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/audiotags"
+	"github.com/datahearth/streamline/internal/media/music"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/quality"
@@ -190,13 +191,15 @@ func cueImage(files []string, tracks int) bool {
 
 // hydratedAlbum returns the album with its tracks: one added as a stub has
 // none until its release data is fetched, and a download for it cannot be
-// matched before that. One hydrated before genres were fetched (NULL) gets
-// them now, best effort, since the tags written below carry them.
+// matched before that. One whose stored details are stale
+// (music.DetailsStale) is fetched again now, best effort, since the tags
+// written below carry them.
 func (w *Worker) hydratedAlbum(
 	ctx context.Context,
 	alb *ent.Album,
 ) (*ent.Album, error) {
-	if (alb.MetadataFetchedAt != nil && alb.Genres != nil) || w.albums == nil {
+	if (alb.MetadataFetchedAt != nil && !music.DetailsStale(alb)) ||
+		w.albums == nil {
 		return alb, nil
 	}
 	if err := w.albums.HydrateAlbum(ctx, alb.ID); err != nil {

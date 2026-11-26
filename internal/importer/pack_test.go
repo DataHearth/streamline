@@ -441,6 +441,46 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
 
+	DescribeTable("refetches a hydrated album only when its details are stale",
+		func(edit func(*ent.Album), refetched bool) {
+			hydrator := musicmocks.NewMockAlbumHydrator(GinkgoT())
+			w.albums = hydrator
+			stored := trackAlbum(1, "Nevermind", 1991, "Drain You", "Lithium")
+			stored.Genres, stored.Aliases = []string{"grunge"}, []string{}
+			edit(stored)
+			seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 1, "Drain You")
+			rec := fixtureAlbumRecord(dlDir, stored)
+			rec.VerificationBypassed = true
+			expectFind(rec)
+			if refetched {
+				hydrator.EXPECT().HydrateAlbum(mock.Anything, uint32(1)).
+					Return(nil).Once()
+				storeMk.EXPECT().
+					FindAlbumByID(mock.Anything, uint32(1)).
+					Return(nevermind, nil).
+					Once()
+			}
+			storeMk.EXPECT().RecordAlbumImportSuccess(mock.Anything, mock.MatchedBy(
+				func(p db.RecordAlbumImportSuccessParams) bool { return len(p.Files) == 1 },
+			)).Return(nil).Once()
+			msMk.EXPECT().
+				RefreshAll(mock.Anything, "music", musicDir, mock.Anything).
+				Return(nil).
+				Once()
+
+			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		},
+		Entry("genres never fetched", func(a *ent.Album) { a.Genres = nil }, true),
+		Entry("aliases never fetched for a monitored album", func(a *ent.Album) {
+			a.Aliases, a.Monitored = nil, true
+		}, true),
+		Entry("credits stored under an older layout", func(a *ent.Album) {
+			at := time.Now()
+			a.CreditsFetchedAt, a.CreditsVersion = &at, 0
+		}, true),
+		Entry("details up to date", func(*ent.Album) {}, false),
+	)
+
 	It("fails the import when hydration fails", func() {
 		hydrator := musicmocks.NewMockAlbumHydrator(GinkgoT())
 		w.albums = hydrator
