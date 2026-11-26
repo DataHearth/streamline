@@ -310,7 +310,7 @@ check.
 | `resolution` | The probed resolution is *below* what the release name claimed. Either dimension can reach a class, so a 1920×800 scope film and a 1440×1080 4:3 film both count as 1080p. Higher than claimed never holds |
 | `duration` | Probed duration is under `library.probe.min_duration_ratio` × the title's runtime. Skipped when the runtime is unknown |
 | `codec` | The profile's `allowed_codecs` is non-empty and the probed video codec is not in it |
-| `always_ask` | `library.probe.always_ask` is on and nothing else objected |
+| `always_ask` | `library.probe.always_ask` is on and nothing else objected. Music and book imports too; a discography pack is held once, before any album |
 
 Music and book downloads have checks of their own: `tier` (an album's measured tier is one its profile does not tick — a "FLAC" that is a lossy transcode), `album` (the files are tagged as another album), `track` (a file's title differs from its track or the file fits no track, such as another edition's bonus track; in a discography pack only when at least half the release's titles agree), `missing` (the import would leave some of the album's tracks empty), `folder` (a discography pack's folder names no album of the artist, or two name one), `format` (an audiobook mostly in an unticked format), `bitrate` (an audiobook under the profile's `min_bitrate`) and `metadata` (a book Hardcover has not delivered the details of yet, such as a series placeholder, which would otherwise be filed under a wrong name). See [Music and Books](Music-and-Books#searching-and-grabbing).
 

@@ -819,7 +819,8 @@ watch -n5 "curl -sS -H 'X-API-Key: $KEY' $SL/api/v1/activity/queue \
 A download that fails import verification sits in the queue with
 `"status": "held"` and a `hold_reasons` array — one entry per failed check,
 each naming the file, what was expected and what was found. `corrupt`,
-`resolution`, `duration`, `codec` and `always_ask` are the video checks; `tier`
+`resolution`, `duration` and `codec` are the video checks; `always_ask` holds
+any import that passed the rest; `tier`
 (a measured audio tier the profile does not tick), `album` (files tagged as
 another album), `track` (a file titled differently from the track its number
 lands on, or matching no track), `missing` (tracks the album would be left

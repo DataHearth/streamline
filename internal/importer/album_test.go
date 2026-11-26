@@ -430,6 +430,31 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 		))
 	})
 
+	It("holds a clean album when always_ask is on", func() {
+		configtest.Setup(map[string]any{"library": map[string]any{
+			"music_path":   musicDir,
+			"music_naming": albumNaming,
+			"import_mode":  "copy",
+			"probe":        map[string]any{"always_ask": true},
+		}})
+		for i, t := range albumTracks {
+			seedTrackFile(
+				dlDir, string(rune('a'+i))+".mp3", "tagged.mp3", t.position, t.title,
+			)
+		}
+		rec := fixtureAlbumRecord(dlDir, alb)
+		expectFind(rec)
+		storeMk.EXPECT().
+			HoldDownloadRecord(mock.Anything, rec.ID, []schema.HoldReason{{
+				File: dlDir, Check: "always_ask", Expected: "manual approval",
+			}}).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		Expect(destOf(1, albumTracks[0].title, "mp3")).NotTo(BeAnExistingFile())
+	})
+
 	It("lets the first file claim a track once someone waved the hold", func() {
 		seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 1, albumTracks[0].title)
 		seedTrackFile(dlDir, "b.mp3", "tagged.mp3", 1, albumTracks[0].title)

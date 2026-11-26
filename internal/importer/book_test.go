@@ -15,6 +15,7 @@ import (
 	"github.com/datahearth/streamline/ent/book"
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
+	"github.com/datahearth/streamline/ent/schema"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/library"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
@@ -67,13 +68,14 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 		return client.Book.GetX(ctx, b.ID)
 	}
 
-	configure := func(importMode string) {
+	configure := func(importMode string, alwaysAsk bool) {
 		configtest.Setup(map[string]any{
 			"library": map[string]any{
 				"ebook_path":          ebooks,
 				"audiobook_path":      audio,
 				"import_mode":         importMode,
 				"import_max_attempts": 3,
+				"probe":               map[string]any{"always_ask": alwaysAsk},
 			},
 			"book_quality_profiles": []map[string]any{{
 				"name": "e",
@@ -95,7 +97,7 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 		tmp = GinkgoT().TempDir()
 		ebooks = filepath.Join(tmp, "ebooks")
 		audio = filepath.Join(tmp, "audio")
-		configure("copy")
+		configure("copy", false)
 		client = dbtest.SetupTestDB(ctx)
 		DeferCleanup(client.Close)
 		w = NewWorker(Deps{DB: db.New(client), Library: library.NewImportService()})
@@ -350,6 +352,37 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 
 		Expect(reload().EbookStatus).To(Equal(book.EbookStatusAvailable))
 	})
+	DescribeTable("holds a clean slot when always_ask is on",
+		func(kind downloadrecord.BookKind, name string, bypassed bool) {
+			configure("copy", true)
+			src := filepath.Join(tmp, "dl")
+			write(src, name, "bytes")
+			id := record(kind, src, downloadrecord.ReplaceModeNone)
+			client.DownloadRecord.UpdateOneID(id).
+				SetVerificationBypassed(bypassed).ExecX(ctx)
+
+			Expect(run(id)).To(Succeed())
+
+			rec := client.DownloadRecord.GetX(ctx, id)
+			if bypassed {
+				Expect(rec.Status).To(Equal(downloadrecord.StatusCompleted))
+				Expect(client.MediaFile.Query().CountX(ctx)).To(Equal(1))
+				return
+			}
+			Expect(rec.Status).To(Equal(downloadrecord.StatusHeld))
+			Expect(rec.HoldReasons).To(ConsistOf(schema.HoldReason{
+				File: src, Check: "always_ask", Expected: "manual approval",
+			}))
+			Expect(client.MediaFile.Query().CountX(ctx)).To(BeZero())
+		},
+		Entry("an ebook", downloadrecord.BookKindEbook, "x.epub", false),
+		Entry("an audiobook", downloadrecord.BookKindAudiobook, "x.m4b", false),
+		Entry("but imports an ebook once waved",
+			downloadrecord.BookKindEbook, "x.epub", true),
+		Entry("but imports an audiobook once waved",
+			downloadrecord.BookKindAudiobook, "x.m4b", true),
+	)
+
 	Describe("a book not ready to be named", func() {
 		It("parks the record held while the book has not been hydrated", func() {
 			client.Book.UpdateOneID(b.ID).ClearLastRefreshedAt().ExecX(ctx)
@@ -446,7 +479,7 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 				SaveX(ctx).ID
 		}
 
-		BeforeEach(func() { configure("move") })
+		BeforeEach(func() { configure("move", false) })
 
 		It("copies an ebook, then removes the staging folder", func() {
 			src := filepath.Join(tmp, "dl")
