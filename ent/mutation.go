@@ -51807,6 +51807,7 @@ type UserMutation struct {
 	addfailed_login_count  *int8
 	last_failed_login_at   *time.Time
 	locked_until           *time.Time
+	title_logos            *bool
 	clearedFields          map[string]struct{}
 	api_keys               map[uint32]struct{}
 	removedapi_keys        map[uint32]struct{}
@@ -52410,6 +52411,42 @@ func (m *UserMutation) ResetLockedUntil() {
 	delete(m.clearedFields, user.FieldLockedUntil)
 }
 
+// SetTitleLogos sets the "title_logos" field.
+func (m *UserMutation) SetTitleLogos(b bool) {
+	m.title_logos = &b
+}
+
+// TitleLogos returns the value of the "title_logos" field in the mutation.
+func (m *UserMutation) TitleLogos() (r bool, exists bool) {
+	v := m.title_logos
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTitleLogos returns the old "title_logos" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldTitleLogos(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTitleLogos is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTitleLogos requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTitleLogos: %w", err)
+	}
+	return oldValue.TitleLogos, nil
+}
+
+// ResetTitleLogos resets all changes to the "title_logos" field.
+func (m *UserMutation) ResetTitleLogos() {
+	m.title_logos = nil
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the ApiKey entity by ids.
 func (m *UserMutation) AddAPIKeyIDs(ids ...uint32) {
 	if m.api_keys == nil {
@@ -52660,7 +52697,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
 	if m.create_time != nil {
 		fields = append(fields, user.FieldCreateTime)
 	}
@@ -52694,6 +52731,9 @@ func (m *UserMutation) Fields() []string {
 	if m.locked_until != nil {
 		fields = append(fields, user.FieldLockedUntil)
 	}
+	if m.title_logos != nil {
+		fields = append(fields, user.FieldTitleLogos)
+	}
 	return fields
 }
 
@@ -52724,6 +52764,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.LastFailedLoginAt()
 	case user.FieldLockedUntil:
 		return m.LockedUntil()
+	case user.FieldTitleLogos:
+		return m.TitleLogos()
 	}
 	return nil, false
 }
@@ -52755,6 +52797,8 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldLastFailedLoginAt(ctx)
 	case user.FieldLockedUntil:
 		return m.OldLockedUntil(ctx)
+	case user.FieldTitleLogos:
+		return m.OldTitleLogos(ctx)
 	}
 	return nil, fmt.Errorf("unknown User field %s", name)
 }
@@ -52840,6 +52884,13 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetLockedUntil(v)
+		return nil
+	case user.FieldTitleLogos:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTitleLogos(v)
 		return nil
 	}
 	return fmt.Errorf("unknown User field %s", name)
@@ -52970,6 +53021,9 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldLockedUntil:
 		m.ResetLockedUntil()
+		return nil
+	case user.FieldTitleLogos:
+		m.ResetTitleLogos()
 		return nil
 	}
 	return fmt.Errorf("unknown User field %s", name)

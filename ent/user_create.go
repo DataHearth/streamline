@@ -170,6 +170,20 @@ func (_c *UserCreate) SetNillableLockedUntil(v *time.Time) *UserCreate {
 	return _c
 }
 
+// SetTitleLogos sets the "title_logos" field.
+func (_c *UserCreate) SetTitleLogos(v bool) *UserCreate {
+	_c.mutation.SetTitleLogos(v)
+	return _c
+}
+
+// SetNillableTitleLogos sets the "title_logos" field if the given value is not nil.
+func (_c *UserCreate) SetNillableTitleLogos(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetTitleLogos(*v)
+	}
+	return _c
+}
+
 // SetID sets the "id" field.
 func (_c *UserCreate) SetID(v uint32) *UserCreate {
 	_c.mutation.SetID(v)
@@ -291,6 +305,10 @@ func (_c *UserCreate) defaults() {
 		v := user.DefaultFailedLoginCount
 		_c.mutation.SetFailedLoginCount(v)
 	}
+	if _, ok := _c.mutation.TitleLogos(); !ok {
+		v := user.DefaultTitleLogos
+		_c.mutation.SetTitleLogos(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -327,6 +345,9 @@ func (_c *UserCreate) check() error {
 	}
 	if _, ok := _c.mutation.FailedLoginCount(); !ok {
 		return &ValidationError{Name: "failed_login_count", err: errors.New(`ent: missing required field "User.failed_login_count"`)}
+	}
+	if _, ok := _c.mutation.TitleLogos(); !ok {
+		return &ValidationError{Name: "title_logos", err: errors.New(`ent: missing required field "User.title_logos"`)}
 	}
 	return nil
 }
@@ -403,6 +424,10 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.LockedUntil(); ok {
 		_spec.SetField(user.FieldLockedUntil, field.TypeTime, value)
 		_node.LockedUntil = &value
+	}
+	if value, ok := _c.mutation.TitleLogos(); ok {
+		_spec.SetField(user.FieldTitleLogos, field.TypeBool, value)
+		_node.TitleLogos = value
 	}
 	if nodes := _c.mutation.APIKeysIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

@@ -52,6 +52,8 @@
 	"account_stat_api_keys": "Clés API",
 	"account_stat_last_seen": "Dernière activité",
 	"account_stat_sessions": "Sessions",
+	"account_title_logos": "Logos des titres",
+	"account_title_logos_help": "Affiche le logo d'un film ou d'une série à la place de son titre sur sa page, sur grand écran. S'applique à votre compte sur tous vos appareils.",
 	"account_token_once": "Il ne sera plus affiché. Traitez-le comme un mot de passe.",
 	"action_add_movie": "Ajouter le film",
 	"action_add_series": "Ajouter la série",

@@ -268,6 +268,7 @@ func toAPIUser(u *ent.User) User {
 		AuthMethod:  UserAuthMethod(u.AuthMethod),
 		DisplayName: dn,
 		DeviceEmail: &u.DeviceEmail,
+		TitleLogos:  u.TitleLogos,
 		CreatedAt:   u.CreateTime,
 	}
 }

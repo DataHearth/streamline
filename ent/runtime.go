@@ -973,4 +973,8 @@ func init() {
 	userDescFailedLoginCount := userFields[6].Descriptor()
 	// user.DefaultFailedLoginCount holds the default value on creation for the failed_login_count field.
 	user.DefaultFailedLoginCount = userDescFailedLoginCount.Default.(uint8)
+	// userDescTitleLogos is the schema descriptor for title_logos field.
+	userDescTitleLogos := userFields[9].Descriptor()
+	// user.DefaultTitleLogos holds the default value on creation for the title_logos field.
+	user.DefaultTitleLogos = userDescTitleLogos.Default.(bool)
 }

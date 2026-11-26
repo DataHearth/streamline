@@ -10657,6 +10657,7 @@ type UpdateMeRequest struct {
 	// DeviceEmail Empty string clears it.
 	DeviceEmail *string `json:"device_email,omitempty"`
 	DisplayName *string `json:"display_name,omitempty"`
+	TitleLogos  *bool   `json:"title_logos,omitempty"`
 }
 
 // UpdateMovieRequest defines model for UpdateMovieRequest.
@@ -10737,6 +10738,10 @@ type User struct {
 	LockedUntil      *time.Time          `json:"locked_until,omitempty"`
 	Role             UserRole            `json:"role"`
 	Send             *UserSend           `json:"send,omitempty"`
+
+	// TitleLogos Whether the SPA draws a movie's or series' logo in place of its
+	// title on the detail page. On for a new account.
+	TitleLogos bool `json:"title_logos"`
 }
 
 // UserAuthMethod defines model for User.AuthMethod.

@@ -4,6 +4,7 @@
 		User,
 		LockKeyhole,
 		Globe,
+		Image,
 		KeyRound,
 		Monitor,
 		RefreshCw,
@@ -21,6 +22,7 @@
 	import ProfileCard from "./ProfileCard.svelte";
 	import PasswordCard from "./PasswordCard.svelte";
 	import LanguageCard from "./LanguageCard.svelte";
+	import TitleLogosCard from "./TitleLogosCard.svelte";
 	import APIKeysCard from "./APIKeysCard.svelte";
 	import SessionsCard from "./SessionsCard.svelte";
 	import JWTRotateCard from "./JWTRotateCard.svelte";
@@ -66,6 +68,7 @@
 		| "profile"
 		| "password"
 		| "language"
+		| "logos"
 		| "keys"
 		| "sessions"
 		| `ext:${string}`
@@ -82,6 +85,7 @@
 		profile: i18n.common_profile(),
 		password: i18n.common_password(),
 		language: i18n.account_language(),
+		logos: i18n.account_title_logos(),
 		keys: i18n.account_api_keys(),
 		sessions: i18n.account_active_sessions(),
 		device: i18n.account_device_title(),
@@ -118,6 +122,15 @@
 					Icon: Globe,
 					label: i18n.account_language(),
 					value: endonym(getLocale()),
+				},
+				{
+					key: "logos" as RowKey,
+					Icon: Image,
+					label: i18n.account_title_logos(),
+					value:
+						auth.user?.title_logos === false
+							? i18n.account_app_off()
+							: i18n.account_app_on(),
 				},
 			],
 		},
@@ -250,6 +263,8 @@
 		<PasswordCard />
 	{:else if openRow === "language"}
 		<LanguageCard />
+	{:else if openRow === "logos"}
+		<TitleLogosCard />
 	{:else if openRow === "keys"}
 		<APIKeysCard />
 	{:else if openRow === "sessions"}

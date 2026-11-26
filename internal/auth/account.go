@@ -71,6 +71,7 @@ func validatePassword(p string) error {
 type ProfilePatch struct {
 	DisplayName *string
 	DeviceEmail *string
+	TitleLogos  *bool
 }
 
 // UpdateProfile writes the user-editable profile fields.
@@ -99,6 +100,7 @@ func (s *auth) UpdateProfile(
 		}
 		params.DeviceEmail = &de
 	}
+	params.TitleLogos = p.TitleLogos
 	u, err := s.db.UpdateUser(ctx, userID, params)
 	if err != nil {
 		return nil, otelx.RecordSpanError(

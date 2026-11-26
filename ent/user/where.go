@@ -100,6 +100,11 @@ func LockedUntil(v time.Time) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldLockedUntil, v))
 }
 
+// TitleLogos applies equality check predicate on the "title_logos" field. It's identical to TitleLogosEQ.
+func TitleLogos(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldTitleLogos, v))
+}
+
 // CreateTimeEQ applies the EQ predicate on the "create_time" field.
 func CreateTimeEQ(v time.Time) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldCreateTime, v))
@@ -648,6 +653,16 @@ func LockedUntilIsNil() predicate.User {
 // LockedUntilNotNil applies the NotNil predicate on the "locked_until" field.
 func LockedUntilNotNil() predicate.User {
 	return predicate.User(sql.FieldNotNull(FieldLockedUntil))
+}
+
+// TitleLogosEQ applies the EQ predicate on the "title_logos" field.
+func TitleLogosEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldTitleLogos, v))
+}
+
+// TitleLogosNEQ applies the NEQ predicate on the "title_logos" field.
+func TitleLogosNEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldTitleLogos, v))
 }
 
 // HasAPIKeys applies the HasEdge predicate on the "api_keys" edge.

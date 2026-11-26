@@ -14336,7 +14336,7 @@ components:
 
     User:
       type: object
-      required: [id, email, role, auth_method, created_at]
+      required: [id, email, role, auth_method, title_logos, created_at]
       properties:
         id:
           type: integer
@@ -14355,6 +14355,11 @@ components:
         device_email:
           type: string
           description: Address of the user's e-reader; empty when unset.
+        title_logos:
+          type: boolean
+          description: |
+            Whether the SPA draws a movie's or series' logo in place of its
+            title on the detail page. On for a new account.
         send:
           $ref: "#/components/schemas/UserSend"
         created_at:
@@ -14574,6 +14579,8 @@ components:
         device_email:
           type: string
           description: Empty string clears it.
+        title_logos:
+          type: boolean
 
     ChangePasswordRequest:
       type: object
