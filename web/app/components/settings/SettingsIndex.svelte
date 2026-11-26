@@ -10,12 +10,7 @@
 	const nav = createSettingsNav();
 </script>
 
-<header class="pb-1">
-	<h1 class="text-2xl font-bold tracking-tight text-fg">
-		{i18n.nav_settings()}
-	</h1>
-	<p class="mt-1 text-sm text-fg-muted">{i18n.settings_server_library()}</p>
-</header>
+<p class="text-sm text-fg-muted">{i18n.settings_server_library()}</p>
 
 <nav aria-label={i18n.settings_sections()} class="mt-4">
 	{#each nav.groups as g (g.name)}
