@@ -173,6 +173,8 @@
 		{#snippet actions()}
 			<!-- No "Downloading…" chip: the hero's status pill already says it. -->
 			{#if auth.canAddDirectly}
+				<MonitorToggle monitored={movie.monitored ?? false} onToggle={() => monitor.mutate(!(movie.monitored ?? false))} pending={monitor.isPending} size="md" backdrop />
+
 				<PlayOnMenu
 					path={`/movies/${movie.id}/play-on`}
 					queryKey={["movie", movie.id, "play-on"]}
@@ -182,14 +184,12 @@
 
 				<Button
 					type="button"
+					class="min-w-0 px-3 @min-[512px]:px-4"
 					onclick={() => (searchOpen = true)}
-				
 				>
-					<Search size={14} aria-hidden="true" />
-					{i18n.action_manual_search()}
+					<Search size={14} class="shrink-0" aria-hidden="true" />
+					<span class="truncate">{i18n.action_manual_search()}</span>
 				</Button>
-
-				<MonitorToggle monitored={movie.monitored ?? false} onToggle={() => monitor.mutate(!(movie.monitored ?? false))} pending={monitor.isPending} size="md" backdrop />
 
 				<MovieKebabMenu onPick={onKebabPick} disabledActions={hasFiles ? [] : ["rename"]} />
 			{/if}

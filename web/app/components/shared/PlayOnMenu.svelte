@@ -248,22 +248,27 @@
 			<Play class="h-[18px] w-[18px] text-accent" aria-hidden="true" />
 		</button>
 	{:else}
+		<!-- Labelled from 512px of row; the row it sits in is the @container. -->
 		<button
 			bind:this={triggerEl}
 			type="button"
 			aria-haspopup="menu"
 			aria-expanded={open}
+			aria-label={i18n.action_play_on()}
 			{disabled}
-			title={disabled ? disabledTitle : undefined}
+			title={disabled ? disabledTitle : i18n.action_play_on()}
 			onclick={toggle}
-			class="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-md border border-border-strong bg-bg-elevated px-4 text-sm font-medium max-lg:min-h-11 text-fg hover:border-accent/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:border-border disabled:text-fg-faint disabled:hover:border-border"
+			class="inline-flex h-10 w-11 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-border-strong bg-bg-elevated text-sm font-medium max-lg:min-h-11 lg:w-10 @min-[512px]:w-auto @min-[512px]:px-4 text-fg hover:border-accent/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring disabled:cursor-not-allowed disabled:border-border disabled:text-fg-faint disabled:hover:border-border"
 		>
 			<span class="inline-flex items-center gap-2">
 				<Play class="h-4 w-4 text-accent" aria-hidden="true" />
-				{i18n.action_play_on()}
+				<span class="hidden @min-[512px]:inline">{i18n.action_play_on()}</span>
 			</span>
 			<ChevronDown
-				class={twMerge("h-3.5 w-3.5 text-fg-muted transition", open && "rotate-180")}
+				class={twMerge(
+					"hidden h-3.5 w-3.5 text-fg-muted transition @min-[512px]:block",
+					open && "rotate-180",
+				)}
 				aria-hidden="true"
 			/>
 		</button>

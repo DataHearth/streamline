@@ -130,13 +130,16 @@
 			{#if actions}
 				<!-- md and up only: on a phone these live in the pinned bar at the
 				     bottom of the page, where Manual search is reachable from anywhere
-				     in the document rather than only from the top of it. -->
-				<fieldset
-					class="min-w-0 mt-5 hidden flex-wrap items-center gap-2.5 md:flex"
-					aria-label={i18n.movies_actions()}
-				>
-					{@render actions()}
-				</fieldset>
+				     in the document rather than only from the top of it. One line:
+				     Play on is an icon and the gaps tighten below 512px of row. -->
+				<div class="@container mt-5 hidden md:block">
+					<fieldset
+						class="flex min-w-0 items-center gap-1.5 @min-[512px]:gap-2.5"
+						aria-label={i18n.movies_actions()}
+					>
+						{@render actions()}
+					</fieldset>
+				</div>
 			{/if}
 		</div>
 	</div>
