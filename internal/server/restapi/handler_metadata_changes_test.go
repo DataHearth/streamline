@@ -12,6 +12,8 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/internal/db"
+	"github.com/datahearth/streamline/internal/media/book"
+	"github.com/datahearth/streamline/internal/metadata"
 )
 
 var _ = Describe("Handler: MetadataChanges", Label("unit", "server"), func() {
@@ -206,5 +208,57 @@ var _ = Describe("Handler: MetadataChanges", Label("unit", "server"), func() {
 			resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
+
+		DescribeTable("answers a provider failure as that provider's",
+			func(owner string, err error, status int, code, message string) {
+				c := albumChange(metadatachange.StatePending)
+				if owner == "book" {
+					c.Kind = metadatachange.KindEditionRemoved
+					c.Edges = ent.MetadataChangeEdges{Book: &ent.Book{ID: 9}}
+					app.books.EXPECT().
+						FollowChange(mock.Anything, c).
+						Return(err).
+						Once()
+				} else {
+					app.music.EXPECT().
+						FollowChange(mock.Anything, c).
+						Return(err).
+						Once()
+				}
+				app.store.EXPECT().FindChange(mock.Anything, uint32(5)).
+					Return(c, nil).Once()
+				resp := app.do(
+					app.req(
+						http.MethodPost,
+						"/api/v1/metadata-changes/5/follow",
+						app.adminKey,
+						nil,
+					),
+				)
+				Expect(resp.StatusCode).To(Equal(status))
+				e := errorOf(resp)
+				if code != "" {
+					Expect(e.Code).To(HaveValue(Equal(code)))
+				}
+				Expect(e.Message).To(ContainSubstring(message))
+			},
+			Entry("a book Hardcover no longer has", "book",
+				book.ErrHardcoverNotFound, http.StatusNotFound, "", "hardcover"),
+			Entry("no Hardcover key", "book",
+				metadata.ErrHardcoverKeyMissing, http.StatusServiceUnavailable,
+				"hardcover_not_configured", "hardcover"),
+			Entry("no book provider", "book",
+				book.ErrNotConfigured, http.StatusServiceUnavailable,
+				"hardcover_not_configured", "hardcover"),
+			Entry("a refused Hardcover key", "book",
+				metadata.ErrHardcoverUnauthorized, http.StatusServiceUnavailable,
+				"hardcover_key_rejected", "hardcover"),
+			Entry("a Hardcover rate limit", "book",
+				&metadata.RateLimitedError{}, http.StatusTooManyRequests,
+				"rate_limited", "Hardcover"),
+			Entry("a MusicBrainz rate limit", "album",
+				&metadata.RateLimitedError{}, http.StatusTooManyRequests,
+				"rate_limited", "MusicBrainz"),
+		)
 	})
 })

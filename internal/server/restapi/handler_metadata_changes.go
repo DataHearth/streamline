@@ -7,7 +7,7 @@ import (
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/metadatachange"
 	"github.com/datahearth/streamline/internal/db"
-	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/media/book"
 )
 
 const metadataChangesMaxLimit = 100
@@ -171,9 +171,21 @@ func (s *Server) FollowMetadataChange(
 			Message: err.Error(),
 			Code:    &code,
 		}, nil
-	case errors.Is(err, metadata.ErrRateLimited):
+	case errors.Is(err, book.ErrHardcoverNotFound):
+		return FollowMetadataChange404JSONResponse{
+			NotFoundJSONResponse: errNotFound(err.Error()),
+		}, nil
+	case rateLimited(err) && db.ChangeOwnerOf(c).Type == db.ChangeOwnerBook:
+		return FollowMetadataChange429JSONResponse{
+			RateLimitedJSONResponse: errRateLimited(err),
+		}, nil
+	case rateLimited(err):
 		return FollowMetadataChange429JSONResponse{
 			RateLimitedJSONResponse: errMusicBrainzRateLimited(err),
+		}, nil
+	case providerUnavailable(err):
+		return FollowMetadataChange503JSONResponse{
+			ServiceUnavailableJSONResponse: errHardcoverUnavailable(err),
 		}, nil
 	}
 	return nil, err
