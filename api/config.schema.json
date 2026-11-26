@@ -688,7 +688,7 @@
           "properties": {
             "always_ask": {
               "type": "boolean",
-              "description": "Hold every import for a decision, even when every check passes."
+              "description": "Hold every import (movie, episode, album or book) for a decision, even when every check passes. Needs no probe."
             },
             "min_duration_ratio": {
               "type": "number",

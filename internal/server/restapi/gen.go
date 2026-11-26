@@ -5999,7 +5999,7 @@ type Error struct {
 	// hardcover_not_configured, hardcover_key_rejected, not_sendable,
 	// no_device_email, smtp_not_configured, send_failed,
 	// secret_required, secret_file_managed, api_key_quota,
-	// catalog_unavailable, indexers_unavailable). Present
+	// catalog_unavailable, indexers_unavailable, body_too_large). Present
 	// for domain errors where the caller needs to branch on the
 	// specific reason; absent
 	// for generic errors where the message is sufficient.
@@ -6067,7 +6067,7 @@ type ExtensionCard struct {
 	// Fields The controls of a `settings` card.
 	Fields *[]ExtensionCardField `json:"fields,omitempty"`
 
-	// Kind `credential` is the only kind.
+	// Kind `credential` (a per-user secret) or `settings` (the controls in `fields`).
 	Kind string `json:"kind"`
 
 	// Mount Where a client is pointed, as the module declares it: relative to the extension's path, `/` being the path itself.
@@ -6311,12 +6311,17 @@ type HistoryEntryStatus string
 type HoldReason struct {
 	Actual *string `json:"actual,omitempty"`
 
-	// Check corrupt, resolution, duration, codec and always_ask are the video
-	// checks; tier, album and track hold a music download (a measured
+	// Check corrupt, resolution, duration and codec are the video checks;
+	// always_ask holds any clean import while `library.probe.always_ask`
+	// is on. tier, album and track hold a music download (a measured
 	// tier the profile does not tick, files tagged as another album, a
 	// file titled differently from the track its number lands on, when
-	// at least half the release's titles agree); format, bitrate and
-	// metadata hold a book. location holds a completed download whose
+	// at least half the release's titles agree); missing holds an album
+	// the import would leave with tracks and no file (`file` empty;
+	// `expected` the track count, `actual` the tracks filled); folder
+	// holds a discography pack folder that names no album of the
+	// artist, or one an earlier folder already took. format, bitrate
+	// and metadata hold a book. location holds a completed download whose
 	// files are at neither place streamline looks: `expected` is
 	// `<library.download_path>/<torrent name>`, `actual` the client's
 	// reported save path through `download.path_mappings` (absent when
@@ -6327,12 +6332,17 @@ type HoldReason struct {
 	File     string          `json:"file"`
 }
 
-// HoldReasonCheck corrupt, resolution, duration, codec and always_ask are the video
-// checks; tier, album and track hold a music download (a measured
+// HoldReasonCheck corrupt, resolution, duration and codec are the video checks;
+// always_ask holds any clean import while `library.probe.always_ask`
+// is on. tier, album and track hold a music download (a measured
 // tier the profile does not tick, files tagged as another album, a
 // file titled differently from the track its number lands on, when
-// at least half the release's titles agree); format, bitrate and
-// metadata hold a book. location holds a completed download whose
+// at least half the release's titles agree); missing holds an album
+// the import would leave with tracks and no file (`file` empty;
+// `expected` the track count, `actual` the tracks filled); folder
+// holds a discography pack folder that names no album of the
+// artist, or one an earlier folder already took. format, bitrate
+// and metadata hold a book. location holds a completed download whose
 // files are at neither place streamline looks: `expected` is
 // `<library.download_path>/<torrent name>`, `actual` the client's
 // reported save path through `download.path_mappings` (absent when
@@ -8899,7 +8909,8 @@ type PlayOnLinkList struct {
 // ProbeConfig Import-time verification against ffprobe results; when patched, only
 // provided fields are applied.
 type ProbeConfig struct {
-	// AlwaysAsk Hold every import for a decision, even when every check passes.
+	// AlwaysAsk Hold every import (movie, episode, album or book) for a decision,
+	// even when every check passes. Needs no probe.
 	AlwaysAsk *bool `json:"always_ask,omitempty"`
 
 	// MinDurationRatio A file shorter than this share of the expected runtime fails the
@@ -13342,13 +13353,13 @@ type ServerInterface interface {
 	// ApproveRequest Approve a request (admin/member) — creates the library item
 	// (POST /requests/{id}/approve)
 	ApproveRequest(w http.ResponseWriter, r *http.Request, id ResourceID)
-	// DenyRequest Deny a request (admin)
+	// DenyRequest Deny a request (admin/member)
 	// (POST /requests/{id}/deny)
 	DenyRequest(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// GetRequestMetadata Cover and synopsis for a requested item
 	// (GET /requests/{id}/metadata)
 	GetRequestMetadata(w http.ResponseWriter, r *http.Request, id ResourceID)
-	// ReopenRequest Reopen a denied request (admin)
+	// ReopenRequest Reopen a denied request (admin/member)
 	// (POST /requests/{id}/reopen)
 	ReopenRequest(w http.ResponseWriter, r *http.Request, id ResourceID)
 	// ListSchedules List all scheduled jobs with current state.
@@ -14858,7 +14869,7 @@ func (_ Unimplemented) ApproveRequest(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// DenyRequest Deny a request (admin)
+// DenyRequest Deny a request (admin/member)
 // (POST /requests/{id}/deny)
 func (_ Unimplemented) DenyRequest(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -14870,7 +14881,7 @@ func (_ Unimplemented) GetRequestMetadata(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// ReopenRequest Reopen a denied request (admin)
+// ReopenRequest Reopen a denied request (admin/member)
 // (POST /requests/{id}/reopen)
 func (_ Unimplemented) ReopenRequest(w http.ResponseWriter, r *http.Request, id ResourceID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -45958,13 +45969,13 @@ type StrictServerInterface interface {
 	// ApproveRequest Approve a request (admin/member) — creates the library item
 	// (POST /requests/{id}/approve)
 	ApproveRequest(ctx context.Context, request ApproveRequestRequestObject) (ApproveRequestResponseObject, error)
-	// DenyRequest Deny a request (admin)
+	// DenyRequest Deny a request (admin/member)
 	// (POST /requests/{id}/deny)
 	DenyRequest(ctx context.Context, request DenyRequestRequestObject) (DenyRequestResponseObject, error)
 	// GetRequestMetadata Cover and synopsis for a requested item
 	// (GET /requests/{id}/metadata)
 	GetRequestMetadata(ctx context.Context, request GetRequestMetadataRequestObject) (GetRequestMetadataResponseObject, error)
-	// ReopenRequest Reopen a denied request (admin)
+	// ReopenRequest Reopen a denied request (admin/member)
 	// (POST /requests/{id}/reopen)
 	ReopenRequest(ctx context.Context, request ReopenRequestRequestObject) (ReopenRequestResponseObject, error)
 	// ListSchedules List all scheduled jobs with current state.
