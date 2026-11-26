@@ -999,7 +999,8 @@ type Store interface {
 		liveHashes []string,
 	) (int, error)
 	// DeleteOrphanedPendingAdoptions prunes pending proposals whose client is
-	// not among clientNames (the enabled download clients).
+	// not among clientNames (the enabled download clients); every one when
+	// clientNames is empty.
 	DeleteOrphanedPendingAdoptions(
 		ctx context.Context,
 		clientNames []string,

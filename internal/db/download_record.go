@@ -376,7 +376,8 @@ func (db *DB) DeleteStalePendingAdoptions(
 }
 
 // DeleteOrphanedPendingAdoptions removes pending adoption proposals whose
-// download client is not among clientNames. A proposal is derived from its
+// download client is not among clientNames, or every one when clientNames is
+// empty. A proposal is derived from its
 // client's listing, and only an enabled client is ever listed, so one whose
 // client was disabled or removed is never pruned by the per-client pass — it
 // would sit in every user's pending list for good. Disabling a client that comes

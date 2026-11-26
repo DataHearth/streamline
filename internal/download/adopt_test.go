@@ -447,12 +447,15 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 			Expect(found).To(BeFalse())
 		})
 
-		It("no-ops when no download clients are configured", func() {
+		It("only prunes proposals when no download client is enabled", func() {
 			configtest.Setup()
-			// No EXPECT: with nothing to adopt from, the pass must not even
-			// reach the hash query — a full scan of download_records that the
-			// 30s monitor tick would otherwise pay for an empty loop. The
-			// mock fails the spec on any call, which is the assertion.
+			// Every proposal is orphaned, and nothing else may run: the hash
+			// query is a full scan of download_records that the 30s monitor
+			// tick would otherwise pay for an empty loop. The mock fails the
+			// spec on any other call.
+			store.EXPECT().
+				DeleteOrphanedPendingAdoptions(mock.Anything, []string(nil)).
+				Return(2, nil).Once()
 			ids, err := mgr.AdoptManualTorrents(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ids).To(BeEmpty())
