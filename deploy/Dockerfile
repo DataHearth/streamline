@@ -81,7 +81,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # publishes hardened static PIE builds with no external deps, which is what lets
 # a bare COPY of the binaries into distroless (no libc to link against) work at
 # all.
-FROM docker.io/mwader/static-ffmpeg:9.0.2-1@sha256:f5d100184884eb3e82b0eb14bb5ebf98da99826ac824989720297fb9ef21c822 AS ffmpeg
+FROM docker.io/mwader/static-ffmpeg:9.1@sha256:dd09509d8c2152bfa601c8c20e3dd166bde906d37951b9f7e8bbd922267f5ac9 AS ffmpeg
 
 # --- Go binary ---
 FROM golang:1.27.4-alpine@sha256:70bd7ddea8b6cbe5d6943cde279d6b67feb10cc924fb9100d1d8757c1575b280 AS builder
@@ -135,7 +135,7 @@ RUN mkdir -p /out/data /out/config
 # `group_add`, the chart's hwAccel.supplementalGroups), gid from
 # `stat -c %g /dev/dri/renderD128`. This is why the stage sits ABOVE the
 # distroless one: a plain `docker build` must still produce the hardened image.
-FROM ghcr.io/linuxserver/ffmpeg:9.0.2-cli-ls89@sha256:822d04f0b2d0c4847430f5cc90f20ea48be866bb502ece63fdeb729400bf5361 AS vaapi
+FROM ghcr.io/linuxserver/ffmpeg:9.0.2-cli-ls91@sha256:6570e68912d840b3923fc9e9e396af4b88199a19dad44b53ff117d80a90babf5 AS vaapi
 
 # linuxserver's own ENTRYPOINT is an s6 wrapper (`/ffmpegwrapper.sh`) built for
 # running ffmpeg as the container's job; streamline is a long-running server,
