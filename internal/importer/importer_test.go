@@ -12,6 +12,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/sdk/metric"
+	"go.opentelemetry.io/sdk/metric/metricdata"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -1457,7 +1461,35 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					})).
 				Return(nil).Once()
 
-			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(wp.runImport(context.Background(), 1)).To(MatchError(errHeld))
+		})
+		It("records a held import once, and not as succeeded", func() {
+				reader := sdkmetric.NewManualReader()
+			otel.SetMeterProvider(sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader)))
+			src := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+			wp := proberReturning(probed(1280, "h264"), nil)
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(rec, nil).Once()
+		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+		storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.MatchedBy(
+						func(rs []schema.HoldReason) bool {
+								return len(rs) == 1 && rs[0].Check == "resolution"
+						})).
+		Return(nil).Once()
+			ctx := context.Background()
+			err := wp.runImport(ctx, 1)
+			Expect(err).To(MatchError(errHeld))
+			wp.handleOutcome(ctx, 1, err)
+			var rm metricdata.ResourceMetrics
+			Expect(reader.Collect(ctx, &rm)).To(Succeed())
+			Expect(outcomeCount(rm, "held")).To(Equal(int64(1)))
+			Expect(outcomeCount(rm, "succeeded")).To(BeZero())
 		})
 
 		It("falls back to the release title for the resolution claim", func() {
@@ -1481,7 +1513,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					})).
 				Return(nil).Once()
 
-			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(wp.runImport(context.Background(), 1)).To(MatchError(errHeld))
 		})
 
 		It("holds a movie whose file will not probe", func() {
@@ -1503,7 +1535,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					})).
 				Return(nil).Once()
 
-			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(wp.runImport(context.Background(), 1)).To(MatchError(errHeld))
 		})
 
 		It("keeps the existing movie file when the replacement is held", func() {
@@ -1525,7 +1557,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				HoldDownloadRecord(mock.Anything, uint32(1), mock.Anything).
 				Return(nil).Once()
 
-			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(wp.runImport(context.Background(), 1)).To(MatchError(errHeld))
 			Expect(old).To(BeAnExistingFile())
 		})
 
@@ -1555,7 +1587,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				HoldDownloadRecord(mock.Anything, uint32(1), mock.Anything).
 				Return(nil).Once()
 
-			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(wp.runImport(context.Background(), 1)).To(MatchError(errHeld))
 			Expect(old).To(BeAnExistingFile())
 		})
 
@@ -1612,7 +1644,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					})).
 				Return(nil).Once()
 
-			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+			Expect(w.runImport(context.Background(), 1)).To(MatchError(errHeld))
 		})
 
 		It("fails, never holds, when the source file is missing", func() {
@@ -1705,7 +1737,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					})).
 				Return(nil).Once()
 
-			Expect(wp.runImport(context.Background(), 2)).To(Succeed())
+			Expect(wp.runImport(context.Background(), 2)).To(MatchError(errHeld))
 		})
 
 		// probedFile is an existing library file with probe results on it.
@@ -2055,4 +2087,26 @@ func episodeRecord(
 	r.Edges.AnchorEpisode = ep
 	_ = season
 	return r
+}
+
+// outcomeCount reads one outcome total out of collected importer metrics.
+func outcomeCount(rm metricdata.ResourceMetrics, outcome string) int64 {
+
+GinkgoHelper()
+		for _, sm := range rm.ScopeMetrics {
+				for _, m := range sm.Metrics {
+						if m.Name != "streamline.importer.outcomes" {
+								continue
+						}
+					sum, ok := m.Data.(metricdata.Sum[int64])
+					Expect(ok).To(BeTrue(), "importer outcomes counter is not an int64 sum")
+					for _, dp := range sum.DataPoints {
+							v, _ := dp.Attributes.Value(attribute.Key("outcome"))
+						if v.AsString() == outcome {
+								return dp.Value
+						}
+					}
+				}
+		}
+return 0
 }
