@@ -182,7 +182,7 @@ var _ = Describe(
 					Return(nil).
 					Once()
 
-				Expect(w.runImport(context.Background(), rec.ID)).To(Succeed())
+				Expect(w.runImport(context.Background(), rec.ID)).To(MatchError(errHeld))
 
 				Expect(reasons).To(HaveLen(1))
 				Expect(reasons[0].Check).To(Equal("tier"))
@@ -223,7 +223,7 @@ var _ = Describe(
 					Return(nil).
 					Once()
 
-				Expect(w.runImport(context.Background(), rec.ID)).To(Succeed())
+				Expect(w.runImport(context.Background(), rec.ID)).To(MatchError(errHeld))
 
 				Expect(reasons).To(HaveLen(1))
 				Expect(reasons[0].Check).To(Equal("track"))
