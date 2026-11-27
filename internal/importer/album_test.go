@@ -418,7 +418,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 			Return(nil).
 			Once()
 
-		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		Expect(w.runImport(context.Background(), 1)).To(MatchError(errHeld))
 
 		Expect(reasons).To(ConsistOf(
 			schema.HoldReason{
@@ -759,8 +759,7 @@ var _ = Describe("Worker album import", Label("unit", "importer"), func() {
 			Return(nil).
 			Once()
 
-		Expect(w.runImport(context.Background(), 1)).To(Succeed())
-	})
+		Expect(w.runImport(context.Background(), 1)).To(MatchError(errHeld))
 
 	It("fails terminally when a waved release matches no track", func() {
 		seedTrackFile(dlDir, "a.mp3", "tagged.mp3", 9, "Nope")
