@@ -393,7 +393,8 @@ func (w *Worker) verdict(
 }
 
 // hold stops the import and parks the record for a user decision. A hold is an
-// outcome, not a failure: it returns nil so the attempt counter stays put.
+// outcome, not a failure: it returns errHeld so handleOutcome does not also
+// record it as succeeded.
 func (w *Worker) hold(
 	ctx context.Context,
 	span trace.Span,
@@ -408,7 +409,7 @@ func (w *Worker) hold(
 		"download_record.id", rec.ID,
 		"reasons", len(reasons),
 		"check", reasons[0].Check)
-	return nil
+	return errHeld
 }
 
 func (w *Worker) importMovieRecord(
@@ -1074,7 +1075,7 @@ func (w *Worker) handleOutcome(ctx context.Context, recordID uint32, runErr erro
 	}
 	if errors.Is(runErr, context.Canceled) ||
 		errors.Is(runErr, context.DeadlineExceeded) ||
-		errors.Is(runErr, errRootOffline) {
+		errors.Is(runErr, errRootOffline) || errors.Is(runErr, errHeld) {
 		return
 	}
 

@@ -10,6 +10,9 @@ var (
 	// errRootOffline leaves a record importing, with no attempt counted, for
 	// the next scan to retry.
 	errRootOffline = errors.New("library root is offline")
+	// errHeld is returned by hold after it records a "held" outcome, so
+	// handleOutcome does not also record the import as "succeeded".
+	errHeld = errors.New("import held")
 	// ErrPathNotAllowed is returned when a DownloadRecord.save_path is not
 	// within any configured Library.AllowedDownloadRoots prefix.
 	ErrPathNotAllowed = errors.New("save_path not in allowed download roots")

@@ -80,7 +80,7 @@ func (w *Worker) importPackRecord(
 		changed = append(changed, placed...)
 		switch {
 		case held:
-			return nil
+			return err
 		case errors.Is(err, library.ErrDestExists):
 			// Every track of the folder already holds a file: a re-run after
 			// a partial failure, or a pack that adds nothing.

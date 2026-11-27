@@ -103,7 +103,7 @@ var _ = Describe("Worker audiobook verification", Label("unit", "importer"), fun
 			Return(&ffmpeg.AudioInfo{Codec: "flac", BitrateKbps: 900, DurationSec: 60}, nil).
 			Maybe()
 
-		Expect(w.runImport(ctx, id)).To(Succeed())
+		Expect(w.runImport(ctx, id)).To(MatchError(errHeld))
 
 		rec := client.DownloadRecord.GetX(ctx, id)
 		Expect(rec.Status).To(Equal(downloadrecord.StatusHeld))
@@ -119,7 +119,7 @@ var _ = Describe("Worker audiobook verification", Label("unit", "importer"), fun
 			Return(&ffmpeg.AudioInfo{Codec: "mp3", BitrateKbps: 32, DurationSec: 60}, nil).
 			Once()
 
-		Expect(w.runImport(ctx, id)).To(Succeed())
+		Expect(w.runImport(ctx, id)).To(MatchError(errHeld))
 
 		rec := client.DownloadRecord.GetX(ctx, id)
 		Expect(rec.Status).To(Equal(downloadrecord.StatusHeld))
