@@ -165,6 +165,7 @@ var (
 	selectionCounter metric.Int64Counter
 	seedReapCounter  metric.Int64Counter
 	rotationCounter  metric.Int64Counter
+	trimCounter      metric.Int64Counter
 )
 
 func init() {
@@ -227,6 +228,13 @@ func init() {
 				"to make room in a full engine",
 		),
 	))
+	trimCounter = otelx.Must(meter.Int64Counter(
+		"streamline.download.limit_removals",
+		metric.WithDescription(
+			"Imported builtin torrents removed with their files "+
+				"to bring the engine back under max_torrents",
+		),
+	))
 
 	// Prime instruments with 0 so series appear in the backend before the
 	// first real event.
@@ -238,6 +246,7 @@ func init() {
 	orphanCounter.Add(ctx, 0)
 	seedReapCounter.Add(ctx, 0)
 	rotationCounter.Add(ctx, 0)
+	trimCounter.Add(ctx, 0)
 	grabDuration.Record(ctx, 0)
 }
 
@@ -375,6 +384,9 @@ type Cleaner interface {
 // download monitor tick alongside the completion and adoption passes.
 type SeedReaper interface {
 	RemoveSeedCompleteTorrents(ctx context.Context) error
+	// TrimOverLimitTorrents removes, with their files, the imported torrents
+	// the builtin engine holds past its max_torrents.
+	TrimOverLimitTorrents(ctx context.Context) error
 }
 
 // Adopter scans enabled download clients for untracked managed-category
