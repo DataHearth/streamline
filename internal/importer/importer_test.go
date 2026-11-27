@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	sdkmetric "go.opentelemetry.io/sdk/metric"
-	"go.opentelemetry.io/sdk/metric/metricdata"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/ent/downloadrecord"
@@ -1464,8 +1464,10 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			Expect(wp.runImport(context.Background(), 1)).To(MatchError(errHeld))
 		})
 		It("records a held import once, and not as succeeded", func() {
-				reader := sdkmetric.NewManualReader()
-			otel.SetMeterProvider(sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader)))
+			reader := sdkmetric.NewManualReader()
+			otel.SetMeterProvider(
+				sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader)),
+			)
 			src := filepath.Join(tmp, "dl")
 			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
 			seedMediaFile(src, "Flick.2024.1080p.mkv")
@@ -1473,15 +1475,15 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 			wp := proberReturning(probed(1280, "h264"), nil)
 			storeMk.EXPECT().
 				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
-			Return(rec, nil).Once()
-		storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
 				Return(nil, nil).Once()
-		storeMk.EXPECT().
+			storeMk.EXPECT().
 				HoldDownloadRecord(mock.Anything, uint32(1), mock.MatchedBy(
-						func(rs []schema.HoldReason) bool {
-								return len(rs) == 1 && rs[0].Check == "resolution"
-						})).
-		Return(nil).Once()
+					func(rs []schema.HoldReason) bool {
+						return len(rs) == 1 && rs[0].Check == "resolution"
+					})).
+				Return(nil).Once()
 			ctx := context.Background()
 			err := wp.runImport(ctx, 1)
 			Expect(err).To(MatchError(errHeld))
@@ -2091,22 +2093,21 @@ func episodeRecord(
 
 // outcomeCount reads one outcome total out of collected importer metrics.
 func outcomeCount(rm metricdata.ResourceMetrics, outcome string) int64 {
-
-GinkgoHelper()
-		for _, sm := range rm.ScopeMetrics {
-				for _, m := range sm.Metrics {
-						if m.Name != "streamline.importer.outcomes" {
-								continue
-						}
-					sum, ok := m.Data.(metricdata.Sum[int64])
-					Expect(ok).To(BeTrue(), "importer outcomes counter is not an int64 sum")
-					for _, dp := range sum.DataPoints {
-							v, _ := dp.Attributes.Value(attribute.Key("outcome"))
-						if v.AsString() == outcome {
-								return dp.Value
-						}
-					}
+	GinkgoHelper()
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name != "streamline.importer.outcomes" {
+				continue
+			}
+			sum, ok := m.Data.(metricdata.Sum[int64])
+			Expect(ok).To(BeTrue(), "importer outcomes counter is not an int64 sum")
+			for _, dp := range sum.DataPoints {
+				v, _ := dp.Attributes.Value(attribute.Key("outcome"))
+				if v.AsString() == outcome {
+					return dp.Value
 				}
+			}
 		}
-return 0
+	}
+	return 0
 }
