@@ -170,6 +170,9 @@ var _ = Describe("Torznab ids", Label("unit", "indexers"), func() {
 				Season: 1, Episode: 2,
 			},
 			"tvsearch", []string{"imdbid", "season", "ep"}, []string{"tvdbid"}),
+		Entry("special, whose season is never sent",
+			SearchParams{Query: "Dark", Kind: KindTV, TVDBID: 334824, Episode: 2},
+			"tvsearch", []string{"tvdbid"}, []string{"season", "ep"}),
 	)
 })
 

@@ -350,6 +350,146 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			Expect(out).To(BeEmpty())
 			Expect(hidden).To(Equal(3))
 		})
+
+		It("never counts a complete pack as covering a special", func() {
+			// An integral holds the numbered seasons; season 0 is outside it,
+			// as it is outside the show-level counts. Only a pack of the
+			// specials season itself covers a special.
+			integral := SearchResult{
+				Title: "The.Big.Bang.Theory.2007.INTEGRALE.MULTI.1080p.WEB-GRP",
+			}
+			ranged := SearchResult{
+				Title: "The.Big.Bang.Theory.COMPLETE.S01-S12.1080p.BluRay-GRP",
+			}
+			specials := SearchResult{
+				Title: "The.Big.Bang.Theory.S00.Specials.1080p.WEB-GRP",
+			}
+			out, hidden := filterToEpisode([]SearchResult{integral, ranged}, 0, 1)
+			Expect(out).To(BeEmpty())
+			Expect(hidden).To(BeZero())
+
+			out, hidden = filterToEpisode(
+				[]SearchResult{integral, ranged, specials}, 0, 1,
+			)
+			Expect(out).To(BeEmpty())
+			Expect(hidden).To(Equal(1))
+		})
+
+		It("counts a range opening at S00 for the specials and its seasons", func() {
+			// S00 is the specials season beside the numbered range.
+			in := []SearchResult{
+				{Title: "The.Big.Bang.Theory.S00-S12.1080p.BluRay-GRP"},
+			}
+			for _, season := range []uint16{0, 1, 5, 12} {
+				out, hidden := filterToEpisode(in, season, 1)
+				Expect(out).To(BeEmpty())
+				Expect(hidden).To(Equal(1), "season %d", season)
+			}
+
+			out, hidden := filterToEpisode(in, 13, 1)
+			Expect(out).To(BeEmpty())
+			Expect(hidden).To(BeZero())
+		})
+
+		It(
+			"counts a pack listing the specials for the seasons it lists only",
+			func() {
+				in := []SearchResult{{Title: "Show.S05+S00.1080p.BluRay-GRP"}}
+				for season, want := range map[uint16]int{0: 1, 1: 0, 4: 0, 5: 1} {
+					out, hidden := filterToEpisode(in, season, 1)
+					Expect(out).To(BeEmpty())
+					Expect(hidden).To(Equal(want), "season %d", season)
+				}
+			},
+		)
+
+		It("offers a special numbered apart from S00 to no pack search", func() {
+			in := []SearchResult{
+				{Title: "[Group] Show S00 - 05 [1080p]"},
+				{Title: "Show.Integrale + S00.MULTI.1080p-GRP"},
+				{Title: "Show.S00.Specials.1080p.WEB-GRP"},
+			}
+			out := filterToSeason(in, 0)
+			Expect(out).To(HaveLen(1))
+			Expect(out[0].Title).To(ContainSubstring("Specials"))
+		})
+
+		It(
+			"leaves a numbered special and a specials pack matching their show",
+			func() {
+				in := []SearchResult{
+					{Title: "Show.S00E01.1080p.WEB-GRP"},
+					{Title: "Show.S00.Specials.1080p.WEB-GRP"},
+					{Title: "Show.S00-S12.1080p.BluRay-GRP"},
+					{Title: "Show.Confidential.S00E01.1080p.WEB-GRP"},
+				}
+				out := preferTitleMatches(in, []string{"Show"})
+				Expect(out).To(HaveLen(3))
+				for _, r := range out {
+					Expect(r.TitleMismatch).To(BeFalse(), r.Title)
+				}
+			},
+		)
+
+		It("drops absolute-numbered and dated releases for a special", func() {
+			in := []SearchResult{
+				{Title: "[SubsPlease] Show - 18 (1080p) [ABCD1234].mkv"},
+				{Title: "Show.2011.09.25.1080p.WEB-GRP"},
+				{Title: "Show.S00.2011.09.25.1080p.WEB-GRP"},
+			}
+			out, hidden := filterToEpisode(in, 0, 18)
+			Expect(out).To(BeEmpty())
+			Expect(hidden).To(BeZero())
+
+			out, _ = filterToEpisode(in, 1, 1)
+			Expect(out).To(Equal(in[:2]))
+		})
+
+		It("keeps a special numbered after S00 for that special alone", func() {
+			in := []SearchResult{{Title: "[Group] Show S00 - 05 [1080p]"}}
+			out, hidden := filterToEpisode(in, 0, 5)
+			Expect(out).To(HaveLen(1))
+			Expect(hidden).To(BeZero())
+
+			for _, at := range [][2]uint16{{0, 4}, {1, 5}} {
+				out, hidden = filterToEpisode(in, at[0], at[1])
+				Expect(out).To(BeEmpty(), "S%02dE%02d", at[0], at[1])
+				Expect(hidden).To(BeZero())
+			}
+		})
+
+		DescribeTable(
+			"drops a complete pack carrying an absolute number or a date",
+			func(title string) {
+				// These names read as an anime or daily episode to the
+				// "names nothing" fallback, which would keep the whole
+				// series as one episode's release.
+				in := []SearchResult{{Title: title}}
+
+				out, hidden := filterToEpisode(in, 0, 1)
+				Expect(out).To(BeEmpty())
+				Expect(hidden).To(BeZero())
+
+				out, hidden = filterToEpisode(in, 1, 1)
+				Expect(out).To(BeEmpty())
+				Expect(hidden).To(Equal(1))
+			},
+			Entry(
+				"a ranged anime batch",
+				"[Group] Naruto Complete 001-220 [BD 1080p]",
+			),
+			Entry(
+				"a counted anime batch",
+				"[Group] Cowboy Bebop Complete - 26 [1080p]",
+			),
+			Entry("a bare integrale", "One Piece Integrale 1-1000"),
+			Entry(
+				"a bracketed integrale",
+				"[Group] Detective Conan Integrale 01-1100 [1080p]",
+			),
+			Entry("a total count", "[Group] Bleach Complete 366 (BD 1080p)"),
+			Entry("a dated complete", "The Daily Show 2011.09.25 COMPLETE 720p"),
+		)
 	})
 
 	Describe("filterProviderIDs", func() {
@@ -630,9 +770,10 @@ var _ = Describe("Service", Label("unit", "indexers"), func() {
 			Expect(SearchParams{TMDBID: 1}.narrowed()).To(BeTrue())
 			Expect(SearchParams{TVDBID: 1}.narrowed()).To(BeTrue())
 			Expect(SearchParams{IMDbID: "tt1"}.narrowed()).To(BeTrue())
-			// Season and episode count, since they narrow at the tracker.
+			// A season counts, since it narrows at the tracker. An episode is
+			// only ever sent beside one.
 			Expect(SearchParams{Season: 1}.narrowed()).To(BeTrue())
-			Expect(SearchParams{Episode: 1}.narrowed()).To(BeTrue())
+			Expect(SearchParams{Episode: 1}.narrowed()).To(BeFalse())
 		})
 	})
 

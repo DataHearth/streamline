@@ -122,9 +122,11 @@ func (t *Torznab) Search(
 	}
 	if params.Season > 0 {
 		q.Set("season", strconv.FormatUint(uint64(params.Season), 10))
-	}
-	if params.Episode > 0 {
-		q.Set("ep", strconv.FormatUint(uint64(params.Episode), 10))
+		// Alone, an episode asks for that number of every season, which hides
+		// a special behind them.
+		if params.Episode > 0 {
+			q.Set("ep", strconv.FormatUint(uint64(params.Episode), 10))
+		}
 	}
 	// Only when no TMDB/TVDB id is sent: Jackett refuses a query carrying an
 	// id its tracker cannot search by (an HTTP 400 with error 203, "Function

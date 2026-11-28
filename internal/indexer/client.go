@@ -94,8 +94,7 @@ type SearchParams struct {
 // It is what makes the empty-result retry worth issuing: a query that named
 // nothing else has no narrower form to fall back from.
 func (p SearchParams) narrowed() bool {
-	return p.TMDBID > 0 || p.TVDBID > 0 || p.IMDbID != "" || p.Season > 0 ||
-		p.Episode > 0
+	return p.TMDBID > 0 || p.TVDBID > 0 || p.IMDbID != "" || p.Season > 0
 }
 
 // imdbNumber reads the number out of an IMDb id, with or without its "tt"

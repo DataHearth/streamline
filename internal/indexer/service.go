@@ -894,15 +894,32 @@ func filterToEpisode(
 		// fallback would otherwise keep every integral in an episode search.
 		sp := library.ParseSeasonSpan(r.Title)
 		switch {
-		case sp.Complete ||
-			(sp.From != 0 && sp.From <= season && season <= sp.To):
+		case packCoversSeason(sp, season):
 			hiddenPacks++
-		case sp.From == 0 && p.Season == 0 && p.Episode == 0 &&
+		case season != 0 && sp == (library.SeasonSpan{}) &&
+			p.Season == 0 && p.Episode == 0 && !p.Specials &&
 			(p.AbsoluteNumber > 0 || p.AirDate != nil):
+			// A special has no absolute number, and nothing here tells a dated
+			// special from a dated episode.
 			out = append(out, r)
 		}
 	}
 	return out, hiddenPacks
+}
+
+// packCoversSeason reports whether a pack release holds the season, which
+// decides the hidden-packs count only: filterToEpisode drops a complete pack
+// whatever this answers. An integral's name rarely says whether it ships its
+// specials, so a complete pack is taken to hold the numbered seasons only, as
+// the show-level counts leave season 0 out: the hint then never sends anyone
+// to a whole-series pack for a special it most likely lacks, at the cost of
+// staying silent about one that has it. Season 0 is covered only by a pack
+// naming the specials season ("S00", "S00-S05", "S05+S00", "INTEGRALE + S00").
+func packCoversSeason(sp library.SeasonSpan, season uint16) bool {
+	if season == 0 {
+		return sp.Specials
+	}
+	return sp.Complete || (sp.From != 0 && sp.From <= season && season <= sp.To)
 }
 
 // fallbacks lists the wider queries to try, in order, while an indexer keeps

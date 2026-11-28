@@ -248,7 +248,7 @@ func AdoptionEpisode(
 func adoptionScope(
 	parsed library.ParseResult, show *ent.TVShow,
 ) []*ent.Season {
-	if parsed.SeasonPack {
+	if parsed.SeasonPack || parsed.Specials {
 		return seasonNumbered(show, parsed.Season)
 	}
 	// A whole-series pack ("INTEGRALE", "COMPLETE") names no season, so

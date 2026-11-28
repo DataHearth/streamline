@@ -252,6 +252,17 @@ var _ = Describe("Adoption", Label("unit", "downloads"), func() {
 		})
 
 		It(
+			"never adopts an anime special as the episode of that absolute number",
+			func() {
+				parsed := library.Parse("The.Bear.S00E02.1080p.WEB-X")
+				_, ok := classifyEpisodeAdoption(
+					parsed, 0, []*ent.TVShow{buildShow(true, false)},
+				)
+				Expect(ok).To(BeFalse())
+			},
+		)
+
+		It(
 			"auto-imports an episode over a row whose file is missing from disk",
 			func() {
 				show := buildShow(false, false)
