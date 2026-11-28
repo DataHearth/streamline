@@ -369,7 +369,7 @@ func (s *Service) hydrateAlbum(
 		return false, err
 	}
 	detailsOnly = a.MetadataFetchedAt != nil
-	if mode == hydrateIfStale && detailsOnly && !detailsStale(a) {
+	if mode == hydrateIfStale && detailsOnly && !DetailsStale(a) {
 		return false, nil
 	}
 	ctx, span := tracer.Start(ctx, "music.hydrate_album",
@@ -542,10 +542,11 @@ func (s *Service) SetAlbumEdition(
 	return nil
 }
 
-// detailsStale reports a hydrated album whose release data predates what the
-// tag writer reads: genres never fetched, or credits stored under an older
+// DetailsStale reports a hydrated album whose release data predates what the
+// tag writer and the title matching read: genres never fetched, aliases
+// never fetched for a monitored album, or credits stored under an older
 // layout. ListAlbumsAwaitingDetails is its query twin.
-func detailsStale(a *ent.Album) bool {
+func DetailsStale(a *ent.Album) bool {
 	return a.Genres == nil || (a.Aliases == nil && a.Monitored) ||
 		(a.CreditsFetchedAt != nil && a.CreditsVersion < library.MusicCreditsVersion)
 }

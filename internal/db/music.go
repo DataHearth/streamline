@@ -1078,10 +1078,11 @@ func albumInUse() predicate.Album {
 // no longer lists — a release group MusicBrainz merged away, or one the
 // discography fetch leaves out, like a bootleg-only one. An album nothing
 // was ever done with is deleted. One holding files, download history, an
-// acquisition event or a co-artist is kept, and unmonitored unless its flag
-// was set by hand. The events written for every album (added, searched by the
-// missing-album job, metadata or monitoring changes) are not use: counting
-// them would keep nearly every bootleg album a scheduled search has tried.
+// acquisition event, a co-artist or a monitor flag set by hand is kept, and
+// unmonitored unless its flag was set by hand or it has a co-artist. The
+// events written for every album (added, searched by the missing-album job,
+// metadata or monitoring changes) are not use: counting them would keep
+// nearly every bootleg album a scheduled search has tried.
 // An empty listing prunes nothing: it says nothing about the stored albums.
 // It returns the deleted albums' ids.
 func pruneUnlistedAlbums(

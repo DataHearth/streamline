@@ -130,8 +130,7 @@ var _ = Describe("Handler: Cardigann", Label("unit", "server", "indexers"), func
 				}
 			}
 			configtest.SetupFile(indexerOverride(entry("A"), entry("B")))
-			app.indexers.EXPECT().Session(mock.Anything, mock.Anything).
-				Return(indexer.SessionState{}, nil).Times(2)
+			// No Session expectation: reading it would resolve the definition.
 			resp := app.do(app.req(http.MethodGet, "/api/v1/indexers", "", nil))
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))

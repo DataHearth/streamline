@@ -474,10 +474,9 @@ func (s *Service) SetArtistMonitor(
 }
 
 // ApplyMonitoredTypes applies the current library.music_monitored_types to
-// the albums of every artist whose policy is all or future, the way changing
-// the artist's monitor would — hand-set flags on those artists included.
-// Manual and none artists are left alone. It returns how many albums it
-// monitored and unmonitored.
+// the albums of every artist whose policy is all or future. Manual and none
+// artists are left alone, and so is every album whose flag was set by hand.
+// It returns how many albums it monitored and unmonitored.
 func (s *Service) ApplyMonitoredTypes(ctx context.Context) (int, int, error) {
 	types := config.Get().Library.MusicMonitoredTypes
 	ctx, span := tracer.Start(ctx, "music.apply_monitored_types",
@@ -618,11 +617,13 @@ const (
 )
 
 // RefreshOne re-fetches the artist and its discography synchronously
-// (1 + ceil(n/100) MusicBrainz calls): the artist's own facts and members are
-// rewritten, release groups new to it become albums under its monitor policy
-// and are hydrated in the background, as are known albums that still have no
-// tracks. The photo is re-resolved when none is cached and the overview when
-// it is empty.
+// (1 + ceil(n/100) MusicBrainz calls). An artist MusicBrainz merged or
+// deleted is recorded as a metadata change and nothing is written. Otherwise
+// the artist's own facts and members are rewritten, release groups new to it
+// become albums under its monitor policy, and albums its discography no
+// longer lists are pruned (db.RefreshArtist). Every album is then re-fetched
+// in the background, and the covers of the hydrated ones, the photo and the
+// overview are asked for again.
 func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error) {
 	ctx, span := tracer.Start(ctx, "music.refresh_one",
 		trace.WithAttributes(attribute.Int("artist.id", int(id))))

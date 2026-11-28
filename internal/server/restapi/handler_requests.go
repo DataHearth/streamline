@@ -337,7 +337,7 @@ func (s *Server) GetRequestMetadata(
 			var ok bool
 			artistMBID, ok, err = s.verifiedAlbumArtist(ctx, r.MediaMbid)
 			if err != nil {
-				return albumMetadataError(ctx, err), nil
+				return albumMetadataError(ctx, err)
 			}
 			if !ok {
 				return GetRequestMetadata404JSONResponse{
@@ -349,9 +349,9 @@ func (s *Server) GetRequestMetadata(
 			Mbid: artistMBID,
 		})
 		if err != nil {
-			return GetRequestMetadata500JSONResponse{
-				InternalErrorJSONResponse: errInternal(ctx, err),
-			}, nil
+			// MusicBrainz not answering, or the caller gone: responseError
+			// answers both as the lookup does.
+			return nil, err
 		}
 		switch v := resp.(type) {
 		case GetMusicArtistLookup200JSONResponse:
@@ -445,15 +445,18 @@ func (s *Server) verifiedAlbumArtist(
 func albumMetadataError(
 	ctx context.Context,
 	err error,
-) GetRequestMetadataResponseObject {
-	if errors.Is(err, metadata.ErrRateLimited) {
+) (GetRequestMetadataResponseObject, error) {
+	switch {
+	case errors.Is(err, metadata.ErrRateLimited):
 		return GetRequestMetadata429JSONResponse{
 			RateLimitedJSONResponse: errMusicBrainzRateLimited(err),
-		}
+		}, nil
+	case errors.Is(err, metadata.ErrUnavailable), errors.Is(err, context.Canceled):
+		return nil, err
 	}
 	return GetRequestMetadata500JSONResponse{
 		InternalErrorJSONResponse: errInternal(ctx, err),
-	}
+	}, nil
 }
 
 func (s *Server) GetRequestCounts(

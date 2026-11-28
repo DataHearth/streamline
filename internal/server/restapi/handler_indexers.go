@@ -379,6 +379,14 @@ func (s *Server) indexerWithSession(
 	if e.Protocol != "cardigann" {
 		return i
 	}
+	// Reading the session loads the definition, fetching it when it is not
+	// kept: fetchUnkept already made the one attempt a listing gets.
+	if _, err := config.Get().CardigannDefinition(e); errors.Is(
+		err,
+		definitions.ErrNotKept,
+	) {
+		return i
+	}
 	st, err := s.indexers.Session(ctx, e.Name)
 	if err != nil {
 		slog.WarnContext(ctx, "could not read an indexer's session",

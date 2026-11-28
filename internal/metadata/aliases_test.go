@@ -50,10 +50,29 @@ var _ = Describe("collectAliases", Label("unit", "metadata"), func() {
 			To(ConsistOf("Them"))
 	})
 
-	// library.normalizeTitle strips everything outside [a-z0-9], so these fold
-	// to the empty string and TitlePrefixMatches can never match them.
-	It("drops candidates with no characters the matcher compares on", func() {
-		Expect(collectAliases(nil, []string{"鬼滅の刃", "無限城編"})).To(BeEmpty())
+	// library.normalizeTitle keeps the letters of a title's own script when it
+	// holds no Latin one, so TitlePrefixMatches compares on these.
+	It("keeps candidates written in another script", func() {
+		Expect(collectAliases(nil, []string{"鬼滅の刃", "Левиафан", "Λεβιάθαν"})).
+			To(ConsistOf("鬼滅の刃", "Левиафан", "Λεβιάθαν"))
+	})
+
+	It(
+		"drops a candidate in another script that repunctuates a primary title",
+		func() {
+			Expect(collectAliases(primary, []string{
+				"劇場版 鬼滅の刃 無限城編 第一章 猗窩座再来",
+			})).To(BeEmpty())
+		},
+	)
+
+	It("counts characters, not bytes, in another script", func() {
+		Expect(collectAliases(nil, []string{"鬼滅", "Йо"})).To(BeEmpty())
+	})
+
+	It("folds a two-script candidate to its Latin letters", func() {
+		Expect(collectAliases(nil, []string{"勇気のReason", "reason"})).
+			To(ConsistOf("勇気のReason"))
 	})
 
 	It("trims surrounding whitespace before comparing and storing", func() {

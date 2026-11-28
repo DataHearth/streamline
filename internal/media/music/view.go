@@ -193,8 +193,7 @@ func worstTier(files []*ent.MediaFile) (quality.AudioTier, bool) {
 // formatLabel names the album's weakest file: its codec, or its extension
 // when it was never probed, in capitals, with the rate in kbps appended for a
 // lossy file whose bit rate is known ("MP3 320"). A lossless file carries no
-// suffix: no bit depth or sample rate is stored, and the tier chip already
-// says hires.
+// suffix: the tier chip already says whether it is hires.
 func formatLabel(files []*ent.MediaFile) string {
 	var (
 		pick  *ent.MediaFile

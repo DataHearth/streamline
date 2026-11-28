@@ -313,6 +313,52 @@ var _ = Describe("Handler: Requests", Label("unit", "server", "request"), func()
 			Expect(resp.StatusCode).To(Equal(http.StatusNotFound))
 		})
 
+		It(
+			"answers 502 for an artist request when MusicBrainz cannot answer",
+			func() {
+				app.requests.EXPECT().Get(mock.Anything, uint32(4)).
+					Return(&ent.Request{ID: 4, MediaType: "artist", MediaMbid: "a-1"}, nil).
+					Once()
+				app.music.EXPECT().LookupArtist(mock.Anything, "a-1", "en").
+					Return(nil, metadata.ErrUnavailable).Once()
+
+				resp := send(
+					http.MethodGet,
+					"/api/v1/requests/4/metadata",
+					app.adminKey,
+					"",
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadGateway))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Code).To(HaveValue(Equal("provider_unavailable")))
+			},
+		)
+
+		It(
+			"answers 502 for an album request when MusicBrainz cannot answer",
+			func() {
+				app.requests.EXPECT().Get(mock.Anything, uint32(4)).
+					Return(&ent.Request{ID: 4, MediaType: "album", MediaMbid: "rg-1"}, nil).
+					Once()
+				app.metadataMusic.EXPECT().GetReleaseGroup(mock.Anything, "rg-1").
+					Return(nil, metadata.ErrUnavailable).Once()
+
+				resp := send(
+					http.MethodGet,
+					"/api/v1/requests/4/metadata",
+					app.adminKey,
+					"",
+				)
+				defer resp.Body.Close()
+				Expect(resp.StatusCode).To(Equal(http.StatusBadGateway))
+				var body Error
+				Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+				Expect(body.Code).To(HaveValue(Equal("provider_unavailable")))
+			},
+		)
+
 		It("answers 404 for an unknown request", func() {
 			app.requests.EXPECT().Get(mock.Anything, uint32(4)).
 				Return(nil, &ent.NotFoundError{}).Once()
