@@ -50,7 +50,8 @@ rec {
     LoadCredential = lib.mapAttrsToList (name: path: "${name}:${path}") cfg.credentials;
 
     LockPersonality = true;
-    MemoryDenyWriteExecute = true;
+    # No MemoryDenyWriteExecute: wazero's compiler, which runs TagLib and
+    # extensions, maps the code it generates executable at runtime.
     NoNewPrivileges = true;
     PrivateTmp = true;
     ProtectClock = true;
@@ -64,6 +65,8 @@ rec {
     RestrictAddressFamilies = [
       "AF_INET"
       "AF_INET6"
+      # The built-in engine's bind_interface reads addresses over netlink.
+      "AF_NETLINK"
       "AF_UNIX"
     ];
     RestrictNamespaces = true;

@@ -32,9 +32,8 @@ var (
 	// ErrConversionFailed is returned when a WAV file could not be converted
 	// to a FLAC holding the same audio. Nothing was placed for it.
 	ErrConversionFailed = errors.New("converting to FLAC failed")
-	// ErrNoBookProfile is returned when an ebook record has no quality profile
-	// to choose its format by: none is configured for the author or as the
-	// default.
+	// ErrNoBookProfile is returned when a book record resolves no quality
+	// profile: none on the book, its series, or as the default of its kind.
 	ErrNoBookProfile = errors.New("no quality profile configured for this book")
 )
 

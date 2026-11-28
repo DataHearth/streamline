@@ -13,24 +13,23 @@ import (
 var (
 	meter = otel.Meter("github.com/datahearth/streamline/internal/importer")
 
-	// outcomes is the only aggregate signal for the import pipeline. With
-	// the held/failed/terminal transitions only logged, a growing review
-	// queue or a spike in terminal failures after a library change could
-	// only be found by grepping.
+	// outcomes counts every import by result, so a growing review queue or a
+	// spike in terminal failures after a library change shows on a graph
+	// rather than only in the logs.
 	outcomes = otelx.Must(meter.Int64Counter(
 		"streamline.importer.outcomes",
 		metric.WithDescription("Import outcomes by result"),
+	))
+
+	wavConversions = otelx.Must(meter.Int64Counter(
+		"streamline.importer.wav_conversions",
+		metric.WithDescription("WAV files converted to FLAC on import, by outcome"),
 	))
 
 	// dropped counts enqueues thrown away because the channel was full. A
 	// backed-up importer degrades silently otherwise: each drop logs one line
 	// with nothing aggregating them, so nobody notices until imports go
 	// missing.
-	wavConversions = otelx.Must(meter.Int64Counter(
-		"streamline.importer.wav_conversions",
-		metric.WithDescription("WAV files converted to FLAC on import, by outcome"),
-	))
-
 	dropped = otelx.Must(meter.Int64Counter(
 		"streamline.importer.enqueue_dropped",
 		metric.WithDescription("Enqueues dropped because the queue was full"),

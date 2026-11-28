@@ -241,9 +241,10 @@ func AudioNamingOf(f *ent.MediaFile) AudioNaming {
 //
 // The probe wins for resolution and only backfills the codec, which is not an
 // inconsistency: 2160p is 2160p however it was measured, while a codec has two
-// vocabularies. ffprobe says "hevc" and a release says "x265", and {codec} in
-// a naming template means the second — so the measurement fills the field only
-// when nothing claimed one, rather than rewriting every name that has one.
+// vocabularies. ffprobe says "h264" or "hevc", the release-name parser "x264"
+// or "HEVC", and {codec} in a naming template means the second — so the
+// measurement fills the field only when nothing claimed one, rather than
+// rewriting every name that has one.
 func ParsedFromMediaFile(f *ent.MediaFile) ParseResult {
 	p := Parse(filepath.Base(f.Path))
 	if p.Extension == "" {

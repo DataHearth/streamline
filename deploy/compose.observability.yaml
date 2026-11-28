@@ -23,10 +23,21 @@ services:
       - "127.0.0.1:8080:8080"
     volumes:
       - ./data:/data
-      - ./config:/etc/streamline:ro
+      # Writable: the first start writes config.yaml and its generated secrets.
+      - ./config:/etc/streamline
+      # One mount for downloads and libraries, so imports can hardlink.
+      - ./media:/media
     environment:
       - STREAMLINE_LOG__APP__LEVEL=info
       - STREAMLINE_OTEL__ENDPOINT=alloy:4318
+      # Alloy's OTLP receiver speaks plain HTTP.
+      - STREAMLINE_OTEL__INSECURE=true
+      - STREAMLINE_LIBRARY__DOWNLOAD_PATH=/media/downloads
+      - STREAMLINE_LIBRARY__MOVIE_PATH=/media/movies
+      - STREAMLINE_LIBRARY__SERIES_PATH=/media/series
+      - STREAMLINE_LIBRARY__MUSIC_PATH=/media/music
+      - STREAMLINE_LIBRARY__EBOOK_PATH=/media/books
+      - STREAMLINE_LIBRARY__AUDIOBOOK_PATH=/media/audiobooks
     depends_on:
       - alloy
 
