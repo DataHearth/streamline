@@ -382,14 +382,24 @@ func (w *Worker) verdict(
 		allowedCodecs,
 		cfg.Library.Probe.MinDurationRatio,
 	)
-	if len(reasons) == 0 && cfg.Library.Probe.AlwaysAsk {
-		reasons = append(reasons, schema.HoldReason{
-			File:     file,
-			Check:    "always_ask",
-			Expected: "manual approval",
-		})
+	if len(reasons) == 0 {
+		reasons = alwaysAsk(file)
 	}
 	return reasons
+}
+
+// alwaysAsk holds an import that passed every check when
+// library.probe.always_ask is on. Every vertical calls it last, so it is the
+// only reason when it holds.
+func alwaysAsk(file string) []schema.HoldReason {
+	if !config.Get().Library.Probe.AlwaysAsk {
+		return nil
+	}
+	return []schema.HoldReason{{
+		File:     file,
+		Check:    "always_ask",
+		Expected: "manual approval",
+	}}
 }
 
 // hold stops the import and parks the record for a user decision. A hold is an

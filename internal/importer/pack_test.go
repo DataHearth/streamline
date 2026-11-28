@@ -192,6 +192,26 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 		Expect(w.runImport(context.Background(), 1)).To(Succeed())
 	})
 
+	It("holds a clean pack once, before any album, when always_ask is on", func() {
+		configtest.Setup(map[string]any{"library": map[string]any{
+			"music_path":   musicDir,
+			"music_naming": albumNaming,
+			"import_mode":  "copy",
+			"probe":        map[string]any{"always_ask": true},
+		}})
+		seed("Nevermind", "Drain You", "Lithium")
+		rec := pack(nevermind)
+		expectFind(rec)
+		storeMk.EXPECT().
+			HoldDownloadRecord(mock.Anything, rec.ID, []schema.HoldReason{{
+				File: dlDir, Check: "always_ask", Expected: "manual approval",
+			}}).
+			Return(nil).
+			Once()
+
+		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+	})
+
 	Context("with a folder no album of the artist accounts for", func() {
 		It("holds the record before anything moves", func() {
 			seed("Nevermind", "Drain You")

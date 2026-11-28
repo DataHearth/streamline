@@ -447,6 +447,44 @@ var _ = Describe("Service", Label("unit", "library"), func() {
 			status := svc.Status()
 			Expect(status.Done).To(BeZero())
 			Expect(status.Skipped).To(Equal(1))
+			Expect(status.Error).To(Equal(ErrAllSkipped.Error()))
+			Expect(config.Get().Library.MoviePath).To(Equal(root))
+		})
+
+		It("re-points the root when only some rows were skipped", func() {
+			touch(filepath.Join(dest, "Dune (2021)/d.mkv"))
+			store.EXPECT().ListMediaFilesByPathPrefix(mock.Anything, root).
+				Return([]*ent.MediaFile{
+					{ID: 1, Path: filepath.Join(root, "Dune (2021)/d.mkv")},
+					{ID: 2, Path: filepath.Join(root, "Gone (2001)/g.mkv")},
+				}, nil).Once()
+			store.EXPECT().UpdateMediaFilePath(
+				mock.Anything, uint32(1), filepath.Join(dest, "Dune (2021)/d.mkv"),
+			).Return(nil).Once()
+
+			_, err := svc.Start(ctx, Params{Root: RootMovies, To: dest})
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() bool { return svc.Status().Running }).
+				Should(BeFalse())
+			status := svc.Status()
+			Expect(status.Error).To(BeEmpty())
+			Expect(status.Done).To(Equal(1))
+			Expect(status.Skipped).To(Equal(1))
+			Expect(config.Get().Library.MoviePath).To(Equal(dest))
+		})
+
+		It("re-points the root of an empty library", func() {
+			store.EXPECT().ListMediaFilesByPathPrefix(mock.Anything, root).
+				Return(nil, nil).Once()
+
+			_, err := svc.Start(ctx, Params{Root: RootMovies, To: dest})
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() bool { return svc.Status().Running }).
+				Should(BeFalse())
+			Expect(svc.Status().Error).To(BeEmpty())
+			Expect(config.Get().Library.MoviePath).To(Equal(dest))
 		})
 
 		DescribeTable("re-points a row already missing from disk",

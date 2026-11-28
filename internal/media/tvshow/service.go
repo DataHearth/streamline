@@ -70,6 +70,7 @@ var (
 	ErrInvalidTVDBID     = errors.New("tvdb id must be non-zero")
 	ErrSameTVDBID        = errors.New("series already points at that tvdb id")
 	ErrSeriesExists      = errors.New("series already exists")
+	ErrEpisodeNotFound   = errors.New("episode not found in this series")
 )
 
 // metadataMinRefreshInterval bounds the TVDB call rate of the metadata-refresh
@@ -727,15 +728,23 @@ type DeleteFileOptions struct {
 // opts.RemoveTorrent is set, the source torrent is also removed from its
 // download client (best-effort).
 func (s *Service) DeleteEpisodeFile(
-	ctx context.Context, episodeID uint32, opts DeleteFileOptions,
+	ctx context.Context, showID, episodeID uint32, opts DeleteFileOptions,
 ) error {
 	ctx, span := tracer.Start(ctx, "tvshow.delete_episode_file",
 		trace.WithAttributes(
+			attribute.Int64("tvshow.id", int64(showID)),
 			attribute.Int64("episode.id", int64(episodeID)),
 			attribute.Bool("remove_torrent", opts.RemoveTorrent),
 		))
 	defer span.End()
 
+	show, err := s.Get(ctx, showID)
+	if err != nil {
+		return otelx.RecordSpanError(span, err)
+	}
+	if !hasEpisode(show, episodeID) {
+		return otelx.RecordSpanError(span, ErrEpisodeNotFound)
+	}
 	mf, err := s.db.FindMediaFileByEpisodeID(ctx, episodeID)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -765,6 +774,17 @@ func (s *Service) DeleteEpisodeFile(
 	slog.InfoContext(ctx, "episode media file deleted",
 		"episode.id", episodeID, "media_file.id", mf.ID)
 	return nil
+}
+
+func hasEpisode(show *ent.TVShow, episodeID uint32) bool {
+	for _, se := range show.Edges.Seasons {
+		for _, ep := range se.Edges.Episodes {
+			if ep.ID == episodeID {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // removeEpisodeSourceTorrent best-effort removes the torrent that produced the
@@ -1371,7 +1391,7 @@ type Manager interface {
 	Delete(ctx context.Context, id uint32, opts DeleteOptions) error
 	DeleteEpisodeFile(
 		ctx context.Context,
-		episodeID uint32,
+		showID, episodeID uint32,
 		opts DeleteFileOptions,
 	) error
 	GrabSeasonRelease(

@@ -425,7 +425,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 	Describe("DeleteEpisodeFile", func() {
 		It("deletes an episode file and returns 204", func() {
 			app.tvshows.EXPECT().
-				DeleteEpisodeFile(mock.Anything, uint32(9),
+				DeleteEpisodeFile(mock.Anything, uint32(3), uint32(9),
 					tvshow.DeleteFileOptions{RemoveTorrent: true}).
 				Return(nil).Once()
 
@@ -440,7 +440,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 
 		It("maps a service error to 404", func() {
 			app.tvshows.EXPECT().
-				DeleteEpisodeFile(mock.Anything, uint32(9),
+				DeleteEpisodeFile(mock.Anything, uint32(3), uint32(9),
 					tvshow.DeleteFileOptions{RemoveTorrent: false}).
 				Return(errors.New("episode 9 has no media file")).Once()
 

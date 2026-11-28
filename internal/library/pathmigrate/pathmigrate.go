@@ -74,6 +74,11 @@ var (
 		"moving files is not supported for this root; move them yourself and re-point it",
 	)
 	ErrUnknownRoot = errors.New("unknown library root")
+	// ErrAllSkipped ends a run that found rows under From but none of their
+	// files: re-pointing the root then would take a working library offline.
+	ErrAllSkipped = errors.New(
+		"no file was found where expected; the root was left where it was",
+	)
 )
 
 // Params describes one migration. From defaults to the root's currently
@@ -301,11 +306,13 @@ func (s *Service) run(ctx context.Context, p Params, targets []target) {
 	defer span.End()
 
 	var runErr error
+	skipped := 0
 	for _, t := range targets {
 		s.progress(t.from)
 		present := onDisk(t, p.MoveFiles)
 		if !present && !t.missing {
 			s.skip()
+			skipped++
 			continue
 		}
 		if p.MoveFiles && present {
@@ -320,7 +327,11 @@ func (s *Service) run(ctx context.Context, p Params, targets []target) {
 		}
 		s.advance()
 	}
-	if runErr == nil {
+	switch {
+	case runErr != nil:
+	case len(targets) > 0 && skipped == len(targets):
+		runErr = ErrAllSkipped
+	default:
 		runErr = s.persistRoot(ctx, p)
 	}
 	if runErr != nil {

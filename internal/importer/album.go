@@ -276,6 +276,10 @@ func (w *Worker) importAlbumFiles(
 		if haveProfile {
 			reasons = append(reasons, tierHoldReasons(plan, profile)...)
 		}
+		// A pack asks once for the whole download, before its first album.
+		if len(reasons) == 0 && !pack {
+			reasons = alwaysAsk(rec.SavePath)
+		}
 		if len(reasons) > 0 {
 			return nil, true, w.hold(ctx, span, rec, reasons)
 		}

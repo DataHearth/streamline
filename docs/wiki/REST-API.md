@@ -121,7 +121,7 @@ Everything database-backed (movies, series, requests, users, imports) uses numer
 
 **Secrets are never returned.** Read views expose booleans — `api_key_set`, `password_set`, `client_secret_set` — instead of values. On update, sending a blank secret **preserves** the existing one rather than clearing it, so you can round-trip a config object without leaking or destroying credentials. The exception is a **move**: an update that sends a media server, download client or indexer to another address (or an OIDC provider to another issuer, where a path change counts too) (scheme, host or port — a path or letter-case change is not a move) must carry the secret again, or it is refused with `422` `code: secret_required`, so a typo in the host never hands a stored token to the wrong machine. A secret read from a `*_file` path cannot be moved through the API at all (`403` `code: secret_file_managed`): change the address in the config file. On a download client only the secret it authenticates with is asked for; the other one, unused, is dropped on a move.
 
-**Sort direction follows the key.** `GET /series?sort=` defaults to the direction the key implies — `title` ascending, `year`, `rating`, `episodes` and `recent` descending, so "most episodes" means most. Pass `?order=asc|desc` to override. `sort=episodes` ranks by the same episode count the list response reports in `total_episodes` (monitored, or already on disk), not by every row the provider lists.
+**Sort direction follows the key.** `GET /series?sort=` defaults to the direction the key implies — `title` ascending, `year`, `rating`, `episodes` and `recent` descending, so "most episodes" means most. Pass `?order=asc|desc` to override. `sort=episodes` ranks by the same episode count the list response reports in `total_episodes` (monitored in a monitored show, or already on disk), not by every row the provider lists.
 
 **Series counts leave the specials out.** `total_seasons`, `total_episodes`, `have_episodes` and `wanted_episodes` cover the numbered seasons only — season 0 is reported as its own entry in the detail response's `seasons` array, with its own counts, but never folded into the show's totals or into `status=missing`. `total_seasons` counts the seasons themselves, so a season the library follows no episode of still counts as one. A show whose only files are specials therefore reports `have_episodes: 0`: to ask whether it has files on disk, read the `seasons` array, not the rollup.
 
@@ -180,7 +180,7 @@ A change to the files of an offline library root (rename, delete with files, upl
 | `PATCH` | `/series/{id}/episodes/{episodeId}` | Update an episode | Member |
 | `GET` | `/series/{id}/episodes/{episodeId}/credits` | The episode's guest stars and crew, read by the `tv-metadata-refresh` job | Authenticated |
 | `POST` | `/series/{id}/episodes/{episodeId}/search` · `/grab` | Search or grab an episode | Member |
-| `DELETE` | `/series/{id}/episodes/{episodeId}/file` | Delete the episode's file (`409` `outside_library` and `remove_torrent` as for movies) | Member |
+| `DELETE` | `/series/{id}/episodes/{episodeId}/file` | Delete the episode's file (`409` `outside_library` and `remove_torrent` as for movies; `404` when the episode is not one of series `{id}`'s) | Member |
 
 Each of the three search scopes filters the indexer's answer to its own scope — an episode search returns that episode, a season search returns season packs of that season, a series search returns complete/multi-season packs. The episode search additionally carries `hidden_packs` (present only when non-zero): how many packs covering that episode it excluded, so an empty `items` can be told apart from "it only exists inside a pack".
 
@@ -819,7 +819,8 @@ watch -n5 "curl -sS -H 'X-API-Key: $KEY' $SL/api/v1/activity/queue \
 A download that fails import verification sits in the queue with
 `"status": "held"` and a `hold_reasons` array — one entry per failed check,
 each naming the file, what was expected and what was found. `corrupt`,
-`resolution`, `duration`, `codec` and `always_ask` are the video checks; `tier`
+`resolution`, `duration` and `codec` are the video checks; `always_ask` holds
+any import that passed the rest; `tier`
 (a measured audio tier the profile does not tick), `album` (files tagged as
 another album), `track` (a file titled differently from the track its number
 lands on, or matching no track), `missing` (tracks the album would be left

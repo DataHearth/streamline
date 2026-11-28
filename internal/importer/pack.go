@@ -50,6 +50,9 @@ func (w *Worker) importPackRecord(
 		if err != nil {
 			return otelx.RecordSpanError(span, err)
 		}
+		if len(reasons) == 0 {
+			reasons = alwaysAsk(rec.SavePath)
+		}
 		if len(reasons) > 0 {
 			return w.hold(ctx, span, rec, reasons)
 		}

@@ -481,8 +481,8 @@ func missingEpisode(now time.Time) predicate.Episode {
 // count is a correlated subquery rather than a join so the page's LIMIT still
 // applies to shows, not to episode rows.
 //
-// It counts what EpisodeCounts.Total counts — an episode is in scope when it is
-// monitored or already on disk. Ranking raw rows instead put a daily soap with
+// It counts what EpisodeCounts.Total counts — an episode is in scope when it
+// and its show are monitored, or it is already on disk. Ranking raw rows instead put a daily soap with
 // 2012 provider rows above a show the card said had more, because the card was
 // showing the scoped 26.
 func orderByEpisodeCount(desc bool) tvshow.OrderOption {
@@ -495,13 +495,13 @@ func orderByEpisodeCount(desc bool) tvshow.OrderOption {
 			"(SELECT COUNT(*) FROM %s AS oc_e "+
 				"JOIN %s AS oc_s ON oc_e.%s = oc_s.%s "+
 				"WHERE oc_s.%s = %s AND oc_s.%s > 0 "+
-				"AND (oc_e.%s = 1 OR EXISTS ("+
+				"AND ((oc_e.%s = 1 AND %s = 1) OR EXISTS ("+
 				"SELECT 1 FROM %s AS oc_f WHERE oc_f.%s = oc_e.%s))) %s",
 			episode.Table, season.Table,
 			episode.SeasonColumn, season.FieldID,
 			season.TvShowColumn, s.C(tvshow.FieldID),
 			season.FieldNumber,
-			episode.FieldMonitored,
+			episode.FieldMonitored, s.C(tvshow.FieldMonitored),
 			mediafile.Table, mediafile.EpisodeColumn, episode.FieldID,
 			dir,
 		)))

@@ -77,6 +77,11 @@ func (w *Worker) importBookRecord(
 		if !ok {
 			return otelx.RecordSpanError(span, ErrNoBookProfile)
 		}
+		if !rec.VerificationBypassed {
+			if reasons := alwaysAsk(rec.SavePath); len(reasons) > 0 {
+				return w.hold(ctx, span, rec, reasons)
+			}
+		}
 		aside, err = setAside(ctx, existing)
 		if err != nil {
 			return otelx.RecordSpanError(span, err)
@@ -104,6 +109,9 @@ func (w *Worker) importBookRecord(
 			reasons, measured := w.audiobookHoldReasons(
 				ctx, rec.SavePath, keep, profile,
 			)
+			if len(reasons) == 0 {
+				reasons = alwaysAsk(rec.SavePath)
+			}
 			if len(reasons) > 0 {
 				return w.hold(ctx, span, rec, reasons)
 			}

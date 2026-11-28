@@ -314,16 +314,16 @@ func (_c *MockManager_Delete_Call) RunAndReturn(run func(ctx context.Context, id
 }
 
 // DeleteEpisodeFile provides a mock function for the type MockManager
-func (_mock *MockManager) DeleteEpisodeFile(ctx context.Context, episodeID uint32, opts tvshow.DeleteFileOptions) error {
-	ret := _mock.Called(ctx, episodeID, opts)
+func (_mock *MockManager) DeleteEpisodeFile(ctx context.Context, showID uint32, episodeID uint32, opts tvshow.DeleteFileOptions) error {
+	ret := _mock.Called(ctx, showID, episodeID, opts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteEpisodeFile")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, tvshow.DeleteFileOptions) error); ok {
-		r0 = returnFunc(ctx, episodeID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32, uint32, tvshow.DeleteFileOptions) error); ok {
+		r0 = returnFunc(ctx, showID, episodeID, opts)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -337,13 +337,14 @@ type MockManager_DeleteEpisodeFile_Call struct {
 
 // DeleteEpisodeFile is a helper method to define mock.On call
 //   - ctx context.Context
+//   - showID uint32
 //   - episodeID uint32
 //   - opts tvshow.DeleteFileOptions
-func (_e *MockManager_Expecter) DeleteEpisodeFile(ctx any, episodeID any, opts any) *MockManager_DeleteEpisodeFile_Call {
-	return &MockManager_DeleteEpisodeFile_Call{Call: _e.mock.On("DeleteEpisodeFile", ctx, episodeID, opts)}
+func (_e *MockManager_Expecter) DeleteEpisodeFile(ctx any, showID any, episodeID any, opts any) *MockManager_DeleteEpisodeFile_Call {
+	return &MockManager_DeleteEpisodeFile_Call{Call: _e.mock.On("DeleteEpisodeFile", ctx, showID, episodeID, opts)}
 }
 
-func (_c *MockManager_DeleteEpisodeFile_Call) Run(run func(ctx context.Context, episodeID uint32, opts tvshow.DeleteFileOptions)) *MockManager_DeleteEpisodeFile_Call {
+func (_c *MockManager_DeleteEpisodeFile_Call) Run(run func(ctx context.Context, showID uint32, episodeID uint32, opts tvshow.DeleteFileOptions)) *MockManager_DeleteEpisodeFile_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -353,14 +354,19 @@ func (_c *MockManager_DeleteEpisodeFile_Call) Run(run func(ctx context.Context, 
 		if args[1] != nil {
 			arg1 = args[1].(uint32)
 		}
-		var arg2 tvshow.DeleteFileOptions
+		var arg2 uint32
 		if args[2] != nil {
-			arg2 = args[2].(tvshow.DeleteFileOptions)
+			arg2 = args[2].(uint32)
+		}
+		var arg3 tvshow.DeleteFileOptions
+		if args[3] != nil {
+			arg3 = args[3].(tvshow.DeleteFileOptions)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -371,7 +377,7 @@ func (_c *MockManager_DeleteEpisodeFile_Call) Return(err error) *MockManager_Del
 	return _c
 }
 
-func (_c *MockManager_DeleteEpisodeFile_Call) RunAndReturn(run func(ctx context.Context, episodeID uint32, opts tvshow.DeleteFileOptions) error) *MockManager_DeleteEpisodeFile_Call {
+func (_c *MockManager_DeleteEpisodeFile_Call) RunAndReturn(run func(ctx context.Context, showID uint32, episodeID uint32, opts tvshow.DeleteFileOptions) error) *MockManager_DeleteEpisodeFile_Call {
 	_c.Call.Return(run)
 	return _c
 }
