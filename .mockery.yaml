@@ -88,9 +88,10 @@ packages:
       ArtistPhotoProvider: {}
       Provider: {}
       TVProvider: {}
-  github.com/datahearth/streamline/internal/posters:
+  github.com/datahearth/streamline/internal/imagecache:
     interfaces:
       Manager: {}
+      Store: {}
   github.com/datahearth/streamline/internal/request:
     interfaces:
       AlbumMonitor: {}

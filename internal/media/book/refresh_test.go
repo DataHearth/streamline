@@ -312,7 +312,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 		}
 
 		It("does nothing without a Hardcover key", func() {
-			svc := NewService(f.store, nil, f.posters, f.idx, f.dl, nil, nil)
+			svc := NewService(f.store, nil, f.images, f.idx, f.dl, nil, nil)
 			Expect(svc.RefreshStale(f.ctx)).To(Succeed())
 		})
 
@@ -467,7 +467,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 					remaining:        400,
 					reserve:          500,
 				},
-				f.posters,
+				f.images,
 				f.idx,
 				f.dl,
 				nil,
@@ -527,7 +527,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 			).To(Equal("Mnemos"))
 			Expect(got.Edges.Volumes[1].Kind).To(Equal(book.KindManga))
 			Expect(*got.Since).To(Equal(uint16(2005)))
-			Eventually(f.posters.fetches).Should(ContainElement(
+			Eventually(f.images.fetches).Should(ContainElement(
 				fetch{"books", got.Edges.Volumes[0].ID, "https://img/b1001.jpg"},
 			))
 		})
@@ -608,7 +608,7 @@ var _ = Describe("Refreshing books", Label("unit", "integration", "books"), func
 		})
 
 		It("does not start without a Hardcover key", func() {
-			svc := NewService(f.store, nil, f.posters, f.idx, f.dl, nil, nil)
+			svc := NewService(f.store, nil, f.images, f.idx, f.dl, nil, nil)
 			svc.HydrateSeriesInBackground(f.ctx)
 			Expect(svc.hydrating.Load()).To(BeFalse())
 		})

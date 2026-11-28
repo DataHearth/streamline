@@ -17,10 +17,11 @@ import (
 	entdownloadrecord "github.com/datahearth/streamline/ent/downloadrecord"
 	entmovie "github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/internal/db"
+	mockimagecache "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
-	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/imagecachetest"
 )
 
 var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func() {
@@ -29,7 +30,8 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		client  *ent.Client
 		store   *db.DB
 		meta    *mockmeta.MockProvider
-		posters *mockposters.MockManager
+		posters *mockimagecache.MockStore
+		images  *mockimagecache.MockManager
 		svc     *Service
 	)
 
@@ -44,8 +46,8 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 		store = db.New(client)
 
 		meta = mockmeta.NewMockProvider(GinkgoT())
-		posters = mockposters.NewMockManager(GinkgoT())
-		svc = NewService(store, meta, posters, nil, nil)
+		images, posters = imagecachetest.NewMocks(GinkgoT())
+		svc = NewService(store, meta, images, nil, nil)
 		configtest.Setup(map[string]any{
 			"metadata": map[string]any{"tmdb_region": ""},
 			"quality_profiles": []map[string]any{{
@@ -397,7 +399,7 @@ var _ = Describe("MovieService end-to-end", Label("integration", "movies"), func
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			posters.EXPECT().Remove("movies", m.ID).Return(nil).Once()
+			images.EXPECT().Remove("movies", m.ID).Return(nil).Once()
 
 			Expect(svc.Delete(ctx, m.ID, DeleteOptions{DeleteFiles: true})).
 				To(Succeed())

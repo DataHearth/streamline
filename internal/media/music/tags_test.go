@@ -449,7 +449,7 @@ var _ = Describe("Music tag sync", Label("unit", "integration", "music"), func()
 					*reload(mf).TagsState,
 				).To(Equal(entmediafile.TagsStateWritten))
 				e.seedArtist("Guest", albumSeed{mbid: "rg-1", title: "Nevermind"})
-				e.posters.EXPECT().
+				e.images.EXPECT().
 					Remove(mock.Anything, mock.Anything).
 					Return(nil).
 					Maybe()

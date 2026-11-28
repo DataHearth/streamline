@@ -18,12 +18,13 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	dbmocks "github.com/datahearth/streamline/internal/db/mocks"
 	mockdownload "github.com/datahearth/streamline/internal/download/mocks"
+	mockimagecache "github.com/datahearth/streamline/internal/imagecache/mocks"
 	"github.com/datahearth/streamline/internal/library"
 	msmocks "github.com/datahearth/streamline/internal/mediaserver/mocks"
 	"github.com/datahearth/streamline/internal/metadata"
 	mockmeta "github.com/datahearth/streamline/internal/metadata/mocks"
-	mockposters "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
+	"github.com/datahearth/streamline/internal/testutil/imagecachetest"
 )
 
 var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
@@ -31,10 +32,11 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		ctx          context.Context
 		storeMock    *dbmocks.MockStore_Expecter
 		metaMock     *mockmeta.MockProvider_Expecter
-		fetchMock    *mockposters.MockManager_Expecter
+		imagesMock   *mockimagecache.MockManager_Expecter
+		posterMock   *mockimagecache.MockStore_Expecter
 		downloadMock *mockdownload.MockDownloader_Expecter
 		msMock       *msmocks.MockRefresher_Expecter
-		posters      *mockposters.MockManager
+		images       *mockimagecache.MockManager
 		svc          *Service
 	)
 
@@ -44,13 +46,15 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 		storeMock = store.EXPECT()
 		meta := mockmeta.NewMockProvider(GinkgoT())
 		metaMock = meta.EXPECT()
-		posters = mockposters.NewMockManager(GinkgoT())
-		fetchMock = posters.EXPECT()
+		var posterStore *mockimagecache.MockStore
+		images, posterStore = imagecachetest.NewMocks(GinkgoT())
+		imagesMock = images.EXPECT()
+		posterMock = posterStore.EXPECT()
 		dl := mockdownload.NewMockDownloader(GinkgoT())
 		downloadMock = dl.EXPECT()
 		ms := msmocks.NewMockRefresher(GinkgoT())
 		msMock = ms.EXPECT()
-		svc = NewService(store, meta, posters, dl, ms)
+		svc = NewService(store, meta, images, dl, ms)
 		// Cast enrichment runs after every add and metadata update and is
 		// exercised on its own in people_test.go; here it is background noise
 		// with nothing to enrich.
@@ -142,7 +146,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 					Once()
 
 				done := make(chan struct{})
-				fetchMock.Follow(mock.Anything, "movies", uint32(11),
+				posterMock.Follow(mock.Anything, "movies", uint32(11),
 					"https://image.tmdb.org/t/p/w780/abc.jpg").
 					RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error {
 						close(done)
@@ -170,7 +174,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 						Once()
 
 					done := make(chan struct{})
-					fetchMock.Follow(mock.Anything, "movies", uint32(11),
+					posterMock.Follow(mock.Anything, "movies", uint32(11),
 						"https://image.tmdb.org/t/p/w780/abc.jpg").
 						RunAndReturn(func(_ context.Context, _ string, _ uint32, _ string) error {
 							close(done)
@@ -527,7 +531,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 	Describe("Delete", func() {
 		It("calls store delete and evicts the cached poster", func() {
 			storeMock.DeleteMovie(mock.Anything, uint32(7)).Return(nil).Once()
-			fetchMock.Remove("movies", uint32(7)).Return(nil).Once()
+			imagesMock.Remove("movies", uint32(7)).Return(nil).Once()
 
 			Expect(svc.Delete(ctx, 7, DeleteOptions{})).To(Succeed())
 		})
@@ -540,7 +544,7 @@ var _ = Describe("MovieService unit", Label("unit", "movies"), func() {
 			storeMock.LatestImportedRecordForMovie(mock.Anything, uint32(7)).
 				Return(nil, &ent.NotFoundError{}).Once()
 			storeMock.DeleteMovie(mock.Anything, uint32(7)).Return(nil).Once()
-			fetchMock.Remove("movies", uint32(7)).Return(nil).Once()
+			imagesMock.Remove("movies", uint32(7)).Return(nil).Once()
 			refreshed := expectRefresh(root)
 
 			Expect(

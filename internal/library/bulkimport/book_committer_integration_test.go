@@ -21,9 +21,9 @@ import (
 	"github.com/datahearth/streamline/internal/media/book"
 	"github.com/datahearth/streamline/internal/metadata"
 	metamocks "github.com/datahearth/streamline/internal/metadata/mocks"
-	postersmocks "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
+	"github.com/datahearth/streamline/internal/testutil/imagecachetest"
 )
 
 func hardcoverBook(id uint32, title string) *metadata.BookRecord {
@@ -84,10 +84,11 @@ var _ = Describe(
 			DeferCleanup(client.Close)
 			store = db.New(client)
 			bookmeta = metamocks.NewMockBookProvider(GinkgoT())
+			images, _ := imagecachetest.NewMocks(GinkgoT())
 			bookSvc := book.NewService(
 				store,
 				bookmeta,
-				postersmocks.NewMockManager(GinkgoT()),
+				images,
 				nil,
 				nil,
 				nil,

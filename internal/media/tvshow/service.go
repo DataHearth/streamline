@@ -18,12 +18,12 @@ import (
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
-	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/scheduler"
 	"github.com/datahearth/streamline/internal/utils/numeric"
 	"go.opentelemetry.io/otel"
@@ -79,7 +79,7 @@ const metadataMinRefreshInterval = 24 * time.Hour
 type Service struct {
 	db       db.Store
 	metadata metadata.TVProvider
-	posters  posters.Manager
+	images   imagecache.Manager
 	download download.Downloader
 	ms       mediaserver.Refresher
 }
@@ -87,11 +87,11 @@ type Service struct {
 func NewService(
 	store db.Store,
 	meta metadata.TVProvider,
-	p posters.Manager,
+	p imagecache.Manager,
 	dl download.Downloader,
 	ms mediaserver.Refresher,
 ) *Service {
-	return &Service{db: store, metadata: meta, posters: p, download: dl, ms: ms}
+	return &Service{db: store, metadata: meta, images: p, download: dl, ms: ms}
 }
 
 var _ Manager = (*Service)(nil)
@@ -197,13 +197,13 @@ func (s *Service) Add(
 // fetchPoster caches the show's poster in the background. Best-effort: a
 // missing poster is cosmetic and must not fail the operation that asked for it.
 func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string) {
-	if posterPath == "" || s.posters == nil {
+	if posterPath == "" || s.images == nil {
 		return
 	}
 	bg := context.WithoutCancel(ctx)
 	src := metadata.TVDBArtworkURL(posterPath)
 	go func() {
-		if err := s.posters.Follow(bg, "tvshows", id, src); err != nil {
+		if err := s.images.Posters().Follow(bg, "tvshows", id, src); err != nil {
 			slog.WarnContext(bg, "tv poster fetch failed",
 				"tvshow.id", id, "error", err)
 		}
@@ -698,8 +698,8 @@ func (s *Service) Delete(ctx context.Context, id uint32, opts DeleteOptions) err
 		}
 		return otelx.RecordSpanError(span, err)
 	}
-	if s.posters != nil {
-		if err := s.posters.Remove("tvshows", id); err != nil {
+	if s.images != nil {
+		if err := s.images.Remove("tvshows", id); err != nil {
 			slog.WarnContext(ctx, "poster cache eviction failed",
 				"tvshow.id", id, "error", err)
 		}

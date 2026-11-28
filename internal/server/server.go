@@ -17,6 +17,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/extension"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/importer"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
@@ -29,7 +30,6 @@ import (
 	"github.com/datahearth/streamline/internal/media/tvshow"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
-	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/request"
 	"github.com/datahearth/streamline/internal/rss"
 	"github.com/datahearth/streamline/internal/scheduler"
@@ -47,12 +47,12 @@ import (
 // middleware, mounted with the web.Handler and restapi.Server. The exported
 // Router method returns the fully-wrapped HTTP handler ready to serve.
 type Server struct {
-	router  *chi.Mux
-	web     *web.Handler
-	api     *restapi.Server
-	posters posters.Manager
-	art     LookupArt
-	db      db.Store
+	router *chi.Mux
+	web    *web.Handler
+	api    *restapi.Server
+	images imagecache.Manager
+	art    LookupArt
+	db     db.Store
 }
 
 // LookupArt serves the art of titles that are not in the library yet.
@@ -91,7 +91,7 @@ type Config struct {
 	MetadataBook    metadata.BookProvider
 	MetadataMusic   metadata.MusicProvider
 	Hardcover       interface{ AuthRejected() bool }
-	Posters         posters.Manager
+	Images          imagecache.Manager
 	LookupArt       LookupArt
 	Torrents        bittorrent.Manager
 	PathMigrations  *pathmigrate.Service
@@ -153,12 +153,12 @@ func New(cfg Config) *Server {
 	})
 
 	s := &Server{
-		router:  chi.NewRouter(),
-		web:     webH,
-		api:     api,
-		posters: cfg.Posters,
-		art:     cfg.LookupArt,
-		db:      cfg.DB,
+		router: chi.NewRouter(),
+		web:    webH,
+		api:    api,
+		images: cfg.Images,
+		art:    cfg.LookupArt,
+		db:     cfg.DB,
 	}
 
 	// RequestID first so every line the rest of the chain logs — including the
@@ -230,7 +230,7 @@ func New(cfg Config) *Server {
 			case "people":
 				s.fetchPersonPhoto(r.Context(), id)
 			}
-			s.posters.Serve(w, r, kind, id)
+			s.images.Posters().Serve(w, r, kind, id)
 		},
 	)
 
@@ -258,7 +258,7 @@ func (s *Server) artistPosterSource(
 	id uint32,
 ) (string, uint32) {
 	if _, err := os.Stat(
-		s.posters.Path("artists", id),
+		s.images.Posters().Path("artists", id),
 	); !errors.Is(
 		err,
 		os.ErrNotExist,
@@ -278,7 +278,7 @@ func (s *Server) artistPosterSource(
 		return "artists", id
 	}
 	for _, album := range albums {
-		if _, err := os.Stat(s.posters.Path("albums", album)); err == nil {
+		if _, err := os.Stat(s.images.Posters().Path("albums", album)); err == nil {
 			return "albums", album
 		}
 	}
@@ -290,7 +290,7 @@ func (s *Server) artistPosterSource(
 // a cast rail shown before that would otherwise be all monograms.
 func (s *Server) fetchPersonPhoto(ctx context.Context, id uint32) {
 	if _, err := os.Stat(
-		s.posters.Path("people", id),
+		s.images.Posters().Path("people", id),
 	); !errors.Is(
 		err,
 		os.ErrNotExist,
@@ -301,7 +301,7 @@ func (s *Server) fetchPersonPhoto(ctx context.Context, id uint32) {
 	if err != nil || src == "" {
 		return
 	}
-	if err := s.posters.Fetch(ctx, "people", id, src); err != nil {
+	if err := s.images.Posters().Fetch(ctx, "people", id, src); err != nil {
 		slog.WarnContext(ctx, "person photo fetch failed",
 			"person.id", id, "error", err)
 	}

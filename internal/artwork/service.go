@@ -23,10 +23,10 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/datahearth/streamline/internal/buildinfo"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
-	"github.com/datahearth/streamline/internal/posters"
 )
 
 var (
@@ -52,7 +52,7 @@ func init() {
 }
 
 const (
-	// maxImage caps one fetched image, as posters does for library art.
+	// maxImage caps one fetched image, as imagecache does for library art.
 	maxImage = 20 * 1024 * 1024
 	// cacheMaxAge is how long a cached lookup image is served before it is
 	// refetched.
@@ -116,7 +116,7 @@ type ArtistLinks interface {
 // can swap the transport.
 type Deps struct {
 	DataDir string
-	Posters posters.Manager
+	Images  imagecache.Manager
 	Library Library
 	Deezer  ArtistPictures
 	Links   ArtistLinks
@@ -126,7 +126,7 @@ type Deps struct {
 
 type Service struct {
 	dir     string
-	posters posters.Manager
+	images  imagecache.Manager
 	library Library
 	deezer  ArtistPictures
 	links   ArtistLinks
@@ -155,7 +155,7 @@ func New(d Deps) (*Service, error) {
 	}
 	s := &Service{
 		dir:     dir,
-		posters: d.Posters,
+		images:  d.Images,
 		library: d.Library,
 		deezer:  d.Deezer,
 		links:   d.Links,
@@ -282,12 +282,12 @@ func (s *Service) serveLibrary(
 		return false
 	}
 	if st, err := os.Stat(
-		s.posters.Path(string(kind), id),
+		s.images.Posters().Path(string(kind), id),
 	); err != nil ||
 		st.Size() == 0 {
 		return false
 	}
-	s.posters.Serve(w, r, string(kind), id)
+	s.images.Posters().Serve(w, r, string(kind), id)
 	return true
 }
 

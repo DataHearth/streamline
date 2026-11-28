@@ -22,12 +22,12 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/otelx"
-	"github.com/datahearth/streamline/internal/posters"
 )
 
 var tracer = otel.Tracer("github.com/datahearth/streamline/internal/media/music")
@@ -174,7 +174,7 @@ type Service struct {
 
 	db        db.Store
 	metadata  metadata.MusicProvider
-	posters   posters.Manager
+	images    imagecache.Manager
 	covers    metadata.CoverProvider
 	indexer   indexer.Manager
 	download  download.Downloader
@@ -198,7 +198,7 @@ type Service struct {
 func NewService(
 	store db.Store,
 	meta metadata.MusicProvider,
-	p posters.Manager,
+	p imagecache.Manager,
 	covers metadata.CoverProvider,
 	idx indexer.Manager,
 	dl download.Downloader,
@@ -209,7 +209,7 @@ func NewService(
 	prober ffmpeg.Prober,
 ) *Service {
 	return &Service{
-		db: store, metadata: meta, posters: p, covers: covers,
+		db: store, metadata: meta, images: p, covers: covers,
 		indexer: idx, download: dl, overviews: overviews, photos: photos,
 		links: links, ms: ms, prober: prober,
 		details: newMemo[*metadata.ArtistDetails](detailsTTL, detailsCacheLimit),
@@ -594,12 +594,12 @@ func (s *Service) Delete(ctx context.Context, id uint32, deleteFiles bool) error
 		// Their files name the deleted owner as the album artist.
 		s.tagsChanged(ctx, moved...)
 	}
-	if err := s.posters.Remove(artistKind, id); err != nil {
+	if err := s.images.Remove(artistKind, id); err != nil {
 		slog.WarnContext(ctx, "artist poster was not removed",
 			"artist.id", id, "error", err)
 	}
 	for _, a := range owned {
-		if err := s.posters.Remove(coverKind, a.ID); err != nil {
+		if err := s.images.Remove(coverKind, a.ID); err != nil {
 			slog.WarnContext(ctx, "album poster was not removed",
 				"album.id", a.ID, "error", err)
 		}
@@ -665,7 +665,7 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.Artist, error
 			"artist.id", id, "albums", removed)
 	}
 	for _, albumID := range removed {
-		if err := s.posters.Remove(coverKind, albumID); err != nil {
+		if err := s.images.Remove(coverKind, albumID); err != nil {
 			slog.WarnContext(ctx, "album poster was not removed",
 				"album.id", albumID, "error", err)
 		}

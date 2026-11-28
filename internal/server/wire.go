@@ -23,6 +23,7 @@ import (
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/extension"
 	"github.com/datahearth/streamline/internal/ffmpeg"
+	"github.com/datahearth/streamline/internal/imagecache"
 	"github.com/datahearth/streamline/internal/importer"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/jobs"
@@ -40,7 +41,6 @@ import (
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
 	"github.com/datahearth/streamline/internal/observability"
-	"github.com/datahearth/streamline/internal/posters"
 	"github.com/datahearth/streamline/internal/request"
 	"github.com/datahearth/streamline/internal/rss"
 	"github.com/datahearth/streamline/internal/scheduler"
@@ -155,10 +155,10 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	default:
 		bookMeta, hardcoverHealth = hc, hc
 	}
-	postersSvc, err := posters.New(cfg.DataDir)
+	imageCache, err := imagecache.New(cfg.DataDir)
 	if err != nil {
 		dbClient.Close()
-		return nil, fmt.Errorf("create posters service: %w", err)
+		return nil, fmt.Errorf("create image cache: %w", err)
 	}
 	indexerSvc := indexer.New(store)
 	var torrentEngine *bittorrent.Engine
@@ -174,12 +174,12 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	}
 	dlManager := download.New(store, builtinClient)
 	dispatcher := mediaserver.NewDispatcher()
-	movieSvc := movie.NewService(store, tmdb, postersSvc, dlManager, dispatcher)
-	tvSvc := tvshow.NewService(store, tvdb, postersSvc, dlManager, dispatcher)
+	movieSvc := movie.NewService(store, tmdb, imageCache, dlManager, dispatcher)
+	tvSvc := tvshow.NewService(store, tvdb, imageCache, dlManager, dispatcher)
 	deezer := metadata.NewDeezer()
 	lookupArt, err := artwork.New(artwork.Deps{
 		DataDir: cfg.DataDir,
-		Posters: postersSvc,
+		Images:  imageCache,
 		Library: artwork.EntLibrary{Client: dbClient},
 		Deezer:  deezer,
 		Links:   mb,
@@ -193,7 +193,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 	// same prober.
 	prober := ffmpeg.NewCLI(cfg.FFmpeg.Path)
 	musicSvc := music.NewService(
-		store, mb, postersSvc, deezer, indexerSvc, dlManager,
+		store, mb, imageCache, deezer, indexerSvc, dlManager,
 		metadata.NewWikipedia(), deezer, mb, dispatcher, prober,
 	)
 	var mail mailer.Sender
@@ -201,7 +201,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		mail = mailer.New()
 	}
 	bookSvc := book.NewService(
-		store, bookMeta, postersSvc, indexerSvc, dlManager, dispatcher, mail,
+		store, bookMeta, imageCache, indexerSvc, dlManager, dispatcher, mail,
 	)
 	mediaServerSvc := mediaserver.New()
 	// Nothing else creates the library roots — the importer only makes per-title
@@ -595,7 +595,7 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		Requests:        reqSvc,
 		TVSearcher:      tvMissing,
 		MetadataTV:      tvdb,
-		Posters:         postersSvc,
+		Images:          imageCache,
 		LookupArt:       lookupArt,
 		Torrents:        torrentsAPI,
 		PathMigrations:  pathMigrations,
@@ -610,8 +610,11 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		MetadataMusic:   mb,
 		Hardcover:       hardcoverHealth,
 		AuthMiddleware:  authMW,
-		Extensions:      extMgr.Middleware(bookFiles{client: dbClient}, postersSvc),
-		HTTPLog:         httpLogger.Middleware(httpAccessSkip),
+		Extensions: extMgr.Middleware(
+			bookFiles{client: dbClient},
+			imageCache.Posters(),
+		),
+		HTTPLog: httpLogger.Middleware(httpAccessSkip),
 	})
 
 	return &App{

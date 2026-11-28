@@ -9,11 +9,11 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
-	posmocks "github.com/datahearth/streamline/internal/posters/mocks"
 	"github.com/datahearth/streamline/internal/server/middleware"
 	mwmocks "github.com/datahearth/streamline/internal/server/middleware/mocks"
 	"github.com/datahearth/streamline/internal/testutil/configtest"
 	"github.com/datahearth/streamline/internal/testutil/dbtest"
+	"github.com/datahearth/streamline/internal/testutil/imagecachetest"
 )
 
 var _ = Describe("auth exclude list", Label("unit", "server"), func() {
@@ -34,9 +34,10 @@ var _ = Describe("auth exclude list", Label("unit", "server"), func() {
 			authExcludePaths,
 			nil,
 		)
+		images, _ := imagecachetest.NewMocks(GinkgoT())
 		srv := New(Config{
 			Ent:            client,
-			Posters:        posmocks.NewMockManager(GinkgoT()),
+			Images:         images,
 			AuthMiddleware: authMW,
 		})
 		ts = httptest.NewServer(srv.Router())

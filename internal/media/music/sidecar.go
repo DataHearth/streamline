@@ -139,8 +139,8 @@ func (a *albumTagging) sidecars(
 		return changed
 	}
 	var photo []byte
-	if a.cfg.SidecarArt && a.svc.posters != nil {
-		photo, _ = os.ReadFile(a.svc.posters.Path(artistKind, ar.ID))
+	if a.cfg.SidecarArt && a.svc.images != nil {
+		photo, _ = os.ReadFile(a.svc.images.Posters().Path(artistKind, ar.ID))
 	}
 	hash, did, err = sidecar{
 		dir: parent, names: artistCoverNames, base: "folder",
