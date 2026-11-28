@@ -501,6 +501,7 @@ An extension serves its own routes beside these: `/api/v1/extensions/{name}/card
 | `GET` | `/auth/config` · `/auth/invite/{token}` | Pre-auth SPA bootstrap | None |
 | `GET` | `/auth/oidc/{name}/start` · `/callback` | The OIDC flow | None |
 | `GET` | `/posters/{kind}/{id}/poster.jpg` | Poster proxy; `kind` is `movies`, `tvshows`, `artists`, `albums`, `books`, `authors` or `people` | Session |
+| `GET` | `/posters/{kind}/{id}/logo.png` | Transparent title logo of a movie (`movies`) or series (`tvshows`); `404` when there is none. `GET /movies/{id}` and `GET /series/{id}` carry `has_logo` | Session |
 | `GET` | `/posters/lookup/{kind}/{key}/poster.jpg` | Art for a title that is not in the library yet: `kind` is `artists` or `albums` (a MusicBrainz id, a release-group id for albums) or `books` (a Hardcover book id). The server fetches it from a source it remembered while serving the lookup, so a tile listed before a restart answers `404` until its search runs again | Session |
 | `POST` | `/settings/media-servers/plex/pin` | Start a Plex sign-in: `flow_id`, `auth_url` to open and `client_id` | 🔒 Admin session |
 | `GET` | `/settings/media-servers/plex/pin/{flowID}` | Poll it: `auth_token` once the user signed in, `expired` when they did not in time | 🔒 Admin session |

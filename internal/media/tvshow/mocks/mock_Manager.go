@@ -727,6 +727,63 @@ func (_c *MockManager_GrabSeriesRelease_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// HasLogo provides a mock function for the type MockManager
+func (_mock *MockManager) HasLogo(ctx context.Context, id uint32) bool {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HasLogo")
+	}
+
+	var r0 bool
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uint32) bool); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	return r0
+}
+
+// MockManager_HasLogo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HasLogo'
+type MockManager_HasLogo_Call struct {
+	*mock.Call
+}
+
+// HasLogo is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uint32
+func (_e *MockManager_Expecter) HasLogo(ctx any, id any) *MockManager_HasLogo_Call {
+	return &MockManager_HasLogo_Call{Call: _e.mock.On("HasLogo", ctx, id)}
+}
+
+func (_c *MockManager_HasLogo_Call) Run(run func(ctx context.Context, id uint32)) *MockManager_HasLogo_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uint32
+		if args[1] != nil {
+			arg1 = args[1].(uint32)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockManager_HasLogo_Call) Return(b bool) *MockManager_HasLogo_Call {
+	_c.Call.Return(b)
+	return _c
+}
+
+func (_c *MockManager_HasLogo_Call) RunAndReturn(run func(ctx context.Context, id uint32) bool) *MockManager_HasLogo_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function for the type MockManager
 func (_mock *MockManager) List(ctx context.Context, page uint16, limit uint16) ([]*ent.TVShow, uint32, error) {
 	ret := _mock.Called(ctx, page, limit)

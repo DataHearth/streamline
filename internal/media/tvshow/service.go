@@ -23,6 +23,7 @@ import (
 	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/mediaserver"
 	"github.com/datahearth/streamline/internal/metadata"
+	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
 	"github.com/datahearth/streamline/internal/scheduler"
 	"github.com/datahearth/streamline/internal/utils/numeric"
@@ -179,7 +180,7 @@ func (s *Service) Add(
 		return nil, fmt.Errorf("create tv show: %w", err)
 	}
 
-	s.fetchPoster(ctx, show.ID, d.PosterPath)
+	s.fetchImagesInBackground(ctx, show.ID, d)
 	s.enrichPeople(ctx, show.ID)
 
 	showsAdded.Add(ctx, 1)
@@ -194,20 +195,32 @@ func (s *Service) Add(
 	return show, nil
 }
 
-// fetchPoster caches the show's poster in the background. Best-effort: a
-// missing poster is cosmetic and must not fail the operation that asked for it.
-func (s *Service) fetchPoster(ctx context.Context, id uint32, posterPath string) {
-	if posterPath == "" || s.images == nil {
+// fetchImagesInBackground caches the show's poster and logo. Best-effort: a
+// missing image is cosmetic and must not fail the operation that asked for it.
+func (s *Service) fetchImagesInBackground(
+	ctx context.Context,
+	id uint32,
+	d *metadata.TVDetails,
+) {
+	if s.images == nil {
 		return
 	}
+	logos := make([]string, len(d.LogoPaths))
+	for i, ref := range d.LogoPaths {
+		logos[i] = metadata.TVDBArtworkURL(ref)
+	}
+	refresh := s.images.Refresh(
+		"tvshows", id, metadata.TVDBArtworkURL(d.PosterPath), logos,
+	)
 	bg := context.WithoutCancel(ctx)
-	src := metadata.TVDBArtworkURL(posterPath)
 	go func() {
-		if err := s.images.Posters().Follow(bg, "tvshows", id, src); err != nil {
-			slog.WarnContext(bg, "tv poster fetch failed",
-				"tvshow.id", id, "error", err)
-		}
+		defer observability.RecoverPanic(bg, "tv image fetch", nil)
+		refresh(bg)
 	}()
+}
+
+func (s *Service) HasLogo(ctx context.Context, id uint32) bool {
+	return s.images != nil && s.images.HasLogo(ctx, "tvshows", id)
 }
 
 func (s *Service) List(
@@ -1076,10 +1089,10 @@ func (s *Service) RefreshOne(ctx context.Context, id uint32) (*ent.TVShow, error
 	if err := s.db.SetTVShowRefreshedAt(ctx, id, time.Now()); err != nil {
 		return nil, otelx.RecordSpanError(span, err)
 	}
-	// Add and Reidentify fetch the poster too; without this a cleared cache
+	// Add and Reidentify fetch the images too; without this a cleared cache
 	// would stay cleared for every show already in the library. Fetch
 	// no-ops when the file is present, so this is free on a warm cache.
-	s.fetchPoster(ctx, id, d.PosterPath)
+	s.fetchImagesInBackground(ctx, id, d)
 	// Only when the provider actually moved something. RefreshStale runs this
 	// over every stale show on a tick, and an unconditional event would bury a
 	// day of real activity under one row per series in the library.
@@ -1203,7 +1216,15 @@ func (s *Service) Reidentify(
 	if err := s.db.SetTVShowRefreshedAt(ctx, id, time.Now()); err != nil {
 		return nil, nil, otelx.RecordSpanError(span, err)
 	}
-	s.fetchPoster(ctx, id, d.PosterPath)
+	// The images are keyed by row id and the page asks for them under the new
+	// match at once: with the old show's gone, it waits for the new ones.
+	if s.images != nil {
+		if err := s.images.Remove("tvshows", id); err != nil {
+			slog.WarnContext(ctx, "poster cache eviction failed",
+				"tvshow.id", id, "error", err)
+		}
+	}
+	s.fetchImagesInBackground(ctx, id, d)
 
 	refreshed, err := s.db.FindTVShowByID(ctx, id)
 	if err != nil {
@@ -1367,6 +1388,8 @@ type Manager interface {
 		p FilterParams,
 	) ([]*ent.TVShow, map[uint32]db.EpisodeCounts, uint32, error)
 	Get(ctx context.Context, id uint32) (*ent.TVShow, error)
+	// HasLogo reports whether the show's logo is cached for the hero.
+	HasLogo(ctx context.Context, id uint32) bool
 	Update(ctx context.Context, id uint32, p UpdateParams) (*ent.TVShow, error)
 	Delete(ctx context.Context, id uint32, opts DeleteOptions) error
 	DeleteEpisodeFile(

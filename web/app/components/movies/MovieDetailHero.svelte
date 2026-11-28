@@ -1,8 +1,9 @@
 <script lang="ts">
 	import ClampedText from "@components/shared/ClampedText.svelte";
+	import HeroTitle from "@components/shared/HeroTitle.svelte";
 	import type { Snippet } from "svelte";
 	import { Film, ArrowLeft } from "@lucide/svelte";
-	import { moviePosterUrl } from "@lib/posters";
+	import { movieLogoUrl, moviePosterUrl } from "@lib/posters";
 	import { listHref, MOVIES_SEARCH } from "@lib/prefs";
 	import { movieStatus } from "@lib/status";
 	import { formatDate } from "@lib/dates";
@@ -101,7 +102,10 @@
 				class="text-[26px] font-bold leading-[1.05] tracking-tight text-fg md:text-4xl lg:text-5xl"
 				title={movie.title}
 			>
-				{movie.title}
+				<HeroTitle
+					title={movie.title}
+					logoSrc={movie.has_logo ? movieLogoUrl(movie) : undefined}
+				/>
 			</h1>
 
 			{#if movie.original_title.trim() && movie.original_title.trim() !== movie.title.trim()}

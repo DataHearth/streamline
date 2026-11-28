@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -35,8 +36,12 @@ type CastMember struct {
 
 type MovieDetails struct {
 	MovieResult
-	Genres  []string
-	Runtime uint16
+	// LogoPaths are the TMDB file paths of the title's transparent logos in the
+	// language the hero shows, best first. Empty when TMDB has none, and when
+	// the call did not ask for them (WithLogos).
+	LogoPaths []string
+	Genres    []string
+	Runtime   uint16
 	// Rating is TMDB's vote average (0–10). Zero when TMDB has no votes.
 	Rating           float32
 	VoteCount        uint32
@@ -105,6 +110,19 @@ func PosterURL(path, size string) string {
 	return "https://image.tmdb.org/t/p/" + size + path
 }
 
+// LogoURL returns the PNG rendition of a TMDB logo. TMDB keeps many logos as
+// SVG and serves any of them as PNG under the .png extension; the poster cache
+// serves only what sniffs as an image, which an SVG does not.
+func LogoURL(path, size string) string {
+	if path == "" {
+		return ""
+	}
+	if ext := filepath.Ext(path); ext != "" {
+		path = strings.TrimSuffix(path, ext)
+	}
+	return "https://image.tmdb.org/t/p/" + size + path + ".png"
+}
+
 // TVDBArtworkURL returns an absolute URL for a TVDB image reference. TVDB image
 // fields are usually already absolute; relative paths are prefixed with the
 // TVDB artwork host. Empty in, empty out.
@@ -168,6 +186,9 @@ const (
 // TVDetails is the full TVDB record used to seed a show + its seasons/episodes.
 type TVDetails struct {
 	TVResult
+	// LogoPaths are the TVDB references of the show's transparent logos in the
+	// language the hero shows, best first. Empty when TVDB has none.
+	LogoPaths  []string
 	Status     string // "continuing" | "ended"
 	Type       SeriesType
 	Creator    string
