@@ -32,9 +32,10 @@ const (
 	qbAuthAPIKey
 )
 
-// managedCategory tags every torrent streamline adds so streamline only
-// ever sees/acts on its own torrents, never the operator's personal ones
-// in the same client.
+// managedCategory is the qBittorrent category and the Transmission label
+// streamline adds its torrents under. qBittorrent's listing filters on it, so
+// streamline sees none of the operator's own torrents there; Transmission and
+// Deluge list every torrent in the client.
 const managedCategory = "streamline"
 
 // maxQBResponse bounds an add reply. The daemon answers with a bare hash or a

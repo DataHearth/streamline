@@ -300,8 +300,8 @@ type Downloader interface {
 	) (*ent.DownloadRecord, error)
 	// GrabArtistPack grabs a discography pack for the artist. The record is
 	// filed under the artist and linked to every album of it that is
-	// monitored, released, hydrated and wanted or paused, which are marked
-	// downloading; a pack with no such album is refused with ErrNoWantedFiles
+	// monitored, released, hydrated and wanted, paused or failed, which are
+	// marked downloading; a pack with no such album is refused with ErrNoWantedFiles
 	// before the client is contacted.
 	GrabArtistPack(
 		ctx context.Context,
@@ -1088,20 +1088,16 @@ func (d *download) grabWith(
 	// spec §4.6: a re-grab landing on a hash already tracked by a live record
 	// means "I also want these episodes", not "add a duplicate torrent" —
 	// checked before any client contact, and before Flow A's own decode runs,
-	// since a widen recomputes the keep-set itself over the union.
-	//
-	// The whole block is behind the feature flag, not just the widen arm: with
-	// selective_files off there is nothing to widen, and the pre-check's own
-	// duplicate rejection is behavior this feature introduced. Off has to be
-	// bit-for-bit the pre-feature path, where AddTorrent is what detects a
-	// duplicate hash.
+	// since a widen recomputes the keep-set itself over the union. With
+	// selective_files off there is nothing to widen, and the in-flight lookup
+	// below refuses a duplicate hash instead.
 	if localHash := localInfoHash(src); config.Get().Download.SelectiveFiles &&
 		localHash != "" {
 		live, lerr := d.db.FindWidenableDownloadRecordByHash(ctx, localHash)
 		if lerr != nil {
-			// Not fatal — the pre-check is an optimization and AddTorrent still
-			// rejects a genuine duplicate — but silence here looks exactly like
-			// "no record found", which is the wrong conclusion to reach quietly.
+			// Not fatal, since the grab can go on, but silence here looks
+			// exactly like "no record found", which is the wrong conclusion to
+			// reach quietly.
 			slog.DebugContext(ctx,
 				"grab: widenable record lookup failed; whole-torrent grab",
 				"hash", localHash, "error", lerr)

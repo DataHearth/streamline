@@ -26,11 +26,11 @@ const (
 // The polling is inside the run rather than in the schedule because the two
 // cadences the job wants are far apart. Resolving a magnet wants seconds; an
 // install with nothing pending wants nothing at all, and a scheduler tick is
-// never free — it commits a WAL frame through the one SQLite connection every
-// API request queues behind, which at the resolution cadence is thousands a
-// day finding no work. Registered slow, polling fast only while it keeps
-// finding pending records, the job costs the fast rate exactly when a magnet
-// is in flight and the slow rate otherwise.
+// never free — it commits a WAL frame through the one SQLite write
+// connection every other write queues behind, which at the resolution
+// cadence is thousands a day finding no work. Registered slow, polling fast
+// only while it keeps finding pending records, the job costs the fast rate
+// exactly when a magnet is in flight and the slow rate otherwise.
 func FileSelection(r download.SelectionResolver) scheduler.JobFunc {
 	return func(ctx context.Context) error {
 		deadline := time.Now().Add(selectionBusyBudget)

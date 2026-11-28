@@ -84,7 +84,9 @@ func (s *FeedScanner) Run(ctx context.Context) error {
 		return nil
 	}
 
-	wanted, err := s.store.ListWantedMovies(ctx)
+	wanted, err := s.store.ListWantedMovies(
+		ctx, config.Get().Library.MaxGrabFailures,
+	)
 	if err != nil {
 		return otelx.RecordSpanError(span, err)
 	}

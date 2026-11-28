@@ -378,10 +378,18 @@ func (d *download) AdoptManualTorrents(ctx context.Context) ([]uint32, error) {
 	ctx, span := tracer.Start(ctx, "download.adopt_manual_torrents")
 	defer span.End()
 
-	// With no client enabled there is nothing to adopt from, and the hash
-	// query below is a full scan of download_records — paid every 30s on the
-	// monitor tick, for a loop that then iterates over nothing.
+	// With no client enabled every proposal is orphaned and there is nothing
+	// to adopt from. The pass stops after the prune: the hash query below is a
+	// full scan of download_records, paid every 30s on the monitor tick, for a
+	// loop that then iterates over nothing.
 	if len(config.EnabledDownloadClients()) == 0 {
+		n, err := d.db.DeleteOrphanedPendingAdoptions(ctx, nil)
+		if err != nil {
+			slog.WarnContext(ctx,
+				"adopt: prune proposals of disabled clients failed", "error", err)
+		}
+		span.SetAttributes(attribute.Int("adopt.pruned", n))
+		adoptPruned.Add(ctx, int64(n))
 		return nil, nil
 	}
 	d.gaugesOnce.Do(func() { d.registerClientGauges(ctx) })

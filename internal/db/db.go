@@ -627,7 +627,10 @@ type Store interface {
 		maxGrabFailures uint8,
 		notSearchedSince time.Time,
 	) ([]*ent.Movie, error)
-	ListWantedMovies(ctx context.Context) ([]*ent.Movie, error)
+	ListWantedMovies(
+		ctx context.Context,
+		maxGrabFailures uint8,
+	) ([]*ent.Movie, error)
 	// ListUpgradeCandidateMovies returns monitored movies that already have a
 	// file, with the files loaded — the feed scanner scores them to decide an
 	// upgrade grab.
@@ -999,7 +1002,8 @@ type Store interface {
 		liveHashes []string,
 	) (int, error)
 	// DeleteOrphanedPendingAdoptions prunes pending proposals whose client is
-	// not among clientNames (the enabled download clients).
+	// not among clientNames (the enabled download clients); every one when
+	// clientNames is empty.
 	DeleteOrphanedPendingAdoptions(
 		ctx context.Context,
 		clientNames []string,

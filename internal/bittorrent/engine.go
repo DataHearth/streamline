@@ -62,8 +62,8 @@ type torrentState struct {
 	// uploadedPersisted is the last total written to TorrentSession. The
 	// minute tick would otherwise rewrite the row for every torrent whether
 	// or not it moved, and a torrent nobody leeches from uploads nothing —
-	// 20 idle torrents cost ~28,800 no-op commits a day through the single
-	// SQLite connection every API request also queues behind.
+	// 20 idle torrents cost ~28,800 no-op commits a day through the one
+	// SQLite write connection every other write queues behind.
 	uploadedPersisted int64
 	// selectionMode and wantedFiles mirror the persisted file-selection
 	// columns, consulted by applyFilePriorities every time startWhenReady

@@ -48,7 +48,7 @@ const (
 	partialSuffix = ".partial"
 	cueExt        = ".cue"
 	wavExt        = ".wav"
-	gib           = int64(1) << 30
+	gigabyte      = 1_000_000_000
 	maxNameBytes  = 255
 	maxNamedFiles = 5
 )
@@ -237,7 +237,8 @@ func freeBudget() (int64, bool) {
 	if usage == nil {
 		return 0, false
 	}
-	return usage.FreeBytes - int64(config.Get().Download.SpaceReserveGB)*gib, true
+	reserve := int64(config.Get().Download.SpaceReserveGB) * gigabyte
+	return usage.FreeBytes - reserve, true
 }
 
 // CheckSpace is the refusal that needs no body: an instance whose staging lies

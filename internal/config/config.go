@@ -499,7 +499,9 @@ type DownloadConfig struct {
 	SelectionGrace string `koanf:"selection_grace" validate:"required"`
 	// SpaceCheck refuses a grab that would leave less than SpaceReserveGB free
 	// on the download client's disk once every active download has finished.
-	SpaceCheck     bool  `koanf:"space_check"`
+	SpaceCheck bool `koanf:"space_check"`
+	// SpaceReserveGB is in gigabytes of 10^9 bytes, kept free by both the
+	// grab check and uploads.
 	SpaceReserveGB uint8 `koanf:"space_reserve_gb"`
 	// PathMappings translate a save path a download client reports into one
 	// streamline can open. Empty means both processes see the same paths,

@@ -525,7 +525,7 @@ Governs [selective file download](First-Run-Setup#selective-file-download) — g
 | `download.selective_files` | bool | `false` | Off is bit-for-bit today's whole-torrent grab, and the rollback path. **Runtime-editable** |
 | `download.selection_grace` | duration | `10m` | How long a magnet-sourced selection may sit unresolved before giving up and downloading the release whole |
 | `download.space_check` | bool | `true` | Refuse a grab that would not fit on the download client's disk once its active downloads finish. **Runtime-editable** |
-| `download.space_reserve_gb` | int (0–255) | `10` | Gigabytes the space check always leaves free on the download disk. **Runtime-editable** |
+| `download.space_reserve_gb` | int (0–255) | `10` | Gigabytes (10^9 bytes) the space check always leaves free on the download disk, for grabs and uploads. **Runtime-editable** |
 | `download.path_mappings` | list of `{from, to}` | `[]` | Translates a save path your download client reports into one Streamline can open. First matching prefix wins. Both sides must be absolute. **Runtime-editable** |
 
 #### Path mappings

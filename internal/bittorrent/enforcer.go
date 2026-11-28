@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/datahearth/streamline/internal/download"
 )
 
 const enforceInterval = time.Minute
@@ -45,10 +47,10 @@ func (e *Engine) enforceOnce(ctx context.Context) {
 		stats := t.Stats()
 		uploaded := st.uploadedBase + stats.BytesWrittenData.Int64()
 		e.persistUploaded(ctx, hash, st.uploadedPersisted, uploaded)
-		if t.Info() == nil || wantedMissing(t) != 0 {
-			continue
-		}
-		if st.paused || st.seedStopped {
+		// status is the one judge of done: a selection that is pending or not
+		// applied yet wants no file, so wantedMissing is already 0 there.
+		// Seeding also means neither paused nor seed-stopped.
+		if e.status(t, hash) != download.StatusSeeding {
 			continue
 		}
 		if st.completedAt.IsZero() {

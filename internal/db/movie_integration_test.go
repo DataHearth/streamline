@@ -550,7 +550,7 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 		It("returns only movies with status=wanted", func() {
 			seed("wanted", 2024, 1001, entmovie.StatusWanted)
 			seed("available", 2023, 1002, entmovie.StatusAvailable)
-			items, err := store.ListWantedMovies(ctx)
+			items, err := store.ListWantedMovies(ctx, 3)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(items).To(HaveLen(1))
 			Expect(items[0].Title).To(Equal("wanted"))
@@ -560,9 +560,23 @@ var _ = Describe("Movie filter + lookup", Label("integration", "db"), func() {
 			m := seed("unmonitored", 2024, 1003, entmovie.StatusWanted)
 			_, err := client.Movie.UpdateOneID(m.ID).SetMonitored(false).Save(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			items, err := store.ListWantedMovies(ctx)
+			items, err := store.ListWantedMovies(ctx, 3)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(items).To(BeEmpty())
+		})
+
+		It("excludes movies at the grab-failure cap", func() {
+			under := seed("under", 2024, 1004, entmovie.StatusWanted)
+			at := seed("at", 2024, 1005, entmovie.StatusWanted)
+			_, err := client.Movie.UpdateOneID(under.ID).SetGrabFailures(2).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			_, err = client.Movie.UpdateOneID(at.ID).SetGrabFailures(3).Save(ctx)
+			Expect(err).NotTo(HaveOccurred())
+
+			items, err := store.ListWantedMovies(ctx, 3)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(items).To(HaveLen(1))
+			Expect(items[0].ID).To(Equal(under.ID))
 		})
 	})
 
