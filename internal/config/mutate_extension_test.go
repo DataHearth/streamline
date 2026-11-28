@@ -141,6 +141,25 @@ var _ = Describe("Extension CRUD", Label("unit", "config"), func() {
 		))
 	})
 
+	It("lower-cases a host the config file wrote in upper case", func() {
+		configtest.SetupFile(map[string]any{"extensions": []any{map[string]any{
+			"name": "player", "source": "/opt/player.wasm", "enabled": true,
+			"hosts": []any{"Engine.LAN:8097"},
+		}}})
+		Expect(config.Get().Extensions[0].Hosts).
+			To(Equal([]string{"engine.lan:8097"}))
+		Expect(
+			config.UpdateExtension(
+				ctx,
+				"player",
+				func(e *config.ExtensionEntry) error {
+					e.Enabled = false
+					return nil
+				},
+			),
+		).To(Succeed())
+	})
+
 	It("refuses an update that breaks a rule", func() {
 		Expect(config.AddExtension(ctx, local("opds"))).To(Succeed())
 		Expect(

@@ -56,6 +56,7 @@ func (db *DB) FindUnusedInviteForEmail(
 			invite.UsedAtIsNil(),
 			invite.ExpiresAtGT(now),
 		).
+		Order(invite.ByCreateTime(), invite.ByID()).
 		First(ctx)
 }
 

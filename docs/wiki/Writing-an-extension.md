@@ -237,7 +237,7 @@ A `credential` card is the secret each user's apps sign in with. The account pag
 - `POST`: create the secret, or replace it, and answer `{"secret": "..."}`. It is shown to the user once and Streamline keeps no copy.
 - `DELETE`: remove it.
 
-After a `POST`, Streamline calls `GET` again before it shows the secret, so a `GET` that fails there loses it. A `GET` that answers 300 or more while the account page lists its cards leaves your card off the page; any other call answering 300 or more, or a `POST` with no secret, reaches the user as an extension that did not answer.
+After a `POST`, Streamline calls `GET` again to fill in the card; if that `GET` fails, the user still gets the secret, without `created_at`, `last_used_at` and `last_client`. A `GET` that answers 300 or more while the account page lists its cards leaves your card off the page; any other call answering 300 or more, or a `POST` with no secret, reaches the user as an extension that did not answer.
 
 ## Settings cards
 

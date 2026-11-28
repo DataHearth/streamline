@@ -73,7 +73,10 @@
 		mutationFn: () => api<AppAccessCreated>(path, { method: "POST" }),
 		onSuccess: (resp) => {
 			revealed = resp;
-			qc.setQueryData<AppAccess>(key(), withoutSecret(resp));
+			// No created_at: the card did not report one or could not be read
+			// back, so ask for it again rather than show a partial card.
+			if (resp.created_at) qc.setQueryData<AppAccess>(key(), withoutSecret(resp));
+			else qc.invalidateQueries({ queryKey: key() });
 			// The account's list of cards carries each one's On / Off.
 			qc.invalidateQueries({ queryKey: ACCOUNT_EXTENSIONS_KEY });
 			toast.ok(meta.created());

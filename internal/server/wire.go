@@ -304,13 +304,13 @@ func NewFromConfig(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("create auth service: %w", err)
 	}
 
-	// 5. Bootstrap seed admin (no-op if email empty or users already exist).
+	// 5. Bootstrap seed admin (no-op once any user exists).
 	if err := authSvc.BootstrapSeedAdmin(ctx); err != nil {
 		dbClient.Close()
 		return nil, fmt.Errorf("bootstrap seed admin: %w", err)
 	}
 
-	// 6. Initialize OIDC providers (silent skip on discovery failures).
+	// 6. Initialize OIDC providers (a failed discovery is logged and skipped).
 	oidcMgr := auth.NewOIDCManager()
 	oidcMgr.Init(ctx, config.PublicURL())
 

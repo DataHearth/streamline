@@ -685,9 +685,21 @@ func (c *Config) normalizeTranscodePolicies() {
 	}
 }
 
+// normalizeExtensionHosts lower-cases every extensions[].hosts entry. A host
+// name is case-insensitive, the http service matches the URL's lower-cased
+// host:port exactly, and validateExtension refuses an upper-case entry on
+// every API write to the extension.
+func (c *Config) normalizeExtensionHosts() {
+	for i := range c.Extensions {
+		for j, h := range c.Extensions[i].Hosts {
+			c.Extensions[i].Hosts[j] = strings.ToLower(h)
+		}
+	}
+}
+
 // Validate reports whether these values are a config the process can run on.
-// Beyond normalising the OIDC linking tier and the transcode policies onto c,
-// it only reads c. Creating
+// Beyond normalising the OIDC linking tier, the transcode policies and the
+// extension hosts onto c, it only reads c. Creating
 // directories is ensureDataDir's job, so a caller asking a question rather than
 // booting — config.Update, deciding whether the file it is about to write would
 // still load — leaves nothing behind on the filesystem when the answer is no.
@@ -709,6 +721,7 @@ func (c *Config) normalizeTranscodePolicies() {
 func (c *Config) Validate() error {
 	c.normalizeOIDCEmailLinking()
 	c.normalizeTranscodePolicies()
+	c.normalizeExtensionHosts()
 	return errors.Join(validator.New().Struct(c), c.checkInvariants())
 }
 

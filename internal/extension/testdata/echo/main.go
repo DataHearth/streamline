@@ -276,6 +276,13 @@ func card(r sdk.Request) sdk.Response {
 		_, _ = sdk.Exec("DELETE FROM secrets WHERE user_id = ?", id)
 		return sdk.Response{Status: 204}
 	}
+	// A test creates card_unreadable to make the read fail.
+	if res, err := sdk.Query(
+		"SELECT 1 FROM card_unreadable",
+	); err == nil &&
+		res.Error == "" {
+		return sdk.Response{Status: 500}
+	}
 	res, _ := sdk.Query("SELECT 1 FROM secrets WHERE user_id = ?", id)
 	b, _ := json.Marshal(map[string]bool{"set": len(res.Rows) > 0})
 	return sdk.Response{Status: 200, Body: b}

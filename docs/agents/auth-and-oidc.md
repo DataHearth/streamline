@@ -27,7 +27,7 @@
 - Registration failures are mapped to user-safe messages (`userFacingRegisterError` in `internal/server/web/auth.go`) and returned as JSON; raw service errors are only logged, never sent to the client.
 
 ## OIDC
-- Multi-provider via `auth.oidc[].{name, issuer, client_id, client_secret | client_secret_file}`. `OIDCManager.Init` discovers each at startup; a discovery failure is logged at ERROR and the entry is skipped.
+- Multi-provider via `auth.oidc[].{name, issuer, client_id, client_secret | client_secret_file}`. `OIDCManager.Init` discovers each at startup; a discovery failure is logged at ERROR and the entry is skipped, and `/auth/config` leaves it out, so the login page draws no button whose `/start` would 404.
 - Flow: state + nonce + PKCE (S256) held in short-lived `_oidc_*` cookies scoped to `/auth/oidc/`. Redirect URI = `<origin the request arrived on>/auth/oidc/<name>/callback` (`oidcRedirectURI` in `internal/server/web/auth.go`, over `httputil.RequestOrigin`: `r.Host`, or `X-Forwarded-Host` from a trusted proxy, so the flow works on every domain the instance is served from). `/start` and `/callback` both send it as `redirect_uri`, which overrides the `config.PublicURL`-based `RedirectURL` that `OIDCManager.Init` puts on the provider.
 - Provider trust is **two independent axes**, one key each, both defaulting closed: `auth.oidc[].email_linking` (which accounts it may adopt) and `auth.oidc[].allow_admin` (whether it may grant `admin`). They were one key; tightening the adoption tier could then *raise* the role ceiling. Keeping them apart is what makes each axis monotone — no move on one can add capability on the other. Never re-merge them.
 - Linking policy (`auth.Manager.LoginOIDC`):

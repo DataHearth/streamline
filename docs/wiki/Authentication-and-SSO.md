@@ -203,7 +203,7 @@ It is only ever a **fallback**. An invite carries its own role, chosen by the ad
 
 > **Upgrading:** `auth.oidc_default_role` is **not read**. If your config still uses it, rename it to `auth.default_role` — otherwise the key is ignored and new self-registered accounts fall back to `member`, with nothing in the logs to say so. The API reads only the new name too: `GET /api/v1/config/auth` returns only `default_role`, and a `PATCH` naming `oidc_default_role` is ignored as an unknown field.
 
-Invites: `POST /api/v1/auth/invites` returns the raw token **once**, and answers `403` while `registration_mode` is `disabled`. It takes a `ttl` as a Go duration string (default `168h`); the Invites card offers 1, 3, 7 and 30 days. The SPA fetches `GET /auth/invite/{token}` to prefill the form; that lookup deliberately skips the email match so the page can render, while `RegisterWithInvite` enforces the binding atomically inside a transaction at submit time. Registration failures are mapped to user-safe messages — raw service errors are logged, never returned.
+Invites: `POST /api/v1/auth/invites` returns the raw token **once**, and answers `403` while `registration_mode` is `disabled`. It takes a `ttl` as a Go duration string (default `168h`) and answers `422` to one it cannot parse; the Invites card offers 1, 3, 7 and 30 days. The SPA fetches `GET /auth/invite/{token}` to prefill the form; that lookup deliberately skips the email match so the page can render, while `RegisterWithInvite` enforces the binding atomically inside a transaction at submit time. Registration failures are mapped to user-safe messages — raw service errors are logged, never returned.
 
 ---
 
@@ -237,7 +237,7 @@ streamline --config /etc/streamline/config.yaml auth unlock user@example.com
 
 ## OIDC
 
-Multi-provider. Each entry is discovered at startup; **a provider whose discovery fails is unavailable until the next start**, and its button on the login page leads to a `404`. Look for `OIDC provider discovery failed; provider unavailable` in the boot log.
+Multi-provider. Each entry is discovered at startup; **a provider whose discovery fails is unavailable until the next start**, and the login page shows no button for it. Look for `OIDC provider discovery failed; provider unavailable` in the boot log.
 
 With at least one provider configured, the login page leads with the provider buttons (the first one listed in `auth.oidc` is the highlighted one) and folds the email and password form behind **Sign in with email**. The form opens on its own after a failed password attempt, and in a browser whose last sign-in used it. Local accounts keep working; with no provider, the form is all the page shows.
 

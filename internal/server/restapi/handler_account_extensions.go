@@ -86,16 +86,20 @@ func (s *Server) cardAccess(
 	if err := json.Unmarshal(body, &st); err != nil {
 		return AppAccess{}, fmt.Errorf("read the card's answer: %w", err)
 	}
-	out := AppAccess{
+	return AppAccess{
 		Enabled:    st.Set,
+		Username:   cardUsername(card, claims),
 		CreatedAt:  st.CreatedAt,
 		LastUsedAt: st.LastUsedAt,
 		LastClient: st.LastClient,
-	}
+	}, nil
+}
+
+func cardUsername(card *extension.AccountCard, claims *auth.Claims) string {
 	if card.Username == "email" {
-		out.Username = claims.Email
+		return claims.Email
 	}
-	return out, nil
+	return ""
 }
 
 func cardFailed(ctx context.Context, name string, err error) BadGatewayJSONResponse {
@@ -197,9 +201,13 @@ func (s *Server) RotateExtensionCredential(
 	if err := json.Unmarshal(body, &created); err != nil || created.Secret == "" {
 		return fail(errors.New("the card answered no secret"))
 	}
+	// The extension has already replaced the old secret, so a failed read
+	// still answers the new one: failing here would lose it for good.
 	access, err := s.cardAccess(ctx, request.Name, card, claims)
 	if err != nil {
-		return fail(err)
+		slog.WarnContext(ctx, "Extension card did not answer after a rotation",
+			"extension", request.Name, "error", err)
+		access = AppAccess{Enabled: true, Username: cardUsername(card, claims)}
 	}
 	return RotateExtensionCredential200JSONResponse(
 		toAppAccessCreated(access, created.Secret),

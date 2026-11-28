@@ -58,8 +58,14 @@ func (h *Handler) authConfig(w http.ResponseWriter, r *http.Request) {
 		Providers:        make([]providerInfo, 0, len(cfg.Auth.OIDC)),
 		ReadOnly:         cfg.ReadOnly,
 	}
-	for _, p := range cfg.Auth.OIDC {
-		body.Providers = append(body.Providers, providerInfo{Name: p.Name})
+	// Only the providers /start can serve: one whose discovery failed has no
+	// button, since its /start answers 404.
+	if h.oidc != nil {
+		for _, p := range cfg.Auth.OIDC {
+			if _, ok := h.oidc.Get(p.Name); ok {
+				body.Providers = append(body.Providers, providerInfo{Name: p.Name})
+			}
+		}
 	}
 	writeJSON(w, r, http.StatusOK, body)
 }

@@ -184,6 +184,22 @@ var _ = Describe("Handler: Auth API", Label("unit", "server", "auth"), func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 		})
 
+		It("refuses a ttl that is not a duration and creates nothing", func() {
+			req := app.req(
+				http.MethodPost,
+				"/api/v1/auth/invites",
+				app.adminKey,
+				strings.NewReader(
+					`{"email": "a@test.com", "role": "member", "ttl": "7d"}`,
+				),
+			)
+			req.Header.Set("Content-Type", "application/json")
+			resp := app.do(req)
+			defer resp.Body.Close()
+
+			Expect(resp.StatusCode).To(Equal(http.StatusUnprocessableEntity))
+		})
+
 		It("creates an invite and returns raw token + URL", func() {
 			app.auth.EXPECT().
 				CreateInvite(mock.Anything, app.adminID, "invited@test.com", "member", 24*time.Hour).
