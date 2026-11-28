@@ -89,6 +89,8 @@ tasks:
     sources:
       - web/static/css/input.css
       - web/app/**/*.svelte
+      - web/app/**/*.ts
+      - exclude: web/app/.routify/**
     generates:
       - web/static/css/style.css
 

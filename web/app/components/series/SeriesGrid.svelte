@@ -5,6 +5,7 @@
 	import { createAction, monitorToast, SERIES, updateFailed } from "@lib/actions";
 	import { tvPosterUrl } from "@lib/posters";
 	import { seriesStatus } from "@lib/status";
+	import { seasonCount } from "@lib/nouns";
 	import PosterCard from "@components/shared/PosterCard.svelte";
 	import SeriesActionsMenu from "./SeriesActionsMenu.svelte";
 	import type { TVShow } from "@lib/types";
@@ -35,12 +36,14 @@
 
 	function episodeText(s: TVShow): string | undefined {
 		const seasons = s.total_seasons ?? 0;
-		const seasonText =
-			seasons > 0 ? `${seasons} season${seasons === 1 ? "" : "s"}` : undefined;
+		const seasonText = seasons > 0 ? seasonCount(seasons) : undefined;
 		// A show the library follows no episode of still has seasons, and that
 		// is the only size the card can report for it.
 		if (!s.total_episodes) return seasonText;
-		const eps = `${s.have_episodes ?? 0}/${s.total_episodes} eps`;
+		const eps = i18n.series_card_episodes({
+			have: String(s.have_episodes ?? 0),
+			total: String(s.total_episodes),
+		});
 		return seasonText ? `${seasonText} · ${eps}` : eps;
 	}
 

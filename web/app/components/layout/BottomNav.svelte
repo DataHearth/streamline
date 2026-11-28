@@ -238,10 +238,8 @@
 		{ label: i18n.nav_library(), icon: Library, section: "Library" as const },
 		{ label: i18n.nav_activity(), icon: Activity, section: "Activity" as const },
 	];
-	function cellActive(label: string) {
-		if (label === "Library") return libraryActive;
-		if (label === "Activity") return activityActive;
-		return false;
+	function cellActive(section: Section) {
+		return section === "Library" ? libraryActive : activityActive;
 	}
 
 	function closeSheet() {
@@ -304,7 +302,7 @@
 >
 	{#each primary as tab (tab.label)}
 		{#if tab.section}
-			{@const on = cellActive(tab.label) || sheet === tab.section}
+			{@const on = cellActive(tab.section) || sheet === tab.section}
 			<button
 				type="button"
 				onclick={() => toggleSheet(tab.section)}

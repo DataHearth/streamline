@@ -340,10 +340,9 @@
 	// library routes do it — a button in the toolbar line is at the far end of the
 	// screen from a thumb. AddButton owns the library's; this owns its own, because
 	// only this page knows whether the engine is on. It floats over the end of the
-	// list like any corner action: `main`'s pb-16 keeps content clear of the bar,
-	// and reserving a second band for the pill on top of that left a visibly empty
-	// strip at the bottom of every scroll. The on-screen keyboard takes its place,
-	// as it does AddButton's.
+	// list like any corner action: `#main`'s bottom padding keeps content clear of
+	// the bar, and the pill reserves no band of its own. The on-screen keyboard
+	// takes its place, as it does AddButton's.
 	let showAddPill = $derived(
 		compact && !torrentsNotConfigured && !selecting && !keyboardUp(),
 	);

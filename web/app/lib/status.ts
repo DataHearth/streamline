@@ -4,6 +4,7 @@ import type {
 	EpisodeStatus,
 	Movie,
 	Season,
+	SeriesStatus,
 	TVShow,
 } from "./types";
 import { m as i18n } from "./paraglide/messages.js";
@@ -14,6 +15,11 @@ import { countDownloading, countImporting, countMissing, countWanted } from "./n
 export function movieStatus(m: Movie): StatusKind {
 	if (m.status === "wanted" && !m.monitored) return "missing";
 	return m.status;
+}
+
+// Whether the show still airs, in the reader's language.
+export function seriesStatusLabel(s: SeriesStatus): string {
+	return s === "ended" ? i18n.series_ended() : i18n.series_continuing();
 }
 
 // What a series card reads, rolled up from the show's episode counts.

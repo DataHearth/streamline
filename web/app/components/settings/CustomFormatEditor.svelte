@@ -23,7 +23,7 @@
 	// condition cannot: the renamer wrote the only name that file has. Pairing
 	// one of these with a release_title row in the same format is what lets the
 	// format score a release by its name and the file it would replace by its
-	// probe — otherwise the file scores 0 and everything reads as upgradable.
+	// probe. A format the file cannot answer is left out when the two compare.
 	const STREAM_TYPES: CustomFormatConditionType[] = [
 		"audio_tracks",
 		"audio_language",
