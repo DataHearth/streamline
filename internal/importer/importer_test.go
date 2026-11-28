@@ -93,6 +93,21 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 		w = NewWorker(Deps{DB: storeMk, Library: libSvc, MediaServer: msMk})
 	})
 
+	It("counts nothing for a record that is no longer importing", func() {
+		ctx := context.Background()
+		storeMk.EXPECT().
+			FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+			Return(nil, &ent.NotFoundError{}).Once()
+
+		before := outcomeCounts()
+		err := w.runImport(ctx, 1)
+		Expect(err).To(MatchError(errNotImporting))
+		// No RecordImportFailure expectation: the mock fails the spec if the
+		// outcome is counted as an attempt.
+		w.handleOutcome(ctx, 1, err)
+		Expect(outcomeDelta(before)).To(BeEmpty())
+	})
+
 	Describe("an offline library root", func() {
 		var (
 			rec   *ent.DownloadRecord
@@ -1457,7 +1472,32 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					})).
 				Return(nil).Once()
 
-			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(wp.runImport(context.Background(), 1)).To(MatchError(errHeld))
+		})
+
+		It("counts a held import as held, never as succeeded", func() {
+			ctx := context.Background()
+			src := filepath.Join(tmp, "dl")
+			Expect(os.MkdirAll(src, 0o755)).To(Succeed())
+			seedMediaFile(src, "Flick.2024.1080p.mkv")
+			rec := fixtureRecord(1, 10, src, 0)
+			wp := proberReturning(probed(1280, "h264"), nil)
+
+			storeMk.EXPECT().
+				FindImportingDownloadRecordByID(mock.Anything, uint32(1)).
+				Return(rec, nil).Once()
+			storeMk.EXPECT().ListMediaFilesByMovieID(mock.Anything, uint32(10)).
+				Return(nil, nil).Once()
+			storeMk.EXPECT().
+				HoldDownloadRecord(mock.Anything, uint32(1), mock.Anything).
+				Return(nil).Once()
+
+			before := outcomeCounts()
+			err := wp.runImport(ctx, 1)
+			Expect(err).To(MatchError(errHeld))
+			// No RecordImportFailure expectation: a hold costs no attempt.
+			wp.handleOutcome(ctx, 1, err)
+			Expect(outcomeDelta(before)).To(Equal(map[string]int64{"held": 1}))
 		})
 
 		It("falls back to the release title for the resolution claim", func() {
@@ -1481,7 +1521,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					})).
 				Return(nil).Once()
 
-			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(wp.runImport(context.Background(), 1)).To(MatchError(errHeld))
 		})
 
 		It("holds a movie whose file will not probe", func() {
@@ -1503,7 +1543,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					})).
 				Return(nil).Once()
 
-			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(wp.runImport(context.Background(), 1)).To(MatchError(errHeld))
 		})
 
 		It("keeps the existing movie file when the replacement is held", func() {
@@ -1525,7 +1565,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				HoldDownloadRecord(mock.Anything, uint32(1), mock.Anything).
 				Return(nil).Once()
 
-			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(wp.runImport(context.Background(), 1)).To(MatchError(errHeld))
 			Expect(old).To(BeAnExistingFile())
 		})
 
@@ -1555,7 +1595,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 				HoldDownloadRecord(mock.Anything, uint32(1), mock.Anything).
 				Return(nil).Once()
 
-			Expect(wp.runImport(context.Background(), 1)).To(Succeed())
+			Expect(wp.runImport(context.Background(), 1)).To(MatchError(errHeld))
 			Expect(old).To(BeAnExistingFile())
 		})
 
@@ -1612,7 +1652,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					})).
 				Return(nil).Once()
 
-			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+			Expect(w.runImport(context.Background(), 1)).To(MatchError(errHeld))
 		})
 
 		It("fails, never holds, when the source file is missing", func() {
@@ -1705,7 +1745,7 @@ var _ = Describe("Worker", Label("unit", "importer"), func() {
 					})).
 				Return(nil).Once()
 
-			Expect(wp.runImport(context.Background(), 2)).To(Succeed())
+			Expect(wp.runImport(context.Background(), 2)).To(MatchError(errHeld))
 		})
 
 		// probedFile is an existing library file with probe results on it.

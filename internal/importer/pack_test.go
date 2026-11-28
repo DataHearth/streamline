@@ -207,7 +207,7 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 				Return(nil).
 				Once()
 
-			Expect(w.runImport(context.Background(), 1)).To(Succeed())
+			Expect(w.runImport(context.Background(), 1)).To(MatchError(errHeld))
 
 			Expect(reasons).To(ConsistOf(schema.HoldReason{
 				File: filepath.Join(
@@ -256,7 +256,7 @@ var _ = Describe("Worker pack import", Label("unit", "importer"), func() {
 			Run(func(_ context.Context, _ uint32, r []schema.HoldReason) { reasons = r }).
 			Return(nil).Once()
 
-		Expect(w.runImport(context.Background(), 1)).To(Succeed())
+		Expect(w.runImport(context.Background(), 1)).To(MatchError(errHeld))
 
 		Expect(reasons).To(HaveLen(1))
 		Expect(reasons[0].Expected).To(Equal("Nevermind"))

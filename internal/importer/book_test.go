@@ -361,7 +361,7 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 				downloadrecord.ReplaceModeNone,
 			)
 
-			Expect(run(id)).To(Succeed())
+			Expect(run(id)).To(MatchError(errHeld))
 
 			rec := client.DownloadRecord.GetX(ctx, id)
 			Expect(rec.Status).To(Equal(downloadrecord.StatusHeld))
@@ -382,7 +382,7 @@ var _ = Describe("Worker book imports", Label("unit", "importer"), func() {
 				downloadrecord.ReplaceModeNone,
 			)
 
-			Expect(run(id)).To(Succeed())
+			Expect(run(id)).To(MatchError(errHeld))
 
 			Expect(client.DownloadRecord.GetX(ctx, id).Status).
 				To(Equal(downloadrecord.StatusHeld))
