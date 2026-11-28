@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/datahearth/streamline/ent"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/indexer"
 	"github.com/datahearth/streamline/internal/quality"
@@ -164,12 +165,12 @@ var _ = Describe("scoreBest", Label("unit", "rss"), func() {
 	})
 
 	It("leaves out a release dated another year than the film", func() {
-		kept := dropOtherYears([]indexer.SearchResult{
+		kept := dropOtherYears(context.Background(), []indexer.SearchResult{
 			{Title: "Metropolis.2001.1080p.BluRay.x264-GRP"},
 			{Title: "Metropolis.1927.1080p.BluRay.x264-GRP"},
 			{Title: "Metropolis.1928.1080p.BluRay.x264-GRP"},
 			{Title: "Metropolis.1080p.BluRay.x264-GRP"},
-		}, 1927)
+		}, &ent.Movie{Title: "Metropolis", Year: 1927})
 		titles := make([]string, len(kept))
 		for i, r := range kept {
 			titles[i] = r.Title
