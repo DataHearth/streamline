@@ -80,7 +80,8 @@ func (s *Service) reviewEditions(
 
 // FollowChange applies a book's pending change: a format whose edition
 // Hardcover removed gets the edition the pick rules choose now, its file
-// kept. db.ErrNotFollowable for a book Hardcover removed.
+// kept. db.ErrNotFollowable for a book Hardcover removed. The change row
+// is left to RefreshBook's review, so a failed refresh keeps it to retry.
 func (s *Service) FollowChange(ctx context.Context, c *ent.MetadataChange) error {
 	if c.Kind != metadatachange.KindEditionRemoved {
 		return db.ErrNotFollowable
@@ -95,13 +96,6 @@ func (s *Service) FollowChange(ctx context.Context, c *ent.MetadataChange) error
 		if err := s.db.SetBookSlotEdition(ctx, id, kind, 0); err != nil {
 			return err
 		}
-	}
-	if err := s.db.ClearChange(
-		ctx,
-		bookOwner(id),
-		metadatachange.KindEditionRemoved,
-	); err != nil {
-		return err
 	}
 	_, err := s.RefreshBook(ctx, id)
 	return err

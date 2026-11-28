@@ -35700,6 +35700,20 @@ func (response FollowMetadataChange500JSONResponse) VisitFollowMetadataChangeRes
 	return err
 }
 
+type FollowMetadataChange503JSONResponse struct{ ServiceUnavailableJSONResponse }
+
+func (response FollowMetadataChange503JSONResponse) VisitFollowMetadataChangeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type KeepMetadataChangeRequestObject struct {
 	Id ResourceID `json:"id"`
 }

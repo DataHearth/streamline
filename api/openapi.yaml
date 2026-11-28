@@ -6543,11 +6543,18 @@ paths:
         moves to the edition MusicBrainz prefers, or the one its edition was
         merged into; tracks or episodes no longer listed are removed, their
         files left on disk, untracked; a merged album or artist moves to what
-        it was merged into, joining it when the library already holds it.
+        it was merged into, joining it when the library already holds it; a
+        book format whose edition Hardcover removed gets the edition Hardcover
+        offers now, its file kept.
         `409 code: not_followable` for a change that only removes the item
         (find it again, remove it or keep it instead); `409 code:
         change_conflict` when it cannot be applied as it stands, such as an
-        album merged into one the library already uses.
+        album merged into one the library already uses. A book's change needs
+        Hardcover: `404` when Hardcover no longer has the book, `429` when
+        Hardcover is rate limiting, `503` with `code:
+        hardcover_not_configured` or `code: hardcover_key_rejected` when its
+        key is missing or refused. A book's change that failed stays listed,
+        to follow again.
       tags: [metadata-changes]
       responses:
         "204":
@@ -6562,6 +6569,8 @@ paths:
           $ref: "#/components/responses/RateLimited"
         "500":
           $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
 
   /metadata-changes/{id}/keep:
     parameters:
