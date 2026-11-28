@@ -208,14 +208,16 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Lint Go
         run: task lint:go
+      - name: Check generated code
+        run: task generate:check
       - name: Summary
         if: always()
         run: |
           echo "### Go Lint" >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ golangci-lint passed" >> "$GITHUB_STEP_SUMMARY"
+            echo "✅ golangci-lint passed and generated code is current" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "❌ golangci-lint found issues" >> "$GITHUB_STEP_SUMMARY"
+            echo "❌ golangci-lint found issues or generated code is stale" >> "$GITHUB_STEP_SUMMARY"
           fi
 
   lint-frontend:

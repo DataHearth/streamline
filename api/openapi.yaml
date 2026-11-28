@@ -14516,7 +14516,7 @@ components:
           format: date-time
           nullable: true
           description: >-
-            When the key stops authenticating; null never expires. An expired
+            When the key stops authenticating; absent never expires. An expired
             key is still listed until the hourly `purge-api-keys` job drops
             it, seven days after it expired.
         last_used_at:
@@ -16083,7 +16083,7 @@ components:
       type: object
       nullable: true
       description: >-
-        The last rescan streamline sent this server since it started, null
+        The last rescan streamline sent this server since it started, absent
         before the first. Refreshes are collected for 30 seconds and sent
         together, so a fresh import shows here up to that long after.
       required: [at, outcome, folders]

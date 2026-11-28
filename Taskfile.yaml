@@ -65,22 +65,23 @@ tasks:
 
   generate:
     desc: Regenerate all generated code
+    # No sources, so Task never skips it and one run repairs a stale output.
     cmds:
       - go tool oapi-codegen --config api/oapi-codegen.yaml api/openapi.yaml
       - go generate ./ent
       - go tool mockery
-    sources:
-      - api/openapi.yaml
-      - api/oapi-codegen.yaml
-      - ent/schema/*.go
-      - .mockery.yaml
-      - internal/**/*.go
-      - exclude: "**/*_test.go"
-      - exclude: "**/mocks/**"
-    generates:
-      - internal/server/restapi/gen.go
-      - ent/**/*.go
-      - exclude: ent/schema/*.go
+
+  generate:check:
+    desc: Regenerate all generated code and fail when it is not what is committed
+    cmds:
+      - task: generate
+      - |
+        stale="$(git status --porcelain -- ent internal go.mod go.sum)"
+        if [ -n "$stale" ]; then
+          echo "Generated code is stale, or these files have uncommitted changes:"
+          echo "$stale"
+          exit 1
+        fi
 
   generate:icons:
     desc: Render every app icon in web/static/images from web/icons/logo.svg
