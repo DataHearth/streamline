@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"path"
+	"slices"
 
 	"github.com/anacrolix/torrent/metainfo"
 
@@ -48,30 +49,52 @@ func decodeTorrentFiles(raw []byte) ([]metaFile, error) {
 // always kept (spec §6 rule 5). Returns the kept indexes, the summed size
 // of kept video files, and how many video candidates matched a wanted
 // episode.
+//
+// A grab for exactly one special reads its files by title as well
+// (library.MatchFileEpisode): most specials carry no number. And when such a
+// release holds one video candidate, that file is the special unless its name
+// is another episode of the library, by number or by title: the importer
+// files a release's only video under its anchor whatever it is called, and a
+// tracker's number for a special ("S00E05", "S07E00") is often not the
+// library's.
 func computeKeepSet(
 	files []metaFile,
-	seasons []*ent.Season,
-	anime bool,
+	show *ent.TVShow,
 	wantedEpisodes []uint32,
 ) (keep []int, keptBytes int64, matchedWanted int) {
 	wanted := make(map[uint32]bool, len(wantedEpisodes))
 	for _, id := range wantedEpisodes {
 		wanted[id] = true
 	}
+	var special *ent.Episode
+	if len(wantedEpisodes) == 1 {
+		special = library.SpecialOf(show, wantedEpisodes[0])
+	}
+	var unresolved []metaFile
+	candidates := 0
 
+	take := func(f metaFile) {
+		keep = append(keep, f.Index)
+		keptBytes += f.Size
+		matchedWanted++
+	}
 	for _, f := range files {
 		if !isSkipCandidate(f) {
 			keep = append(keep, f.Index)
 			continue
 		}
-		parsed := library.Parse(path.Base(f.Path))
-		_, ep := library.MatchEpisodeInSeason(parsed, seasons, anime)
-		if ep == nil || !wanted[ep.ID] {
-			continue
+		candidates++
+		name := path.Base(f.Path)
+		switch _, ep := library.MatchFileEpisode(name, show, special); {
+		case ep != nil && wanted[ep.ID]:
+			take(f)
+		case ep == nil && library.NamedSpecial(name, show) == nil:
+			unresolved = append(unresolved, f)
 		}
-		keep = append(keep, f.Index)
-		keptBytes += f.Size
-		matchedWanted++
+	}
+	if special != nil && candidates == 1 && len(unresolved) == 1 {
+		take(unresolved[0])
+		slices.Sort(keep)
 	}
 	return keep, keptBytes, matchedWanted
 }

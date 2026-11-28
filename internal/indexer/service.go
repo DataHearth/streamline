@@ -196,6 +196,7 @@ type Manager interface {
 		tvdbID uint32,
 		imdbID string,
 		season, episode uint16,
+		specials []string,
 	) ([]SearchResult, int, error)
 	// SearchAlbum queries every enabled indexer for an album release. The
 	// music newznab root is 3000 (Audio); q is "<artist> <album>", then
@@ -802,15 +803,41 @@ func (i *indexer) SearchSeries(
 // SearchEpisode queries all enabled indexers for a single episode (a tvsearch
 // keyed by tvdbid + season + episode). Results are aggregated, deduped, and
 // sorted exactly like SearchMovie.
+//
+// specials is read for a special (season 0) only: its title first, then the
+// titles of the season's other specials (library.SpecialTitles). Most
+// specials are released under their title and no number
+// ("Show.The.Special.Title.1080p"), which the episode filter drops as naming
+// nothing, so the search also asks every indexer for the show followed by
+// that title (searchSpecialTitle) and keeps the releases library.NamesSpecial
+// reads as this special among the others. A numbered release titled as
+// another of them is flagged TitleMismatch: trackers number specials their
+// own way. A title query that failed fails the search unless an unflagged
+// result is left: the automatic searches drop the flagged ones, and an empty
+// answer would read as "no release exists" for a question no indexer
+// answered.
 func (i *indexer) SearchEpisode(
 	ctx context.Context,
 	titles, aliases []string,
 	tvdbID uint32,
 	imdbID string,
 	season, episode uint16,
+	specials []string,
 ) ([]SearchResult, int, error) {
 	titles = dedupTitles(titles)
 	match := matchTitles(titles, aliases)
+	if season != 0 {
+		specials = nil
+	}
+	var titleQueries []string
+	if len(specials) > 0 {
+		for _, t := range titles {
+			titleQueries = append(
+				titleQueries, library.SpecialQuery(t, specials[0]),
+			)
+		}
+		titleQueries = dedupTitles(titleQueries)
+	}
 	ctx, span := tracer.Start(ctx, "indexer.search_episode",
 		trace.WithAttributes(
 			attribute.Int("series.titles.count", len(titles)),
@@ -819,6 +846,7 @@ func (i *indexer) SearchEpisode(
 			attribute.String("series.imdb_id", imdbID),
 			attribute.Int("series.season", int(season)),
 			attribute.Int("series.episode", int(episode)),
+			attribute.Int("special.title_queries", len(titleQueries)),
 		),
 	)
 	defer span.End()
@@ -851,14 +879,106 @@ func (i *indexer) SearchEpisode(
 	if err != nil {
 		return nil, 0, otelx.RecordSpanError(span, err)
 	}
+	var titleErr error
+	if len(titleQueries) > 0 {
+		var titled []SearchResult
+		titled, titleErr = i.searchSpecialTitle(ctx, titleQueries, tvdbID, imdbID)
+		if err := ctx.Err(); err != nil {
+			return nil, 0, otelx.RecordSpanError(
+				span, fmt.Errorf("indexer search: %w", err),
+			)
+		}
+		results = dedupResults(append(results, titled...))
+	}
 	filtered, hiddenPacks := filterToEpisode(results, season, episode)
 	filtered = preferTitleMatches(filtered, match)
+	if len(specials) > 0 {
+		named := namedSpecials(results, match, specials)
+		span.SetAttributes(attribute.Int("results.named_specials", len(named)))
+		filtered = mergeNamed(named, flagSiblings(filtered, match, specials))
+	}
+	if titleErr != nil {
+		if !slices.ContainsFunc(filtered, func(r SearchResult) bool {
+			return !r.TitleMismatch
+		}) {
+			return nil, 0, otelx.RecordSpanError(span, titleErr)
+		}
+		slog.WarnContext(ctx, "special title search failed, results kept",
+			"series.tvdb_id", tvdbID, "error", titleErr)
+	}
 	span.SetAttributes(
 		attribute.Int("results.pre_episode_filter", len(results)),
 		attribute.Int("results.hidden_packs", hiddenPacks),
 		attribute.Int("results.total", len(filtered)),
 	)
 	return filtered, hiddenPacks, nil
+}
+
+// searchSpecialTitle asks every indexer for each of queries, "<show>
+// <special title>" texts, on a span of its own so the fan-out's attributes
+// stay apart from the numbered search's.
+//
+// The request carries no provider id and no season: a built-in indexer or a
+// tracker searching by id ignores the text, and one asked for a season
+// narrows to it. That also makes it one request per query per indexer, no
+// fallback rung being wider than it. The ids are checked on what comes back
+// instead (filterProviderIDs).
+func (i *indexer) searchSpecialTitle(
+	ctx context.Context,
+	queries []string,
+	tvdbID uint32,
+	imdbID string,
+) ([]SearchResult, error) {
+	ctx, span := tracer.Start(ctx, "indexer.search_special_title",
+		trace.WithAttributes(attribute.Int("queries.count", len(queries))),
+	)
+	defer span.End()
+	res, err := i.searchAll(ctx, span, queries, SearchParams{Kind: KindTV})
+	if err != nil {
+		return nil, otelx.RecordSpanError(span, err)
+	}
+	kept := filterProviderIDs(res, SearchParams{TVDBID: tvdbID, IMDbID: imdbID})
+	span.SetAttributes(attribute.Int("results.id_mismatch", len(res)-len(kept)))
+	return kept, nil
+}
+
+// namedSpecials keeps the releases that name the special by its title:
+// library.NamesSpecial picking specials' first title, the special searched
+// for, over the others. It refuses packs and regular episodes. The show is
+// confirmed by that match, so they are kept unflagged however
+// preferTitleMatches read the rest.
+func namedSpecials(results []SearchResult, shows, specials []string) []SearchResult {
+	var out []SearchResult
+	for _, r := range results {
+		if library.NamesSpecial(r.Title, shows, specials) == 0 {
+			r.TitleMismatch = false
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// flagSiblings stamps TitleMismatch on the releases titled as another of the
+// season's specials: kept by their number, which a tracker assigns its own
+// way, they stay there to browse and are not grabbed unattended.
+func flagSiblings(results []SearchResult, shows, specials []string) []SearchResult {
+	for i, r := range results {
+		if library.NamesSpecial(r.Title, shows, specials) > 0 {
+			results[i].TitleMismatch = true
+		}
+	}
+	return results
+}
+
+// mergeNamed joins the releases found by title to those found by number,
+// best seeded first. named comes first, so a release in both is listed once
+// in its unflagged copy.
+func mergeNamed(named, numbered []SearchResult) []SearchResult {
+	out := dedupResults(append(named, numbered...))
+	sort.SliceStable(out, func(a, b int) bool {
+		return out[a].Seeders > out[b].Seeders
+	})
+	return out
 }
 
 // filterToEpisode keeps only releases naming exactly the requested episode.

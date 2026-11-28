@@ -403,6 +403,143 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 			Expect(r.AirDate.Year()).To(Equal(2026))
 		})
 
+		// One special filed under a season: the segment between the season
+		// token and the first technical tag holds "special" and a title word.
+		DescribeTable(
+			"reads a special named under a season token",
+			func(name string) {
+				r := Parse(name)
+				Expect(r.TitledSpecial).To(BeTrue())
+				Expect(r.SeasonPack).To(BeFalse())
+				Expect(r.AbsoluteNumber).To(BeZero())
+				Expect(r.Title).To(Equal("Show"))
+				Expect(ParseSeasonSpan(name)).To(Equal(SeasonSpan{}))
+			},
+			Entry(
+				"title after the word",
+				"Show.S05.Special.The.Title.1080p.WEB-GRP",
+			),
+			Entry("title joined by a dash",
+				"Show.S02.Special-Inside.Chesters.Mill.HDTV.x264-BAJSKORV"),
+			Entry(
+				"title before the word",
+				"Show.S05.Christmas.Special.720p.HDTV-GRP",
+			),
+			Entry("ending the name", "Show.S00.Christmas.Special"),
+			Entry("ending a file name", "Show.S00.Christmas.Special.mkv"),
+			Entry(
+				"a number after the title",
+				"Show S00 Christmas Special 03 [1080p]",
+			),
+			Entry("a date after the title",
+				"Show.S00.Christmas.Special.2020.12.25.720p.HDTV-GRP"),
+			Entry("a complete tag past the technical tags",
+				"Show.S05.Special.The.Title.1080p.COMPLETE.BluRay-GRP"),
+		)
+
+		// "Show.S01.Reunion.Special.1080p-GRP" is one special; each entry
+		// adds the one signal that makes it a pack shipping its special.
+		DescribeTable(
+			"reads each pack signal on its own",
+			func(name string) {
+				Expect(Parse("Show.S01.Reunion.Special.1080p-GRP").TitledSpecial).
+					To(BeTrue())
+				r := Parse(name)
+				Expect(r.TitledSpecial).To(BeFalse())
+				Expect(r.SeasonPack).To(BeTrue())
+				Expect(r.Season).To(Equal(uint16(1)))
+			},
+			Entry(
+				"another season token",
+				"Show.S01-S03.The.Reunion.Special.1080p-GRP",
+			),
+			Entry("a complete tag", "Show.S01.COMPLETE.Reunion.Special.1080p-GRP"),
+			Entry("an ampersand", "Show.S01.&.Reunion.Special.1080p-GRP"),
+			Entry("a square bracket", "Show S01 [Reunion Special] 1080p"),
+			Entry("a curly bracket", "Show S01 {Reunion Special} 1080p"),
+			Entry("and", "Show.S01.and.Reunion.Special.1080p-GRP"),
+			Entry("incl", "Show.S01.incl.Reunion.Special.1080p-GRP"),
+			Entry("inc", "Show.S01.inc.Reunion.Special.1080p-GRP"),
+			Entry("including", "Show.S01.including.Reunion.Special.1080p-GRP"),
+			Entry("included before", "Show.S01.included.Reunion.Special.1080p-GRP"),
+			Entry("included after", "Show.S01.Reunion.Special.Included.1080p-GRP"),
+			Entry("plus", "Show.S01.plus.Reunion.Special.1080p-GRP"),
+			Entry("w", "Show.S01.w.Reunion.Special.1080p-GRP"),
+			Entry("et", "Show.S01.et.Reunion.Special.1080p-GRP"),
+			Entry("avec", "Show.S01.avec.Reunion.Special.1080p-GRP"),
+			Entry("ed", "Show.S01.Reunion.Special.Ed.1080p-GRP"),
+			Entry("extras", "Show.S01.Reunion.Special.Extras.1080p-GRP"),
+			Entry("bonus", "Show.S01.Reunion.Special.Bonus.1080p-GRP"),
+			Entry("an episode range", "Show.S01.E01-E10.Reunion.Special.1080p-GRP"),
+			Entry("an episode range with one E",
+				"Show.S01.E01-10.Reunion.Special.1080p-GRP"),
+			Entry(
+				"special features ending the name",
+				"Show.S01.DVD.Special.Features",
+			),
+		)
+
+		DescribeTable(
+			"keeps a pack that mentions a special as a pack",
+			func(name string, season uint16) {
+				r := Parse(name)
+				Expect(r.TitledSpecial).To(BeFalse())
+				Expect(r.SeasonPack).To(BeTrue())
+				Expect(r.Season).To(Equal(season))
+			},
+			Entry("a plus", "Show.S01.+.Special.1080p.BluRay-GRP", uint16(1)),
+			Entry("a fansub pack with its special",
+				"[Group] Show S02 + Special [BD 1080p]", uint16(2)),
+			Entry("a plus and a named special",
+				"Top.Gear.S22.+.Patagonia.Special.720p.HDTV-GRP", uint16(22)),
+			Entry(
+				"special features",
+				"Show.S01.Special.Features.1080p-GRP",
+				uint16(1),
+			),
+			Entry("special features past the tags",
+				"Show.S01.1080p.BluRay.Special.Features-GRP", uint16(1)),
+			Entry("with", "Show.S01.with.Special.1080p-GRP", uint16(1)),
+			Entry(
+				"a plus with no space",
+				"Show.S01.OVA+Special.1080p-GRP",
+				uint16(1),
+			),
+			Entry("a plus right after the token",
+				"Show.S01+Special.Title.1080p-GRP", uint16(1)),
+			Entry("an extended edition",
+				"Show.S01.Special.Extended.Edition.1080p-GRP", uint16(1)),
+			Entry("a collectors edition",
+				"Show.S01.Special.Collectors.Edition.1080p-GRP", uint16(1)),
+			Entry("an edition tag",
+				"Show.S01.Special.Edition.1080p.BluRay.x264-GRP", uint16(1)),
+			Entry(
+				"an edition tag ending the name",
+				"Show.S01.Special.Edition",
+				uint16(1),
+			),
+			Entry("an edition tag ending a file name",
+				"Show.S01.Special.Edition.mkv", uint16(1)),
+			Entry("the word alone", "Show.S00.Special.1080p.WEB-GRP", uint16(0)),
+			Entry("a complete tag",
+				"Show.S01.COMPLETE.incl.Special.1080p-GRP", uint16(1)),
+			Entry("a bracket", "Show S01 (BD Special Box) 1080p", uint16(1)),
+			Entry("the specials pack",
+				"The.Big.Bang.Theory.S00.Specials.1080p.WEB-GRP", uint16(0)),
+			Entry("the word before the season",
+				"Big.Special.Show.S05.1080p.HDTV.x264-GRP", uint16(5)),
+		)
+
+		It("keeps a season range with a special a range", func() {
+			name := "Show.S01-S03.+.Special.1080p.BluRay-GRP"
+			Expect(Parse(name).TitledSpecial).To(BeFalse())
+			Expect(ParseSeasonSpan(name)).To(Equal(SeasonSpan{From: 1, To: 3}))
+		})
+
+		It("takes no trailing Edition for the release group", func() {
+			Expect(Parse("Show.S01.Special.Edition").Group).To(BeEmpty())
+		})
+
 		// The season token is cut from the title for season 0 as for any
 		// other: left in, no special's title ever equals the show's.
 		DescribeTable("cuts the title at a season 0 token",
@@ -417,6 +554,7 @@ var _ = Describe("Filename Parser", Label("unit", "library"), func() {
 			Entry("a range opening at the specials",
 				"Show.S00-S12.1080p.BluRay-GRP", "Show"),
 			Entry("a spelled-out season 0", "Show Saison 0 MULTI 1080p", "Show"),
+			Entry("an S00 special", "Show.S00.Christmas.Special.1080p-GRP", "Show"),
 		)
 
 		DescribeTable(

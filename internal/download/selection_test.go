@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/datahearth/streamline/ent"
+	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/library"
 )
 
@@ -27,6 +28,19 @@ func buildTorrentBytes(info metainfo.Info) []byte {
 }
 
 const aboveFloor int64 = library.MinEpisodeSize + 1
+
+// showOf wraps seasons in a show, the shape computeKeepSet reads.
+func showOf(seasons []*ent.Season, anime bool) *ent.TVShow {
+	show := &ent.TVShow{
+		Title: "Show",
+		Type:  tvshow.TypeStandard,
+		Edges: ent.TVShowEdges{Seasons: seasons},
+	}
+	if anime {
+		show.Type = tvshow.TypeAnime
+	}
+	return show
+}
 
 var _ = Describe("decodeTorrentFiles", Label("unit", "downloads"), func() {
 	It("lists multi-file torrents in metainfo order", func() {
@@ -104,7 +118,7 @@ var _ = Describe("computeKeepSet", Label("unit", "downloads"), func() {
 		mfs := toMetaFiles(files)
 
 		keep, keptBytes, matched := computeKeepSet(
-			mfs, seasons, false, []uint32{wantedID},
+			mfs, showOf(seasons, false), []uint32{wantedID},
 		)
 
 		Expect(matched).To(Equal(1))
@@ -128,7 +142,7 @@ var _ = Describe("computeKeepSet", Label("unit", "downloads"), func() {
 		mfs := toMetaFiles(files)
 
 		keep, keptBytes, matched := computeKeepSet(
-			mfs, seasons, false, []uint32{105, 110},
+			mfs, showOf(seasons, false), []uint32{105, 110},
 		)
 
 		Expect(matched).To(Equal(2))
@@ -144,7 +158,8 @@ var _ = Describe("computeKeepSet", Label("unit", "downloads"), func() {
 		}
 		mfs := []metaFile{{Index: 0, Path: "Show.S01E02.mkv", Size: aboveFloor}}
 
-		keep, keptBytes, matched := computeKeepSet(mfs, seasons, false, []uint32{11})
+		keep, keptBytes, matched := computeKeepSet(
+			mfs, showOf(seasons, false), []uint32{11})
 
 		Expect(matched).To(Equal(1))
 		Expect(keep).To(Equal([]int{0}))
@@ -163,7 +178,8 @@ var _ = Describe("computeKeepSet", Label("unit", "downloads"), func() {
 			{Index: 1, Path: "Show - 02.mkv", Size: aboveFloor},
 		}
 
-		keep, keptBytes, matched := computeKeepSet(mfs, seasons, true, []uint32{52})
+		keep, keptBytes, matched := computeKeepSet(
+			mfs, showOf(seasons, true), []uint32{52})
 
 		Expect(matched).To(Equal(1))
 		Expect(keep).To(Equal([]int{1}))
@@ -192,10 +208,7 @@ var _ = Describe("computeKeepSet", Label("unit", "downloads"), func() {
 			// Only episode 2 is wanted; the sample (of episode 1, and sub-floor
 			// regardless) must stay in the keep set anyway.
 			keep, keptBytes, matched := computeKeepSet(
-				mfs,
-				seasons,
-				false,
-				[]uint32{22},
+				mfs, showOf(seasons, false), []uint32{22},
 			)
 
 			Expect(keep).To(ConsistOf(0, 2))
@@ -218,7 +231,8 @@ var _ = Describe("computeKeepSet", Label("unit", "downloads"), func() {
 
 		// Nothing wanted at all: the episode itself is excluded, but the
 		// sidecars are kept unconditionally (spec §6 rule 5).
-		keep, keptBytes, matched := computeKeepSet(mfs, seasons, false, nil)
+		keep, keptBytes, matched := computeKeepSet(
+			mfs, showOf(seasons, false), nil)
 
 		Expect(keep).To(ConsistOf(1, 2))
 		Expect(matched).To(Equal(0))
@@ -241,10 +255,7 @@ var _ = Describe("computeKeepSet", Label("unit", "downloads"), func() {
 			}
 
 			keep, keptBytes, matched := computeKeepSet(
-				mfs,
-				seasons,
-				false,
-				[]uint32{41, 42},
+				mfs, showOf(seasons, false), []uint32{41, 42},
 			)
 
 			Expect(matched).To(Equal(0))
@@ -253,6 +264,128 @@ var _ = Describe("computeKeepSet", Label("unit", "downloads"), func() {
 		},
 	)
 })
+
+// A special is released under its title and no number, so a grab made for
+// exactly one season 0 episode reads its files by title too.
+var _ = Describe(
+	"computeKeepSet for one special",
+	Label("unit", "downloads"),
+	func() {
+		const dayID, regularID = uint32(900), uint32(11)
+
+		doctorWho := func() *ent.TVShow {
+			return &ent.TVShow{
+				Title:   "Doctor Who (2005)",
+				Aliases: []string{"Doctor Who"},
+				Type:    tvshow.TypeStandard,
+				Edges: ent.TVShowEdges{Seasons: []*ent.Season{
+					{Number: 0, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+						{ID: dayID, Number: 5, Title: "The Day of the Doctor"},
+						{ID: 901, Number: 77, Title: "The Time of the Doctor"},
+					}}},
+					{Number: 7, Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+						{
+							ID:     regularID,
+							Number: 5,
+							Title:  "The Angels Take Manhattan",
+						},
+					}}},
+				}},
+			}
+		}
+		video := func(i int, name string) metaFile {
+			return metaFile{Index: i, Path: "Release/" + name, Size: aboveFloor}
+		}
+
+		It("keeps the file naming the special by its title", func() {
+			keep, keptBytes, matched := computeKeepSet([]metaFile{
+				video(0, "Doctor.Who.The.Day.of.the.Doctor.1080p.BluRay.mkv"),
+				video(1, "Doctor.Who.The.Day.of.the.Doctor.Deleted.Scenes.mkv"),
+				{Index: 2, Path: "Release/release.nfo", Size: 512},
+			}, doctorWho(), []uint32{dayID})
+
+			Expect(matched).To(Equal(1))
+			Expect(keep).To(Equal([]int{0, 2}))
+			Expect(keptBytes).To(Equal(aboveFloor))
+		})
+
+		It("reads a title before the number a tracker gave the special", func() {
+			// S00E77 is another special in the library; the title says which.
+			keep, _, matched := computeKeepSet([]metaFile{
+				video(0, "Doctor.Who.S00E77.The.Day.of.the.Doctor.1080p.mkv"),
+			}, doctorWho(), []uint32{dayID})
+
+			Expect(matched).To(Equal(1))
+			Expect(keep).To(Equal([]int{0}))
+		})
+
+		It("keeps a lone video that names no episode at all", func() {
+			// The importer files a release's only video under its anchor,
+			// whatever it is called.
+			keep, keptBytes, matched := computeKeepSet([]metaFile{
+				video(0, "feature.mkv"),
+				{
+					Index: 1,
+					Path:  "Release/Sample/sample.mkv",
+					Size:  library.MinEpisodeSize - 1,
+				},
+			}, doctorWho(), []uint32{dayID})
+
+			Expect(matched).To(Equal(1))
+			Expect(keep).To(Equal([]int{0, 1}))
+			Expect(keptBytes).To(Equal(aboveFloor))
+		})
+
+		// The importer files a release's only video under its anchor, so
+		// only a name that is another episode of the library is refused.
+		DescribeTable(
+			"keeps a lone video that is no other episode",
+			func(name string) {
+				keep, _, matched := computeKeepSet(
+					[]metaFile{video(0, name)}, doctorWho(), []uint32{dayID},
+				)
+				Expect(matched).To(Equal(1))
+				Expect(keep).To(Equal([]int{0}))
+			},
+			Entry("an episode 0 of a season", "grp-dw.s07e00.1080p.mkv"),
+			Entry("a special number the library lacks", "Show.S00E99.mkv"),
+			Entry(
+				"a regular episode the library lacks",
+				"Doctor.Who.S09E01.1080p.mkv",
+			),
+			Entry("the specials season alone", "Show.S00.1080p.mkv"),
+			Entry("an absolute number", "Doctor Who - 05.mkv"),
+			Entry("a date", "Doctor.Who.2013.11.23.1080p.mkv"),
+		)
+
+		DescribeTable("still matches nothing",
+			func(wanted []uint32, names ...string) {
+				files := make([]metaFile, 0, len(names))
+				for i, name := range names {
+					files = append(files, video(i, name))
+				}
+				keep, _, matched := computeKeepSet(files, doctorWho(), wanted)
+				Expect(matched).To(BeZero())
+				Expect(keep).To(BeEmpty())
+			},
+			Entry("a lone video of a regular episode",
+				[]uint32{dayID}, "Doctor.Who.S07E05.1080p.mkv"),
+			Entry("a lone video numbered as another special",
+				[]uint32{dayID}, "Doctor.Who.S00E77.1080p.mkv"),
+			Entry("a lone video titled as another special",
+				[]uint32{dayID}, "Doctor.Who.The.Time.of.the.Doctor.1080p.mkv"),
+			Entry("another special's file beside an unnamed one",
+				[]uint32{dayID},
+				"Doctor.Who.The.Time.of.the.Doctor.1080p.mkv", "feature.mkv"),
+			Entry("two videos naming nothing",
+				[]uint32{dayID}, "feature.mkv", "extras.mkv"),
+			Entry("a lone unnamed video for a regular episode",
+				[]uint32{regularID}, "feature.mkv"),
+			Entry("a title-named file when more than the special is wanted",
+				[]uint32{dayID, regularID}, "Doctor.Who.The.Day.of.the.Doctor.mkv"),
+		)
+	},
+)
 
 var _ = Describe("countVideoCandidates", Label("unit", "downloads"), func() {
 	It(

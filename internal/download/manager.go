@@ -28,7 +28,6 @@ import (
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/movie"
 	"github.com/datahearth/streamline/ent/schema"
-	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/events"
@@ -1206,7 +1205,8 @@ func (d *download) grabWith(
 					)
 				} else {
 					keep, keptBytes, matched := computeKeepSet(
-						files, show.Edges.Seasons, show.Type == tvshow.TypeAnime,
+						files,
+						show,
 						wantedEpisodes,
 					)
 					videoTotal := countVideoCandidates(files)
@@ -1502,9 +1502,7 @@ func (d *download) widenSelection(
 	for i, f := range clientFiles {
 		files[i] = metaFile{Index: f.Index, Path: f.Path, Size: f.Size}
 	}
-	keep, keptBytes, matched := computeKeepSet(
-		files, show.Edges.Seasons, show.Type == tvshow.TypeAnime, union,
-	)
+	keep, keptBytes, matched := computeKeepSet(files, show, union)
 	if matched == 0 {
 		// The union matches nothing in the client's actual file list — never
 		// apply a keep-set that deselects every video file. Pre-feature

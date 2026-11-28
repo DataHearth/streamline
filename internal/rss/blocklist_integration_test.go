@@ -162,8 +162,10 @@ var _ = Describe("rejected releases", Label("integration", "rss"), func() {
 			indexerM := mocks.NewMockTVIndexerSearcher(GinkgoT())
 			dlM := mocks.NewMockEpisodeGrabber(GinkgoT())
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, mock.Anything, mock.Anything,
-					uint32(4242), mock.Anything, uint16(1), uint16(1)).
+				SearchEpisode(
+					mock.Anything, mock.Anything, mock.Anything, uint32(4242),
+					mock.Anything, uint16(1), uint16(1), mock.Anything,
+				).
 				Return([]indexer.SearchResult{
 					{
 						Title:    badEp,

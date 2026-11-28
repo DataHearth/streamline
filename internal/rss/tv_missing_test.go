@@ -188,7 +188,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			expectEligible([]*ent.TVShow{showWith(ep1)}, nil)
 
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), uint16(1)).
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), uint16(1), mock.Anything).
 				Return([]indexer.SearchResult{{Title: acceptableEp, Seeders: 10}}, 0, nil).
 				Once()
 			dlM.EXPECT().
@@ -209,6 +209,51 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 		})
 	})
 
+	When("a special is wanted", func() {
+		It("searches it by its title too and grabs it", func() {
+			sp := &ent.Episode{ID: 21, Number: 2, Title: "The Lost Night"}
+			show := showWith(sp)
+			show.Edges.Seasons[0].Number = 0
+			expectEligible([]*ent.TVShow{show}, nil)
+			// The eligible tree holds the wanted special alone; its siblings
+			// come from the show read whole.
+			store.EXPECT().TVShowForEpisode(mock.Anything, uint32(21)).
+				Return(&ent.TVShow{Edges: ent.TVShowEdges{Seasons: []*ent.Season{{
+					Number: 0,
+					Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+						{ID: 20, Number: 1, Title: "Gag Reel"},
+						sp,
+					}},
+				}}}}, nil).Once()
+
+			const named = "The.Black.Sea.The.Lost.Night.1080p.WEB-DL.x265-GRP"
+			indexerM.EXPECT().
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"},
+					mock.Anything, uint32(9001), "", uint16(0), uint16(2),
+					[]string{"The Lost Night", "Gag Reel"}).
+				Return([]indexer.SearchResult{{Title: named, Seeders: 10}}, 0, nil).
+				Once()
+			dlM.EXPECT().
+				GrabEpisode(mock.Anything,
+					mock.MatchedBy(func(r indexer.SearchResult) bool {
+						return r.Title == named
+					}),
+					uint32(21), []uint32{21}).
+				Return(&ent.DownloadRecord{}, nil).Once()
+			store.EXPECT().
+				SetEpisodeStatus(mock.Anything, uint32(21), episode.StatusDownloading).
+				Return(nil).Once()
+			store.EXPECT().
+				ResetEpisodeGrabFailures(mock.Anything, uint32(21)).
+				Return(nil).Once()
+			store.EXPECT().
+				SetEpisodeLastSearchAt(mock.Anything, uint32(21), mock.AnythingOfType("time.Time")).
+				Return(nil).Once()
+
+			Expect(searcher.Run(ctx)).To(Succeed())
+		})
+	})
+
 	When("the single-episode grab fails because the client is unreachable", func() {
 		// A timeout says nothing about the release. Counted, three unlucky
 		// ticks reach max_grab_failures and the eligibility query then stops
@@ -219,7 +264,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			expectEligible([]*ent.TVShow{showWith(ep1)}, nil)
 
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), uint16(1)).
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), uint16(1), mock.Anything).
 				Return([]indexer.SearchResult{{Title: acceptableEp, Seeders: 10}}, 0, nil).
 				Once()
 			dlM.EXPECT().
@@ -244,7 +289,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 
 			// No resolution token → rejected by the quality filter.
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), uint16(1)).
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), uint16(1), mock.Anything).
 				Return([]indexer.SearchResult{{Title: "The.Black.Sea.S03E01.DVDRip-GRP"}}, 0, nil).
 				Once()
 			store.EXPECT().
@@ -267,7 +312,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 
 			for _, n := range []uint16{1, 2} {
 				indexerM.EXPECT().
-					SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), n).
+					SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), n, mock.Anything).
 					Return([]indexer.SearchResult{{Title: acceptableEp, Seeders: 10}}, 0, nil).
 					Once()
 			}
@@ -329,7 +374,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 				other(&ent.Episode{ID: 21, Number: 1}),
 			}, nil)
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, mock.Anything, mock.Anything, uint32(9001), "", uint16(3), uint16(1)).
+				SearchEpisode(mock.Anything, mock.Anything, mock.Anything, uint32(9001), "", uint16(3), uint16(1), mock.Anything).
 				Return(nil, 0, outage).Once()
 
 			Expect(searcher.Run(ctx)).To(MatchError(indexer.ErrNoIndexerAnswered))
@@ -363,7 +408,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			// per-episode search for both episodes.
 			for _, n := range []uint16{1, 2} {
 				indexerM.EXPECT().
-					SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), n).
+					SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), n, mock.Anything).
 					Return(nil, 0, nil).Once()
 			}
 			for _, id := range []uint32{11, 12} {
@@ -396,7 +441,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 
 			for _, n := range []uint16{1, 2} {
 				indexerM.EXPECT().
-					SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), n).
+					SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), n, mock.Anything).
 					Return(nil, 0, nil).Once()
 			}
 			for _, id := range []uint32{11, 12} {
@@ -488,8 +533,8 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			})
 			searchErr := make(chan error, 1)
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, mock.Anything, mock.Anything, uint32(9001), "", uint16(3), uint16(1)).
-				Run(func(c context.Context, _, _ []string, _ uint32, _ string, _, _ uint16) {
+				SearchEpisode(mock.Anything, mock.Anything, mock.Anything, uint32(9001), "", uint16(3), uint16(1), mock.Anything).
+				Run(func(c context.Context, _, _ []string, _ uint32, _ string, _, _ uint16, _ []string) {
 					<-release
 					searchErr <- c.Err()
 				}).
@@ -596,7 +641,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 				Seeders: 2,
 			}
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), uint16(1)).
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), uint16(1), mock.Anything).
 				Return([]indexer.SearchResult{
 					{Title: acceptableEp, Seeders: 500},
 					remuxEp,
@@ -627,7 +672,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 
 			// 1080p clears the default profile but not the show's 2160p floor.
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), uint16(1)).
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(3), uint16(1), mock.Anything).
 				Return([]indexer.SearchResult{{Title: acceptableEp, Seeders: 10}}, 0, nil).
 				Once()
 			store.EXPECT().
@@ -877,7 +922,7 @@ var _ = Describe("EpisodeMissingSearcher.Run", Label("unit", "rss"), func() {
 			expectEligible([]*ent.TVShow{show}, nil)
 
 			indexerM.EXPECT().
-				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(1), uint16(1)).
+				SearchEpisode(mock.Anything, []string{"The Black Sea", "Karadeniz"}, mock.Anything, uint32(9001), "", uint16(1), uint16(1), mock.Anything).
 				Return([]indexer.SearchResult{{Title: acceptableEp, Seeders: 10}}, 0, nil).
 				Once()
 			dlM.EXPECT().

@@ -14,6 +14,7 @@ import (
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/events"
 	"github.com/datahearth/streamline/internal/indexer"
+	"github.com/datahearth/streamline/internal/library"
 	"github.com/datahearth/streamline/internal/library/roothealth"
 	"github.com/datahearth/streamline/internal/observability"
 	"github.com/datahearth/streamline/internal/otelx"
@@ -449,6 +450,25 @@ func (s *EpisodeMissingSearcher) grabSeasonPack(
 	return false, nil
 }
 
+// specialTitles is what the search matches a special's title against: its
+// own, then its siblings'. The eligible tree holds only the episodes a pass
+// may act on, so the show's full specials season is read. A special whose
+// siblings cannot be read is searched by number alone.
+func (s *EpisodeMissingSearcher) specialTitles(
+	ctx context.Context, se *ent.Season, e *ent.Episode,
+) []string {
+	if se.Number != 0 {
+		return nil
+	}
+	show, err := s.store.TVShowForEpisode(ctx, e.ID)
+	if err != nil {
+		slog.WarnContext(ctx, "tv missing-search: specials not read",
+			"episode.id", e.ID, "error", err)
+		return nil
+	}
+	return library.SpecialTitles(show, e.ID)
+}
+
 // grabEpisode searches for a single episode and grabs the best-scoring
 // acceptable result, bumping/resetting grab_failures accordingly.
 // last_search_at is stamped whenever an indexer answered so the cooldown
@@ -484,7 +504,8 @@ func (s *EpisodeMissingSearcher) grabEpisode(
 	defer span.End()
 
 	results, _, err := s.indexers.SearchEpisode(
-		ctx, titles, show.Aliases, show.TvdbID, show.ImdbID, se.Number, e.Number,
+		ctx, titles, show.Aliases, show.TvdbID, show.ImdbID,
+		se.Number, e.Number, s.specialTitles(ctx, se, e),
 	)
 	if err != nil {
 		slog.WarnContext(ctx, "tv missing-search: episode search failed",

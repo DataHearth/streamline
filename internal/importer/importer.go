@@ -20,7 +20,6 @@ import (
 	"github.com/datahearth/streamline/ent/downloadrecord"
 	"github.com/datahearth/streamline/ent/mediafile"
 	"github.com/datahearth/streamline/ent/schema"
-	"github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/db"
 	"github.com/datahearth/streamline/internal/download"
@@ -658,7 +657,6 @@ func (w *Worker) importEpisodeRecord(
 		)
 	}
 	show := season.Edges.TvShow
-	anime := show.Type == tvshow.TypeAnime
 	span.SetAttributes(
 		attribute.Int64("tvshow.id", int64(show.ID)),
 		attribute.Int64("episode.id", int64(ep.ID)),
@@ -702,12 +700,17 @@ func (w *Worker) importEpisodeRecord(
 		config.MediaSeries,
 		show.QualityProfile,
 	)
+	// A release taken for one special names its file by the special's title
+	// more often than by a number. A pack of several goes by number alone.
+	var special *ent.Episode
+	if ids := db.RecordEpisodeIDs(rec); len(ids) == 1 {
+		special = library.SpecialOf(show, ids[0])
+	}
 	plan := make([]packFile, 0, len(files))
 	for _, f := range files {
 		pf := packFile{path: f}
-		parsed := library.Parse(filepath.Base(f))
-		pf.season, pf.episode = library.MatchEpisodeInSeason(
-			parsed, show.Edges.Seasons, anime,
+		pf.season, pf.episode = library.MatchFileEpisode(
+			filepath.Base(f), show, special,
 		)
 		if pf.episode == nil {
 			slog.WarnContext(ctx, "season pack file matched no episode",

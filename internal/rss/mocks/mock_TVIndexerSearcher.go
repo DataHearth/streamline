@@ -48,8 +48,8 @@ func (_m *MockTVIndexerSearcher) EXPECT() *MockTVIndexerSearcher_Expecter {
 }
 
 // SearchEpisode provides a mock function for the type MockTVIndexerSearcher
-func (_mock *MockTVIndexerSearcher) SearchEpisode(ctx context.Context, titles []string, aliases []string, tvdbID uint32, imdbID string, season uint16, episode uint16) ([]indexer.SearchResult, int, error) {
-	ret := _mock.Called(ctx, titles, aliases, tvdbID, imdbID, season, episode)
+func (_mock *MockTVIndexerSearcher) SearchEpisode(ctx context.Context, titles []string, aliases []string, tvdbID uint32, imdbID string, season uint16, episode uint16, specials []string) ([]indexer.SearchResult, int, error) {
+	ret := _mock.Called(ctx, titles, aliases, tvdbID, imdbID, season, episode, specials)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SearchEpisode")
@@ -58,23 +58,23 @@ func (_mock *MockTVIndexerSearcher) SearchEpisode(ctx context.Context, titles []
 	var r0 []indexer.SearchResult
 	var r1 int
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32, string, uint16, uint16) ([]indexer.SearchResult, int, error)); ok {
-		return returnFunc(ctx, titles, aliases, tvdbID, imdbID, season, episode)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32, string, uint16, uint16, []string) ([]indexer.SearchResult, int, error)); ok {
+		return returnFunc(ctx, titles, aliases, tvdbID, imdbID, season, episode, specials)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32, string, uint16, uint16) []indexer.SearchResult); ok {
-		r0 = returnFunc(ctx, titles, aliases, tvdbID, imdbID, season, episode)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, []string, []string, uint32, string, uint16, uint16, []string) []indexer.SearchResult); ok {
+		r0 = returnFunc(ctx, titles, aliases, tvdbID, imdbID, season, episode, specials)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]indexer.SearchResult)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, []string, uint32, string, uint16, uint16) int); ok {
-		r1 = returnFunc(ctx, titles, aliases, tvdbID, imdbID, season, episode)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, []string, []string, uint32, string, uint16, uint16, []string) int); ok {
+		r1 = returnFunc(ctx, titles, aliases, tvdbID, imdbID, season, episode, specials)
 	} else {
 		r1 = ret.Get(1).(int)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, []string, []string, uint32, string, uint16, uint16) error); ok {
-		r2 = returnFunc(ctx, titles, aliases, tvdbID, imdbID, season, episode)
+	if returnFunc, ok := ret.Get(2).(func(context.Context, []string, []string, uint32, string, uint16, uint16, []string) error); ok {
+		r2 = returnFunc(ctx, titles, aliases, tvdbID, imdbID, season, episode, specials)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -94,11 +94,12 @@ type MockTVIndexerSearcher_SearchEpisode_Call struct {
 //   - imdbID string
 //   - season uint16
 //   - episode uint16
-func (_e *MockTVIndexerSearcher_Expecter) SearchEpisode(ctx any, titles any, aliases any, tvdbID any, imdbID any, season any, episode any) *MockTVIndexerSearcher_SearchEpisode_Call {
-	return &MockTVIndexerSearcher_SearchEpisode_Call{Call: _e.mock.On("SearchEpisode", ctx, titles, aliases, tvdbID, imdbID, season, episode)}
+//   - specials []string
+func (_e *MockTVIndexerSearcher_Expecter) SearchEpisode(ctx any, titles any, aliases any, tvdbID any, imdbID any, season any, episode any, specials any) *MockTVIndexerSearcher_SearchEpisode_Call {
+	return &MockTVIndexerSearcher_SearchEpisode_Call{Call: _e.mock.On("SearchEpisode", ctx, titles, aliases, tvdbID, imdbID, season, episode, specials)}
 }
 
-func (_c *MockTVIndexerSearcher_SearchEpisode_Call) Run(run func(ctx context.Context, titles []string, aliases []string, tvdbID uint32, imdbID string, season uint16, episode uint16)) *MockTVIndexerSearcher_SearchEpisode_Call {
+func (_c *MockTVIndexerSearcher_SearchEpisode_Call) Run(run func(ctx context.Context, titles []string, aliases []string, tvdbID uint32, imdbID string, season uint16, episode uint16, specials []string)) *MockTVIndexerSearcher_SearchEpisode_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -128,6 +129,10 @@ func (_c *MockTVIndexerSearcher_SearchEpisode_Call) Run(run func(ctx context.Con
 		if args[6] != nil {
 			arg6 = args[6].(uint16)
 		}
+		var arg7 []string
+		if args[7] != nil {
+			arg7 = args[7].([]string)
+		}
 		run(
 			arg0,
 			arg1,
@@ -136,6 +141,7 @@ func (_c *MockTVIndexerSearcher_SearchEpisode_Call) Run(run func(ctx context.Con
 			arg4,
 			arg5,
 			arg6,
+			arg7,
 		)
 	})
 	return _c
@@ -146,7 +152,7 @@ func (_c *MockTVIndexerSearcher_SearchEpisode_Call) Return(searchResults []index
 	return _c
 }
 
-func (_c *MockTVIndexerSearcher_SearchEpisode_Call) RunAndReturn(run func(ctx context.Context, titles []string, aliases []string, tvdbID uint32, imdbID string, season uint16, episode uint16) ([]indexer.SearchResult, int, error)) *MockTVIndexerSearcher_SearchEpisode_Call {
+func (_c *MockTVIndexerSearcher_SearchEpisode_Call) RunAndReturn(run func(ctx context.Context, titles []string, aliases []string, tvdbID uint32, imdbID string, season uint16, episode uint16, specials []string) ([]indexer.SearchResult, int, error)) *MockTVIndexerSearcher_SearchEpisode_Call {
 	_c.Call.Return(run)
 	return _c
 }

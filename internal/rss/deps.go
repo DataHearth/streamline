@@ -55,6 +55,7 @@ type TVIndexerSearcher interface {
 		tvdbID uint32,
 		imdbID string,
 		season, episode uint16,
+		specials []string,
 	) ([]indexer.SearchResult, int, error)
 }
 
@@ -78,6 +79,9 @@ type EligibleEpisodeLister interface {
 		notSearchedSince time.Time,
 		airedBefore time.Time,
 	) ([]*ent.TVShow, error)
+	// TVShowForEpisode reads the show with every season and episode: the
+	// listing above narrows the episode edges to what a pass may act on.
+	TVShowForEpisode(ctx context.Context, episodeID uint32) (*ent.TVShow, error)
 	SetEpisodeStatus(ctx context.Context, id uint32, status episode.Status) error
 	SetEpisodeLastSearchAt(ctx context.Context, id uint32, when time.Time) error
 	IncrementEpisodeGrabFailures(ctx context.Context, id uint32) error

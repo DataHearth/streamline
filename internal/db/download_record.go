@@ -416,6 +416,9 @@ func (db *DB) FindPendingDownloadRecordByID(
 		WithAnchorEpisode(func(q *ent.EpisodeQuery) {
 			q.WithSeason(func(sq *ent.SeasonQuery) { sq.WithTvShow() })
 		}).
+		// How many episodes the proposal is for decides how its preview
+		// matches files, as it decides for the import.
+		WithEpisodes().
 		WithAlbum().
 		WithBook().
 		Only(ctx)
@@ -706,6 +709,9 @@ func (db *DB) FindImportingDownloadRecordByID(
 		).
 		WithMovie().
 		WithAnchorEpisode(withEpisodeContext).
+		// A record taken for one special matches its files by title; one for
+		// several goes by number.
+		WithEpisodes().
 		WithBook(withBookContext).
 		WithAlbum(withAlbumContext).
 		WithArtist().

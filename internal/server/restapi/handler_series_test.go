@@ -1040,7 +1040,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return(&withTree, nil).Once()
 			app.indexers.EXPECT().
 				SearchEpisode(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
-					uint32(81189), "", uint16(1), uint16(2)).
+					uint32(81189), "", uint16(1), uint16(2), mock.Anything).
 				Return(results, 0, nil).Once()
 			app.store.EXPECT().
 				ListReleaseGrabs(mock.Anything, uint32(0), uint32(3), mock.Anything, mock.Anything).
@@ -1067,7 +1067,7 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 				Return(&withTree, nil).Once()
 			app.indexers.EXPECT().
 				SearchEpisode(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
-					uint32(81189), "", uint16(1), uint16(2)).
+					uint32(81189), "", uint16(1), uint16(2), mock.Anything).
 				Return(nil, 4, nil).Once()
 
 			resp := app.do(app.req(http.MethodPost,
@@ -1081,6 +1081,66 @@ var _ = Describe("Handler: Series", Label("unit", "server", "series"), func() {
 			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
 			Expect(body.Items).To(BeEmpty())
 			Expect(body.HiddenPacks).To(HaveValue(Equal(4)))
+		})
+
+		It("searches a special by its title as well", func() {
+			withTree := *show
+			withTree.Edges.Seasons = []*ent.Season{
+				{
+					ID:     9,
+					Number: 0,
+					Edges: ent.SeasonEdges{
+						Episodes: []*ent.Episode{
+							{ID: 89, Number: 2, Title: "Gag Reel"},
+							{ID: 90, Number: 3, Title: "No Half Measures"},
+						},
+					},
+				},
+			}
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
+				Return(&withTree, nil).Once()
+			app.indexers.EXPECT().
+				SearchEpisode(mock.Anything, []string{"Breaking Bad", "Breaking Bad (US)"}, mock.Anything,
+					uint32(81189), "", uint16(0), uint16(3),
+					[]string{"No Half Measures", "Gag Reel"}).
+				Return(nil, 0, nil).Once()
+
+			resp := app.do(app.req(http.MethodPost,
+				"/api/v1/series/3/episodes/90/search", app.adminKey, nil))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		})
+
+		It("answers indexers_unavailable when no indexer answered", func() {
+			withTree := *show
+			withTree.Edges.Seasons = []*ent.Season{{
+				ID:     9,
+				Number: 0,
+				Edges: ent.SeasonEdges{Episodes: []*ent.Episode{
+					{ID: 90, Number: 3, Title: "No Half Measures"},
+				}},
+			}}
+			app.tvshows.EXPECT().Get(mock.Anything, uint32(3)).
+				Return(&withTree, nil).Once()
+			app.indexers.EXPECT().
+				SearchEpisode(mock.Anything, mock.Anything, mock.Anything,
+					uint32(81189), "", uint16(0), uint16(3), mock.Anything).
+				Return(nil, 0, &indexer.UnavailableError{
+					Failures: []indexer.IndexerFailure{{
+						Indexer: "Prowlarr", Outcome: "error",
+						Err: errors.New("boom"),
+					}},
+				}).Once()
+
+			resp := app.do(app.req(http.MethodPost,
+				"/api/v1/series/3/episodes/90/search", app.adminKey, nil))
+			defer resp.Body.Close()
+			Expect(resp.StatusCode).To(Equal(http.StatusBadGateway))
+
+			var body Error
+			Expect(json.NewDecoder(resp.Body).Decode(&body)).To(Succeed())
+			Expect(body.Code).NotTo(BeNil())
+			Expect(*body.Code).To(Equal("indexers_unavailable"))
 		})
 	})
 

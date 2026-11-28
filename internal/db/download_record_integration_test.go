@@ -829,6 +829,38 @@ var _ = Describe("Download record store", Label("integration", "db"), func() {
 		})
 	})
 
+	// The importer and the proposal preview match a file by its title only
+	// for a record taken for one episode, which they read off this edge.
+	It("loads the linked episodes of an importing and a pending record", func() {
+		show, err := store.CreateTVShow(ctx, CreateTVShowParams{
+			Title: "Linked", Year: 2024, TvdbID: 9051,
+			Seasons: []SeasonSeed{{Number: 0, Episodes: []EpisodeSeed{
+				{Number: 1, Title: "One"}, {Number: 2, Title: "Two"},
+			}}},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		eps := show.Edges.Seasons[0].Edges.Episodes
+		find := map[downloadrecord.Status]func(
+			context.Context, uint32,
+		) (*ent.DownloadRecord, error){
+			downloadrecord.StatusImporting: store.FindImportingDownloadRecordByID,
+			downloadrecord.StatusPending:   store.FindPendingDownloadRecordByID,
+		}
+		for status, byID := range find {
+			rec, err := store.CreateDownloadRecord(ctx, CreateDownloadRecordParams{
+				Title: "specials", Size: 1, TorrentHash: "linked-" + string(status),
+				Status:             status,
+				EpisodeID:          eps[0].ID,
+				EpisodeIDs:         []uint32{eps[0].ID, eps[1].ID},
+				DownloadClientName: clientName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			got, err := byID(ctx, rec.ID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(RecordEpisodeIDs(got)).To(ConsistOf(eps[0].ID, eps[1].ID))
+		}
+	})
+
 	Describe("FindImportingDownloadRecordByID", func() {
 		It("returns the matching importing row with edges preloaded", func() {
 			rec := createRec("abc", downloadrecord.StatusImporting)

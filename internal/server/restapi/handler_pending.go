@@ -15,7 +15,6 @@ import (
 	"github.com/datahearth/streamline/ent"
 	entartist "github.com/datahearth/streamline/ent/artist"
 	"github.com/datahearth/streamline/ent/downloadrecord"
-	enttvshow "github.com/datahearth/streamline/ent/tvshow"
 	"github.com/datahearth/streamline/internal/config"
 	"github.com/datahearth/streamline/internal/download"
 	"github.com/datahearth/streamline/internal/library"
@@ -306,16 +305,24 @@ func (s *Server) identifySeries(
 		}
 	}
 	parsed := library.Parse(rec.Title)
-	ep := download.AdoptionEpisode(parsed, show)
+	ep := download.AdoptionEpisode(rec.Title, show)
 	if ep == nil {
+		missing := fmt.Sprintf("season %d", parsed.Season)
+		switch {
+		case parsed.TitledSpecial && parsed.Season == 0:
+			missing = "specials"
+		case parsed.TitledSpecial:
+			// A special goes to season 0 first, then to the season it names.
+			missing = "specials and no " + missing
+		}
 		return 0, nil, IdentifyPending422JSONResponse{
 			UnprocessableEntityJSONResponse: errUnprocessable(fmt.Sprintf(
-				"%s has no season %d to file this release against",
-				show.Title, parsed.Season,
+				"%s has no %s to file this release against",
+				show.Title, missing,
 			)),
 		}
 	}
-	return ep.ID, download.AdoptionEpisodes(parsed, show), nil
+	return ep.ID, download.AdoptionEpisodes(rec.Title, show), nil
 }
 
 func (s *Server) identifyMovie(
@@ -393,9 +400,14 @@ func (s *Server) PreviewPending(
 			),
 		}, nil
 	}
+	// As the importer: by title for a proposal filed for one special only.
+	var special *ent.Episode
+	if ids := db.RecordEpisodeIDs(rec); len(ids) == 1 {
+		special = library.SpecialOf(show, ids[0])
+	}
 	return PreviewPending200JSONResponse{
 		PendingPreviewJSONResponse: PendingPreviewJSONResponse(
-			previewPack(files, show, rec.Title),
+			previewPack(files, show, special, rec.Title),
 		),
 	}, nil
 }
@@ -412,14 +424,16 @@ func (s *Server) PreviewPending(
 // download client, so upgrades/keeps are decided on filename and size alone
 // and the import may land on a slightly different split.
 func previewPack(
-	files []download.TorrentFile, show *ent.TVShow, releaseTitle string,
+	files []download.TorrentFile,
+	show *ent.TVShow,
+	special *ent.Episode,
+	releaseTitle string,
 ) PendingPreview {
 	out := PendingPreview{
 		Imports:  []PendingPreviewEpisode{},
 		Upgrades: []PendingPreviewEpisode{},
 		Keeps:    []PendingPreviewEpisode{},
 	}
-	anime := show.Type == enttvshow.TypeAnime
 	profile, hasProfile := config.ResolveScoredProfile(
 		config.MediaSeries,
 		show.QualityProfile,
@@ -432,9 +446,7 @@ func previewPack(
 			library.SampleRe.MatchString(name) {
 			continue
 		}
-		season, ep := library.MatchEpisodeInSeason(
-			library.Parse(name), show.Edges.Seasons, anime,
-		)
+		season, ep := library.MatchFileEpisode(name, show, special)
 		if ep == nil {
 			out.Unmatched++
 			continue
